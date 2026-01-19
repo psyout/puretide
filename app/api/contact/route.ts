@@ -8,21 +8,26 @@ type ContactPayload = {
 };
 
 function getSmtpConfig() {
-	const host = process.env.SMTP_HOST;
-	const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
-	const user = process.env.SMTP_USER;
-	const pass = process.env.SMTP_PASS;
-	const from = process.env.SMTP_FROM;
+	const host = process.env.CONTACT_SMTP_HOST ?? process.env.SMTP_HOST;
+	const port = process.env.CONTACT_SMTP_PORT
+		? Number(process.env.CONTACT_SMTP_PORT)
+		: process.env.SMTP_PORT
+			? Number(process.env.SMTP_PORT)
+			: undefined;
+	const user = process.env.CONTACT_SMTP_USER ?? process.env.SMTP_USER;
+	const pass = process.env.CONTACT_SMTP_PASS ?? process.env.SMTP_PASS;
+	const from = process.env.CONTACT_FROM ?? process.env.SMTP_FROM;
 	const replyTo = process.env.SMTP_REPLY_TO;
 	const bcc = process.env.SMTP_BCC;
-	const secure = process.env.SMTP_SECURE === 'true';
-	const contactFrom = process.env.CONTACT_FROM;
+	const secure =
+		process.env.CONTACT_SMTP_SECURE === 'true' ||
+		(process.env.CONTACT_SMTP_SECURE == null && process.env.SMTP_SECURE === 'true');
 
 	if (!host || !port || !user || !pass || !from) {
 		return null;
 	}
 
-	return { host, port, user, pass, from, replyTo, bcc, secure, contactFrom };
+	return { host, port, user, pass, from, replyTo, bcc, secure };
 }
 
 export async function POST(request: Request) {
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
 		].join('\n');
 
 		await transporter.sendMail({
-			from: smtpConfig.contactFrom ?? smtpConfig.from,
+			from: smtpConfig.from,
 			to: 'info@puretide.ca',
 			subject,
 			text,

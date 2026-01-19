@@ -75,6 +75,17 @@ This creates an `out` folder that can be uploaded to any static hosting.
      -    `SMTP_BCC` (optional admin copy)
      -    `ORDER_NOTIFICATION_EMAIL` (optional, defaults to `orders@puretide.ca`)
      -    `CONTACT_FROM` (optional, defaults to `SMTP_FROM`)
+     -    `CONTACT_SMTP_HOST` (optional override)
+     -    `CONTACT_SMTP_PORT` (optional override)
+     -    `CONTACT_SMTP_USER` (optional override)
+     -    `CONTACT_SMTP_PASS` (optional override)
+     -    `CONTACT_SMTP_SECURE` (optional override)
+     -    `ORDER_FROM` (optional override)
+     -    `ORDER_SMTP_HOST` (optional override)
+     -    `ORDER_SMTP_PORT` (optional override)
+     -    `ORDER_SMTP_USER` (optional override)
+     -    `ORDER_SMTP_PASS` (optional override)
+     -    `ORDER_SMTP_SECURE` (optional override)
 
 ### 5. Security Considerations
 

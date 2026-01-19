@@ -60,14 +60,20 @@ type EmailStatus = {
 };
 
 function getSmtpConfig() {
-	const host = process.env.SMTP_HOST;
-	const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
-	const user = process.env.SMTP_USER;
-	const pass = process.env.SMTP_PASS;
-	const from = process.env.SMTP_FROM;
+	const host = process.env.ORDER_SMTP_HOST ?? process.env.SMTP_HOST;
+	const port = process.env.ORDER_SMTP_PORT
+		? Number(process.env.ORDER_SMTP_PORT)
+		: process.env.SMTP_PORT
+			? Number(process.env.SMTP_PORT)
+			: undefined;
+	const user = process.env.ORDER_SMTP_USER ?? process.env.SMTP_USER;
+	const pass = process.env.ORDER_SMTP_PASS ?? process.env.SMTP_PASS;
+	const from = process.env.ORDER_FROM ?? process.env.SMTP_FROM;
 	const replyTo = process.env.SMTP_REPLY_TO;
 	const bcc = process.env.SMTP_BCC;
-	const secure = process.env.SMTP_SECURE === 'true';
+	const secure =
+		process.env.ORDER_SMTP_SECURE === 'true' ||
+		(process.env.ORDER_SMTP_SECURE == null && process.env.SMTP_SECURE === 'true');
 
 	if (!host || !port || !user || !pass || !from) {
 		return null;
