@@ -16,12 +16,13 @@ function getSmtpConfig() {
 	const replyTo = process.env.SMTP_REPLY_TO;
 	const bcc = process.env.SMTP_BCC;
 	const secure = process.env.SMTP_SECURE === 'true';
+	const contactFrom = process.env.CONTACT_FROM;
 
 	if (!host || !port || !user || !pass || !from) {
 		return null;
 	}
 
-	return { host, port, user, pass, from, replyTo, bcc, secure };
+	return { host, port, user, pass, from, replyTo, bcc, secure, contactFrom };
 }
 
 export async function POST(request: Request) {
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
 		].join('\n');
 
 		await transporter.sendMail({
-			from: smtpConfig.from,
+			from: smtpConfig.contactFrom ?? smtpConfig.from,
 			to: 'info@puretide.ca',
 			subject,
 			text,

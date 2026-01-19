@@ -74,6 +74,7 @@ This creates an `out` folder that can be uploaded to any static hosting.
      -    `SMTP_REPLY_TO` (optional)
      -    `SMTP_BCC` (optional admin copy)
      -    `ORDER_NOTIFICATION_EMAIL` (optional, defaults to `orders@puretide.ca`)
+     -    `CONTACT_FROM` (optional, defaults to `SMTP_FROM`)
 
 ### 5. Security Considerations
 
