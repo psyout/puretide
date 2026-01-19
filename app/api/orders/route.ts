@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { buildOrderEmail } from '@/lib/orderEmail';
+import nodemailer from 'nodemailer';
 
 interface OrderPayload {
 	customer: {
@@ -52,6 +53,61 @@ async function readOrders(filePath: string) {
 	}
 }
 
+type EmailStatus = {
+	sent: boolean;
+	skipped: boolean;
+	error?: string;
+};
+
+function getSmtpConfig() {
+	const host = process.env.SMTP_HOST;
+	const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
+	const user = process.env.SMTP_USER;
+	const pass = process.env.SMTP_PASS;
+	const from = process.env.SMTP_FROM;
+	const replyTo = process.env.SMTP_REPLY_TO;
+	const bcc = process.env.SMTP_BCC;
+	const secure = process.env.SMTP_SECURE === 'true';
+
+	if (!host || !port || !user || !pass || !from) {
+		return null;
+	}
+
+	return { host, port, user, pass, from, replyTo, bcc, secure };
+}
+
+async function sendOrderEmail(to: string, subject: string, text: string): Promise<EmailStatus> {
+	const smtpConfig = getSmtpConfig();
+	if (!smtpConfig) {
+		return { sent: false, skipped: true, error: 'SMTP not configured' };
+	}
+
+	const transporter = nodemailer.createTransport({
+		host: smtpConfig.host,
+		port: smtpConfig.port,
+		secure: smtpConfig.secure,
+		auth: {
+			user: smtpConfig.user,
+			pass: smtpConfig.pass,
+		},
+	});
+
+	try {
+		await transporter.sendMail({
+			from: smtpConfig.from,
+			to,
+			subject,
+			text,
+			replyTo: smtpConfig.replyTo ?? smtpConfig.from,
+			bcc: smtpConfig.bcc,
+		});
+		return { sent: true, skipped: false };
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Unknown email error';
+		return { sent: false, skipped: false, error: message };
+	}
+}
+
 export async function POST(request: Request) {
 	try {
 		const payload = (await request.json()) as OrderPayload;
@@ -77,12 +133,15 @@ export async function POST(request: Request) {
 			createdAt,
 		});
 
+		const emailStatus = await sendOrderEmail(payload.customer.email, emailData.subject, emailData.text);
+
 		existingOrders.push({
 			...orderRecord,
 			emailPreview: {
 				subject: emailData.subject,
 				text: emailData.text,
 			},
+			emailStatus,
 		});
 		await fs.writeFile(ordersFile, JSON.stringify(existingOrders, null, 2), 'utf8');
 

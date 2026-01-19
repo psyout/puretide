@@ -64,6 +64,15 @@ This creates an `out` folder that can be uploaded to any static hosting.
 -    Ensure Node.js 18+ is installed on the server
 -    Set up process manager (PM2 recommended) for production
 -    Configure firewall to allow traffic on your chosen port
+-    Configure SMTP env vars for order emails:
+     -    `SMTP_HOST`
+     -    `SMTP_PORT`
+     -    `SMTP_USER`
+     -    `SMTP_PASS`
+     -    `SMTP_FROM`
+     -    `SMTP_SECURE` (set to `true` for SMTPS/465)
+     -    `SMTP_REPLY_TO` (optional)
+     -    `SMTP_BCC` (optional admin copy)
 
 ### 5. Security Considerations
 
