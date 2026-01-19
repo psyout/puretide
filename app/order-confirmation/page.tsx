@@ -80,7 +80,7 @@ export default async function OrderConfirmationPage() {
 			<div className='container mx-auto px-4 py-16 pt-28'>
 					<div className='max-w-2xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-8 shadow-lg'>
 						<h1 className='text-3xl font-bold text-deep-tidal-teal-800 mb-3'>Order not found</h1>
-						<p className='text-deep-tidal-teal-800 mb-6'>We couldn't find a recent order. Please return to the shop.</p>
+						<p className='text-deep-tidal-teal-800 mb-6'>We could not find a recent order. Please return to the shop.</p>
 						<Link
 							href='/'
 							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>

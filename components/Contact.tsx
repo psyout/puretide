@@ -22,7 +22,7 @@ export default function Contact() {
 				<div className='text-center mb-12'>
 					<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Get in Touch</h2>
 					<p className='text-deep-tidal-teal-700 text-lg max-w-2xl mx-auto'>
-						Have questions about our products? We're here to help. Reach out to us and we'll respond as soon as possible.
+						Have questions about our products? We are here to help. Reach out to us and we will respond as soon as possible.
 					</p>
 				</div>
 
