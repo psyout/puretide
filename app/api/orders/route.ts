@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { buildOrderEmail } from '@/lib/orderEmail';
+import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
 
 interface OrderPayload {
@@ -90,6 +90,7 @@ async function sendOrderEmail(
 	to: string,
 	subject: string,
 	text: string,
+	html: string,
 	replyTo?: string,
 	bccOverride?: string
 ): Promise<EmailStatus> {
@@ -114,6 +115,7 @@ async function sendOrderEmail(
 			to,
 			subject,
 			text,
+			html,
 			replyTo: replyTo ?? smtpConfig.replyTo ?? smtpConfig.from,
 			bcc: bccOverride ?? smtpConfig.bcc,
 		});
@@ -143,7 +145,7 @@ export async function POST(request: Request) {
 			...payload,
 		};
 
-		const emailData = buildOrderEmail({
+		const emailData = buildOrderEmails({
 			...payload,
 			orderNumber,
 			createdAt,
@@ -152,14 +154,32 @@ export async function POST(request: Request) {
 		const adminRecipient = getOrderNotificationRecipient();
 		const customerEmail = payload.customer.email;
 		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
-		const emailStatus = await sendOrderEmail(customerEmail, emailData.subject, emailData.text, undefined, '');
-		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.subject, emailData.text, customerReplyTo, '');
+		const emailStatus = await sendOrderEmail(
+			customerEmail,
+			emailData.customer.subject,
+			emailData.customer.text,
+			emailData.customer.html,
+			undefined,
+			''
+		);
+		const adminEmailStatus = await sendOrderEmail(
+			adminRecipient,
+			emailData.admin.subject,
+			emailData.admin.text,
+			emailData.admin.html,
+			customerReplyTo,
+			''
+		);
 
 		existingOrders.push({
 			...orderRecord,
 			emailPreview: {
-				subject: emailData.subject,
-				text: emailData.text,
+				subject: emailData.customer.subject,
+				text: emailData.customer.text,
+			},
+			adminEmailPreview: {
+				subject: emailData.admin.subject,
+				text: emailData.admin.text,
 			},
 			emailStatus,
 			adminEmailStatus,

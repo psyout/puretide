@@ -36,10 +36,10 @@ type OrderEmailInput = {
 
 const paymentDetails = {
   recipientName: "Pure Tide Payments",
-  recipientEmail: "contraviento@gmail.com",
+  recipientEmail: "payments@puretide.ca",
   securityQuestion: "Order number?",
   securityAnswerPrefix: "PT",
-  supportEmail: "contraviento@gmail.com",
+  supportEmail: "info@puretide.ca",
 };
 
 const formatMoney = (value: number) =>
@@ -55,7 +55,18 @@ const formatDate = (value: string) =>
     day: "numeric",
   });
 
-export function buildOrderEmail(input: OrderEmailInput) {
+type OrderEmailPayload = {
+  subject: string;
+  text: string;
+  html: string;
+};
+
+type OrderEmailResult = {
+  customer: OrderEmailPayload;
+  admin: OrderEmailPayload;
+};
+
+export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
   const orderDate = formatDate(input.createdAt);
   const orderName = `${input.customer.firstName} ${input.customer.lastName}`.trim();
   const securityAnswer = `${paymentDetails.securityAnswerPrefix}${input.orderNumber}`;
@@ -76,12 +87,24 @@ export function buildOrderEmail(input: OrderEmailInput) {
     `${shippingSource.city} ${shippingSource.province} ${shippingSource.zipCode}`.trim(),
     input.customer.country,
   ].filter(Boolean);
+  const adminNotes = input.customer.orderNotes?.trim();
 
   const itemsText = input.cartItems
     .map((item) => `- ${item.name} x${item.quantity} (${formatMoney(item.price * item.quantity)})`)
     .join("\n");
+  const itemsHtml = input.cartItems
+    .map(
+      (item) => `
+              <tr>
+                <td style="padding: 6px 0;">${item.name}</td>
+                <td style="padding: 6px 0;">x${item.quantity}</td>
+                <td style="padding: 6px 0; text-align: right;">${formatMoney(item.price * item.quantity)}</td>
+              </tr>
+            `
+    )
+    .join("");
 
-  const text = [
+  const customerText = [
     "Pure Tide",
     "",
     "Thank you for your order",
@@ -129,7 +152,7 @@ export function buildOrderEmail(input: OrderEmailInput) {
     `Thanks again! If you need any help with your order, please contact us at ${paymentDetails.supportEmail}.`,
   ].join("\n");
 
-  const html = `
+  const customerHtml = `
     <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
       <h2 style="margin: 0 0 8px;">Pure Tide</h2>
       <h3 style="margin: 0 0 16px;">Thank you for your order</h3>
@@ -162,17 +185,7 @@ export function buildOrderEmail(input: OrderEmailInput) {
           </tr>
         </thead>
         <tbody>
-          ${input.cartItems
-            .map(
-              (item) => `
-              <tr>
-                <td style="padding: 6px 0;">${item.name}</td>
-                <td style="padding: 6px 0;">x${item.quantity}</td>
-                <td style="padding: 6px 0; text-align: right;">${formatMoney(item.price * item.quantity)}</td>
-              </tr>
-            `
-            )
-            .join("")}
+          ${itemsHtml}
         </tbody>
       </table>
       <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
@@ -189,9 +202,92 @@ export function buildOrderEmail(input: OrderEmailInput) {
     </div>
   `;
 
+  const adminText = [
+    "New order received",
+    `Order #${input.orderNumber} (${orderDate})`,
+    "",
+    "Customer",
+    ...billingLines,
+    "",
+    "Shipping address",
+    ...shippingLines,
+    "",
+    "Products",
+    itemsText,
+    "",
+    `Subtotal: ${formatMoney(input.subtotal)}`,
+    `Shipping: ${shippingLabel} ${formatMoney(input.shippingCost)}`,
+    `Total: ${formatMoney(input.total)}`,
+    "Payment method: Interac e-Transfer",
+    "",
+    "Interac e-Transfer details",
+    `Recipient Name: ${paymentDetails.recipientName}`,
+    `Recipient Email: ${paymentDetails.recipientEmail}`,
+    `Security Question: ${paymentDetails.securityQuestion}`,
+    `Security Answer: ${securityAnswer}`,
+    `Memo/Message: ${input.orderNumber}`,
+    adminNotes ? "" : null,
+    adminNotes ? "Order notes" : null,
+    adminNotes ? adminNotes : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const adminHtml = `
+    <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
+      <h2 style="margin: 0 0 8px;">New order received</h2>
+      <p><strong>Order #${input.orderNumber}</strong> (${orderDate})</p>
+
+      <h4 style="margin: 24px 0 8px;">Customer</h4>
+      <p>${billingLines.join("<br />")}</p>
+
+      <h4 style="margin: 16px 0 8px;">Shipping address</h4>
+      <p>${shippingLines.join("<br />")}</p>
+
+      <h4 style="margin: 24px 0 8px;">Products</h4>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+        <thead>
+          <tr>
+            <th style="text-align: left; padding: 6px 0; border-bottom: 1px solid #cdd9d7;">Product</th>
+            <th style="text-align: left; padding: 6px 0; border-bottom: 1px solid #cdd9d7;">Quantity</th>
+            <th style="text-align: right; padding: 6px 0; border-bottom: 1px solid #cdd9d7;">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+      <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
+      <p><strong>Shipping:</strong> ${shippingLabel} ${formatMoney(input.shippingCost)}</p>
+      <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
+      <p><strong>Payment method:</strong> Interac e-Transfer</p>
+
+      <h4 style="margin: 24px 0 8px;">Interac e-Transfer details</h4>
+      <ul>
+        <li><strong>Recipient Name:</strong> ${paymentDetails.recipientName}</li>
+        <li><strong>Recipient Email:</strong> ${paymentDetails.recipientEmail}</li>
+        <li><strong>Security Question:</strong> ${paymentDetails.securityQuestion}</li>
+        <li><strong>Security Answer:</strong> ${securityAnswer}</li>
+        <li><strong>Memo/Message:</strong> ${input.orderNumber}</li>
+      </ul>
+      ${
+        adminNotes
+          ? `<h4 style="margin: 24px 0 8px;">Order notes</h4><p>${adminNotes}</p>`
+          : ""
+      }
+    </div>
+  `;
+
   return {
-    subject: `Order #${input.orderNumber} - Interac e-Transfer instructions`,
-    text,
-    html,
+    customer: {
+      subject: `Order #${input.orderNumber} - Interac e-Transfer instructions`,
+      text: customerText,
+      html: customerHtml,
+    },
+    admin: {
+      subject: `New order #${input.orderNumber}`,
+      text: adminText,
+      html: adminHtml,
+    },
   };
 }
