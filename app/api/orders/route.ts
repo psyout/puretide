@@ -144,8 +144,10 @@ export async function POST(request: Request) {
 		});
 
 		const adminRecipient = getOrderNotificationRecipient();
-		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${payload.customer.email}>`;
-		const emailStatus = await sendOrderEmail(adminRecipient, emailData.subject, emailData.text, customerReplyTo);
+		const customerEmail = payload.customer.email;
+		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
+		const emailStatus = await sendOrderEmail(customerEmail, emailData.subject, emailData.text);
+		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.subject, emailData.text, customerReplyTo);
 
 		existingOrders.push({
 			...orderRecord,
@@ -154,6 +156,7 @@ export async function POST(request: Request) {
 				text: emailData.text,
 			},
 			emailStatus,
+			adminEmailStatus,
 		});
 		await fs.writeFile(ordersFile, JSON.stringify(existingOrders, null, 2), 'utf8');
 
