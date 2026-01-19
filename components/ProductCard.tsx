@@ -2,6 +2,7 @@
 
 import { Product } from '@/types/product';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 
 interface ProductCardProps {
@@ -17,9 +18,12 @@ export default function ProductCard({ product }: ProductCardProps) {
 				<div className='p-8'>
 					<div className='mb-6 text-center duration-300 flex justify-center items-center h-56'>
 						{product.image.startsWith('/') || product.image.startsWith('http') ? (
-							<img
+							<Image
 								src={product.image}
 								alt={product.name}
+								width={260}
+								height={208}
+								unoptimized={product.image.startsWith('http')}
 								className='max-h-52 w-auto object-contain drop-shadow-xl drop-shadow-red'
 							/>
 						) : (

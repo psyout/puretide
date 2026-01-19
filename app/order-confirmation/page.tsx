@@ -43,10 +43,10 @@ type Order = {
 
 const paymentDetails = {
 	recipientName: 'Pure Tide Payments',
-	recipientEmail: 'payments@pure-tide.com',
+	recipientEmail: 'payments@puretide.ca',
 	securityQuestion: 'Order number?',
 	securityAnswerPrefix: 'PT',
-	supportEmail: 'info@pure-tide.com',
+	supportEmail: 'info@puretide.ca',
 };
 
 const formatMoney = (value: number) =>
@@ -121,7 +121,7 @@ export default async function OrderConfirmationPage() {
 			<div className='container mx-auto px-4 py-12 pt-28'>
 				<div className='max-w-4xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-8 shadow-lg'>
 					<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-2'>Thank you. Your order has been received.</h1>
-					<p className='text-deep-tidal-teal-800 mb-6'>Payment is completed only via Interac e-Transfer in Canada.</p>
+					<p className='text-deep-tidal-teal-800 mb-6'>Payment is completed only via Interac e&ndash;Transfer in Canada.</p>
 
 					<div className='grid grid-cols-1 md:grid-cols-4 gap-4 text-md mb-8'>
 						<div className='bg-mineral-white rounded-lg border border-muted-sage-300 p-4'>
@@ -138,14 +138,14 @@ export default async function OrderConfirmationPage() {
 						</div>
 						<div className='bg-mineral-white rounded-lg border border-muted-sage-300 p-4'>
 							<div className='text-deep-tidal-teal-600'>Payment method</div>
-							<div className='text-deep-tidal-teal-800 font-semibold'>Interac e-Transfer</div>
+							<div className='text-deep-tidal-teal-800 font-semibold'>Interac e&ndash;Transfer</div>
 						</div>
 					</div>
 
 					<div className='rounded-lg bg-mineral-white border border-muted-sage-300 p-6 mb-8'>
-						<h2 className='text-2xl font-semibold text-deep-tidal-teal-800 mb-4'>Interac e-Transfer Instructions</h2>
+						<h2 className='text-2xl font-semibold text-deep-tidal-teal-800 mb-4'>Interac e&ndash;Transfer Instructions</h2>
 						<p className='text-deep-tidal-teal-800 mb-4'>
-							After placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.
+							After placing your order, please send an Interac e&ndash;Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.
 						</p>
 						<div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-md'>
 							<div>
@@ -175,10 +175,10 @@ export default async function OrderConfirmationPage() {
 						<div className='text-xs text-deep-tidal-teal-700 mt-4 space-y-2'>
 							<p>Important: Use the exact Security Question and Answer above. Any changes can delay payment acceptance or have your payment refused.</p>
 							<p>If your bank does not allow a memo, you can leave it empty.</p>
-							<p>We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.</p>
-							<p>If your payment is not accepted, please go to your banking app, cancel and re-send with the correct instructions above.</p>
+							<p>We only accept e&ndash;Transfers sent to the email listed above. Do not send payments to any other email address.</p>
+							<p>If your payment is not accepted, please go to your banking app, cancel and re&ndash;send with the correct instructions above.</p>
 							<p>
-								Should you encounter any payment-related issues, please contact our support at: <span className='font-semibold'>{paymentDetails.supportEmail}</span>
+								Should you encounter any payment&ndash;related issues, please contact our support at: <span className='font-semibold'>{paymentDetails.supportEmail}</span>
 							</p>
 						</div>
 					</div>

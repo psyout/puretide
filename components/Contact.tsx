@@ -108,7 +108,7 @@ export default function Contact() {
 									</div>
 									<div>
 										<h4 className='font-semibold text-deep-tidal-teal-800 mb-1'>Email</h4>
-										<p className='text-deep-tidal-teal-700'>info@pure-tide.com</p>
+										<p className='text-deep-tidal-teal-700'>info@puretide.ca</p>
 									</div>
 								</div>
 								<div className='flex items-start gap-4'>
@@ -128,7 +128,7 @@ export default function Contact() {
 									</div>
 									<div>
 										<h4 className='font-semibold text-deep-tidal-teal-800 mb-1'>Phone</h4>
-										<p className='text-deep-tidal-teal-700'>+1 (555) 123-4567</p>
+										<p className='text-deep-tidal-teal-700'>+1 &#40;555&#41; 123-4567</p>
 									</div>
 								</div>
 							</div>

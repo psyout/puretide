@@ -2,6 +2,7 @@
 
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
@@ -64,9 +65,12 @@ export default function CartPage() {
 								className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-6 flex items-center gap-6 shadow-lg'>
 								<div className='h-20 w-20 flex items-center justify-center rounded-lg bg-white shadow-sm'>
 									{item.image.startsWith('/') || item.image.startsWith('http') ? (
-										<img
+										<Image
 											src={item.image}
 											alt={item.name}
+											width={64}
+											height={64}
+											unoptimized={item.image.startsWith('http')}
 											className='h-16 w-16 object-contain'
 										/>
 									) : (

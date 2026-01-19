@@ -4,6 +4,7 @@ import { products } from '@/lib/products';
 import { useCart } from '@/context/CartContext';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
 	Activity,
 	Droplets,
@@ -64,9 +65,12 @@ export default function ProductPage() {
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
 					<div className='bg-white/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-12 flex items-center justify-center shadow-lg'>
 						{product.image.startsWith('/') || product.image.startsWith('http') ? (
-							<img
+							<Image
 								src={product.image}
 								alt={product.name}
+								width={420}
+								height={420}
+								unoptimized={product.image.startsWith('http')}
 								className='max-w-full max-h-96 w-auto object-contain drop-shadow-xl'
 							/>
 						) : (
