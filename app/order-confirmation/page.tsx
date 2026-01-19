@@ -78,7 +78,7 @@ export default async function OrderConfirmationPage() {
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<Header />
 			<div className='container mx-auto px-4 py-16 pt-28'>
-					<div className='max-w-2xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-8 shadow-lg'>
+					<div className='max-w-2xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-4 shadow-lg'>
 						<h1 className='text-3xl font-bold text-deep-tidal-teal-800 mb-3'>Order not found</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>We could not find a recent order. Please return to the shop.</p>
 						<Link
@@ -119,7 +119,7 @@ export default async function OrderConfirmationPage() {
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<Header />
 			<div className='container mx-auto px-4 py-12 pt-28'>
-				<div className='max-w-4xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-8 shadow-lg'>
+				<div className='max-w-4xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-4 shadow-lg'>
 					<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-2'>Thank you. Your order has been received.</h1>
 					<p className='text-deep-tidal-teal-800 mb-6'>Payment is completed only via Interac e&ndash;Transfer in Canada.</p>
 
@@ -142,7 +142,7 @@ export default async function OrderConfirmationPage() {
 						</div>
 					</div>
 
-					<div className='rounded-lg bg-mineral-white border border-muted-sage-300 p-6 mb-8'>
+					<div className='rounded-lg bg-mineral-white border border-muted-sage-300 p-3 mb-8'>
 						<h2 className='text-2xl font-semibold text-deep-tidal-teal-800 mb-4'>Interac e&ndash;Transfer Instructions</h2>
 						<p className='text-deep-tidal-teal-800 mb-4'>
 							After placing your order, please send an Interac e&ndash;Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.
@@ -184,7 +184,7 @@ export default async function OrderConfirmationPage() {
 					</div>
 
 					<div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
-						<div className='bg-mineral-white rounded-lg border border-muted-sage-300 p-6'>
+						<div className='bg-mineral-white rounded-lg border border-muted-sage-300 p-3'>
 							<h3 className='text-lg font-semibold text-deep-tidal-teal-800 mb-3'>Order details</h3>
 							<div className='space-y-3 text-md'>
 								{order.cartItems.map((item) => (
