@@ -8,12 +8,64 @@ export default function Contact() {
 		email: '',
 		message: '',
 	});
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [formStatus, setFormStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({
+		type: 'idle',
+		message: '',
+	});
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		// Handle form submission (in real app, this would send to an API)
-		alert('Thank you for your message! We will get back to you soon.');
-		setFormData({ name: '', email: '', message: '' });
+		if (isSubmitting) {
+			return;
+		}
+
+		const trimmedName = formData.name.trim();
+		const trimmedEmail = formData.email.trim();
+		const trimmedMessage = formData.message.trim();
+		const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+		if (!trimmedName || !trimmedEmail || !trimmedMessage) {
+			setFormStatus({ type: 'error', message: 'Please complete all fields before sending.' });
+			return;
+		}
+
+		if (!emailPattern.test(trimmedEmail)) {
+			setFormStatus({ type: 'error', message: 'Please enter a valid email address.' });
+			return;
+		}
+
+		setIsSubmitting(true);
+		setFormStatus({ type: 'idle', message: '' });
+
+		try {
+			const response = await fetch('/api/contact', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: trimmedName,
+					email: trimmedEmail,
+					message: trimmedMessage,
+				}),
+			});
+
+			const data = (await response.json()) as { ok: boolean; error?: string };
+
+			if (!response.ok || !data.ok) {
+				setFormStatus({
+					type: 'error',
+					message: data.error ?? 'Something went wrong. Please try again.',
+				});
+				return;
+			}
+
+			setFormStatus({ type: 'success', message: 'Thanks for reaching out. We will reply as soon as possible.' });
+			setFormData({ name: '', email: '', message: '' });
+		} catch (error) {
+			setFormStatus({ type: 'error', message: 'Unable to send your message right now.' });
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	return (
@@ -78,10 +130,21 @@ export default function Contact() {
 									required
 								/>
 							</div>
+							{formStatus.type !== 'idle' && (
+								<div
+									className={`rounded-lg px-4 py-3 text-sm ${
+										formStatus.type === 'success'
+											? 'bg-eucalyptus-200/70 text-deep-tidal-teal-800'
+											: 'bg-rose-100 text-rose-700'
+									}`}>
+									{formStatus.message}
+								</div>
+							)}
 							<button
 								type='submit'
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors'>
-								Send Message
+								disabled={isSubmitting}
+								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-70 disabled:cursor-not-allowed'>
+								{isSubmitting ? 'Sending...' : 'Send Message'}
 							</button>
 						</form>
 					</div>
