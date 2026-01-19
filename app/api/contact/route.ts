@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
 		await transporter.sendMail({
 			from: smtpConfig.from,
-			to: 'info@puretide.ca',
+			to: ['info@puretide.ca', 'orders@puretide.ca'],
 			subject,
 			text,
 			replyTo: `${name} <${email}>`,
