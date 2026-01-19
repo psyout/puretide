@@ -95,7 +95,7 @@ export default function CheckoutPage() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='lg:col-span-2'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-6 mb-6 shadow-lg'>
+						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-black/10 p-6 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							<form
 								onSubmit={handleSubmit}

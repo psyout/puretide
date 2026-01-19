@@ -83,7 +83,7 @@ function getSmtpConfig() {
 }
 
 function getOrderNotificationRecipient() {
-	return process.env.ORDER_NOTIFICATION_EMAIL ?? 'info@puretide.ca';
+	return process.env.ORDER_NOTIFICATION_EMAIL ?? 'orders@puretide.ca';
 }
 
 async function sendOrderEmail(

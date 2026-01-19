@@ -66,7 +66,7 @@ export default function ProductPage() {
 					<div className='lg:col-start-2'>
 						<span className='text-sm text-muted-sage-700 bg-eucalyptus-200 px-3 py-1 rounded inline-block mb-4'>{product.category}</span>
 						<h1 className='text-4xl font-bold mb-4 text-deep-tidal-teal-800'>{product.name}</h1>
-						<div className='bg-white/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-12 flex items-center justify-center shadow-lg mb-4 lg:hidden'>
+						<div className='bg-white/60 backdrop-blur-sm rounded-lg border border-black/10 p-12 flex items-center justify-center shadow-lg mb-4 lg:hidden'>
 							{product.image.startsWith('/') || product.image.startsWith('http') ? (
 								<Image
 									src={product.image}
@@ -106,7 +106,7 @@ export default function ProductPage() {
 						)}
 					</div>
 
-					<div className='hidden lg:flex bg-white/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-12 items-center justify-center shadow-lg lg:col-start-1 lg:row-start-1 lg:row-end-3'>
+					<div className='hidden lg:flex bg-white/60 backdrop-blur-sm rounded-lg border border-black/10 p-12 items-center justify-center shadow-lg lg:col-start-1 lg:row-start-1 lg:row-end-3'>
 						{product.image.startsWith('/') || product.image.startsWith('http') ? (
 							<Image
 								src={product.image}
@@ -133,7 +133,7 @@ export default function ProductPage() {
 								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-4 px-6 rounded transition-colors text-lg'>
 								Add to Cart
 							</button>
-							<div className='bg-eucalyptus-100/10 p-4 rounded border border-muted-sage-400 shadow-md'>
+							<div className='bg-eucalyptus-100/10 p-4 rounded border border-black/10 shadow-md'>
 								<div className='flex items-center gap-2 mb-2'>
 									<svg className='w-5 h-5 text-deep-tidal-teal' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
 										<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' />
