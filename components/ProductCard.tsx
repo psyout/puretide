@@ -30,7 +30,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 							<span className='text-6xl'>{product.image}</span>
 						)}
 					</div>
-					<h3 className='text-xl font-extrabold mb-3 text-deep-tidal-teal-800 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
+					<h3 className='text-xl font-extrabold mb-3 text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
 					<p className='text-muted-sage-600 text-md mb-6 line-clamp-2 leading-relaxed'>{product.description}</p>
 					<div className='flex justify-between items-center'>
 						<span className='text-2xl font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>

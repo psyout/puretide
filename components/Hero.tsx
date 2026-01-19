@@ -46,7 +46,7 @@ export default function Hero() {
 	const currentSlide = slides[currentIndex];
 
 	return (
-		<section className='relative w-full h-screen overflow-hidden'>
+		<section className='relative w-full h-[85vh] sm:h-screen overflow-hidden'>
 			{/* Background image slider */}
 			<div className='absolute inset-0 w-full h-full'>
 				{slides.map((slide, index) => (
@@ -67,14 +67,16 @@ export default function Hero() {
 			</div>
 
 			{/* Text overlay */}
-			<div className='relative z-10 h-full flex flex-col items-center justify-center container mx-auto px-4 text-center'>
+			<div className='relative z-10 h-full flex flex-col items-center justify-center container mx-auto px-6 sm:px-8 text-center'>
 				<div className='mb-8'>
 					<LogoHorizontal
 						className='h-32 lg:h-40 w-auto mx-auto drop-shadow-2xl'
 						fillColor='fill-white drop-shadow-xl/50'
 					/>
 				</div>
-				<p className='text-white text-xl lg:text-xl max-w-2xl mx-auto drop-shadow-xl/50 font-matimo'>{currentSlide.description}</p>
+				<p className='text-white text-lg sm:text-xl lg:text-2xl max-w-sm sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-xl/50 font-matimo'>
+					{currentSlide.description}
+				</p>
 			</div>
 
 			{/* Navigation arrows */}

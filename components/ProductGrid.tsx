@@ -48,31 +48,52 @@ export default function ProductGrid() {
 			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] bg-cover bg-top bg-no-repeat py-20 scroll-mt-10'
 			style={{ backgroundImage: "url('/background/08.jpg')" }}>
 			<div className='absolute inset-0 bg-white/70' />
-			<div className='relative mx-auto max-w-6xl px-10'>
-				<div className='mb-12 mt-20'>
+			<div className='relative mx-auto max-w-6xl px-6 sm:px-8 lg:px-10'>
+				<div className='mb-5 mt-20'>
 					<div className='text-center'>
 						<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Our Products</h2>
-						<p className='text-deep-tidal-teal-700 text-lg max-w-2xl mx-auto'>Discover our premium collection of wellness products, each crafted with precision and care.</p>
+						<p className='text-deep-tidal-teal-700 text-base sm:text-lg max-w-2xl mx-auto'>Discover our premium collection of wellness products, each crafted with precision and care.</p>
 					</div>
 
 					{/* Filter Section */}
-					<div className='mt-6 flex flex-wrap justify-center gap-4'>
-						{categories.map((category) => (
-							<button
-								key={category}
-								onClick={() => setSelectedCategory(category)}
-								className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 bg-deep-tidal-teal text-white-800 shadow-lg ${
-									selectedCategory === category ? 'bg-deep-tidal-teal text-mineral-white shadow-lg' : 'bg-white text-deep-tidal-teal-800 hover:bg-eucalyptus-200'
-								}`}>
-								{category}
-							</button>
-						))}
+					<div className='mt-6 flex flex-wrap gap-4 justify-start lg:justify-center'>
+						<label className='sr-only' htmlFor='category-select'>
+							Filter products by category
+						</label>
+						<div className='w-full lg:hidden flex items-center gap-3'>
+							<p className='text-md font-semibold text-deep-tidal-teal-800 whitespace-nowrap'>Categories:</p>
+							<select
+								id='category-select'
+								value={selectedCategory}
+								onChange={(event) => setSelectedCategory(event.target.value)}
+								className='flex-1 rounded-lg border border-black/10 bg-white px-4 py-3 text-deep-tidal-teal-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/40'>
+								{categories.map((category) => (
+									<option key={category} value={category}>
+										{category}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className='hidden lg:flex flex-wrap justify-center gap-4'>
+							{categories.map((category) => (
+								<button
+									key={category}
+									onClick={() => setSelectedCategory(category)}
+									className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 bg-deep-tidal-teal text-white-800 shadow-lg ${
+										selectedCategory === category
+											? 'bg-deep-tidal-teal text-mineral-white shadow-lg'
+											: 'bg-white text-deep-tidal-teal-800 hover:bg-eucalyptus-200'
+									}`}>
+									{category}
+								</button>
+							))}
+						</div>
 					</div>
 				</div>
 
 				{/* Products Grid */}
 				<div>
-					<div className='grid grid-cols-1 md:grid-cols-3 gap-10'>
+					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10'>
 						{visibleProducts.length > 0 ? (
 							visibleProducts.map((product) => (
 								<ProductCard

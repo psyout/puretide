@@ -5,11 +5,11 @@ import Logo from './Logo';
 export default function Header() {
 	return (
 		<header className='bg-deep-tidal-teal-600/30 backdrop-blur-md fixed top-0 left-0 right-0 z-[100]'>
-			<div className='container mx-auto px-4 py-4 flex justify-between items-center'>
+			<div className='container mx-auto px-6 py-4 flex justify-between items-center'>
 				<Link
 					href='/'
 					className='flex items-center transition-opacity hover:opacity-80'>
-					<Logo />
+					<Logo className='h-8 sm:h-10 w-auto' />
 				</Link>
 				<nav className='flex items-center gap-6'>
 					<Link

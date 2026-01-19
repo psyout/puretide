@@ -22,7 +22,7 @@ export default function About() {
 	];
 
 	return (
-		<section className='py-20 px-4 bg-gradient-to-b from-mineral-white to-deep-tidal-teal-100'>
+		<section className='py-20 px-6 sm:px-8 bg-gradient-to-b from-mineral-white to-deep-tidal-teal-100'>
 			<div className='container mx-auto max-w-6xl'>
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-center'>
 					{/* Accordion */}
@@ -56,7 +56,7 @@ export default function About() {
 					</div>
 
 					{/* Image */}
-					<div className='relative h-[520px] w-full overflow-hidden rounded-2xl'>
+					<div className='relative h-[260px] sm:h-[400px] lg:h-[520px] w-full overflow-hidden rounded-2xl'>
 						<Image
 							src='/background/skin.jpg'
 							alt='Pure Tide wellness'
