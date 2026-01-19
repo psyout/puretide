@@ -63,24 +63,23 @@ export default function ProductPage() {
 				</Link>
 
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
-					<div className='bg-white/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-12 flex items-center justify-center shadow-lg'>
-						{product.image.startsWith('/') || product.image.startsWith('http') ? (
-							<Image
-								src={product.image}
-								alt={product.name}
-								width={420}
-								height={420}
-								unoptimized={product.image.startsWith('http')}
-								className='max-w-full max-h-96 w-auto object-contain drop-shadow-xl'
-							/>
-						) : (
-							<div className='text-9xl'>{product.image}</div>
-						)}
-					</div>
-
-					<div>
+					<div className='lg:col-start-2'>
 						<span className='text-sm text-muted-sage-700 bg-eucalyptus-200 px-3 py-1 rounded inline-block mb-4'>{product.category}</span>
 						<h1 className='text-4xl font-bold mb-4 text-deep-tidal-teal-800'>{product.name}</h1>
+						<div className='bg-white/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-12 flex items-center justify-center shadow-lg mb-4 lg:hidden'>
+							{product.image.startsWith('/') || product.image.startsWith('http') ? (
+								<Image
+									src={product.image}
+									alt={product.name}
+									width={420}
+									height={420}
+									unoptimized={product.image.startsWith('http')}
+									className='max-w-full max-h-96 w-auto object-contain drop-shadow-xl'
+								/>
+							) : (
+								<div className='text-9xl'>{product.image}</div>
+							)}
+						</div>
 						{product.icons && (
 							<div className='grid grid-cols-3 gap-1 mb-4 max-w-[260px] justify-items-start'>
 								{product.icons.map((iconName) => {
@@ -105,6 +104,24 @@ export default function ProductPage() {
 						{product.details && (
 							<p className='text-deep-tidal-teal-700 text-base mb-6'>{product.details}</p>
 						)}
+					</div>
+
+					<div className='hidden lg:flex bg-white/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-12 items-center justify-center shadow-lg lg:col-start-1 lg:row-start-1 lg:row-end-3'>
+						{product.image.startsWith('/') || product.image.startsWith('http') ? (
+							<Image
+								src={product.image}
+								alt={product.name}
+								width={420}
+								height={420}
+								unoptimized={product.image.startsWith('http')}
+								className='max-w-full max-h-96 w-auto object-contain drop-shadow-xl'
+							/>
+						) : (
+							<div className='text-9xl'>{product.image}</div>
+						)}
+					</div>
+
+					<div className='lg:col-start-2'>
 						<div className='text-4xl font-bold text-deep-tidal-teal mb-8'>${product.price.toFixed(2)}</div>
 
 						<div className='space-y-4'>
