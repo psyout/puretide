@@ -49,12 +49,17 @@ export default function Contact() {
 				}),
 			});
 
-			const data = (await response.json()) as { ok: boolean; error?: string };
+			let data: { ok?: boolean; error?: string } | null = null;
+			try {
+				data = (await response.json()) as { ok?: boolean; error?: string };
+			} catch (parseError) {
+				data = null;
+			}
 
-			if (!response.ok || !data.ok) {
+			if (!response.ok || data?.ok === false) {
 				setFormStatus({
 					type: 'error',
-					message: data.error ?? 'Something went wrong. Please try again.',
+					message: data?.error ?? 'Something went wrong. Please try again.',
 				});
 				return;
 			}
@@ -171,7 +176,11 @@ export default function Contact() {
 									</div>
 									<div>
 										<h4 className='font-semibold text-deep-tidal-teal-800 mb-1'>Email</h4>
-										<p className='text-deep-tidal-teal-700'>info@puretide.ca</p>
+										<a
+											href='mailto:info@puretide.ca'
+											className='text-deep-tidal-teal-700 hover:text-deep-tidal-teal'>
+											info@puretide.ca
+										</a>
 									</div>
 								</div>
 								<div className='flex items-start gap-4'>
