@@ -186,5 +186,50 @@
       "subject": "Order #137899 - Interac e-Transfer instructions",
       "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: contraviento@gmail.com\nSecurity Question: Order number?\nSecurity Answer: PT137899\nMemo/Message: 137899\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nShould you encounter any payment related issues, please contact our support at: contraviento@gmail.com\n\nOrder summary\nOrder #137899 (January 18, 2026)\n\nProducts\n- Glutathione x1 ($149.99)\n\nSubtotal: $149.99\nShipping: Regular Shipping $19.99\nTotal: $169.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at contraviento@gmail.com."
     }
+  },
+  {
+    "id": "order_1768796542700",
+    "orderNumber": "542700",
+    "createdAt": "2026-01-19T04:22:22.700Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 29.99,
+    "shippingCost": 19.99,
+    "total": 49.98,
+    "cartItems": [
+      {
+        "id": "1",
+        "slug": "bpc-157",
+        "name": "BPC 157",
+        "description": "Tissue repair and recovery support for tendons, joints, and muscle health.",
+        "details": "Often selected for soft-tissue support and post-training recovery routines, with a focus on mobility, comfort, and day-to-day resilience.",
+        "icons": [
+          "Leaf",
+          "Flower2",
+          "Droplets"
+        ],
+        "price": 29.99,
+        "image": "/bottles/v01.png",
+        "category": "Recovery",
+        "quantity": 1
+      }
+    ],
+    "emailPreview": {
+      "subject": "Order #542700 - Interac e-Transfer instructions",
+      "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: contraviento@gmail.com\nSecurity Question: Order number?\nSecurity Answer: PT542700\nMemo/Message: 542700\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nShould you encounter any payment related issues, please contact our support at: contraviento@gmail.com\n\nOrder summary\nOrder #542700 (January 19, 2026)\n\nProducts\n- BPC 157 x1 ($29.99)\n\nSubtotal: $29.99\nShipping: Regular Shipping $19.99\nTotal: $49.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at contraviento@gmail.com."
+    }
   }
 ]
