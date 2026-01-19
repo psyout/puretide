@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { buildOrderEmail } from '@/lib/orderEmail';
+import { buildOrderEmails } from '@/lib/orderEmail';
 
 interface OrderPayload {
 	customer: {
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 			...payload,
 		};
 
-		const emailData = buildOrderEmail({
+		const emailData = buildOrderEmails({
 			...payload,
 			orderNumber,
 			createdAt,
@@ -80,8 +80,12 @@ export async function POST(request: Request) {
 		existingOrders.push({
 			...orderRecord,
 			emailPreview: {
-				subject: emailData.subject,
-				text: emailData.text,
+				subject: emailData.customer.subject,
+				text: emailData.customer.text,
+			},
+			adminEmailPreview: {
+				subject: emailData.admin.subject,
+				text: emailData.admin.text,
 			},
 		});
 		await fs.writeFile(ordersFile, JSON.stringify(existingOrders, null, 2), 'utf8');
