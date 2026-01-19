@@ -86,7 +86,13 @@ function getOrderNotificationRecipient() {
 	return process.env.ORDER_NOTIFICATION_EMAIL ?? 'orders@puretide.ca';
 }
 
-async function sendOrderEmail(to: string, subject: string, text: string, replyTo?: string): Promise<EmailStatus> {
+async function sendOrderEmail(
+	to: string,
+	subject: string,
+	text: string,
+	replyTo?: string,
+	bccOverride?: string
+): Promise<EmailStatus> {
 	const smtpConfig = getSmtpConfig();
 	if (!smtpConfig) {
 		return { sent: false, skipped: true, error: 'SMTP not configured' };
@@ -109,7 +115,7 @@ async function sendOrderEmail(to: string, subject: string, text: string, replyTo
 			subject,
 			text,
 			replyTo: replyTo ?? smtpConfig.replyTo ?? smtpConfig.from,
-			bcc: smtpConfig.bcc,
+			bcc: bccOverride ?? smtpConfig.bcc,
 		});
 		return { sent: true, skipped: false };
 	} catch (error) {
@@ -146,8 +152,8 @@ export async function POST(request: Request) {
 		const adminRecipient = getOrderNotificationRecipient();
 		const customerEmail = payload.customer.email;
 		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
-		const emailStatus = await sendOrderEmail(customerEmail, emailData.subject, emailData.text);
-		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.subject, emailData.text, customerReplyTo);
+		const emailStatus = await sendOrderEmail(customerEmail, emailData.subject, emailData.text, undefined, '');
+		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.subject, emailData.text, customerReplyTo, '');
 
 		existingOrders.push({
 			...orderRecord,

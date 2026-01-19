@@ -63,26 +63,48 @@ export default function CartPage() {
 							<div
 								key={item.id}
 								className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-muted-sage-400 p-6 flex items-center gap-6 shadow-lg'>
-								<div className='h-20 w-20 flex items-center justify-center rounded-lg bg-white shadow-sm'>
+								<div className='h-28 w-28 flex items-center justify-center rounded-lg bg-white shadow-sm'>
 									{item.image.startsWith('/') || item.image.startsWith('http') ? (
 										<Image
 											src={item.image}
 											alt={item.name}
-											width={64}
-											height={64}
+											width={96}
+											height={96}
 											unoptimized={item.image.startsWith('http')}
-											className='h-16 w-16 object-contain'
+											className='h-24 w-24 object-contain'
 										/>
 									) : (
 										<span className='text-5xl'>{item.image}</span>
 									)}
 								</div>
 								<div className='flex-1'>
-									<h3 className='text-xl font-semibold mb-2 text-deep-tidal-teal-800'>{item.name}</h3>
-									<p className='text-deep-tidal-teal-700 text-sm mb-2'>{item.description}</p>
-									<p className='text-deep-tidal-teal font-semibold'>${item.price.toFixed(2)}</p>
+									<div className='flex items-baseline justify-between gap-3 flex-col lg:items-start lg:gap-1'>
+										<h3 className='text-xl font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
+										<p className='text-xl text-deep-tidal-teal font-bold'>${item.price.toFixed(2)}</p>
+									</div>
+									<p className='text-md text-deep-tidal-teal-700 mt-2'>{item.description}</p>
+									<div className='mt-3 flex w-full items-center justify-between gap-4 lg:hidden'>
+										<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
+											<button
+												onClick={() => updateQuantity(item.id, item.quantity - 1)}
+												className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
+												-
+											</button>
+											<span className='w-8 text-center text-deep-tidal-teal-800'>{item.quantity}</span>
+											<button
+												onClick={() => updateQuantity(item.id, item.quantity + 1)}
+												className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
+												+
+											</button>
+										</div>
+										<button
+											onClick={() => removeFromCart(item.id)}
+											className='text-red-400 hover:text-red-300'>
+											Remove
+										</button>
+									</div>
 								</div>
-								<div className='flex items-center gap-4'>
+								<div className='hidden lg:flex items-center gap-4'>
 									<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
 										<button
 											onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -113,7 +135,7 @@ export default function CartPage() {
 								{cartItems.map((item) => (
 									<div
 										key={item.id}
-										className='flex justify-between text-sm'>
+										className='flex justify-between text-md'>
 										<span className='text-deep-tidal-teal-700'>
 											{item.name} × {item.quantity}
 										</span>
@@ -129,12 +151,12 @@ export default function CartPage() {
 							</div>
 							<button
 								onClick={() => router.push('/checkout')}
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white-800 font-semibold py-3 px-4 rounded transition-colors mb-4'>
+								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded transition-colors mb-4'>
 								Proceed to Checkout
 							</button>
 							<button
 								onClick={clearCart}
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white-800 font-semibold py-2 px-4 rounded transition-colors'>
+								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-2 px-4 rounded transition-colors'>
 								Clear Cart
 							</button>
 						</div>

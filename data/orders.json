@@ -146,5 +146,115 @@
       "subject": "Order #257110 - Interac e-Transfer instructions",
       "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: contraviento@gmail.com\nSecurity Question: Order number?\nSecurity Answer: PT257110\nMemo/Message: 257110\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nShould you encounter any payment related issues, please contact our support at: contraviento@gmail.com\n\nOrder summary\nOrder #257110 (January 18, 2026)\n\nProducts\n- Tirzepatide x1 ($69.99)\n\nSubtotal: $69.99\nShipping: Regular Shipping $19.99\nTotal: $89.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at contraviento@gmail.com."
     }
+  },
+  {
+    "id": "order_1768847862817",
+    "orderNumber": "862817",
+    "createdAt": "2026-01-19T18:37:42.817Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 170.99,
+    "shippingCost": 19.99,
+    "total": 190.98,
+    "cartItems": [
+      {
+        "id": "3",
+        "slug": "glutathione",
+        "name": "Glutathione",
+        "description": "Master antioxidant support for detox pathways and cellular defense.",
+        "details": "Used to support oxidative balance and cellular resilience, helping the body maintain clarity, recovery, and overall detox support.",
+        "icons": [
+          "Sparkles",
+          "Leaf",
+          "Droplets"
+        ],
+        "price": 170.99,
+        "image": "/bottles/v03.png",
+        "category": "Antioxidant",
+        "quantity": 1
+      }
+    ],
+    "emailPreview": {
+      "subject": "Order #862817 - Interac e-Transfer instructions",
+      "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: contraviento@gmail.com\nSecurity Question: Order number?\nSecurity Answer: PT862817\nMemo/Message: 862817\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nShould you encounter any payment related issues, please contact our support at: contraviento@gmail.com\n\nOrder summary\nOrder #862817 (January 19, 2026)\n\nProducts\n- Glutathione x1 ($170.99)\n\nSubtotal: $170.99\nShipping: Regular Shipping $19.99\nTotal: $190.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at contraviento@gmail.com."
+    },
+    "emailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    },
+    "adminEmailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    }
+  },
+  {
+    "id": "order_1768847992043",
+    "orderNumber": "992043",
+    "createdAt": "2026-01-19T18:39:52.043Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 70.99,
+    "shippingCost": 19.99,
+    "total": 90.98,
+    "cartItems": [
+      {
+        "id": "2",
+        "slug": "ghk-cu",
+        "name": "GHK Cu",
+        "description": "Skin rejuvenation peptide to support collagen, elasticity, and glow.",
+        "details": "A copper peptide favored in dermal care protocols for tone and texture, supporting a smoother, brighter, and more refined appearance.",
+        "icons": [
+          "Sparkles",
+          "Droplets",
+          "Leaf"
+        ],
+        "price": 70.99,
+        "image": "/bottles/v02.png",
+        "category": "Skin",
+        "quantity": 1
+      }
+    ],
+    "emailPreview": {
+      "subject": "Order #992043 - Interac e-Transfer instructions",
+      "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: contraviento@gmail.com\nSecurity Question: Order number?\nSecurity Answer: PT992043\nMemo/Message: 992043\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nShould you encounter any payment related issues, please contact our support at: contraviento@gmail.com\n\nOrder summary\nOrder #992043 (January 19, 2026)\n\nProducts\n- GHK Cu x1 ($70.99)\n\nSubtotal: $70.99\nShipping: Regular Shipping $19.99\nTotal: $90.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at contraviento@gmail.com."
+    },
+    "emailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    },
+    "adminEmailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    }
   }
 ]

@@ -25,9 +25,10 @@ export default function About() {
 		<section className='py-20 px-6 sm:px-8 bg-gradient-to-b from-mineral-white to-deep-tidal-teal-100'>
 			<div className='container mx-auto max-w-6xl'>
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-center'>
+					<h2 className='order-1 block text-3xl font-bold text-deep-tidal-teal-800 text-shadow-lg lg:hidden'>Precision Wellness, Refined.</h2>
 					{/* Accordion */}
-					<div className='space-y-4'>
-						<h2 className='text-4xl font-bold text-deep-tidal-teal-800 text-shadow-lg'>Precision Wellness, Refined.</h2>
+					<div className='order-3 lg:order-1 space-y-4'>
+						<h2 className='hidden text-4xl font-bold text-deep-tidal-teal-800 text-shadow-lg lg:block'>Precision Wellness, Refined.</h2>
 						<div className='space-y-3'>
 							{accordionItems.map((item, index) => {
 								const isOpen = openItem === index;
@@ -56,7 +57,7 @@ export default function About() {
 					</div>
 
 					{/* Image */}
-					<div className='relative h-[260px] sm:h-[400px] lg:h-[520px] w-full overflow-hidden rounded-2xl'>
+					<div className='order-2 lg:order-2 relative h-[260px] sm:h-[400px] lg:h-[520px] w-full overflow-hidden rounded-2xl'>
 						<Image
 							src='/background/skin.jpg'
 							alt='Pure Tide wellness'
@@ -69,9 +70,9 @@ export default function About() {
 				</div>
 
 				{/* Highlights */}
-				<div className='grid grid-cols-1 md:grid-cols-3 gap-8 mt-16'>
+				<div className='gap-20 grid grid-cols-1 lg:grid-cols-3 lg:gap-12 mt-16'>
 					<div className='rounded-2xl bg-white/80 backdrop-blur-md p-6 pt-10 shadow-lg border border-black/10 relative'>
-						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border border-muted-sage-300 shadow-md flex items-center justify-center'>
+						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border  shadow-md flex items-center justify-center'>
 							<Leaf className='w-8 h-8 text-deep-tidal-teal' />
 						</div>
 						<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-4'>WHY PURE TIDE</h3>
@@ -89,7 +90,7 @@ export default function About() {
 						</div>
 					</div>
 					<div className='rounded-2xl bg-white/80 backdrop-blur-md p-6 pt-10 shadow-lg border border-black/10 relative'>
-						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border border-muted-sage-300 shadow-md flex items-center justify-center'>
+						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border  shadow-md flex items-center justify-center'>
 							<FlaskConical className='w-8 h-8 text-deep-tidal-teal' />
 						</div>
 						<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-4'>SCIENCE + CREDIBILITY</h3>
@@ -107,7 +108,7 @@ export default function About() {
 						</div>
 					</div>
 					<div className='rounded-2xl bg-white/80 backdrop-blur-md p-6 pt-10 shadow-lg border border-black/10 relative'>
-						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border border-muted-sage-300 shadow-md flex items-center justify-center'>
+						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border  shadow-md flex items-center justify-center'>
 							<Waves className='w-8 h-8 text-deep-tidal-teal' />
 						</div>
 						<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-4'>THE EXPERIENCE</h3>
