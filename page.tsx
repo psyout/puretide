@@ -7,7 +7,7 @@ import Contact from '@/components/Contact';
 
 export default function Home() {
 	return (
-		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-eucalyptus-50 to-deep-tidal-teal-100'>
 			<Header />
 
 			<Hero />
