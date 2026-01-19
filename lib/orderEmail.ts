@@ -130,6 +130,8 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     "",
     "If your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.",
     "",
+    "Email notice: If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.",
+    "",
     `Should you encounter any payment related issues, please contact our support at: ${paymentDetails.supportEmail}`,
     "",
     "Order summary",
@@ -172,6 +174,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <p>If your bank does not allow a memo, you can leave it empty.</p>
       <p>We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.</p>
       <p>If your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.</p>
+      <p><strong>Email notice:</strong> If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.</p>
       <p>Should you encounter any payment related issues, please contact our support at: <strong>${paymentDetails.supportEmail}</strong></p>
 
       <h4 style="margin: 24px 0 8px;">Order summary</h4>
