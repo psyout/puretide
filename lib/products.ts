@@ -96,7 +96,7 @@ export const products: Product[] = [
 		description: 'Longevity‑focused peptide to support fat metabolism and recovery.',
 		details: 'Used in longevity routines for metabolic and recovery support, with an emphasis on healthy aging and ongoing vitality.',
 		icons: ['Timer', 'Leaf', 'Sparkles'],
-		price: 54.99,
+		price: 44.99,
 		image: '/bottles/v09.png',
 		category: 'Longevity',
 	},
