@@ -1,0 +1,190 @@
+[
+  {
+    "id": "order_1768760295688",
+    "createdAt": "2026-01-18T18:18:15.688Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "2092 2nd Ave W",
+      "addressLine2": "204",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": "Hidden by the bushes"
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 19.99,
+    "shippingCost": 19.99,
+    "total": 39.98,
+    "cartItems": [
+      {
+        "id": "2",
+        "name": "GHK Cu",
+        "description": "Skin rejuvenation peptide to support collagen, elasticity, and glow.",
+        "price": 19.99,
+        "image": "/bottles/v02.png",
+        "category": "Skin",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "order_1768760687336",
+    "createdAt": "2026-01-18T18:24:47.336Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 209.97,
+    "shippingCost": 19.99,
+    "total": 229.96,
+    "cartItems": [
+      {
+        "id": "3",
+        "name": "Glutathione",
+        "description": "Master antioxidant support for detox pathways and cellular defense.",
+        "price": 149.99,
+        "image": "/bottles/v03.png",
+        "category": "Antioxidant",
+        "quantity": 1
+      },
+      {
+        "id": "1",
+        "name": "BPC 157",
+        "description": "Tissue repair and recovery support for tendons, joints, and muscle health.",
+        "price": 29.99,
+        "image": "/bottles/v01.png",
+        "category": "Recovery",
+        "quantity": 2
+      }
+    ]
+  },
+  {
+    "id": "order_1768765319432",
+    "orderNumber": "319432",
+    "createdAt": "2026-01-18T19:41:59.432Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "pipegonzalezcare@gmail.com",
+      "phone": "7788385422",
+      "address": "2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 29.99,
+    "shippingCost": 19.99,
+    "total": 49.98,
+    "cartItems": [
+      {
+        "id": "1",
+        "name": "BPC 157",
+        "description": "Tissue repair and recovery support for tendons, joints, and muscle health.",
+        "price": 29.99,
+        "image": "/bottles/v01.png",
+        "category": "Recovery",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "order_1768775257110",
+    "orderNumber": "257110",
+    "createdAt": "2026-01-18T22:27:37.110Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 69.99,
+    "shippingCost": 19.99,
+    "total": 89.98,
+    "cartItems": [
+      {
+        "id": "8",
+        "slug": "tirzepatide",
+        "name": "Tirzepatide",
+        "description": "Dual‑agonist support for metabolic health and body composition.",
+        "price": 69.99,
+        "image": "/bottles/v08.png",
+        "category": "Metabolic",
+        "quantity": 1
+      }
+    ],
+    "emailPreview": {
+      "subject": "Order #257110 - Interac e-Transfer instructions",
+      "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: contraviento@gmail.com\nSecurity Question: Order number?\nSecurity Answer: PT257110\nMemo/Message: 257110\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nShould you encounter any payment related issues, please contact our support at: contraviento@gmail.com\n\nOrder summary\nOrder #257110 (January 18, 2026)\n\nProducts\n- Tirzepatide x1 ($69.99)\n\nSubtotal: $69.99\nShipping: Regular Shipping $19.99\nTotal: $89.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at contraviento@gmail.com."
+    }
+  },
+  {
+    "id": "order_1768776137899",
+    "orderNumber": "137899",
+    "createdAt": "2026-01-18T22:42:17.899Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 149.99,
+    "shippingCost": 19.99,
+    "total": 169.98,
+    "cartItems": [
+      {
+        "id": "3",
+        "slug": "glutathione",
+        "name": "Glutathione",
+        "description": "Master antioxidant support for detox pathways and cellular defense.",
+        "details": "Used to support oxidative balance and cellular resilience, helping the body maintain clarity, recovery, and overall detox support.",
+        "price": 149.99,
+        "image": "/bottles/v03.png",
+        "category": "Antioxidant",
+        "quantity": 1
+      }
+    ],
+    "emailPreview": {
+      "subject": "Order #137899 - Interac e-Transfer instructions",
+      "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: contraviento@gmail.com\nSecurity Question: Order number?\nSecurity Answer: PT137899\nMemo/Message: 137899\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nShould you encounter any payment related issues, please contact our support at: contraviento@gmail.com\n\nOrder summary\nOrder #137899 (January 18, 2026)\n\nProducts\n- Glutathione x1 ($149.99)\n\nSubtotal: $149.99\nShipping: Regular Shipping $19.99\nTotal: $169.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at contraviento@gmail.com."
+    }
+  }
+]
