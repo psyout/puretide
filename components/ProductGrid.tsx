@@ -1,22 +1,42 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { products } from '@/lib/products';
+import { products as fallbackProducts } from '@/lib/products';
 import ProductCard from './ProductCard';
-
-const categories = ['All', ...Array.from(new Set(products.map((p) => p.category)))];
+import type { Product } from '@/types/product';
 
 export default function ProductGrid() {
 	const [selectedCategory, setSelectedCategory] = useState('All');
 	const [visibleCount, setVisibleCount] = useState(6);
 	const loadMoreRef = useRef<HTMLDivElement | null>(null);
+	const [items, setItems] = useState<Product[]>(fallbackProducts);
+
+	useEffect(() => {
+		const load = async () => {
+			try {
+				const response = await fetch('/api/stock');
+				const data = (await response.json()) as { ok: boolean; items?: Product[] };
+				if (data.ok && data.items) {
+					setItems(data.items);
+				}
+			} catch {
+				setItems(fallbackProducts);
+			}
+		};
+		void load();
+	}, []);
+
+	const categories = useMemo(
+		() => ['All', ...Array.from(new Set(items.map((product) => product.category)))],
+		[items]
+	);
 
 	const filteredProducts = useMemo(() => {
 		if (selectedCategory === 'All') {
-			return products;
+			return items;
 		}
-		return products.filter((product) => product.category === selectedCategory);
-	}, [selectedCategory]);
+		return items.filter((product) => product.category === selectedCategory);
+	}, [selectedCategory, items]);
 
 	useEffect(() => {
 		setVisibleCount(6);

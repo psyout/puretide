@@ -1,10 +1,12 @@
 'use client';
 
-import { products } from '@/lib/products';
+import { useEffect, useMemo, useState } from 'react';
+import { products as fallbackProducts } from '@/lib/products';
 import { useCart } from '@/context/CartContext';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import type { Product } from '@/types/product';
 import {
 	Activity,
 	Droplets,
@@ -35,8 +37,28 @@ export default function ProductPage() {
 	const params = useParams();
 	const router = useRouter();
 	const { addToCart } = useCart();
+	const [items, setItems] = useState<Product[]>(fallbackProducts);
 	const slug = Array.isArray(params.id) ? params.id[0] : params.id;
-	const product = products.find((p) => p.slug === slug || p.id === slug);
+
+	useEffect(() => {
+		const load = async () => {
+			try {
+				const response = await fetch('/api/stock');
+				const data = (await response.json()) as { ok: boolean; items?: Product[] };
+				if (data.ok && data.items) {
+					setItems(data.items);
+				}
+			} catch {
+				setItems(fallbackProducts);
+			}
+		};
+		void load();
+	}, []);
+
+	const product = useMemo(
+		() => items.find((item) => item.slug === slug || item.id === slug),
+		[items, slug]
+	);
 
 	if (!product) {
 		return (
@@ -64,7 +86,14 @@ export default function ProductPage() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
 					<div className='lg:col-start-2'>
-						<span className='text-sm text-deep-tidal-teal bg-eucalyptus-200 px-3 py-1 rounded inline-block mb-4'>{product.category}</span>
+						<div className='flex flex-wrap items-center gap-3 mb-4'>
+							<span className='text-sm text-deep-tidal-teal bg-eucalyptus-200 px-3 py-1 rounded inline-block'>{product.category}</span>
+							{product.stock <= 0 && (
+								<span className='text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-full'>
+									Sold out
+								</span>
+							)}
+						</div>
 						<h1 className='text-4xl font-bold mb-4 text-deep-tidal-teal-800'>{product.name}</h1>
 						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-3 flex items-center justify-center shadow-lg mb-4 lg:hidden'>
 							{product.image.startsWith('/') || product.image.startsWith('http') ? (
@@ -83,7 +112,7 @@ export default function ProductPage() {
 						</div>
 						{product.icons && (
 							<div className='grid grid-cols-3 gap-1 mt-5 mb-7 max-w-[260px] justify-items-start'>
-								{product.icons.map((iconName) => {
+								{product.icons.map((iconName: string) => {
 									const Icon = iconMap[iconName as keyof typeof iconMap];
 									if (!Icon) {
 										return null;
@@ -133,8 +162,9 @@ export default function ProductPage() {
 									addToCart(product);
 									router.push('/cart');
 								}}
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-4 px-6 rounded transition-colors text-lg'>
-								Add to Cart
+								disabled={product.stock <= 0}
+								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-muted-sage-400 text-mineral-white font-semibold py-4 px-6 rounded transition-colors text-lg'>
+								{product.stock <= 0 ? 'Sold out' : 'Add to Cart'}
 							</button>
 							<div className='bg-eucalyptus-100/10 p-4 rounded ui-border shadow-md'>
 								<div className='flex items-center gap-2 mb-2'>

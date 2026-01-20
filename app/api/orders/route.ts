@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
+import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
 
 interface OrderPayload {
 	customer: {
@@ -58,6 +59,9 @@ type EmailStatus = {
 	skipped: boolean;
 	error?: string;
 };
+
+const LOW_STOCK_THRESHOLD = 5;
+const ALERT_EMAIL = process.env.LOW_STOCK_EMAIL ?? 'info@puretide.ca';
 
 function getSmtpConfig() {
 	const host = process.env.ORDER_SMTP_HOST ?? process.env.SMTP_HOST;
@@ -126,6 +130,59 @@ async function sendOrderEmail(
 	}
 }
 
+async function sendLowStockAlert(items: Array<{ name: string; slug: string; stock: number }>) {
+	if (items.length === 0) {
+		return;
+	}
+	const smtpConfig = getSmtpConfig();
+	if (!smtpConfig) {
+		return;
+	}
+
+	const transporter = nodemailer.createTransport({
+		host: smtpConfig.host,
+		port: smtpConfig.port,
+		secure: smtpConfig.secure,
+		auth: {
+			user: smtpConfig.user,
+			pass: smtpConfig.pass,
+		},
+	});
+
+	const lines = items.map((item) => `- ${item.name} (${item.slug}): ${item.stock}`);
+	const text = `Low stock alert (<= ${LOW_STOCK_THRESHOLD})\n\n${lines.join('\n')}`;
+
+	await transporter.sendMail({
+		from: smtpConfig.from,
+		to: ALERT_EMAIL,
+		subject: 'Low stock alert',
+		text,
+		replyTo: smtpConfig.replyTo ?? smtpConfig.from,
+		bcc: smtpConfig.bcc,
+	});
+}
+
+async function updateSheetStock(items: OrderPayload['cartItems']) {
+	try {
+		const current = await readSheetProducts();
+		const updated = current.map((product) => {
+			const match = items.find((item) => String(item.id) === product.id || String(item.id) === product.slug);
+			if (!match) {
+				return product;
+			}
+			const nextStock = Math.max(0, product.stock - match.quantity);
+			return { ...product, stock: nextStock };
+		});
+
+		const lowStock = updated.filter((product) => product.stock <= LOW_STOCK_THRESHOLD);
+
+		await writeSheetProducts(updated);
+		await sendLowStockAlert(lowStock);
+	} catch (error) {
+		console.error('Failed to update stock sheet', error);
+	}
+}
+
 export async function POST(request: Request) {
 	try {
 		const payload = (await request.json()) as OrderPayload;
@@ -185,6 +242,7 @@ export async function POST(request: Request) {
 			adminEmailStatus,
 		});
 		await fs.writeFile(ordersFile, JSON.stringify(existingOrders, null, 2), 'utf8');
+		await updateSheetStock(payload.cartItems);
 
 		return NextResponse.json({ ok: true, orderId: orderRecord.id });
 	} catch (error) {
