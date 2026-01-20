@@ -5,6 +5,8 @@
 :root {
 	--background: #f7fbfb;
 	--foreground: #2f3a3f;
+	--ui-border-color: transparent;
+	--ui-border-width: 0px;
 }
 
 html {
@@ -33,8 +35,26 @@ h6 {
 	font-family: var(--font-matimo);
 }
 
+p {
+	line-height: 1.4;
+}
+
+@layer base {
+	p { line-height: 1.4; } 
+ }
+
 @layer utilities {
 	.text-balance {
 		text-wrap: balance;
+	}
+}
+
+@layer components {
+	.ui-border {
+		border: var(--ui-border-width) solid var(--ui-border-color);
+	}
+
+	.ui-border-t {
+		border-top: var(--ui-border-width) solid var(--ui-border-color);
 	}
 }

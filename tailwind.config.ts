@@ -4,6 +4,13 @@ const config: Config = {
 	content: ['./pages/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}', './app/**/*.{js,ts,jsx,tsx,mdx}'],
 	theme: {
 		extend: {
+			fontSize: {
+				base: ['1rem', { lineHeight: '1.4' }],
+				lg: ['1.125rem', { lineHeight: '1.4' }],
+				xl: ['1.25rem', { lineHeight: '1.4' }],
+				'2xl': ['1.5rem', { lineHeight: '1.4' }],
+				'3xl': ['1.75rem', { lineHeight: '1.4' }],
+			},
 			fontFamily: {
 				matimo: ['var(--font-matimo)'],
 			},

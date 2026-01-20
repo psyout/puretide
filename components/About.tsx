@@ -22,9 +22,66 @@ export default function About() {
 	];
 
 	return (
-		<section className='py-20 px-6 sm:px-8 bg-gradient-to-b from-mineral-white to-deep-tidal-teal-100'>
-			<div className='container mx-auto max-w-6xl'>
-				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-center'>
+		<section>
+			{/* Highlights */}
+			<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 w-full'>
+				<div className='bg-mineral-white px-8 py-18 pt-8 pb-8'>
+					<div className='h-16 w-16 rounded-full bg-eucalyptus flex items-center justify-center'>
+						<Leaf className='h-10 w-10 text-deep-tidal-teal' />
+					</div>
+					<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-6'>WHY PURE TIDE</h3>
+					<p className='text-deep-tidal-teal-700 mt-3'>
+						Wellness should feel powerful — not complicated. Pure Tide bridges clinical precision with everyday vitality.
+					</p>
+				</div>
+				<div className='relative min-h-[380px]'>
+					<Image
+						src='/background/02.jpg'
+						alt='Clean wellness ritual'
+						fill
+						sizes='(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
+						className='object-cover'
+					/>
+				</div>
+				<div className='bg-eucalyptus-50 px-8 py-18 pt-8 pb-8'>
+					<div className='h-16 w-16 rounded-full bg-eucalyptus flex items-center justify-center'>
+						<FlaskConical className='h-10 w-10 text-deep-tidal-teal' />
+					</div>
+					<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-6'>SCIENCE + CREDIBILITY</h3>
+					<p className='text-deep-tidal-teal-700 mt-3 text-base'>
+						Powered by peptides. Backed by research. Formulated with intention for purity, stability, and evidence-based application.
+					</p>
+				</div>
+				<div className='relative min-h-[380px]'>
+					<Image
+						src='/background/03.jpg'
+						alt='Scientific formulation'
+						fill
+						sizes='(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
+						className='object-cover'
+					/>
+				</div>
+				<div className='bg-mineral-white px-8 py-18 pt-8 pb-8'>
+					<div className='h-16 w-16 rounded-full bg-eucalyptus flex items-center justify-center'>
+						<Waves className='h-10 w-10 text-deep-tidal-teal' />
+					</div>
+					<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-6'>THE EXPERIENCE</h3>
+					<p className='text-deep-tidal-teal-700 mt-3'>
+						Clean. Calm. Confident. Wellness without overwhelm — balanced, refined, and intuitive.
+					</p>
+				</div>
+				<div className='relative min-h-[380px]'>
+					<Image
+						src='/background/skin.jpg'
+						alt='Refined wellness space'
+						fill
+						sizes='(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
+						className='object-cover'
+					/>
+				</div>
+			</div>
+			<div className='container mx-auto max-w-6xl px-6 my-28 sm:px-8'>
+				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-center pb-24'>
 					<h2 className='order-1 block text-3xl font-bold text-deep-tidal-teal-800 text-shadow-lg lg:hidden'>Precision Wellness, Refined.</h2>
 					{/* Accordion */}
 					<div className='order-3 lg:order-1 space-y-4'>
@@ -35,7 +92,7 @@ export default function About() {
 								return (
 									<div
 										key={item.title}
-										className={`rounded-2xl bg-white/80 backdrop-blur-md shadow-lg overflow-hidden grid transition-[grid-template-rows] duration-300 ease-out border border-black/10 ${
+										className={`rounded-2xl bg-white/80 backdrop-blur-md shadow-lg overflow-hidden grid transition-[grid-template-rows] duration-300 ease-out ui-border ${
 											isOpen ? 'grid-rows-[auto_1fr]' : 'grid-rows-[auto_0fr]'
 										}`}>
 										<button
@@ -45,7 +102,7 @@ export default function About() {
 											<span>{item.title}</span>
 											{isOpen ? <Minus className='w-5 h-5 text-deep-tidal-teal' /> : <Plus className='w-5 h-5 text-deep-tidal-teal' />}
 										</button>
-										<div className='px-5 text-deep-tidal-teal-700 text-base leading-relaxed overflow-hidden'>
+										<div className='px-5 text-deep-tidal-teal-700 text-base overflow-hidden'>
 											<div className={`pb-4 transition-opacity duration-300 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
 												{item.body}
 											</div>
@@ -68,66 +125,9 @@ export default function About() {
 						/>
 					</div>
 				</div>
-
-				{/* Highlights */}
-				<div className='gap-20 grid grid-cols-1 lg:grid-cols-3 lg:gap-12 mt-16'>
-					<div className='rounded-2xl bg-white/80 backdrop-blur-md p-6 pt-10 shadow-lg border border-black/10 relative'>
-						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border  shadow-md flex items-center justify-center'>
-							<Leaf className='w-8 h-8 text-deep-tidal-teal' />
-						</div>
-						<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-4'>WHY PURE TIDE</h3>
-						<p className='text-deep-tidal-teal-700 mt-2'>
-							Wellness should feel powerful — not complicated. Pure Tide bridges clinical precision with everyday vitality.
-						</p>
-						<div className='relative mt-4 h-40 w-full overflow-hidden rounded-xl'>
-							<Image
-								src='/background/02.jpg'
-								alt='Clean wellness ritual'
-								fill
-								sizes='(min-width: 768px) 33vw, 100vw'
-								className='object-cover'
-							/>
-						</div>
-					</div>
-					<div className='rounded-2xl bg-white/80 backdrop-blur-md p-6 pt-10 shadow-lg border border-black/10 relative'>
-						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border  shadow-md flex items-center justify-center'>
-							<FlaskConical className='w-8 h-8 text-deep-tidal-teal' />
-						</div>
-						<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-4'>SCIENCE + CREDIBILITY</h3>
-						<p className='text-deep-tidal-teal-700 mt-2 text-base leading-relaxed'>
-							Powered by peptides. Backed by research. Formulated with intention for purity, stability, and evidence-based application.
-						</p>
-						<div className='relative mt-4 h-40 w-full overflow-hidden rounded-xl'>
-							<Image
-								src='/background/03.jpg'
-								alt='Scientific formulation'
-								fill
-								sizes='(min-width: 768px) 33vw, 100vw'
-								className='object-cover'
-							/>
-						</div>
-					</div>
-					<div className='rounded-2xl bg-white/80 backdrop-blur-md p-6 pt-10 shadow-lg border border-black/10 relative'>
-						<div className='absolute -top-6 left-6 h-16 w-16 rounded-full bg-mineral-white border  shadow-md flex items-center justify-center'>
-							<Waves className='w-8 h-8 text-deep-tidal-teal' />
-						</div>
-						<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mt-4'>THE EXPERIENCE</h3>
-						<p className='text-deep-tidal-teal-700 mt-2'>
-							Clean. Calm. Confident. Wellness without overwhelm — balanced, refined, and intuitive.
-						</p>
-						<div className='relative mt-4 h-40 w-full overflow-hidden rounded-xl'>
-							<Image
-								src='/background/skin.jpg'
-								alt='Refined wellness space'
-								fill
-								sizes='(min-width: 768px) 33vw, 100vw'
-								className='object-cover'
-							/>
-						</div>
-					</div>
-				</div>
-				<p className='text-deep-tidal-teal-800 text-lg font-semibold text-center mt-16'>Pure Tide is wellness, refined.</p>
 			</div>
+			
+			
 		</section>
 	);
 }

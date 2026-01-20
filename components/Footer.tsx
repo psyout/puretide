@@ -1,6 +1,6 @@
 export default function Footer() {
 	return (
-		<footer className='border-t border-deep-tidal-teal-500 mt-20 py-8'>
+		<footer className='ui-border-t mt-1 pt-8 pb-8'>
 			<div className='container mx-auto px-4 text-center text-deep-tidal-teal-700 text-sm'>
 				<p className='flex items-center justify-center gap-2'>
 					<svg

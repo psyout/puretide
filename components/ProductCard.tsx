@@ -13,38 +13,42 @@ export default function ProductCard({ product }: ProductCardProps) {
 	const { addToCart } = useCart();
 
 	return (
-		<div className='bg-mineral-white backdrop-blur-sm rounded-lg border border-black/10 hover:shadow-2xl hover:scale-103 transition-all duration-300 overflow-hidden group shadow-lg'>
+		<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border hover:shadow-2xl hover:scale-103 transition-all duration-300 overflow-hidden group shadow-lg relative'>
 			<Link href={`/product/${product.slug}`}>
-				<div className='p-8'>
+				<div className='p-6'>
 					<div className='mb-6 text-center duration-300 flex justify-center items-center h-56'>
 						{product.image.startsWith('/') || product.image.startsWith('http') ? (
-							<Image
-								src={product.image}
-								alt={product.name}
-								width={260}
-								height={208}
-								unoptimized={product.image.startsWith('http')}
-								className='max-h-52 w-auto object-contain drop-shadow-xl drop-shadow-red'
-							/>
+							<div className='relative h-52 w-52'>
+								<Image
+									src={product.image}
+									alt={product.name}
+									fill
+									sizes='208px'
+									unoptimized={product.image.startsWith('http')}
+									className='object-contain drop-shadow-xl drop-shadow-red'
+									priority
+								/>
+							</div>
 						) : (
-							<span className='text-6xl'>{product.image}</span>
+							<span className='text-5xl' style={{ width: 'auto', height: 'auto' }}>{product.image}</span>
 						)}
 					</div>
-					<h3 className='text-xl font-extrabold mb-3 text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
-					<p className='text-muted-sage-600 text-md mb-6 line-clamp-2 leading-relaxed'>{product.description}</p>
+					<h3 className='text-xl font-extrabold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
+					<p className='text-muted-sage-600 text-md mb-6 line-clamp-2'>{product.description}</p>
 					<div className='flex justify-between items-center'>
 						<span className='text-2xl font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>
 					</div>
 				</div>
 			</Link>
-			<div className='px-8 pb-8'>
+			<div className='absolute inset-0 bg-white/30 backdrop-blur-sm opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100' />
+			<div className='absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100'>
 				<button
 					onClick={(e) => {
 						e.preventDefault();
 						addToCart(product);
 					}}
-					className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
-					Add to Cart
+					className='pointer-events-auto bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors cursor-pointer'>
+					Add to cart
 				</button>
 			</div>
 		</div>

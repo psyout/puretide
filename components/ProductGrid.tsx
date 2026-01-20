@@ -45,7 +45,7 @@ export default function ProductGrid() {
 	return (
 		<div
 			id='products'
-			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] bg-cover bg-top bg-no-repeat py-20 scroll-mt-10'
+			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] bg-cover bg-top bg-no-repeat pt-20 pb-36 scroll-mt-10'
 			style={{ backgroundImage: "url('/background/08.jpg')" }}>
 			<div className='absolute inset-0 bg-white/70' />
 			<div className='relative mx-auto max-w-6xl px-6 sm:px-8 lg:px-10'>
@@ -66,7 +66,7 @@ export default function ProductGrid() {
 								id='category-select'
 								value={selectedCategory}
 								onChange={(event) => setSelectedCategory(event.target.value)}
-								className='flex-1 rounded-lg border border-black/10 bg-white px-4 py-3 text-deep-tidal-teal-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/40'>
+								className='flex-1 rounded-lg ui-border bg-white px-4 py-3 text-deep-tidal-teal-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/40'>
 								{categories.map((category) => (
 									<option key={category} value={category}>
 										{category}

@@ -62,7 +62,7 @@ export default function CartPage() {
 						{cartItems.map((item) => (
 							<div
 								key={item.id}
-								className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-black/10 p-6 flex items-center gap-6 shadow-lg'>
+								className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-6 flex items-center gap-6 shadow-lg'>
 								<div className='h-28 w-28 flex items-center justify-center rounded-lg bg-white shadow-sm'>
 									{item.image.startsWith('/') || item.image.startsWith('http') ? (
 										<Image
@@ -70,8 +70,10 @@ export default function CartPage() {
 											alt={item.name}
 											width={96}
 											height={96}
+											style={{ width: 'auto', height: 'auto' }}
 											unoptimized={item.image.startsWith('http')}
-											className='h-24 w-24 object-contain'
+											className='max-h-24 max-w-24 w-auto h-auto object-contain'
+											priority
 										/>
 									) : (
 										<span className='text-5xl'>{item.image}</span>
@@ -129,7 +131,7 @@ export default function CartPage() {
 					</div>
 
 					<div className='lg:col-span-1'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-black/10 p-6 sticky top-24 shadow-lg'>
+						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div className='space-y-2 mb-6'>
 								{cartItems.map((item) => (
@@ -143,7 +145,7 @@ export default function CartPage() {
 									</div>
 								))}
 							</div>
-							<div className='border-t border-black/10 pt-4 mb-6'>
+							<div className='ui-border-t pt-4 mb-6'>
 								<div className='flex justify-between text-xl font-bold'>
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>

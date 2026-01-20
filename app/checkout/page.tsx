@@ -95,7 +95,7 @@ export default function CheckoutPage() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-2 lg:order-1 lg:col-span-2'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-black/10 p-6 mb-6 shadow-lg'>
+						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-4 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							<form
 								onSubmit={handleSubmit}
@@ -106,7 +106,8 @@ export default function CheckoutPage() {
 										type='text'
 										value={formData.firstName}
 										onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='given-name'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -116,7 +117,8 @@ export default function CheckoutPage() {
 										type='text'
 										value={formData.lastName}
 										onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='family-name'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -125,7 +127,8 @@ export default function CheckoutPage() {
 									<select
 										value={formData.country}
 										onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='country-name'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required>
 										<option value='Canada'>Canada</option>
 									</select>
@@ -137,7 +140,8 @@ export default function CheckoutPage() {
 										value={formData.address}
 										onChange={(e) => setFormData({ ...formData, address: e.target.value })}
 										placeholder='House number and street name'
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='address-line1'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -148,7 +152,8 @@ export default function CheckoutPage() {
 										value={formData.addressLine2}
 										onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
 										placeholder='Apartment, suite, unit, etc. (optional)'
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='address-line2'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
 								<div>
@@ -157,7 +162,8 @@ export default function CheckoutPage() {
 										type='text'
 										value={formData.city}
 										onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='address-level2'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -166,7 +172,8 @@ export default function CheckoutPage() {
 									<select
 										value={formData.province}
 										onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='address-level1'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required>
 										<option value='British Columbia'>British Columbia</option>
 										<option value='Alberta'>Alberta</option>
@@ -189,7 +196,8 @@ export default function CheckoutPage() {
 										type='text'
 										value={formData.zipCode}
 										onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='postal-code'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -199,7 +207,8 @@ export default function CheckoutPage() {
 										type='tel'
 										value={formData.phone}
 										onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										autoComplete='tel'
+										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
 								<div>
@@ -208,6 +217,7 @@ export default function CheckoutPage() {
 										type='email'
 										value={formData.email}
 										onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+										autoComplete='email'
 										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
@@ -238,7 +248,7 @@ export default function CheckoutPage() {
 									<span>Ship to a different address?</span>
 								</div>
 								{shipToDifferentAddress && (
-									<div className='space-y-4 rounded-lg bg-mineral-white border border-muted-sage-300 p-4'>
+									<div className='space-y-4 rounded-lg bg-mineral-white ui-border p-4'>
 										<div>
 											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
 											<input
@@ -246,7 +256,8 @@ export default function CheckoutPage() {
 												value={shippingAddress.address}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
 												placeholder='House number and street name'
-												className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												autoComplete='shipping address-line1'
+												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
 										</div>
@@ -257,7 +268,8 @@ export default function CheckoutPage() {
 												value={shippingAddress.addressLine2}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
 												placeholder='Apartment, suite, unit, etc. (optional)'
-												className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												autoComplete='shipping address-line2'
+												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 											/>
 										</div>
 										<div>
@@ -266,7 +278,8 @@ export default function CheckoutPage() {
 												type='text'
 												value={shippingAddress.city}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-												className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												autoComplete='shipping address-level2'
+												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
 										</div>
@@ -275,7 +288,8 @@ export default function CheckoutPage() {
 											<select
 												value={shippingAddress.province}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
-												className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												autoComplete='shipping address-level1'
+												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required>
 												<option value='British Columbia'>British Columbia</option>
 												<option value='Alberta'>Alberta</option>
@@ -298,7 +312,8 @@ export default function CheckoutPage() {
 												type='text'
 												value={shippingAddress.zipCode}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value })}
-												className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												autoComplete='shipping postal-code'
+												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
 										</div>
@@ -310,10 +325,10 @@ export default function CheckoutPage() {
 										value={formData.orderNotes}
 										onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
 										placeholder='Notes about your order, e.g. special notes for delivery.'
-										className='w-full min-h-[120px] bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full min-h-[120px] bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
-								<div className='bg-eucalyptus-100/60 p-4 rounded border border-black/10 shadow-md'>
+								<div className='bg-eucalyptus-100/60 p-4 rounded ui-border shadow-md'>
 									<div className='flex items-center gap-2 mb-2'>
 										<svg
 											className='w-5 h-5 text-deep-tidal-teal'
@@ -334,7 +349,7 @@ export default function CheckoutPage() {
 										remains protected.
 									</p>
 								</div>
-								<div className='bg-mineral-white p-4 rounded border border-black/10 shadow-md'>
+								<div className='bg-mineral-white p-4 rounded ui-border shadow-md'>
 									<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 									<p className='text-sm text-deep-tidal-teal-800'>
 										After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
@@ -352,7 +367,7 @@ export default function CheckoutPage() {
 					</div>
 
 					<div className='order-1 lg:order-2 lg:col-span-1'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg border border-black/10 p-6 sticky top-24 shadow-lg'>
+						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-4 sticky top-24 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Your order</h2>
 							<div className='space-y-2 mb-6'>
 								{cartItems.map((item) => (
@@ -368,7 +383,7 @@ export default function CheckoutPage() {
 									</div>
 								))}
 							</div>
-							<div className='border-t border-black/10 pt-4 space-y-2 text-md'>
+							<div className='ui-border-t pt-4 space-y-2 text-md'>
 								<div className='flex justify-between'>
 									<span className='text-deep-tidal-teal-700'>Subtotal</span>
 									<span className='text-deep-tidal-teal-800 font-semibold'>${subtotal.toFixed(2)}</span>
@@ -400,7 +415,7 @@ export default function CheckoutPage() {
 										<span>${29.99.toFixed(2)}</span>
 									</label>
 								</div>
-								<div className='border-t border-black/10 pt-3 flex justify-between text-xl font-bold'>
+								<div className='ui-border-t pt-3 flex justify-between text-xl font-bold'>
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>

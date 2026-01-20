@@ -311,5 +311,123 @@
       "skipped": false,
       "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
     }
+  },
+  {
+    "id": "order_1768865790869",
+    "orderNumber": "790869",
+    "createdAt": "2026-01-19T23:36:30.869Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 70.99,
+    "shippingCost": 19.99,
+    "total": 90.98,
+    "cartItems": [
+      {
+        "id": "2",
+        "slug": "ghk-cu",
+        "name": "GHK Cu",
+        "description": "Skin rejuvenation peptide to support collagen, elasticity, and glow.",
+        "details": "A copper peptide favored in dermal care protocols for tone and texture, supporting a smoother, brighter, and more refined appearance.",
+        "icons": [
+          "Sparkles",
+          "Droplets",
+          "Leaf"
+        ],
+        "price": 70.99,
+        "image": "/bottles/v02.png",
+        "category": "Skin",
+        "quantity": 1
+      }
+    ],
+    "emailPreview": {
+      "subject": "Order #790869 - Interac e-Transfer instructions",
+      "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: payments@puretide.ca\nSecurity Question: Order number?\nSecurity Answer: PT790869\nMemo/Message: 790869\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nEmail notice: If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.\n\nShould you encounter any payment related issues, please contact our support at: info@puretide.ca\n\nOrder summary\nOrder #790869 (January 19, 2026)\n\nProducts\n- GHK Cu x1 ($70.99)\n\nSubtotal: $70.99\nShipping: Regular Shipping $19.99\nTotal: $90.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at info@puretide.ca."
+    },
+    "adminEmailPreview": {
+      "subject": "New order #790869",
+      "text": "New order received\nOrder #790869 (January 19, 2026)\nCustomer\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\nProducts\n- GHK Cu x1 ($70.99)\nSubtotal: $70.99\nShipping: Regular Shipping $19.99\nTotal: $90.98\nPayment method: Interac e-Transfer\nInterac e-Transfer details\nRecipient Name: Pure Tide Payments\nRecipient Email: payments@puretide.ca\nSecurity Question: Order number?\nSecurity Answer: PT790869\nMemo/Message: 790869"
+    },
+    "emailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    },
+    "adminEmailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    }
+  },
+  {
+    "id": "order_1768866987126",
+    "orderNumber": "987126",
+    "createdAt": "2026-01-19T23:56:27.126Z",
+    "customer": {
+      "firstName": "Felipe",
+      "lastName": "Gonzalez",
+      "country": "Canada",
+      "email": "contraviento@gmail.com",
+      "phone": "7788385422",
+      "address": "204-2092 2nd Ave W",
+      "addressLine2": "",
+      "city": "Vancouver",
+      "province": "British Columbia",
+      "zipCode": "V6J 1J4",
+      "orderNotes": ""
+    },
+    "shipToDifferentAddress": false,
+    "shippingMethod": "regular",
+    "subtotal": 70.99,
+    "shippingCost": 19.99,
+    "total": 90.98,
+    "cartItems": [
+      {
+        "id": "1",
+        "slug": "bpc-157",
+        "name": "BPC 157",
+        "description": "Tissue repair and recovery support for tendons, joints, and muscle health.",
+        "details": "Often selected for soft-tissue support and post-training recovery routines, with a focus on mobility, comfort, and day-to-day resilience.",
+        "icons": [
+          "Leaf",
+          "Flower2",
+          "Droplets"
+        ],
+        "price": 70.99,
+        "image": "/bottles/v01.png",
+        "category": "Recovery",
+        "quantity": 1
+      }
+    ],
+    "emailPreview": {
+      "subject": "Order #987126 - Interac e-Transfer instructions",
+      "text": "Pure Tide\n\nThank you for your order\nHi Felipe,\n\nWe have received your order and it is on hold until payment is confirmed.\n\nInterac e-Transfer Instructions\n\nAfter placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.\n\nRecipient Name: Pure Tide Payments\nRecipient Email: payments@puretide.ca\nSecurity Question: Order number?\nSecurity Answer: PT987126\nMemo/Message: 987126\n\nImportant: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.\n\nIf your bank does not allow a memo, you can leave it empty.\n\nWe only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.\n\nIf your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.\n\nEmail notice: If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.\n\nShould you encounter any payment related issues, please contact our support at: info@puretide.ca\n\nOrder summary\nOrder #987126 (January 19, 2026)\n\nProducts\n- BPC 157 x1 ($70.99)\n\nSubtotal: $70.99\nShipping: Regular Shipping $19.99\nTotal: $90.98\nPayment method: Interac e-Transfer\n\nBilling address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\n\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\n\nThanks again! If you need any help with your order, please contact us at info@puretide.ca."
+    },
+    "adminEmailPreview": {
+      "subject": "New order #987126",
+      "text": "New order received\nOrder #987126 (January 19, 2026)\nCustomer\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\ncontraviento@gmail.com\nShipping address\nFelipe Gonzalez\n204-2092 2nd Ave W\nVancouver British Columbia V6J 1J4\nCanada\nProducts\n- BPC 157 x1 ($70.99)\nSubtotal: $70.99\nShipping: Regular Shipping $19.99\nTotal: $90.98\nPayment method: Interac e-Transfer\nInterac e-Transfer details\nRecipient Name: Pure Tide Payments\nRecipient Email: payments@puretide.ca\nSecurity Question: Order number?\nSecurity Answer: PT987126\nMemo/Message: 987126"
+    },
+    "emailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    },
+    "adminEmailStatus": {
+      "sent": false,
+      "skipped": false,
+      "error": "Invalid login: 535 5.7.8 Error: authentication failed: "
+    }
   }
 ]

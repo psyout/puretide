@@ -74,7 +74,7 @@ export default function Contact() {
 	};
 
 	return (
-		<section className='py-20 px-6 sm:px-8'>
+		<section className=' pb-8 px-6 sm:px-8'>
 			<div className='container mx-auto max-w-6xl'>
 				<div className='text-center mb-12'>
 					<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Get in Touch</h2>
@@ -85,7 +85,7 @@ export default function Contact() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
 					{/* Contact Form */}
-					<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg p-8 shadow-lg border border-black/10'>
+					<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg p-6 shadow-lg ui-border'>
 						<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Send us a Message</h3>
 						<form
 							onSubmit={handleSubmit}
@@ -156,7 +156,7 @@ export default function Contact() {
 
 					{/* Contact Information */}
 					<div className='space-y-8'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg p-8 shadow-lg border border-black/10'>
+						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg p-6 shadow-lg ui-border'>
 							<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Contact Information</h3>
 							<div className='space-y-6'>
 								<div className='flex items-start gap-4'>
@@ -207,7 +207,7 @@ export default function Contact() {
 						</div>
 
 						{/* Additional Info */}
-						<div className='bg-eucalyptus-100/60 border border-black/10 backdrop-blur-sm rounded-lg p-6 shadow-md'>
+						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
 							<div className='flex items-center gap-2 mb-3'>
 								<svg
 									className='w-5 h-5 text-deep-tidal-teal'
