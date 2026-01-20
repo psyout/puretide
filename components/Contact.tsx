@@ -74,7 +74,7 @@ export default function Contact() {
 	};
 
 	return (
-		<section className=' pb-8 px-6 sm:px-8'>
+		<section className='pb-8 px-6 sm:px-8'>
 			<div className='container mx-auto max-w-6xl'>
 				<div className='text-center mb-12'>
 					<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Get in Touch</h2>
