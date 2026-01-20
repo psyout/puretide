@@ -96,13 +96,15 @@ async function sendOrderEmail(
 	text: string,
 	html: string,
 	replyTo?: string,
-	bccOverride?: string
+	bccOverride?: string,
+	fromOverride?: string
 ): Promise<EmailStatus> {
 	const smtpConfig = getSmtpConfig();
 	if (!smtpConfig) {
 		return { sent: false, skipped: true, error: 'SMTP not configured' };
 	}
 
+	const from = fromOverride ?? smtpConfig.from;
 	const transporter = nodemailer.createTransport({
 		host: smtpConfig.host,
 		port: smtpConfig.port,
@@ -115,7 +117,7 @@ async function sendOrderEmail(
 
 	try {
 		await transporter.sendMail({
-			from: smtpConfig.from,
+			from,
 			to,
 			subject,
 			text,
@@ -129,6 +131,12 @@ async function sendOrderEmail(
 		return { sent: false, skipped: false, error: message };
 	}
 }
+
+const formatOrderFrom = (value: string, label = 'Order Confirmation') => {
+	const match = value.match(/<([^>]+)>/);
+	const address = match ? match[1] : value;
+	return `${label} <${address}>`;
+};
 
 async function sendLowStockAlert(items: Array<{ name: string; slug: string; stock: number }>) {
 	if (items.length === 0) {
@@ -211,13 +219,16 @@ export async function POST(request: Request) {
 		const adminRecipient = getOrderNotificationRecipient();
 		const customerEmail = payload.customer.email;
 		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
+		const smtpConfig = getSmtpConfig();
+		const orderFrom = smtpConfig ? formatOrderFrom(smtpConfig.from) : undefined;
 		const emailStatus = await sendOrderEmail(
 			customerEmail,
 			emailData.customer.subject,
 			emailData.customer.text,
 			emailData.customer.html,
 			undefined,
-			''
+			'',
+			orderFrom
 		);
 		const adminEmailStatus = await sendOrderEmail(
 			adminRecipient,
@@ -225,7 +236,8 @@ export async function POST(request: Request) {
 			emailData.admin.text,
 			emailData.admin.html,
 			customerReplyTo,
-			''
+			'',
+			orderFrom
 		);
 
 		existingOrders.push({
