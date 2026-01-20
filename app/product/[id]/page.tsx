@@ -1,12 +1,9 @@
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
 import { products as fallbackProducts } from '@/lib/products';
-import { useCart } from '@/context/CartContext';
-import { useParams, useRouter } from 'next/navigation';
+import { readSheetProducts } from '@/lib/stockSheet';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/types/product';
+import AddToCartButton from '@/components/AddToCartButton';
 import {
 	Activity,
 	Droplets,
@@ -33,32 +30,20 @@ const iconMap = {
 	Timer,
 };
 
-export default function ProductPage() {
-	const params = useParams();
-	const router = useRouter();
-	const { addToCart } = useCart();
-	const [items, setItems] = useState<Product[]>(fallbackProducts);
-	const slug = Array.isArray(params.id) ? params.id[0] : params.id;
+type ProductPageProps = {
+	params: { id: string };
+};
 
-	useEffect(() => {
-		const load = async () => {
-			try {
-				const response = await fetch('/api/stock');
-				const data = (await response.json()) as { ok: boolean; items?: Product[] };
-				if (data.ok && data.items) {
-					setItems(data.items);
-				}
-			} catch {
-				setItems(fallbackProducts);
-			}
-		};
-		void load();
-	}, []);
+export default async function ProductPage({ params }: ProductPageProps) {
+	let items: Product[] = fallbackProducts;
+	try {
+		items = await readSheetProducts();
+	} catch {
+		items = fallbackProducts;
+	}
 
-	const product = useMemo(
-		() => items.find((item) => item.slug === slug || item.id === slug),
-		[items, slug]
-	);
+	const slug = params.id;
+	const product = items.find((item) => item.slug === slug || item.id === slug);
 
 	if (!product) {
 		return (
@@ -157,15 +142,10 @@ export default function ProductPage() {
 						<div className='text-4xl font-bold text-deep-tidal-teal mb-8'>${product.price.toFixed(2)}</div>
 
 						<div className='space-y-4'>
-							<button
-								onClick={() => {
-									addToCart(product);
-									router.push('/cart');
-								}}
+							<AddToCartButton
+								product={product}
 								disabled={product.stock <= 0}
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-muted-sage-400 text-mineral-white font-semibold py-4 px-6 rounded transition-colors text-lg'>
-								{product.stock <= 0 ? 'Sold out' : 'Add to Cart'}
-							</button>
+							/>
 							<div className='bg-eucalyptus-100/10 p-4 rounded ui-border shadow-md'>
 								<div className='flex items-center gap-2 mb-2'>
 									<svg className='w-5 h-5 text-deep-tidal-teal' fill='none' stroke='currentColor' viewBox='0 0 24 24'>

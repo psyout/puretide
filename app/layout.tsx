@@ -30,11 +30,6 @@ const matimo = localFont({
 			weight: '700',
 			style: 'normal',
 		},
-		{
-			path: '../public/fonts/matimo-black-webfont.woff2',
-			weight: '900',
-			style: 'normal',
-		},
 	],
 	variable: '--font-matimo',
 	display: 'swap',

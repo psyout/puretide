@@ -10,7 +10,7 @@ export const products: Product[] = [
 		icons: ['Leaf', 'Flower2', 'Droplets'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v01.png',
+		image: '/bottles/v01.webp',
 		category: 'Recovery',
 	},
 	{
@@ -22,7 +22,7 @@ export const products: Product[] = [
 		icons: ['Sparkles', 'Droplets', 'Leaf'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v02.png',
+		image: '/bottles/v02.webp',
 		category: 'Skin',
 	},
 	{
@@ -34,7 +34,7 @@ export const products: Product[] = [
 		icons: ['Sparkles', 'Leaf', 'Droplets'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v03.png',
+		image: '/bottles/v03.webp',
 		category: 'Antioxidant',
 	},
 	{
@@ -46,7 +46,7 @@ export const products: Product[] = [
 		icons: ['Moon', 'Leaf', 'Sparkles'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v04.png',
+		image: '/bottles/v04.webp',
 		category: 'Growth',
 	},
 	{
@@ -58,7 +58,7 @@ export const products: Product[] = [
 		icons: ['Activity', 'Leaf', 'Droplets'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v05.png',
+		image: '/bottles/v05.webp',
 		category: 'Metabolic',
 	},
 	{
@@ -70,7 +70,7 @@ export const products: Product[] = [
 		icons: ['Gauge', 'Leaf', 'Droplets'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v06.png',
+		image: '/bottles/v06.webp',
 		category: 'Metabolic',
 	},
 	{
@@ -82,7 +82,7 @@ export const products: Product[] = [
 		icons: ['HeartPulse', 'Leaf', 'Sparkles'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v07.png',
+		image: '/bottles/v07.webp',
 		category: 'Recovery',
 	},
 	{
@@ -94,7 +94,7 @@ export const products: Product[] = [
 		icons: ['Scale', 'Leaf', 'Droplets'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v08.png',
+		image: '/bottles/v08.webp',
 		category: 'Metabolic',
 	},
 	{
@@ -106,7 +106,7 @@ export const products: Product[] = [
 		icons: ['Timer', 'Leaf', 'Sparkles'],
 		price: 70.99,
 		stock: 20,
-		image: '/bottles/v09.png',
+		image: '/bottles/v09.webp',
 		category: 'Longevity',
 	},
 ];

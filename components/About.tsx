@@ -1,11 +1,8 @@
-'use client';
-
-import { useState } from 'react';
 import Image from 'next/image';
-import { Leaf, FlaskConical, Waves, Plus, Minus } from 'lucide-react';
+import { Leaf, FlaskConical, Waves } from 'lucide-react';
+import AboutAccordion from './AboutAccordion';
 
 export default function About() {
-	const [openItem, setOpenItem] = useState<number | null>(0);
 	const accordionItems = [
 		{
 			title: 'Precision Wellness, Refined.',
@@ -36,7 +33,7 @@ export default function About() {
 				</div>
 				<div className='relative min-h-[380px]'>
 					<Image
-						src='/background/02.jpg'
+						src='/background/02.webp'
 						alt='Clean wellness ritual'
 						fill
 						sizes='(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
@@ -54,7 +51,7 @@ export default function About() {
 				</div>
 				<div className='relative min-h-[380px]'>
 					<Image
-						src='/background/03.jpg'
+						src='/background/03.webp'
 						alt='Scientific formulation'
 						fill
 						sizes='(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
@@ -72,7 +69,7 @@ export default function About() {
 				</div>
 				<div className='relative min-h-[380px]'>
 					<Image
-						src='/background/skin.jpg'
+						src='/background/skin.webp'
 						alt='Refined wellness space'
 						fill
 						sizes='(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
@@ -86,37 +83,16 @@ export default function About() {
 					{/* Accordion */}
 					<div className='order-3 lg:order-1 space-y-4'>
 						<h2 className='hidden text-4xl font-bold text-deep-tidal-teal-800 text-shadow-lg lg:block'>Precision Wellness, Refined.</h2>
-						<div className='space-y-3'>
-							{accordionItems.map((item, index) => {
-								const isOpen = openItem === index;
-								return (
-									<div
-										key={item.title}
-										className={`rounded-2xl bg-white/80 backdrop-blur-md shadow-lg overflow-hidden grid transition-[grid-template-rows] duration-300 ease-out ui-border ${
-											isOpen ? 'grid-rows-[auto_1fr]' : 'grid-rows-[auto_0fr]'
-										}`}>
-										<button
-											type='button'
-											onClick={() => setOpenItem(isOpen ? null : index)}
-											className='w-full flex items-center justify-between px-5 py-4 text-left text-deep-tidal-teal-800 font-semibold'>
-											<span>{item.title}</span>
-											{isOpen ? <Minus className='w-5 h-5 text-deep-tidal-teal' /> : <Plus className='w-5 h-5 text-deep-tidal-teal' />}
-										</button>
-										<div className='px-5 text-deep-tidal-teal-700 text-base overflow-hidden'>
-											<div className={`pb-4 transition-opacity duration-300 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-												{item.body}
-											</div>
-										</div>
-									</div>
-								);
-							})}
-						</div>
+						<AboutAccordion
+							items={accordionItems}
+							defaultOpenIndex={0}
+						/>
 					</div>
 
 					{/* Image */}
 					<div className='order-2 lg:order-2 relative h-[260px] sm:h-[400px] lg:h-[520px] w-full overflow-hidden rounded-2xl'>
 						<Image
-							src='/background/skin.jpg'
+						src='/background/skin.webp'
 							alt='Pure Tide wellness'
 							fill
 							sizes='(min-width: 1024px) 50vw, 100vw'
@@ -126,8 +102,6 @@ export default function About() {
 					</div>
 				</div>
 			</div>
-			
-			
 		</section>
 	);
 }
