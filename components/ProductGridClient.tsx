@@ -12,7 +12,35 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 	const [selectedCategory, setSelectedCategory] = useState('All');
 	const [visibleCount, setVisibleCount] = useState(6);
 	const loadMoreRef = useRef<HTMLDivElement | null>(null);
-	const [items] = useState<Product[]>(initialItems);
+	const [items, setItems] = useState<Product[]>(initialItems);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		const load = async () => {
+			try {
+				const response = await fetch('/api/stock', { cache: 'no-store' });
+				const data = (await response.json()) as { ok: boolean; items?: Product[] };
+				if (isMounted && data.ok && data.items) {
+					const visibleItems = data.items.filter((product) => {
+						const status = product.status ?? 'published';
+						return status === 'published' || status === 'stock-out';
+					});
+					setItems(visibleItems);
+				}
+			} catch {
+				// keep current items on fetch failure
+			}
+		};
+
+		void load();
+		const interval = window.setInterval(load, 60000);
+
+		return () => {
+			isMounted = false;
+			window.clearInterval(interval);
+		};
+	}, []);
 
 	const categories = useMemo(
 		() => ['All', ...Array.from(new Set(items.map((product) => product.category)))],

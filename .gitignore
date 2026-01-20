@@ -31,6 +31,7 @@ yarn-error.log*
 
 # local data
 /data/orders.json
+/data/low-stock.json
 
 # vercel
 .vercel

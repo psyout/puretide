@@ -9,6 +9,7 @@ export interface Product {
 	stock: number;
 	image: string;
 	category: string;
+	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
 }
 
 export interface CartItem extends Product {

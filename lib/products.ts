@@ -12,6 +12,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v01.webp',
 		category: 'Recovery',
+		status: 'published',
 	},
 	{
 		id: '2',
@@ -24,6 +25,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v02.webp',
 		category: 'Skin',
+		status: 'published',
 	},
 	{
 		id: '3',
@@ -36,6 +38,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v03.webp',
 		category: 'Antioxidant',
+		status: 'published',
 	},
 	{
 		id: '4',
@@ -48,6 +51,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v04.webp',
 		category: 'Growth',
+		status: 'published',
 	},
 	{
 		id: '5',
@@ -60,6 +64,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v05.webp',
 		category: 'Metabolic',
+		status: 'published',
 	},
 	{
 		id: '6',
@@ -72,6 +77,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v06.webp',
 		category: 'Metabolic',
+		status: 'published',
 	},
 	{
 		id: '7',
@@ -84,6 +90,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v07.webp',
 		category: 'Recovery',
+		status: 'published',
 	},
 	{
 		id: '8',
@@ -96,6 +103,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v08.webp',
 		category: 'Metabolic',
+		status: 'published',
 	},
 	{
 		id: '9',
@@ -108,5 +116,7 @@ export const products: Product[] = [
 		stock: 20,
 		image: '/bottles/v09.webp',
 		category: 'Longevity',
+		status: 'published',
 	},
+	
 ];

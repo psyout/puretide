@@ -132,7 +132,7 @@ async function sendOrderEmail(
 	}
 }
 
-const formatOrderFrom = (value: string, label = 'Order Confirmation') => {
+const formatOrderFrom = (value: string, label = 'Puretide Order Confirmation') => {
 	const match = value.match(/<([^>]+)>/);
 	const address = match ? match[1] : value;
 	return `${label} <${address}>`;

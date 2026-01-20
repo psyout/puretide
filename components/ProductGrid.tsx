@@ -10,5 +10,9 @@ export default async function ProductGrid() {
 		items = fallbackProducts;
 	}
 
-	return <ProductGridClient initialItems={items} />;
+	const visibleItems = items.filter((product) => {
+		const status = product.status ?? 'published';
+		return status === 'published' || status === 'stock-out';
+	});
+	return <ProductGridClient initialItems={visibleItems} />;
 }

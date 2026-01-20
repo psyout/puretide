@@ -7,8 +7,30 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-const HEADERS = ['id', 'slug', 'name', 'description', 'details', 'price', 'stock', 'category'] as const;
+const HEADERS = [
+	'id',
+	'slug',
+	'name',
+	'description',
+	'details',
+	'price',
+	'stock',
+	'category',
+	'image',
+	'icons',
+	'status',
+] as const;
 type HeaderKey = (typeof HEADERS)[number];
+const REQUIRED_HEADERS: Array<HeaderKey> = [
+	'id',
+	'slug',
+	'name',
+	'description',
+	'details',
+	'price',
+	'stock',
+	'category',
+];
 
 const getSheetsClient = () => {
 	if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
@@ -36,10 +58,16 @@ const getSheetTitle = async (sheets: ReturnType<typeof getSheetsClient>) => {
 	return firstSheet;
 };
 
-const normalizeRow = (row: string[]): Record<HeaderKey, string> => {
+const normalizeRow = (row: string[], headerRow: string[]): Record<HeaderKey, string> => {
 	const result = {} as Record<HeaderKey, string>;
-	HEADERS.forEach((header, index) => {
-		result[header] = row[index] ?? '';
+	const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
+		acc[header] = index;
+		return acc;
+	}, {});
+
+	HEADERS.forEach((header) => {
+		const index = indexMap[header];
+		result[header] = index != null ? row[index] ?? '' : '';
 	});
 	return result;
 };
@@ -49,10 +77,29 @@ const parseNumber = (value: string, fallback = 0) => {
 	return Number.isFinite(numeric) ? numeric : fallback;
 };
 
+const normalizeStatus = (value?: string): NonNullable<Product['status']> => {
+	switch ((value ?? '').toLowerCase()) {
+		case 'active':
+		case 'published':
+			return 'published';
+		case 'hidden':
+		case 'draft':
+		case 'draft list':
+			return 'draft';
+		case 'inactive':
+			return 'inactive';
+		case 'stock out':
+		case 'stock-out':
+			return 'stock-out';
+		default:
+			return 'published';
+	}
+};
+
 export const readSheetProducts = async (): Promise<Product[]> => {
 	const sheets = getSheetsClient();
 	const title = await getSheetTitle(sheets);
-	const range = `${title}!A1:H`;
+	const range = `${title}!A1:K`;
 
 	const response = await sheets.spreadsheets.values.get({
 		spreadsheetId: SHEET_ID,
@@ -65,13 +112,13 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 	}
 
 	const [headerRow, ...dataRows] = rows as string[][];
-	const headerMatch = HEADERS.every((header, index) => headerRow?.[index] === header);
+	const headerMatch = REQUIRED_HEADERS.every((header) => headerRow?.includes(header));
 	if (!headerMatch) {
 		return baseProducts;
 	}
 
 	const sheetProducts = dataRows
-		.map(normalizeRow)
+		.map((row) => normalizeRow(row, headerRow))
 		.filter((row) => row.id)
 		.map((row) => ({
 			id: row.id,
@@ -81,9 +128,16 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 			details: row.details || undefined,
 			price: parseNumber(row.price),
 			stock: parseNumber(row.stock),
-			image: baseProducts.find((product) => product.id === row.id)?.image ?? '',
+			image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
 			category: row.category,
-			icons: baseProducts.find((product) => product.id === row.id)?.icons ?? [],
+			icons:
+				row.icons
+					? row.icons
+							.split(',')
+							.map((icon) => icon.trim())
+							.filter(Boolean)
+					: baseProducts.find((product) => product.id === row.id)?.icons ?? [],
+			status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
 		}));
 
 	if (sheetProducts.length === 0) {
@@ -96,7 +150,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 export const writeSheetProducts = async (items: Product[]) => {
 	const sheets = getSheetsClient();
 	const title = await getSheetTitle(sheets);
-	const range = `${title}!A1:H`;
+	const range = `${title}!A1:K`;
 
 	const values = [
 		[...HEADERS],
@@ -109,6 +163,9 @@ export const writeSheetProducts = async (items: Product[]) => {
 			product.price.toFixed(2),
 			String(product.stock),
 			product.category,
+			product.image,
+			(product.icons ?? []).join(', '),
+			product.status ?? 'published',
 		]),
 	];
 

@@ -11,7 +11,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
 	const { addToCart } = useCart();
-	const isSoldOut = product.stock <= 0;
+	const isSoldOut = product.stock <= 0 || product.status === 'stock-out';
 
 	return (
 		<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border hover:shadow-2xl hover:scale-103 transition-all duration-300 overflow-hidden group shadow-lg relative'>

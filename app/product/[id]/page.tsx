@@ -45,7 +45,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 	const slug = params.id;
 	const product = items.find((item) => item.slug === slug || item.id === slug);
 
-	if (!product) {
+	if (!product || !['published', 'stock-out'].includes(product.status ?? 'published')) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<div className='container mx-auto px-4 py-12'>
@@ -73,7 +73,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					<div className='lg:col-start-2'>
 						<div className='flex flex-wrap items-center gap-3 mb-4'>
 							<span className='text-sm text-deep-tidal-teal bg-eucalyptus-200 px-3 py-1 rounded inline-block'>{product.category}</span>
-							{product.stock <= 0 && (
+							{(product.stock <= 0 || product.status === 'stock-out') && (
 								<span className='text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-full'>
 									Sold out
 								</span>
@@ -144,7 +144,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						<div className='space-y-4'>
 							<AddToCartButton
 								product={product}
-								disabled={product.stock <= 0}
+								disabled={product.stock <= 0 || product.status === 'stock-out'}
 							/>
 							<div className='bg-eucalyptus-100/10 p-4 rounded ui-border shadow-md'>
 								<div className='flex items-center gap-2 mb-2'>
