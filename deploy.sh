@@ -11,8 +11,9 @@ SSH_TARGET="${VPS_USER}@${VPS_HOST}"
 echo "Building locally..."
 npm run build
 
-echo "Cleaning old build artifacts on VPS..."
-ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone"
+echo "Cleaning old build artifacts and killing ghost processes on VPS..."
+# This kills anything currently holding port 3000 so PM2 can start fresh
+ssh "${SSH_TARGET}" "fuser -k 3000/tcp || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone"
 
 echo "Syncing build artifacts to ${SSH_TARGET}:${VPS_PATH}..."
 rsync -avz .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/"
@@ -20,6 +21,7 @@ rsync -avz .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
 rsync -avz public/ "${SSH_TARGET}:${VPS_PATH}/public/"
 
 echo "Restarting pm2 app (${PM2_APP}) on VPS..."
-ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && if pm2 describe \"${PM2_APP}\" >/dev/null 2>&1; then pm2 restart \"${PM2_APP}\" --update-env; else echo \"pm2 app '${PM2_APP}' not found. Run: pm2 list\"; exit 1; fi"
+# HOSTNAME=0.0.0.0 is the key fix for the 502 error
+ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && HOSTNAME=0.0.0.0 pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 pm2 start server.js --name \"${PM2_APP}\" --max-memory-restart 700M"
 
-echo "Done."
+echo "Done. Website should be live at https://puretide.ca"
