@@ -98,63 +98,68 @@ const normalizeStatus = (value?: string): NonNullable<Product['status']> => {
 };
 
 export const readSheetProducts = async (): Promise<Product[]> => {
-	const sheets = getSheetsClient();
-	const title = await getSheetTitle(sheets);
-	const range = `${title}!A1:L`;
+	try {
+		const sheets = getSheetsClient();
+		const title = await getSheetTitle(sheets);
+		const range = `${title}!A1:L`;
 
-	const response = await sheets.spreadsheets.values.get({
-		spreadsheetId: SHEET_ID,
-		range,
-	});
+		const response = await sheets.spreadsheets.values.get({
+			spreadsheetId: SHEET_ID,
+			range,
+		});
 
-	const rows = response.data.values ?? [];
-	if (rows.length === 0) {
+		const rows = response.data.values ?? [];
+		if (rows.length === 0) {
+			return baseProducts;
+		}
+
+		const [headerRow, ...dataRows] = rows as string[][];
+		const headerMatch = REQUIRED_HEADERS.every((header) => headerRow?.includes(header));
+		if (!headerMatch) {
+			return baseProducts;
+		}
+
+		const sheetProducts = dataRows
+			.map((row) => normalizeRow(row, headerRow))
+			.filter((row) => row.id)
+			.map((row) => ({
+				id: row.id,
+				slug: row.slug,
+				name: row.name,
+				description: row.description,
+				details: row.details || undefined,
+				price: parseNumber(row.price),
+				stock: parseNumber(row.stock),
+				image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
+				category: row.category,
+				mg: row.mg || undefined,
+				icons:
+					row.icons
+						? row.icons
+								.split(',')
+								.map((icon) => icon.trim())
+								.filter(Boolean)
+						: baseProducts.find((product) => product.id === row.id)?.icons ?? [],
+				status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
+			}));
+
+		if (sheetProducts.length === 0) {
+			return baseProducts;
+		}
+
+		return sheetProducts;
+	} catch (error) {
+		console.error('Error reading products from sheet:', error);
 		return baseProducts;
 	}
-
-	const [headerRow, ...dataRows] = rows as string[][];
-	const headerMatch = REQUIRED_HEADERS.every((header) => headerRow?.includes(header));
-	if (!headerMatch) {
-		return baseProducts;
-	}
-
-	const sheetProducts = dataRows
-		.map((row) => normalizeRow(row, headerRow))
-		.filter((row) => row.id)
-		.map((row) => ({
-			id: row.id,
-			slug: row.slug,
-			name: row.name,
-			description: row.description,
-			details: row.details || undefined,
-			price: parseNumber(row.price),
-			stock: parseNumber(row.stock),
-			image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
-			category: row.category,
-			mg: row.mg || undefined,
-			icons:
-				row.icons
-					? row.icons
-							.split(',')
-							.map((icon) => icon.trim())
-							.filter(Boolean)
-					: baseProducts.find((product) => product.id === row.id)?.icons ?? [],
-			status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
-		}));
-
-	if (sheetProducts.length === 0) {
-		return baseProducts;
-	}
-
-	return sheetProducts;
 };
 
 export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 	const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 	if (!SHEET_ID) return [];
 
-	const sheets = getSheetsClient();
 	try {
+		const sheets = getSheetsClient();
 		// First, let's check if the sheet exists to provide a better error
 		const spreadsheet = await sheets.spreadsheets.get({
 			spreadsheetId: SHEET_ID,
@@ -188,32 +193,36 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 };
 
 export const writeSheetProducts = async (items: Product[]) => {
-	const sheets = getSheetsClient();
-	const title = await getSheetTitle(sheets);
-	const range = `${title}!A1:L`;
+	try {
+		const sheets = getSheetsClient();
+		const title = await getSheetTitle(sheets);
+		const range = `${title}!A1:L`;
 
-	const values = [
-		[...HEADERS],
-		...items.map((product) => [
-			product.id,
-			product.slug,
-			product.name,
-			product.description,
-			product.details ?? '',
-			product.price.toFixed(2),
-			String(product.stock),
-			product.category,
-			product.mg ?? '',
-			product.image,
-			(product.icons ?? []).join(', '),
-			product.status ?? 'published',
-		]),
-	];
+		const values = [
+			[...HEADERS],
+			...items.map((product) => [
+				product.id,
+				product.slug,
+				product.name,
+				product.description,
+				product.details ?? '',
+				product.price.toFixed(2),
+				String(product.stock),
+				product.category,
+				product.mg ?? '',
+				product.image,
+				(product.icons ?? []).join(', '),
+				product.status ?? 'published',
+			]),
+		];
 
-	await sheets.spreadsheets.values.update({
-		spreadsheetId: SHEET_ID,
-		range,
-		valueInputOption: 'RAW',
-		requestBody: { values },
-	});
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range,
+			valueInputOption: 'RAW',
+			requestBody: { values },
+		});
+	} catch (error) {
+		console.error('Error writing products to sheet:', error);
+	}
 };
