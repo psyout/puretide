@@ -11,6 +11,9 @@ SSH_TARGET="${VPS_USER}@${VPS_HOST}"
 echo "Building locally..."
 npm run build
 
+echo "Cleaning old build artifacts on VPS..."
+ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone"
+
 echo "Syncing build artifacts to ${SSH_TARGET}:${VPS_PATH}..."
 rsync -avz .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/"
 rsync -avz .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"

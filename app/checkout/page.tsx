@@ -1,5 +1,11 @@
 import CheckoutClient from '@/components/CheckoutClient';
+import Header from '@/components/Header';
 
 export default function CheckoutPage() {
-	return <CheckoutClient />;
+	return (
+		<>
+			<Header />
+			<CheckoutClient />
+		</>
+	);
 }

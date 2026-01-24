@@ -46,13 +46,22 @@ export default function HeroClient({ slides }: HeroClientProps) {
 					<div
 						key={slide.backgroundImage}
 						className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}>
+						<div className='absolute inset-0 w-full h-full block xs:hidden blur-xs z-0'>
+							<Image
+								src={slide.backgroundImage}
+								alt=''
+								fill
+								sizes='100vw'
+								className='object-cover'
+							/>
+						</div>
 						<Image
 							src={slide.backgroundImage}
 							alt={`Hero background ${index + 1}`}
 							fill
 							priority={index === 0}
 							sizes='100vw'
-							className='object-cover'
+							className='object-cover hidden xs:block'
 						/>
 						<div className='absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.09),rgba(0,0,0,0.3))]' />
 					</div>
@@ -64,10 +73,10 @@ export default function HeroClient({ slides }: HeroClientProps) {
 				<div className='mb-8'>
 					<LogoHorizontal
 						className='h-32 lg:h-40 w-auto mx-auto drop-shadow-2xl'
-						fillColor='fill-white drop-shadow-xl/50'
+						fillColor='fill-deep-tidal-teal-600 drop-shadow-xl/50'
 					/>
 				</div>
-				<p className='text-white text-lg sm:text-xl lg:text-2xl max-w-sm sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-xl/50 font-matimo'>
+				<p className='text-deep-tidal-teal-800 text-lg sm:text-xl lg:text-2xl max-w-sm sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] font-matimo'>
 					{currentSlide.description}
 				</p>
 			</div>

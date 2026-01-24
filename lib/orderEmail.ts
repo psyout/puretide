@@ -25,6 +25,8 @@ type OrderEmailInput = {
   shippingMethod: "regular" | "express";
   subtotal: number;
   shippingCost: number;
+  discountAmount?: number;
+  promoCode?: string;
   total: number;
   cartItems: Array<{
     id: number;
@@ -141,6 +143,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     itemsText,
     "",
     `Subtotal: ${formatMoney(input.subtotal)}`,
+    input.discountAmount ? `Discount (${input.promoCode}): -${formatMoney(input.discountAmount)}` : null,
     `Shipping: ${shippingLabel} ${formatMoney(input.shippingCost)}`,
     `Total: ${formatMoney(input.total)}`,
     "Payment method: Interac e-Transfer",
@@ -192,6 +195,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         </tbody>
       </table>
       <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
+      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode}):</strong> -${formatMoney(input.discountAmount)}</p>` : ""}
       <p><strong>Shipping:</strong> ${shippingLabel} ${formatMoney(input.shippingCost)}</p>
       <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
       <p><strong>Payment method:</strong> Interac e-Transfer</p>
@@ -219,6 +223,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     itemsText,
     "",
     `Subtotal: ${formatMoney(input.subtotal)}`,
+    input.discountAmount ? `Discount (${input.promoCode}): -${formatMoney(input.discountAmount)}` : null,
     `Shipping: ${shippingLabel} ${formatMoney(input.shippingCost)}`,
     `Total: ${formatMoney(input.total)}`,
     "Payment method: Interac e-Transfer",
@@ -261,6 +266,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         </tbody>
       </table>
       <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
+      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode}):</strong> -${formatMoney(input.discountAmount)}</p>` : ""}
       <p><strong>Shipping:</strong> ${shippingLabel} ${formatMoney(input.shippingCost)}</p>
       <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
       <p><strong>Payment method:</strong> Interac e-Transfer</p>

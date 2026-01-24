@@ -6,14 +6,14 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function CartClient() {
-	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart } = useCart();
+	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice } = useCart();
 	const router = useRouter();
 	const total = getTotal();
 
 	if (cartItems.length === 0) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-				<div className='container mx-auto px-4 py-12'>
+				<div className='container mx-auto px-4 py-24'>
 					<Link
 						href='/'
 						className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -49,20 +49,20 @@ export default function CartClient() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='container mx-auto px-4 py-12'>
+			<div className='container mx-auto px-4 py-24'>
 				<Link
 					href='/'
-					className='text-orange-500 hover:text-orange-400 mb-8 inline-block'>
+					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
 					← Back to Products
 				</Link>
-				<h1 className='text-4xl font-bold mb-8 text-deep-tidal-teal-800'>Shopping Cart</h1>
+				<h1 className='text-4xl font-bold mb-8 text-deep-tidal-teal-800'>My Cart</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='lg:col-span-2 space-y-4'>
 						{cartItems.map((item) => (
 							<div
 								key={item.id}
-								className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-6 flex items-center gap-6 shadow-lg'>
+								className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 flex items-center gap-6 shadow-lg'>
 								<div className='h-28 w-28 flex items-center justify-center rounded-lg bg-white shadow-sm'>
 									{item.image.startsWith('/') || item.image.startsWith('http') ? (
 										<Image
@@ -82,7 +82,10 @@ export default function CartClient() {
 								<div className='flex-1'>
 									<div className='flex items-baseline justify-between gap-3 flex-col lg:items-start lg:gap-1'>
 										<h3 className='text-xl font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
-										<p className='text-xl text-deep-tidal-teal font-bold'>${item.price.toFixed(2)}</p>
+										<div className='flex items-center gap-2'>
+											<p className='text-2xl text-deep-tidal-teal font-bold'>${getItemPrice(item).toFixed(2)}</p>
+											{getItemPrice(item) < item.price && <span className='text-lg text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</span>}
+										</div>
 									</div>
 									<p className='text-md text-deep-tidal-teal-700 mt-2'>{item.description}</p>
 									<div className='mt-3 flex w-full items-center justify-between gap-4 lg:hidden'>
@@ -131,7 +134,7 @@ export default function CartClient() {
 					</div>
 
 					<div className='lg:col-span-1'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div className='space-y-2 mb-6'>
 								{cartItems.map((item) => (
@@ -141,7 +144,7 @@ export default function CartClient() {
 										<span className='text-deep-tidal-teal-700'>
 											{item.name} × {item.quantity}
 										</span>
-										<span className='text-deep-tidal-teal-800 font-semibold'>${(item.price * item.quantity).toFixed(2)}</span>
+										<span className='text-deep-tidal-teal-800 font-semibold'>${(getItemPrice(item) * item.quantity).toFixed(2)}</span>
 									</div>
 								))}
 							</div>

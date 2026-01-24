@@ -29,6 +29,7 @@ const buildNewProduct = (fallbackImage: string): Product => {
 		stock: 0,
 		image: fallbackImage,
 		category: 'General',
+		mg: '',
 		icons: [],
 		status: 'draft',
 	};
@@ -58,9 +59,7 @@ export default function StockDashboardPage() {
 	}, []);
 
 	const updateRow = (id: string, next: Partial<Product>) => {
-		setRows((prev) =>
-			prev.map((product) => (product.id === id ? { ...product, ...next } : product))
-		);
+		setRows((prev) => prev.map((product) => (product.id === id ? { ...product, ...next } : product)));
 		setIsDirty(true);
 	};
 
@@ -195,27 +194,21 @@ export default function StockDashboardPage() {
 							<button
 								onClick={() => setActiveTab('products')}
 								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
-									activeTab === 'products'
-										? 'bg-[#6c5dd3] text-white'
-										: 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+									activeTab === 'products' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
 								}`}>
 								Products
 							</button>
 							<button
 								onClick={() => setActiveTab('inventory')}
 								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
-									activeTab === 'inventory'
-										? 'bg-[#6c5dd3] text-white'
-										: 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+									activeTab === 'inventory' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
 								}`}>
 								Inventory
 							</button>
 							<button
 								onClick={() => setActiveTab('alerts')}
 								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
-									activeTab === 'alerts'
-										? 'bg-[#6c5dd3] text-white'
-										: 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+									activeTab === 'alerts' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
 								}`}>
 								Alerts
 							</button>
@@ -287,175 +280,184 @@ export default function StockDashboardPage() {
 											</span>
 										</div>
 									))}
-									{filteredRows.length === 0 && (
-										<div className='py-6 text-sm text-[#6a6a6a]'>No products found.</div>
-									)}
+									{filteredRows.length === 0 && <div className='py-6 text-sm text-[#6a6a6a]'>No products found.</div>}
 								</div>
 							</div>
 						)}
 
 						{activeTab === 'products' && (
 							<div className='grid grid-cols-1 gap-4'>
-								{isLoading && (
-									<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6 text-[#6a6a6a]'>
-										Loading stock from Google Sheets...
-									</div>
-								)}
+								{isLoading && <div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6 text-[#6a6a6a]'>Loading stock from Google Sheets...</div>}
 								{!isLoading && filteredRows.length > 0 && (
 									<div className='rounded-2xl border border-black/5 bg-[#f4f4f7] shadow-sm overflow-x-auto'>
 										<div className='min-w-[980px]'>
 											<div className='px-6 py-3 text-xs uppercase tracking-wide text-[#8d8d8d] border-b border-black/5'>
 												<div className='grid grid-cols-[minmax(220px,2.5fr)_minmax(140px,1.5fr)_minmax(90px,0.8fr)_minmax(90px,0.8fr)_minmax(140px,1fr)_minmax(130px,0.8fr)] gap-5 items-center text-left'>
-												<span>Product name</span>
-												<span>Category</span>
-												<span>Stock</span>
-												<span>Price</span>
-												<span>Status</span>
-												<span>Action</span>
+													<span>Product name</span>
+													<span>Category</span>
+													<span>Stock</span>
+													<span>Price</span>
+													<span>Status</span>
+													<span>Action</span>
 												</div>
 											</div>
 											<div className='divide-y divide-black/5 bg-white'>
 												{filteredRows.map((product) => (
-													<div key={product.id} className='px-6 py-4'>
+													<div
+														key={product.id}
+														className='px-6 py-4'>
 														<div className='grid grid-cols-[minmax(220px,2.5fr)_minmax(140px,1.5fr)_minmax(90px,0.8fr)_minmax(90px,0.8fr)_minmax(140px,1fr)_minmax(130px,0.8fr)] gap-5 items-center text-left'>
-														<div className='text-sm font-semibold text-[#2f2f2f] text-left'>{product.name}</div>
-														<div className='text-sm text-[#6a6a6a]'>{product.category}</div>
-														<div className='text-sm text-[#2f2f2f]'>
-															{product.stock}
-															{product.stock <= 5 && <span className='ml-2 text-xs text-amber-700'>Low Stock</span>}
+															<div className='text-sm font-semibold text-[#2f2f2f] text-left'>
+																{product.name}
+																{product.mg && <sup className='text-[10px] ml-0.5 align-top opacity-70'>{product.mg}</sup>}
+															</div>
+															<div className='text-sm text-[#6a6a6a]'>{product.category}</div>
+															<div className='text-sm text-[#2f2f2f]'>
+																{product.stock}
+																{product.stock <= 5 && <span className='ml-2 text-xs text-amber-700'>Low Stock</span>}
+															</div>
+															<div className='text-sm text-[#2f2f2f]'>${product.price}</div>
+															<div>
+																<select
+																	value={product.status ?? 'published'}
+																	onChange={(event) => handleStatusChange(product.id, event.target.value as Product['status'])}
+																	className={`inline-flex w-auto rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadge(product.status)} border border-transparent focus:outline-none focus:ring-2 focus:ring-[#6c5dd3]/20`}>
+																	<option value='published'>Published</option>
+																	<option value='draft'>Draft List</option>
+																	<option value='inactive'>Inactive</option>
+																	<option value='stock-out'>Stock Out</option>
+																</select>
+															</div>
+															<div className='flex items-center justify-start gap-2'>
+																<button
+																	type='button'
+																	onClick={() => toggleExpanded(product.id)}
+																	className='px-3 py-1.5 rounded-lg border border-black/10 text-sm font-semibold text-[#2f2f2f] hover:bg-[#f4f4f7]'>
+																	{expandedId === product.id ? 'Close' : 'Edit'}
+																</button>
+																<button
+																	type='button'
+																	onClick={() => handleDeleteProduct(product.id)}
+																	className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-rose-700 hover:text-rose-800 hover:bg-rose-50'>
+																	<Trash2 className='h-4 w-4' />
+																</button>
+															</div>
 														</div>
-														<div className='text-sm text-[#2f2f2f]'>${product.price}</div>
-														<div>
-															<select
-																value={product.status ?? 'published'}
-																onChange={(event) => handleStatusChange(product.id, event.target.value as Product['status'])}
-																className={`inline-flex w-auto rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadge(product.status)} border border-transparent focus:outline-none focus:ring-2 focus:ring-[#6c5dd3]/20`}>
-																<option value='published'>Published</option>
-																<option value='draft'>Draft List</option>
-																<option value='inactive'>Inactive</option>
-																<option value='stock-out'>Stock Out</option>
-															</select>
-														</div>
-														<div className='flex items-center justify-start gap-2'>
-															<button
-																type='button'
-																onClick={() => toggleExpanded(product.id)}
-																className='px-3 py-1.5 rounded-lg border border-black/10 text-sm font-semibold text-[#2f2f2f] hover:bg-[#f4f4f7]'>
-																{expandedId === product.id ? 'Close' : 'Edit'}
-															</button>
-															<button
-																type='button'
-																onClick={() => handleDeleteProduct(product.id)}
-																className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-rose-700 hover:text-rose-800 hover:bg-rose-50'>
-																<Trash2 className='h-4 w-4' />
-															</button>
-														</div>
-													</div>
 
-													{expandedId === product.id && (
-														<div className='mt-4 border-t border-black/5 pt-4'>
-															<div className='grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4'>
-																<div>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Title</label>
-																	<input
-																		type='text'
-																		value={product.name}
-																		onChange={(event) => handleTitleChange(product.id, event.target.value)}
-																		placeholder='Title'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
+														{expandedId === product.id && (
+															<div className='mt-4 border-t border-black/5 pt-4'>
+																<div className='grid grid-cols-1 lg:grid-cols-5 gap-4'>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Title</label>
+																		<input
+																			type='text'
+																			value={product.name}
+																			onChange={(event) => handleTitleChange(product.id, event.target.value)}
+																			placeholder='Title'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Price</label>
+																		<input
+																			type='number'
+																			min={0}
+																			step='0.01'
+																			value={product.price}
+																			onChange={(event) => handlePriceChange(product.id, event.target.value)}
+																			placeholder='Price'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Stock</label>
+																		<input
+																			type='number'
+																			min={0}
+																			max={9999}
+																			value={product.stock}
+																			onChange={(event) => handleStockChange(product.id, event.target.value)}
+																			placeholder='Stock'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Status</label>
+																		<select
+																			value={product.status ?? 'published'}
+																			onChange={(event) => handleStatusChange(product.id, event.target.value as Product['status'])}
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'>
+																			<option value='published'>Published</option>
+																			<option value='draft'>Draft List</option>
+																			<option value='inactive'>Inactive</option>
+																			<option value='stock-out'>Stock Out</option>
+																		</select>
+																	</div>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Milligrams (mg)</label>
+																		<input
+																			type='text'
+																			value={product.mg ?? ''}
+																			onChange={(event) => updateRow(product.id, { mg: event.target.value })}
+																			placeholder='e.g. 5mg'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
 																</div>
-																<div>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Price</label>
-																	<input
-																		type='number'
-																		min={0}
-																		step='0.01'
-																		value={product.price}
-																		onChange={(event) => handlePriceChange(product.id, event.target.value)}
-																		placeholder='Price'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
-																</div>
-																<div>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Stock</label>
-																	<input
-																		type='number'
-																		min={0}
-																		max={9999}
-																		value={product.stock}
-																		onChange={(event) => handleStockChange(product.id, event.target.value)}
-																		placeholder='Stock'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
-																</div>
-																<div>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Status</label>
-																	<select
-																		value={product.status ?? 'published'}
-																		onChange={(event) => handleStatusChange(product.id, event.target.value as Product['status'])}
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'>
-																		<option value='published'>Published</option>
-																		<option value='draft'>Draft List</option>
-																		<option value='inactive'>Inactive</option>
-																		<option value='stock-out'>Stock Out</option>
-																	</select>
+																<div className='mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4'>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Image URL</label>
+																		<input
+																			type='text'
+																			value={product.image}
+																			onChange={(event) => handleImageChange(product.id, event.target.value)}
+																			placeholder='Image URL'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Category</label>
+																		<input
+																			type='text'
+																			value={product.category}
+																			onChange={(event) => handleCategoryChange(product.id, event.target.value)}
+																			placeholder='Category'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div className='lg:col-span-2'>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Description</label>
+																		<textarea
+																			rows={2}
+																			value={product.description}
+																			onChange={(event) => updateRow(product.id, { description: event.target.value })}
+																			placeholder='Short description'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div className='lg:col-span-2'>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Details</label>
+																		<textarea
+																			rows={3}
+																			value={product.details ?? ''}
+																			onChange={(event) => updateRow(product.id, { details: event.target.value })}
+																			placeholder='Details'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div className='lg:col-span-2'>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Icons (comma separated)</label>
+																		<input
+																			type='text'
+																			value={(product.icons ?? []).join(', ')}
+																			onChange={(event) => handleIconsChange(product.id, event.target.value)}
+																			placeholder='Icons (comma separated)'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
 																</div>
 															</div>
-															<div className='mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4'>
-																<div>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Image URL</label>
-																	<input
-																		type='text'
-																		value={product.image}
-																		onChange={(event) => handleImageChange(product.id, event.target.value)}
-																		placeholder='Image URL'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
-																</div>
-																<div>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Category</label>
-																	<input
-																		type='text'
-																		value={product.category}
-																		onChange={(event) => handleCategoryChange(product.id, event.target.value)}
-																		placeholder='Category'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
-																</div>
-																<div className='lg:col-span-2'>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Description</label>
-																	<textarea
-																		rows={2}
-																		value={product.description}
-																		onChange={(event) => updateRow(product.id, { description: event.target.value })}
-																		placeholder='Short description'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
-																</div>
-																<div className='lg:col-span-2'>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Details</label>
-																	<textarea
-																		rows={3}
-																		value={product.details ?? ''}
-																		onChange={(event) => updateRow(product.id, { details: event.target.value })}
-																		placeholder='Details'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
-																</div>
-																<div className='lg:col-span-2'>
-																<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Icons (comma separated)</label>
-																	<input
-																		type='text'
-																		value={(product.icons ?? []).join(', ')}
-																		onChange={(event) => handleIconsChange(product.id, event.target.value)}
-																		placeholder='Icons (comma separated)'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																	/>
-																</div>
-															</div>
-														</div>
-													)}
+														)}
 													</div>
 												))}
 											</div>

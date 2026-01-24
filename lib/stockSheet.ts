@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import type { Product } from '@/types/product';
+import type { Product, PromoCode } from '@/types/product';
 import { products as baseProducts } from '@/lib/products';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -16,6 +16,7 @@ const HEADERS = [
 	'price',
 	'stock',
 	'category',
+	'mg',
 	'image',
 	'icons',
 	'status',
@@ -99,7 +100,7 @@ const normalizeStatus = (value?: string): NonNullable<Product['status']> => {
 export const readSheetProducts = async (): Promise<Product[]> => {
 	const sheets = getSheetsClient();
 	const title = await getSheetTitle(sheets);
-	const range = `${title}!A1:K`;
+	const range = `${title}!A1:L`;
 
 	const response = await sheets.spreadsheets.values.get({
 		spreadsheetId: SHEET_ID,
@@ -130,6 +131,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 			stock: parseNumber(row.stock),
 			image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
 			category: row.category,
+			mg: row.mg || undefined,
 			icons:
 				row.icons
 					? row.icons
@@ -147,10 +149,48 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 	return sheetProducts;
 };
 
+export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
+	const SHEET_ID = process.env.GOOGLE_SHEET_ID;
+	if (!SHEET_ID) return [];
+
+	const sheets = getSheetsClient();
+	try {
+		// First, let's check if the sheet exists to provide a better error
+		const spreadsheet = await sheets.spreadsheets.get({
+			spreadsheetId: SHEET_ID,
+		});
+
+		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'PromoCodes');
+
+		if (!sheetExists) {
+			console.error('Sheet "PromoCodes" not found in the spreadsheet. Please create a tab named "PromoCodes".');
+			return [];
+		}
+
+		const response = await sheets.spreadsheets.values.get({
+			spreadsheetId: SHEET_ID,
+			range: 'PromoCodes!A1:C',
+		});
+
+		const rows = response.data.values ?? [];
+		if (rows.length <= 1) return []; // Only header or empty
+
+		const [, ...dataRows] = rows as string[][];
+		return dataRows.map((row) => ({
+			code: (row[0] ?? '').trim().toUpperCase(),
+			discount: parseNumber(row[1] ?? '0'),
+			active: (row[2] ?? '').trim().toLowerCase() === 'true',
+		}));
+	} catch (error) {
+		console.error('Error reading promo codes from sheet:', error);
+		return [];
+	}
+};
+
 export const writeSheetProducts = async (items: Product[]) => {
 	const sheets = getSheetsClient();
 	const title = await getSheetTitle(sheets);
-	const range = `${title}!A1:K`;
+	const range = `${title}!A1:L`;
 
 	const values = [
 		[...HEADERS],
@@ -163,6 +203,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 			product.price.toFixed(2),
 			String(product.stock),
 			product.category,
+			product.mg ?? '',
 			product.image,
 			(product.icons ?? []).join(', '),
 			product.status ?? 'published',

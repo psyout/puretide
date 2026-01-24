@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function CheckoutClient() {
-	const { cartItems, getTotal, clearCart } = useCart();
+	const { cartItems, getTotal, clearCart, getItemPrice } = useCart();
 	const router = useRouter();
 	const [formData, setFormData] = useState({
 		firstName: '',
@@ -23,6 +23,11 @@ export default function CheckoutClient() {
 	});
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [hasSubmitted, setHasSubmitted] = useState(false);
+	const [showPromoInput, setShowPromoInput] = useState(false);
+	const [promoCode, setPromoCode] = useState('');
+	const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
+	const [promoError, setPromoError] = useState<string | null>(null);
+	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
 	const [shippingMethod, setShippingMethod] = useState<'regular' | 'express'>('regular');
 	const [shippingAddress, setShippingAddress] = useState({
@@ -35,13 +40,41 @@ export default function CheckoutClient() {
 
 	const subtotal = getTotal();
 	const shippingCost = shippingMethod === 'express' ? 29.99 : 19.99;
-	const total = Number((subtotal + shippingCost).toFixed(2));
+	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
+	const total = Number((subtotal + shippingCost - discountAmount).toFixed(2));
 
 	useEffect(() => {
 		if (cartItems.length === 0 && !hasSubmitted) {
 			router.push('/cart');
 		}
 	}, [cartItems.length, hasSubmitted, router]);
+
+	const handleApplyPromo = async () => {
+		if (!promoCode.trim()) return;
+		setIsVerifyingPromo(true);
+		setPromoError(null);
+
+		try {
+			const response = await fetch('/api/promo/verify', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ code: promoCode }),
+			});
+
+			const data = await response.json();
+			if (data.ok) {
+				setAppliedDiscount(data.discount);
+				setPromoError(null);
+			} else {
+				setPromoError(data.error || 'Invalid code');
+				setAppliedDiscount(0);
+			}
+		} catch (error) {
+			setPromoError('Failed to verify code');
+		} finally {
+			setIsVerifyingPromo(false);
+		}
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -57,6 +90,7 @@ export default function CheckoutClient() {
 					shipToDifferentAddress,
 					shippingAddress: shipToDifferentAddress ? shippingAddress : undefined,
 					shippingMethod,
+					promoCode: appliedDiscount > 0 ? promoCode : undefined,
 					subtotal,
 					shippingCost,
 					total,
@@ -85,7 +119,7 @@ export default function CheckoutClient() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='container mx-auto px-4 py-12'>
+			<div className='container mx-auto px-4 py-24'>
 				<Link
 					href='/cart'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -95,7 +129,7 @@ export default function CheckoutClient() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-2 lg:order-1 lg:col-span-2'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-4 mb-6 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							<form
 								onSubmit={handleSubmit}
@@ -107,7 +141,7 @@ export default function CheckoutClient() {
 										value={formData.firstName}
 										onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
 										autoComplete='given-name'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -118,7 +152,7 @@ export default function CheckoutClient() {
 										value={formData.lastName}
 										onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
 										autoComplete='family-name'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -128,7 +162,7 @@ export default function CheckoutClient() {
 										value={formData.country}
 										onChange={(e) => setFormData({ ...formData, country: e.target.value })}
 										autoComplete='country-name'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required>
 										<option value='Canada'>Canada</option>
 									</select>
@@ -141,7 +175,7 @@ export default function CheckoutClient() {
 										onChange={(e) => setFormData({ ...formData, address: e.target.value })}
 										placeholder='House number and street name'
 										autoComplete='address-line1'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -153,7 +187,7 @@ export default function CheckoutClient() {
 										onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
 										placeholder='Apartment, suite, unit, etc. (optional)'
 										autoComplete='address-line2'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
 								<div>
@@ -163,7 +197,7 @@ export default function CheckoutClient() {
 										value={formData.city}
 										onChange={(e) => setFormData({ ...formData, city: e.target.value })}
 										autoComplete='address-level2'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
@@ -173,7 +207,7 @@ export default function CheckoutClient() {
 										value={formData.province}
 										onChange={(e) => setFormData({ ...formData, province: e.target.value })}
 										autoComplete='address-level1'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required>
 										<option value='British Columbia'>British Columbia</option>
 										<option value='Alberta'>Alberta</option>
@@ -197,20 +231,11 @@ export default function CheckoutClient() {
 										value={formData.zipCode}
 										onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
 										autoComplete='postal-code'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 								</div>
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Phone (optional)</label>
-									<input
-										type='tel'
-										value={formData.phone}
-										onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-										autoComplete='tel'
-										className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-									/>
-								</div>
+
 								<div>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Email address *</label>
 									<input
@@ -218,7 +243,7 @@ export default function CheckoutClient() {
 										value={formData.email}
 										onChange={(e) => setFormData({ ...formData, email: e.target.value })}
 										autoComplete='email'
-										className='w-full bg-mineral-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
 									<p className='text-xs text-deep-tidal-teal-600 mt-1 flex items-center gap-1'>
@@ -248,7 +273,7 @@ export default function CheckoutClient() {
 									<span>Ship to a different address?</span>
 								</div>
 								{shipToDifferentAddress && (
-									<div className='space-y-4 rounded-lg bg-mineral-white ui-border p-4'>
+									<div className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
 										<div>
 											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
 											<input
@@ -257,7 +282,7 @@ export default function CheckoutClient() {
 												onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
 												placeholder='House number and street name'
 												autoComplete='shipping address-line1'
-												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
 										</div>
@@ -269,7 +294,7 @@ export default function CheckoutClient() {
 												onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
 												placeholder='Apartment, suite, unit, etc. (optional)'
 												autoComplete='shipping address-line2'
-												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 											/>
 										</div>
 										<div>
@@ -279,7 +304,7 @@ export default function CheckoutClient() {
 												value={shippingAddress.city}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
 												autoComplete='shipping address-level2'
-												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
 										</div>
@@ -289,7 +314,7 @@ export default function CheckoutClient() {
 												value={shippingAddress.province}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
 												autoComplete='shipping address-level1'
-												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required>
 												<option value='British Columbia'>British Columbia</option>
 												<option value='Alberta'>Alberta</option>
@@ -313,7 +338,7 @@ export default function CheckoutClient() {
 												value={shippingAddress.zipCode}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value })}
 												autoComplete='shipping postal-code'
-												className='w-full bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
 										</div>
@@ -325,7 +350,7 @@ export default function CheckoutClient() {
 										value={formData.orderNotes}
 										onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
 										placeholder='Notes about your order, e.g. special notes for delivery.'
-										className='w-full min-h-[120px] bg-mineral-white ui-border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
 								<div className='bg-eucalyptus-100/60 p-4 rounded ui-border shadow-md'>
@@ -349,7 +374,7 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
-								<div className='bg-mineral-white p-4 rounded ui-border shadow-md'>
+								<div className='bg-eucalyptus-100/60 p-4 rounded ui-border shadow-md'>
 									<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 									<p className='text-sm text-deep-tidal-teal-800'>
 										After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
@@ -367,9 +392,28 @@ export default function CheckoutClient() {
 					</div>
 
 					<div className='order-1 lg:order-2 lg:col-span-1'>
-						<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-4 sticky top-24 shadow-lg'>
-							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Your order</h2>
-							<div className='space-y-2 mb-6'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
+								<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Your order</h2>
+								<Link
+									href='/cart'
+									className='text-sm font-semibold text-deep-tidal-teal hover:text-deep-tidal-teal-600 transition-colors flex items-center gap-1'>
+									<svg
+										className='w-4 h-4'
+										fill='none'
+										stroke='currentColor'
+										viewBox='0 0 24 24'>
+										<path
+											strokeLinecap='round'
+											strokeLinejoin='round'
+											strokeWidth={2}
+											d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+										/>
+									</svg>
+									<span className='text-sm font-semibold underline'>Edit Cart</span>
+								</Link>
+							</div>
+							<div className='space-y-2 mb-4'>
 								{cartItems.map((item) => (
 									<div
 										key={item.id}
@@ -377,17 +421,78 @@ export default function CheckoutClient() {
 										<span className='text-deep-tidal-teal-700'>
 											{item.name}
 											<br />
-											<span className='text-xs text-deep-tidal-teal-600'>Quantity: {item.quantity}</span>
+											<span className='text-md text-deep-tidal-teal-600'>Quantity: {item.quantity}</span>
 										</span>
-										<span className='text-deep-tidal-teal-800 font-semibold'>${(item.price * item.quantity).toFixed(2)}</span>
+										<span className='text-deep-tidal-teal-800 font-semibold text-lg'>${(getItemPrice(item) * item.quantity).toFixed(2)}</span>
 									</div>
 								))}
 							</div>
-							<div className='ui-border-t pt-4 space-y-2 text-md'>
+
+							<div className='py-4 border-y border-deep-tidal-teal/10'>
+								{!showPromoInput ? (
+									<button
+										onClick={() => setShowPromoInput(true)}
+										className='flex items-center gap-2 text-deep-tidal-teal-800 hover:text-deep-tidal-teal transition-colors group'>
+										<svg
+											className='w-5 h-5 transition-transform group-hover:scale-110'
+											fill='none'
+											stroke='currentColor'
+											viewBox='0 0 24 24'>
+											<path
+												strokeLinecap='round'
+												strokeLinejoin='round'
+												strokeWidth={1.5}
+												d='M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z'
+											/>
+										</svg>
+										<span className='text-md font-bold underline decoration-1 underline-offset-4'>Enter a promo code</span>
+									</button>
+								) : (
+									<div className='space-y-2 animate-in fade-in slide-in-from-top-2 duration-300'>
+										<div className='flex gap-2'>
+											<input
+												type='text'
+												value={promoCode}
+												onChange={(e) => setPromoCode(e.target.value)}
+												placeholder='Promo code'
+												disabled={isVerifyingPromo || appliedDiscount > 0}
+												className='flex-1 bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
+											/>
+											<button
+												type='button'
+												onClick={handleApplyPromo}
+												disabled={isVerifyingPromo || appliedDiscount > 0 || !promoCode.trim()}
+												className='bg-deep-tidal-teal text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-deep-tidal-teal-900 transition-colors disabled:opacity-50 cursor-pointer'>
+												{isVerifyingPromo ? '...' : appliedDiscount > 0 ? 'Applied' : 'Apply'}
+											</button>
+											{appliedDiscount > 0 && (
+												<button
+													onClick={() => {
+														setAppliedDiscount(0);
+														setPromoCode('');
+													}}
+													className='text-xs text-red-500 underline'>
+													Remove
+												</button>
+											)}
+										</div>
+										{promoError && <p className='text-xs text-red-500 font-medium'>{promoError}</p>}
+										{appliedDiscount > 0 && <p className='text-xs text-deep-tidal-teal-400 font-bold'>Discount applied! {appliedDiscount}% off subtotal.</p>}
+									</div>
+								)}
+							</div>
+
+							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-md'>
 								<div className='flex justify-between'>
-									<span className='text-deep-tidal-teal-700'>Subtotal</span>
-									<span className='text-deep-tidal-teal-800 font-semibold'>${subtotal.toFixed(2)}</span>
+									<span className='text-deep-tidal-teal-700 text-lg'>Subtotal</span>
+									<span className='text-deep-tidal-teal-800 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
 								</div>
+								{appliedDiscount > 0 && (
+									<div className='flex justify-between text-deep-tidal-teal font-bold'>
+										<span className='text-lg'>Discount ({appliedDiscount}%)</span>
+										<span className='text-lg'>-${discountAmount.toFixed(2)}</span>
+									</div>
+								)}
 								<div className='space-y-2'>
 									<div className='text-deep-tidal-teal-700'>Shipping</div>
 									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
@@ -400,7 +505,7 @@ export default function CheckoutClient() {
 											/>
 											Regular Shipping
 										</span>
-										<span>${19.99.toFixed(2)}</span>
+										<span className='text-lg'>${(19.99).toFixed(2)}</span>
 									</label>
 									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
 										<span className='flex items-center gap-2'>
@@ -412,10 +517,10 @@ export default function CheckoutClient() {
 											/>
 											Express Shipping
 										</span>
-										<span>${29.99.toFixed(2)}</span>
+										<span className='text-lg'>${(29.99).toFixed(2)}</span>
 									</label>
 								</div>
-								<div className='ui-border-t pt-3 flex justify-between text-xl font-bold'>
+								<div className='border-t border-deep-tidal-teal/10 pt-3 flex justify-between text-xl font-bold'>
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>

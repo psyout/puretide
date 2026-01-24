@@ -3,19 +3,9 @@ import { readSheetProducts } from '@/lib/stockSheet';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/types/product';
-import AddToCartButton from '@/components/AddToCartButton';
-import {
-	Activity,
-	Droplets,
-	Flower2,
-	Gauge,
-	HeartPulse,
-	Leaf,
-	Moon,
-	Scale,
-	Sparkles,
-	Timer,
-} from 'lucide-react';
+import ProductActions from '@/components/ProductActions';
+import Header from '@/components/Header';
+import { Activity, Droplets, Flower2, Gauge, HeartPulse, Leaf, Moon, Scale, Sparkles, Timer } from 'lucide-react';
 
 const iconMap = {
 	Activity,
@@ -62,7 +52,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='container mx-auto px-6 py-12'>
+			<Header />
+			<div className='container mx-auto px-6 py-24'>
 				<Link
 					href='/'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -71,15 +62,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
 					<div className='lg:col-start-2'>
-						<div className='flex flex-wrap items-center gap-3 mb-4'>
-							<span className='text-sm text-deep-tidal-teal bg-eucalyptus-200 px-3 py-1 rounded inline-block'>{product.category}</span>
+						<div className='flex flex-wrap items-center gap-3 mb-8'>
+							<span className='text-[11px] text-deep-tidal-teal bg-eucalyptus-200/40 px-2 py-1 rounded inline-block'>{product.category}</span>
 							{(product.stock <= 0 || product.status === 'stock-out') && (
-								<span className='text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-full'>
-									Sold out
-								</span>
+								<span className='text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-full'>Sold out</span>
 							)}
 						</div>
-						<h1 className='text-4xl font-bold mb-4 text-deep-tidal-teal-800'>{product.name}</h1>
+						<div className='flex items-start gap-2 mb-4'>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-800'>{product.name}</h1>
+							{product.mg && <div className='inline-flex items-start justify-center text-deep-tidal-teal-600 font-bold text-[14px] mt-1'>{product.mg}mg</div>}
+						</div>
+
 						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-3 flex items-center justify-center shadow-lg mb-4 lg:hidden'>
 							{product.image.startsWith('/') || product.image.startsWith('http') ? (
 								<Image
@@ -96,7 +89,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							)}
 						</div>
 						{product.icons && (
-							<div className='grid grid-cols-3 gap-1 mt-5 mb-7 max-w-[260px] justify-items-start'>
+							<div className='grid grid-cols-3 gap-1 mt-4 mb-7 max-w-[260px] justify-items-start'>
 								{product.icons.map((iconName: string) => {
 									const Icon = iconMap[iconName as keyof typeof iconMap];
 									if (!Icon) {
@@ -116,9 +109,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</div>
 						)}
 						<p className='text-deep-tidal-teal-700 text-lg mb-4'>{product.description}</p>
-						{product.details && (
-							<p className='text-deep-tidal-teal-700 text-base mb-6'>{product.details}</p>
-						)}
+						{product.details && <p className='text-deep-tidal-teal-700 text-base'>{product.details}</p>}
 					</div>
 
 					<div className='hidden lg:flex bg-white/60 backdrop-blur-sm rounded-lg ui-border p-12 items-center justify-center shadow-lg lg:col-start-1 lg:row-start-1 lg:row-end-3'>
@@ -139,23 +130,47 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					<div className='lg:col-start-2'>
-						<div className='text-4xl font-bold text-deep-tidal-teal mb-8'>${product.price.toFixed(2)}</div>
+						<div className='text-4xl font-bold text-deep-tidal-teal mb-8'>
+							<span className=' text-deep-tidal-teal-600 font-light'>C</span>${product.price.toFixed(2)}
+						</div>
 
-						<div className='space-y-4'>
-							<AddToCartButton
-								product={product}
-								disabled={product.stock <= 0 || product.status === 'stock-out'}
-							/>
-							<div className='bg-eucalyptus-100/10 p-4 rounded ui-border shadow-md'>
-								<div className='flex items-center gap-2 mb-2'>
-									<svg className='w-5 h-5 text-deep-tidal-teal' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-										<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' />
-									</svg>
-									<h3 className='font-semibold text-deep-tidal-teal-800'>Privacy Guaranteed</h3>
-								</div>
-								<p className='text-sm text-deep-tidal-teal-700'>This purchase is completely anonymous. No tracking, no data collection, no third-party sharing.</p>
+						{/* Discount Table */}
+						<div className='mb-8 overflow-hidden rounded-xl border border-deep-tidal-teal/10 bg-white shadow-sm'>
+							<div className='bg-deep-tidal-teal/5 px-4 py-2 border-b border-deep-tidal-teal/10'>
+								<h3 className='text-sm font-bold text-deep-tidal-teal capitalize tracking-wider'>Discount per Quantity</h3>
+							</div>
+							<div className='overflow-x-auto'>
+								<table className='w-full text-[15px] text-left'>
+									<thead>
+										<tr className='border-b border-deep-tidal-teal/5 bg-deep-tidal-teal/[0.02]'>
+											<th className='px-4 py-2 font-semibold text-deep-tidal-teal-800'>Quantity</th>
+											<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>2 - 5</th>
+											<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>6 - 7</th>
+											<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>8 - 9</th>
+											<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>10 +</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr>
+											<td className='px-4 py-3 font-semibold text-deep-tidal-teal-800 bg-deep-tidal-teal/[0.02]'>Discount</td>
+											<td className='px-4 py-3 text-emerald-600 font-bold'>5%</td>
+											<td className='px-4 py-3 text-emerald-600 font-bold'>10%</td>
+											<td className='px-4 py-3 text-emerald-600 font-bold'>15%</td>
+											<td className='px-4 py-3 text-emerald-600 font-bold'>25%</td>
+										</tr>
+										<tr className='border-t border-deep-tidal-teal/5'>
+											<td className='px-4 py-3 font-semibold text-deep-tidal-teal-800 bg-deep-tidal-teal/[0.02]'>Price</td>
+											<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(product.price * 0.95).toFixed(2)}</td>
+											<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(product.price * 0.9).toFixed(2)}</td>
+											<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(product.price * 0.85).toFixed(2)}</td>
+											<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(product.price * 0.75).toFixed(2)}</td>
+										</tr>
+									</tbody>
+								</table>
 							</div>
 						</div>
+
+						<ProductActions product={product} />
 					</div>
 				</div>
 			</div>
