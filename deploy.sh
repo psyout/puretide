@@ -4,7 +4,7 @@ set -euo pipefail
 VPS_USER="${VPS_USER:-root}"
 VPS_HOST="${VPS_HOST:-82.221.139.21}"
 VPS_PATH="${VPS_PATH:-/var/www/puretide}"
-PM2_APP="${PM2_APP:-0}"
+PM2_APP="${PM2_APP:-puretide}"
 
 SSH_TARGET="${VPS_USER}@${VPS_HOST}"
 
