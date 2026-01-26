@@ -131,7 +131,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 					<div className='lg:col-start-2'>
 						<div className='text-4xl font-bold text-deep-tidal-teal-700 mb-8'>
-							<span className=' text-deep-tidal-teal-600 font-light'>C</span>${product.price.toFixed(2)}
+							<span className=' text-deep-tidal-teal-700 font-light'>C</span>${product.price.toFixed(2)}
 						</div>
 
 						{/* Discount Table */}

@@ -57,6 +57,15 @@ export default function RootLayout({
 					name='referrer'
 					content='no-referrer'
 				/>
+				{/* Block all search engines */}
+				<meta
+					name='robots'
+					content='noindex, nofollow, noarchive, nosnippet, noimageindex'
+				/>
+				<meta
+					name='googlebot'
+					content='noindex, nofollow, noarchive, nosnippet, noimageindex'
+				/>
 			</head>
 			<body className={`${matimo.variable} antialiased`}>
 				<Providers>{children}</Providers>
