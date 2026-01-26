@@ -74,7 +74,7 @@ export default function ContactForm() {
 	};
 
 	return (
-		<div className='bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg p-6 shadow-lg ui-border'>
+		<div className='bg-muted-sage/20 backdrop-blur-md rounded-xl p-6 shadow-lg ui-border'>
 			<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Send us a Message</h3>
 			<form
 				onSubmit={handleSubmit}
@@ -82,7 +82,7 @@ export default function ContactForm() {
 				<div>
 					<label
 						htmlFor='name'
-						className='block text-sm font-medium text-deep-tidal-teal-800 mb-2'>
+						className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>
 						Name
 					</label>
 					<input
@@ -90,14 +90,14 @@ export default function ContactForm() {
 						id='name'
 						value={formData.name}
 						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-						className='w-full bg-mineral-white rounded px-4 py-3 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 						required
 					/>
 				</div>
 				<div>
 					<label
 						htmlFor='email'
-						className='block text-sm font-medium text-deep-tidal-teal-800 mb-2'>
+						className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>
 						Email
 					</label>
 					<input
@@ -105,14 +105,14 @@ export default function ContactForm() {
 						id='email'
 						value={formData.email}
 						onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-						className='w-full bg-mineral-white rounded px-4 py-3 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 						required
 					/>
 				</div>
 				<div>
 					<label
 						htmlFor='message'
-						className='block text-sm font-medium text-deep-tidal-teal-800 mb-2'>
+						className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>
 						Message
 					</label>
 					<textarea
@@ -120,17 +120,12 @@ export default function ContactForm() {
 						value={formData.message}
 						onChange={(e) => setFormData({ ...formData, message: e.target.value })}
 						rows={6}
-						className='w-full bg-mineral-white rounded px-4 py-3 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal resize-none'
+						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal resize-none'
 						required
 					/>
 				</div>
 				{formStatus.type !== 'idle' && (
-					<div
-						className={`rounded-lg px-4 py-3 text-sm ${
-							formStatus.type === 'success'
-								? 'bg-eucalyptus-200/70 text-deep-tidal-teal-800'
-								: 'bg-rose-100 text-rose-700'
-						}`}>
+					<div className={`rounded-lg px-4 py-3 text-sm ${formStatus.type === 'success' ? 'bg-eucalyptus-200/70 text-deep-tidal-teal-800' : 'bg-rose-100 text-rose-700'}`}>
 						{formStatus.message}
 					</div>
 				)}

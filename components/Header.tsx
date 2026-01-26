@@ -23,7 +23,7 @@ export default function Header() {
 
 	return (
 		<header className='bg-deep-tidal-teal-600/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[100]'>
-			<div className='container mx-auto px-6 py-4 flex justify-between items-center'>
+			<div className='max-w-7xl mx-auto px-6 py-4 flex justify-between items-center'>
 				<Link
 					href='/'
 					className='flex items-center transition-opacity hover:opacity-80'>

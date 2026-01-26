@@ -12,7 +12,7 @@ export default function Home() {
 
 			<Hero />
 
-			<main className='container mx-auto px-10'>
+			<main>
 				<ProductGrid />
 			</main>
 

@@ -1,7 +1,7 @@
 export default function Footer() {
 	return (
 		<footer className='ui-border-t mt-1 pt-8 pb-8'>
-			<div className='container mx-auto px-4 text-center text-deep-tidal-teal-700 text-sm'>
+			<div className='mx-auto max-w-7xl px-6 text-center text-deep-tidal-teal-700 text-sm'>
 				<p className='flex items-center justify-center gap-2'>
 					<svg
 						className='w-4 h-4'

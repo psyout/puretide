@@ -119,7 +119,7 @@ export default function CheckoutClient() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='container mx-auto px-4 py-24'>
+			<div className='max-w-7xl mx-auto px-6 py-24'>
 				<Link
 					href='/cart'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -129,7 +129,7 @@ export default function CheckoutClient() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-2 lg:order-1 lg:col-span-2'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
+						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							<form
 								onSubmit={handleSubmit}
@@ -353,7 +353,7 @@ export default function CheckoutClient() {
 										className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
-								<div className='bg-eucalyptus-100/60 p-4 rounded ui-border shadow-md'>
+								<div className='bg-muted-sage/30 p-4 rounded ui-border'>
 									<div className='flex items-center gap-2 mb-2'>
 										<svg
 											className='w-5 h-5 text-deep-tidal-teal'
@@ -374,7 +374,7 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
-								<div className='bg-eucalyptus-100/60 p-4 rounded ui-border shadow-md'>
+								<div className='bg-muted-sage/20 p-4 rounded ui-border'>
 									<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 									<p className='text-sm text-deep-tidal-teal-800'>
 										After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
@@ -392,7 +392,7 @@ export default function CheckoutClient() {
 					</div>
 
 					<div className='order-1 lg:order-2 lg:col-span-1'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
 								<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Your order</h2>
 								<Link

@@ -63,20 +63,20 @@ export default function HeroClient({ slides }: HeroClientProps) {
 							sizes='100vw'
 							className='object-cover hidden xs:block'
 						/>
-						<div className='absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.09),rgba(0,0,0,0.3))]' />
+						<div className='absolute inset-0 ' />
 					</div>
 				))}
 			</div>
 
 			{/* Text overlay */}
-			<div className='relative z-10 h-full flex flex-col items-center justify-center container mx-auto px-6 sm:px-8 text-center'>
-				<div className='mb-8'>
+			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-6 text-center'>
+				<div className='mb-3 lg:mb-6'>
 					<LogoHorizontal
 						className='h-32 lg:h-40 w-auto mx-auto drop-shadow-2xl'
 						fillColor='fill-deep-tidal-teal-600 drop-shadow-xl/50'
 					/>
 				</div>
-				<p className='text-deep-tidal-teal-800 text-lg sm:text-xl lg:text-2xl max-w-sm sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] font-matimo'>
+				<p className='text-deep-tidal-teal-600 text-lg sm:text-xl lg:text-2xl max-w-[80%] min-h-[150px] sm:min-h-[180px] lg:min-h-[200px] sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] font-matimo'>
 					{currentSlide.description}
 				</p>
 			</div>
@@ -84,7 +84,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			{/* Navigation arrows */}
 			<button
 				onClick={goToPrevious}
-				className='absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-3 transition-all duration-300 group'
+				className='absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-deep-tidal-teal/70 hover:bg-deep-tidal-teal-600 backdrop-blur-sm rounded-full p-3 transition-all duration-300 group'
 				aria-label='Previous slide'>
 				<svg
 					className='w-6 h-6 text-white group-hover:scale-110 transition-transform'
@@ -101,7 +101,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			</button>
 			<button
 				onClick={goToNext}
-				className='absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-3 transition-all duration-300 group'
+				className='absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-deep-tidal-teal/70 hover:bg-deep-tidal-teal-600 backdrop-blur-sm rounded-full p-3 transition-all duration-300 group'
 				aria-label='Next slide'>
 				<svg
 					className='w-6 h-6 text-white group-hover:scale-110 transition-transform'
@@ -123,7 +123,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 					<button
 						key={index}
 						onClick={() => goToSlide(index)}
-						className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentIndex ? 'bg-white w-8' : 'bg-white/50 hover:bg-white/75'}`}
+						className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentIndex ? 'bg-deep-tidal-teal w-8' : 'bg-deep-tidal-teal/50 hover:bg-deep-tidal-teal/75'}`}
 						aria-label={`Go to slide ${index + 1}`}
 					/>
 				))}

@@ -13,7 +13,7 @@ export default function CartClient() {
 	if (cartItems.length === 0) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-				<div className='container mx-auto px-4 py-24'>
+				<div className='max-w-7xl mx-auto px-6 py-24'>
 					<Link
 						href='/'
 						className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -49,7 +49,7 @@ export default function CartClient() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='container mx-auto px-4 py-24'>
+			<div className='max-w-7xl mx-auto px-6 py-24'>
 				<Link
 					href='/'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -62,7 +62,7 @@ export default function CartClient() {
 						{cartItems.map((item) => (
 							<div
 								key={item.id}
-								className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 flex items-center gap-6 shadow-lg'>
+								className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 flex items-center gap-6 shadow-lg'>
 								<div className='h-28 w-28 flex items-center justify-center rounded-lg bg-white shadow-sm'>
 									{item.image.startsWith('/') || item.image.startsWith('http') ? (
 										<Image
@@ -87,8 +87,8 @@ export default function CartClient() {
 											{getItemPrice(item) < item.price && <span className='text-lg text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</span>}
 										</div>
 									</div>
-									<p className='text-md text-deep-tidal-teal-700 mt-2'>{item.description}</p>
-									<div className='mt-3 flex w-full items-center justify-between gap-4 lg:hidden'>
+									<p className='text-sm text-deep-tidal-teal-700 mt-2'>{item.description}</p>
+									<div className='mt-3 flex w-full items-center justify-flex-start flex-wrap gap-4 lg:hidden'>
 										<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
 											<button
 												onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -134,7 +134,7 @@ export default function CartClient() {
 					</div>
 
 					<div className='lg:col-span-1'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div className='space-y-2 mb-6'>
 								{cartItems.map((item) => (

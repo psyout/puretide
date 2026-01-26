@@ -14,7 +14,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 	const isSoldOut = product.stock <= 0 || product.status === 'stock-out';
 
 	return (
-		<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border hover:shadow-2xl hover:scale-103 transition-all duration-300 overflow-hidden group shadow-lg relative'>
+		<div className='bg-mineral-white backdrop-blur-sm rounded-xl ui-border hover:shadow-2xl hover:scale-103 transition-all duration-300 overflow-hidden shadow-sm relative'>
 			{isSoldOut && <span className='absolute top-4 right-4 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-full z-10'>Sold out</span>}
 			<Link href={`/product/${product.slug}`}>
 				<div className='p-6'>

@@ -23,7 +23,7 @@ export default function AboutAccordion({ items, defaultOpenIndex = 0 }: AboutAcc
 				return (
 					<div
 						key={item.title}
-						className={`rounded-2xl bg-white/80 backdrop-blur-md shadow-lg overflow-hidden grid transition-[grid-template-rows] duration-300 ease-out ui-border ${
+						className={`rounded-xl p-2 bg-mineral-white backdrop-blur-md shadow-sm overflow-hidden grid transition-[grid-template-rows] duration-300 ease-out ui-border text-lg ${
 							isOpen ? 'grid-rows-[auto_1fr]' : 'grid-rows-[auto_0fr]'
 						}`}>
 						<button
@@ -34,9 +34,7 @@ export default function AboutAccordion({ items, defaultOpenIndex = 0 }: AboutAcc
 							{isOpen ? <Minus className='w-5 h-5 text-deep-tidal-teal' /> : <Plus className='w-5 h-5 text-deep-tidal-teal' />}
 						</button>
 						<div className='px-5 text-deep-tidal-teal-700 text-base overflow-hidden'>
-							<div className={`pb-4 transition-opacity duration-300 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-								{item.body}
-							</div>
+							<div className={`pb-4 transition-opacity duration-300 ease-out text-md ${isOpen ? 'opacity-100' : 'opacity-0'}`}>{item.body}</div>
 						</div>
 					</div>
 				);

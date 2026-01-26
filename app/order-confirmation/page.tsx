@@ -76,8 +76,8 @@ export default async function OrderConfirmationPage() {
 	if (!order) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<Header />
-			<div className='container mx-auto px-4 py-16 pt-28'>
+				<Header />
+				<div className='max-w-7xl mx-auto px-6 py-16 pt-28'>
 					<div className='max-w-2xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-4 shadow-lg'>
 						<h1 className='text-3xl font-bold text-deep-tidal-teal-800 mb-3'>Order not found</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>We could not find a recent order. Please return to the shop.</p>
@@ -118,8 +118,8 @@ export default async function OrderConfirmationPage() {
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<Header />
-			<div className='container mx-auto px-4 py-12 pt-28'>
-				<div className='max-w-4xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border shadow-lg p-4'>
+			<div className='max-w-7xl mx-auto px-6 py-12 pt-28'>
+				<div className='max-w-4xl mx-auto bg-muted-sage/30 backdrop-blur-sm rounded-lg ui-border shadow-lg p-6'>
 					<h1 className='text-3xl font-bold text-deep-tidal-teal-800 mb-2 mt-2'>Thank you. Your order has been received.</h1>
 					<p className='text-deep-tidal-teal-800 mb-6'>Payment is completed only via Interac e&ndash;Transfer in Canada.</p>
 
@@ -145,7 +145,8 @@ export default async function OrderConfirmationPage() {
 					<div className='rounded-lg bg-mineral-white ui-border mb-8 p-4'>
 						<h2 className='text-2xl font-semibold text-deep-tidal-teal-800 mb-4'>Interac e&ndash;Transfer Instructions</h2>
 						<p className='text-deep-tidal-teal-800 mb-4'>
-							After placing your order, please send an Interac e&ndash;Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.
+							After placing your order, please send an Interac e&ndash;Transfer following the instructions below. Enter everything exactly as shown so your payment is
+							automatically accepted.
 						</p>
 						<div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-md'>
 							<div>
@@ -194,9 +195,7 @@ export default async function OrderConfirmationPage() {
 										<span>
 											{item.name} × {item.quantity}
 										</span>
-										<span className='text-deep-tidal-teal-800 font-semibold'>
-											{formatMoney(item.price * item.quantity)}
-										</span>
+										<span className='text-deep-tidal-teal-800 font-semibold'>{formatMoney(item.price * item.quantity)}</span>
 									</div>
 								))}
 							</div>
@@ -238,7 +237,8 @@ export default async function OrderConfirmationPage() {
 					</div>
 
 					<div className='text-xs text-deep-tidal-teal-700 p-[6px]'>
-						Your personal data will be used to process your order, support your experience on this website, and for other purposes described in our privacy policy. All products are sold strictly for laboratory research purposes only and are not intended for human or veterinary use.
+						Your personal data will be used to process your order, support your experience on this website, and for other purposes described in our privacy policy. All products are
+						sold strictly for laboratory research purposes only and are not intended for human or veterinary use.
 					</div>
 				</div>
 			</div>
