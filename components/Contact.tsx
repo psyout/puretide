@@ -2,7 +2,7 @@ import ContactForm from './ContactForm';
 
 export default function Contact() {
 	return (
-		<section className='py-32 px-6 sm:px-8 bg-white'>
+		<section className='py-20 bg-white'>
 			<div className='mx-auto max-w-7xl px-6'>
 				<div className='text-center mb-12'>
 					<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Get in Touch</h2>
@@ -11,13 +11,13 @@ export default function Contact() {
 					</p>
 				</div>
 
-				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
+				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-start'>
 					{/* Contact Form */}
 					<ContactForm />
 
 					{/* Contact Information */}
-					<div className='space-y-8'>
-						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg p-6 shadow-lg ui-border'>
+					<div className='flex flex-col md:flex-row lg:flex-col gap-6'>
+						<div className='flex-1 bg-muted-sage/20 backdrop-blur-sm rounded-lg p-6 shadow-lg ui-border'>
 							<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Contact Information</h3>
 							<div className='space-y-6'>
 								<div className='flex items-start gap-4'>
@@ -48,7 +48,7 @@ export default function Contact() {
 						</div>
 
 						{/* Additional Info */}
-						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
+						<div className='flex-1 bg-muted-sage/20 backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
 							<div className='flex items-center gap-2 mb-3'>
 								<svg
 									className='w-5 h-5 text-deep-tidal-teal'

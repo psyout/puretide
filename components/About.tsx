@@ -44,7 +44,7 @@ export default function About() {
 
 	return (
 		<section>
-			<div className='relative w-full py-24 overflow-hidden'>
+			<div className='relative w-full py-32 overflow-hidden'>
 				<div className='absolute inset-0 z-0 '>
 					<Image
 						src='/background/05.webp'
@@ -80,7 +80,7 @@ export default function About() {
 
 			<div className='w-full bg-[#f5f5f7]/50 overflow-hidden'>
 				<div className='grid grid-cols-1 lg:grid-cols-2 items-stretch min-h-[600px]'>
-					<div className='order-2 lg:order-1 flex lg:justify-end items-center'>
+					<div className='order-1 lg:order-1 flex lg:justify-end items-center'>
 						<div className='w-full lg:max-w-[640px] px-6 lg:pr-16 py-20 lg:py-32'>
 							<h2 className='text-3xl lg:text-5xl font-bold text-deep-tidal-teal-800 mb-12 tracking-tight'>Precision Wellness, Refined.</h2>
 							<AboutAccordion
@@ -91,7 +91,7 @@ export default function About() {
 					</div>
 
 					{/* Image Side - Edge to Edge */}
-					<div className='order-1 lg:order-2 relative min-h-[400px] lg:min-h-full w-full overflow-hidden'>
+					<div className='order-2 lg:order-2 relative min-h-[400px] lg:min-h-full w-full overflow-hidden'>
 						<Image
 							src='/background/skin.webp'
 							alt='Pure Tide wellness'
