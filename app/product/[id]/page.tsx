@@ -108,10 +108,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
 										<div
 											key={iconName}
 											className='flex flex-col items-center'>
-											<div className='h-12 w-12 rounded-full bg-eucalyptus flex items-center justify-center'>
-												<Icon className='w-8 h-8 text-deep-tidal-teal' />
+											<div className='h-12 w-12 rounded-full bg-soft-driftwood flex items-center justify-center'>
+												<Icon className='w-8 h-8 text-deep-tidal-teal-700' />
 											</div>
-											<span className='text-xs text-deep-tidal-teal mt-2'>{iconName}</span>
+											<span className='text-xs text-deep-tidal-teal-700 mt-2'>{iconName}</span>
 										</div>
 									);
 								})}
@@ -130,7 +130,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					<div className='lg:col-start-2'>
-						<div className='text-4xl font-bold text-deep-tidal-teal mb-8'>
+						<div className='text-4xl font-bold text-deep-tidal-teal-700 mb-8'>
 							<span className=' text-deep-tidal-teal-600 font-light'>C</span>${product.price.toFixed(2)}
 						</div>
 

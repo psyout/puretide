@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { Product } from '@/types/product';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { Eye, ShoppingCart, Loader2 } from 'lucide-react';
 
 interface ProductCardProps {
 	product: Product;
@@ -11,13 +14,22 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
 	const { addToCart } = useCart();
+	const router = useRouter();
+	const [isNavigating, setIsNavigating] = useState(false);
 	const isSoldOut = product.stock <= 0 || product.status === 'stock-out';
 
+	const handleViewClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		if (isNavigating) return;
+		setIsNavigating(true);
+		router.push(`/product/${product.slug}`);
+	};
+
 	return (
-		<div className='bg-mineral-white backdrop-blur-sm rounded-xl ui-border hover:shadow-2xl hover:scale-103 transition-all duration-300 overflow-hidden shadow-sm relative'>
+		<div className='group bg-mineral-white backdrop-blur-sm rounded-xl ui-border hover:shadow-xl hover:shadow-deep-tidal-teal-500/20 transition-colors duration-300 overflow-hidden shadow-sm relative'>
 			{isSoldOut && <span className='absolute top-4 right-4 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-full z-10'>Sold out</span>}
 			<Link href={`/product/${product.slug}`}>
-				<div className='p-6'>
+				<div className='p-6 cursor-pointer'>
 					<div className='mb-6 text-center duration-300 flex justify-center items-center h-56'>
 						{product.image.startsWith('/') || product.image.startsWith('http') ? (
 							<div className='relative h-52 w-52'>
@@ -47,14 +59,29 @@ export default function ProductCard({ product }: ProductCardProps) {
 				</div>
 			</Link>
 			<div className='absolute inset-0 bg-white/30 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100' />
-			<div className='absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100'>
+			<div className='absolute inset-0 flex items-center justify-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 flex-col md:flex-row'>
+				<button
+					onClick={handleViewClick}
+					disabled={isNavigating}
+					className='pointer-events-auto flex items-center gap-2 bg-soft-driftwood hover:bg-soft-driftwood-400 disabled:opacity-70 disabled:cursor-not-allowed text-deep-tidal-teal-700 font-semibold py-3 px-4 rounded transition-colors cursor-pointer'>
+					{isNavigating ? (
+						<Loader2
+							size={18}
+							className='animate-spin'
+						/>
+					) : (
+						<Eye size={18} />
+					)}
+					{isNavigating ? 'Loading...' : 'View'}
+				</button>
 				{!isSoldOut && (
 					<button
 						onClick={(e) => {
 							e.preventDefault();
 							addToCart(product);
 						}}
-						className='pointer-events-auto bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors cursor-pointer'>
+						className='pointer-events-auto flex items-center gap-2 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors cursor-pointer'>
+						<ShoppingCart size={18} />
 						Add to cart
 					</button>
 				)}

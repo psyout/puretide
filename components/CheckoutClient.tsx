@@ -353,7 +353,7 @@ export default function CheckoutClient() {
 										className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
-								<div className='bg-muted-sage/30 p-4 rounded ui-border'>
+								<div className='p-4'>
 									<div className='flex items-center gap-2 mb-2'>
 										<svg
 											className='w-5 h-5 text-deep-tidal-teal'
@@ -374,7 +374,8 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
-								<div className='bg-muted-sage/20 p-4 rounded ui-border'>
+								<hr className='my-4 border-deep-tidal-teal/10 border-b' />
+								<div className=' p-4'>
 									<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 									<p className='text-sm text-deep-tidal-teal-800'>
 										After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
