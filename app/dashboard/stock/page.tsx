@@ -23,6 +23,7 @@ const buildNewProduct = (fallbackImage: string): Product => {
 		id,
 		slug: `product-${id.slice(-6)}`,
 		name: 'New Product',
+		subtitle: '',
 		description: '',
 		details: '',
 		price: 0,
@@ -309,7 +310,7 @@ export default function StockDashboardPage() {
 														<div className='grid grid-cols-[minmax(220px,2.5fr)_minmax(140px,1.5fr)_minmax(90px,0.8fr)_minmax(90px,0.8fr)_minmax(140px,1fr)_minmax(130px,0.8fr)] gap-5 items-center text-left'>
 															<div className='text-sm font-semibold text-[#2f2f2f] text-left'>
 																{product.name}
-																{product.mg && <sup className='text-[10px] ml-0.5 align-top opacity-70'>{product.mg}</sup>}
+																{product.mg && <sup className='text-xs ml-0.5 align-top opacity-70'>{product.mg}</sup>}
 															</div>
 															<div className='text-sm text-[#6a6a6a]'>{product.category}</div>
 															<div className='text-sm text-[#2f2f2f]'>
@@ -346,7 +347,7 @@ export default function StockDashboardPage() {
 
 														{expandedId === product.id && (
 															<div className='mt-4 border-t border-black/5 pt-4'>
-																<div className='grid grid-cols-1 lg:grid-cols-5 gap-4'>
+																<div className='grid grid-cols-1 lg:grid-cols-6 gap-4'>
 																	<div>
 																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Title</label>
 																		<input
@@ -354,6 +355,16 @@ export default function StockDashboardPage() {
 																			value={product.name}
 																			onChange={(event) => handleTitleChange(product.id, event.target.value)}
 																			placeholder='Title'
+																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																		/>
+																	</div>
+																	<div>
+																		<label className='block text-xs uppercase tracking-wide text-[#7a7a7a] mb-2'>Subtitle</label>
+																		<input
+																			type='text'
+																			value={product.subtitle ?? ''}
+																			onChange={(event) => updateRow(product.id, { subtitle: event.target.value })}
+																			placeholder='e.g. BPC157 10mg + TB500 10mg'
 																			className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
 																		/>
 																	</div>

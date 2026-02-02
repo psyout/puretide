@@ -7,31 +7,9 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-const HEADERS = [
-	'id',
-	'slug',
-	'name',
-	'description',
-	'details',
-	'price',
-	'stock',
-	'category',
-	'mg',
-	'image',
-	'icons',
-	'status',
-] as const;
+const HEADERS = ['id', 'slug', 'name', 'subtitle', 'description', 'details', 'price', 'stock', 'category', 'mg', 'image', 'icons', 'status'] as const;
 type HeaderKey = (typeof HEADERS)[number];
-const REQUIRED_HEADERS: Array<HeaderKey> = [
-	'id',
-	'slug',
-	'name',
-	'description',
-	'details',
-	'price',
-	'stock',
-	'category',
-];
+const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description', 'details', 'price', 'stock', 'category'];
 
 const getSheetsClient = () => {
 	if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
@@ -68,7 +46,7 @@ const normalizeRow = (row: string[], headerRow: string[]): Record<HeaderKey, str
 
 	HEADERS.forEach((header) => {
 		const index = indexMap[header];
-		result[header] = index != null ? row[index] ?? '' : '';
+		result[header] = index != null ? (row[index] ?? '') : '';
 	});
 	return result;
 };
@@ -101,7 +79,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 	try {
 		const sheets = getSheetsClient();
 		const title = await getSheetTitle(sheets);
-		const range = `${title}!A1:L`;
+		const range = `${title}!A1:M`;
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
@@ -126,6 +104,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 				id: row.id,
 				slug: row.slug,
 				name: row.name,
+				subtitle: row.subtitle || undefined,
 				description: row.description,
 				details: row.details || undefined,
 				price: parseNumber(row.price),
@@ -133,13 +112,12 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 				image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
 				category: row.category,
 				mg: row.mg || undefined,
-				icons:
-					row.icons
-						? row.icons
-								.split(',')
-								.map((icon) => icon.trim())
-								.filter(Boolean)
-						: baseProducts.find((product) => product.id === row.id)?.icons ?? [],
+				icons: row.icons
+					? row.icons
+							.split(',')
+							.map((icon) => icon.trim())
+							.filter(Boolean)
+					: (baseProducts.find((product) => product.id === row.id)?.icons ?? []),
 				status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
 			}));
 
@@ -196,7 +174,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 	try {
 		const sheets = getSheetsClient();
 		const title = await getSheetTitle(sheets);
-		const range = `${title}!A1:L`;
+		const range = `${title}!A1:M`;
 
 		const values = [
 			[...HEADERS],
@@ -204,6 +182,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 				product.id,
 				product.slug,
 				product.name,
+				product.subtitle ?? '',
 				product.description,
 				product.details ?? '',
 				product.price.toFixed(2),

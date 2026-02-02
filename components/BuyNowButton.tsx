@@ -24,7 +24,7 @@ export default function BuyNowButton({ product, quantity = 1, disabled }: BuyNow
 			onClick={handleBuyNow}
 			disabled={disabled}
 			className='w-full bg-deep-tidal-teal-800 hover:bg-gray-700 disabled:bg-muted-sage-400 text-mineral-white font-semibold py-4 px-6 rounded transition-colors text-lg shadow-lg'>
-			{disabled ? 'Sold out' : 'Buy Now'}
+			Buy Now
 		</button>
 	);
 }

@@ -38,7 +38,6 @@ export default function ProductActions({ product }: ProductActionsProps) {
 							+
 						</button>
 					</div>
-					{product.stock > 0 && <span className='text-xs text-deep-tidal-teal-600 opacity-70'>{product.stock} available</span>}
 				</div>
 			)}
 

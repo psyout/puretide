@@ -122,7 +122,7 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 	return (
 		<div
 			id='products'
-			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] bg-cover bg-no-repeat pt-4 lg:pt-20 pb-36 scroll-mt-10'
+			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] bg-cover bg-no-repeat pt-4 pb-24 scroll-mt-10'
 			style={{ backgroundImage: "url('/background/products-bg.webp')" }}>
 			<div className='absolute inset-0 bg-white/70' />
 			<div className='relative mx-auto max-w-7xl px-6'>
@@ -133,40 +133,41 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 							Discover our premium collection of wellness products, each crafted with precision and care.
 						</p>
 					</div>
+				</div>
 
-					<div className='mt-6 flex flex-wrap gap-4 justify-start lg:justify-center'>
-						<label
-							className='sr-only'
-							htmlFor='category-select'>
-							Filter products by category
-						</label>
-						<div className='w-full lg:hidden flex items-center gap-3'>
-							<p className='text-md font-semibold text-deep-tidal-teal-800 whitespace-nowrap'>Categories:</p>
-							<select
-								id='category-select'
-								value={selectedCategory}
-								onChange={(event) => setSelectedCategory(event.target.value)}
-								className='flex-1 rounded-lg ui-border bg-white px-4 py-3 text-deep-tidal-teal-800 font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/40'>
-								{categories.map((category) => (
-									<option
-										key={category}
-										value={category}>
-										{category}
-									</option>
-								))}
-							</select>
-						</div>
-						<div className='hidden lg:flex flex-wrap justify-center gap-4'>
+				{/* Category Filter - to make sticky, add: sticky top-[72px] z-20 bg-white/90 backdrop-blur-md shadow-sm */}
+				<div className='py-4 -mx-6 px-6'>
+					{/* Mobile Dropdown */}
+					<div className='flex justify-center md:hidden'>
+						<select
+							value={selectedCategory}
+							onChange={(e) => setSelectedCategory(e.target.value)}
+							className='w-full max-w-xs bg-white rounded-full px-5 py-3 text-sm font-medium text-deep-tidal-teal-800 shadow-md border border-deep-tidal-teal/10 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/30 appearance-none bg-[url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2724%27%20height%3D%2724%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%232f3a3f%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpolyline%20points%3D%276%209%2012%2015%2018%209%27%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")] bg-[length:20px] bg-[right_12px_center] bg-no-repeat'>
 							{categories.map((category) => (
-								<button
+								<option
 									key={category}
-									onClick={() => setSelectedCategory(category)}
-									className={`px-6 py-2 rounded-md font-semibold transition-all duration-300 bg-deep-tidal-teal text-white-800 shadow-sm ${
-										selectedCategory === category ? 'bg-deep-tidal-teal text-mineral-white shadow-lg' : 'bg-white text-deep-tidal-teal-800 hover:bg-eucalyptus-200'
-									}`}>
+									value={category}>
 									{category}
-								</button>
+								</option>
 							))}
+						</select>
+					</div>
+
+					{/* Tablet/Desktop Pills */}
+					<div className='hidden md:flex justify-center'>
+						<div className='inline-flex bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md border border-deep-tidal-teal/10 overflow-x-auto max-w-full scrollbar-hide'>
+							<div className='flex gap-1'>
+								{categories.map((category) => (
+									<button
+										key={category}
+										onClick={() => setSelectedCategory(category)}
+										className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+											selectedCategory === category ? 'bg-deep-tidal-teal text-white shadow-sm' : 'text-deep-tidal-teal-700 hover:bg-deep-tidal-teal-50'
+										}`}>
+										{category}
+									</button>
+								))}
+							</div>
 						</div>
 					</div>
 				</div>

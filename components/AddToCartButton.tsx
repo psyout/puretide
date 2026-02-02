@@ -21,7 +21,7 @@ export default function AddToCartButton({ product, quantity = 1, disabled }: Add
 			}}
 			disabled={disabled}
 			className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-muted-sage-400 text-mineral-white font-semibold py-4 px-6 rounded transition-colors text-lg'>
-			{disabled ? 'Sold out' : 'Add to Cart'}
+			Add to Cart
 		</button>
 	);
 }

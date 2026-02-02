@@ -17,6 +17,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 	const router = useRouter();
 	const [isNavigating, setIsNavigating] = useState(false);
 	const isSoldOut = product.stock <= 0 || product.status === 'stock-out';
+	const isLowStock = !isSoldOut && product.stock < 10;
 
 	const handleViewClick = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -27,7 +28,10 @@ export default function ProductCard({ product }: ProductCardProps) {
 
 	return (
 		<div className='group bg-mineral-white backdrop-blur-sm rounded-xl ui-border hover:shadow-xl hover:shadow-deep-tidal-teal-500/20 transition-colors duration-300 overflow-hidden shadow-sm relative'>
-			{isSoldOut && <span className='absolute top-4 right-4 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-full z-10'>Sold out</span>}
+			{isSoldOut && <span className='absolute top-4 right-4 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-md z-10'>Sold out</span>}
+			{isLowStock && (
+				<span className='absolute top-4 right-4 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal-200 text-mineral-white px-2 py-1 rounded-md z-10'>Low stock</span>
+			)}
 			<Link href={`/product/${product.slug}`}>
 				<div className='p-6 cursor-pointer'>
 					<div className='mb-6 text-center duration-300 flex justify-center items-center h-56'>
@@ -51,8 +55,12 @@ export default function ProductCard({ product }: ProductCardProps) {
 							</span>
 						)}
 					</div>
-					<h3 className='text-xl font-extrabold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
-					<p className='text-deep-tidal-teal-600 text-md mb-6 line-clamp-2'>{product.description}</p>
+					<div className='flex items-start gap-2'>
+						<h3 className='text-xl font-extrabold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
+						{product.mg && <span className='text-deep-tidal-teal-600 font-bold text-sm mt-0.5'>{product.mg}mg</span>}
+					</div>
+					{product.subtitle && <p className='text-sm text-deep-tidal-teal-600 font-light -mt-1'>({product.subtitle})</p>}
+					<p className='text-deep-tidal-teal-600 text-sm mb-6 line-clamp-2 mt-2'>{product.description}</p>
 					<div className='flex justify-between items-center'>
 						<span className='text-2xl font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>
 					</div>

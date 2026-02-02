@@ -4,6 +4,7 @@ import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import TermsContent from './TermsContent';
 
 export default function CheckoutClient() {
 	const { cartItems, getTotal, clearCart, getItemPrice } = useCart();
@@ -30,6 +31,8 @@ export default function CheckoutClient() {
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
 	const [shippingMethod, setShippingMethod] = useState<'regular' | 'express'>('regular');
+	const [agreedToTerms, setAgreedToTerms] = useState(false);
+	const [showTermsModal, setShowTermsModal] = useState(false);
 	const [shippingAddress, setShippingAddress] = useState({
 		address: '',
 		addressLine2: '',
@@ -353,7 +356,7 @@ export default function CheckoutClient() {
 										className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
-								<div className='p-4'>
+								<div className='p-4 border-b border-deep-tidal-teal/10'>
 									<div className='flex items-center gap-2 mb-2'>
 										<svg
 											className='w-5 h-5 text-deep-tidal-teal'
@@ -374,17 +377,36 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
-								<hr className='my-4 border-deep-tidal-teal/10 border-b' />
-								<div className=' p-4'>
+								<div className=' p-4 border-b border-deep-tidal-teal/10'>
 									<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 									<p className='text-sm text-deep-tidal-teal-800'>
 										After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
 										transfer.
 									</p>
 								</div>
+								<div className='p-4'>
+									<label className='flex items-center gap-3 cursor-pointer'>
+										<input
+											type='checkbox'
+											checked={agreedToTerms}
+											onChange={(e) => setAgreedToTerms(e.target.checked)}
+											className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal'
+											required
+										/>
+										<span className='text-sm text-deep-tidal-teal-800'>
+											I have read and agree to the{' '}
+											<button
+												type='button'
+												onClick={() => setShowTermsModal(true)}
+												className='text-deep-tidal-teal hover:text-deep-tidal-teal-600 underline font-medium'>
+												Terms & Conditions
+											</button>
+										</span>
+									</label>
+								</div>
 								<button
 									type='submit'
-									disabled={isProcessing}
+									disabled={isProcessing || !agreedToTerms}
 									className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-muted-sage-400 text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
 									{isProcessing ? 'Processing...' : 'Place Order'}
 								</button>
@@ -429,7 +451,7 @@ export default function CheckoutClient() {
 								))}
 							</div>
 
-							<div className='py-4 border-y border-deep-tidal-teal/10'>
+							<div className='py-4'>
 								{!showPromoInput ? (
 									<button
 										onClick={() => setShowPromoInput(true)}
@@ -525,11 +547,59 @@ export default function CheckoutClient() {
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>
+
+								{/* Notices */}
+								<div className='mt-6 pt-4 border-t border-deep-tidal-teal/10 space-y-3'>
+									<div>
+										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1'>Credit card transactions</h4>
+										<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>5% fee added for credit card payments.</p>
+									</div>
+									<div className='pt-3 border-t border-deep-tidal-teal/10'>
+										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1'>Shipping disclaimer</h4>
+										<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>
+											Not responsible for errant shipments due to incorrect addresses. Please double check your address is correct.
+										</p>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
+
+			{/* Terms & Conditions Modal */}
+			{showTermsModal && (
+				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
+					<div className='bg-white rounded-xl max-w-3xl w-full max-h-[80vh] overflow-hidden shadow-2xl'>
+						<div className='p-6 border-b border-gray-200 flex items-center justify-between'>
+							<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Terms & Conditions</h2>
+							<button
+								onClick={() => setShowTermsModal(false)}
+								className='text-gray-500 hover:text-gray-700 text-2xl leading-none'>
+								×
+							</button>
+						</div>
+						<div className='p-6 overflow-y-auto max-h-[60vh] text-deep-tidal-teal-800'>
+							<TermsContent />
+						</div>
+						<div className='p-6 border-t border-gray-200 flex justify-end gap-3'>
+							<button
+								onClick={() => setShowTermsModal(false)}
+								className='px-6 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition-colors'>
+								Close
+							</button>
+							<button
+								onClick={() => {
+									setAgreedToTerms(true);
+									setShowTermsModal(false);
+								}}
+								className='px-6 py-2 rounded bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-medium transition-colors'>
+								I Agree
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

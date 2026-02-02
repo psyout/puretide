@@ -237,8 +237,8 @@ export default async function OrderConfirmationPage() {
 					</div>
 
 					<div className='text-xs text-deep-tidal-teal-700 p-[6px]'>
-						Your personal data will be used to process your order, support your experience on this website, and for other purposes described in our privacy policy. All products are
-						sold strictly for laboratory research purposes only and are not intended for human or veterinary use.
+						<p>Your personal data will be used to process your order, support your experience on this website, and for other purposes described in our privacy policy.</p>
+						<p>Products are for research use only and are not intended for human or animal consumption.</p>
 					</div>
 				</div>
 			</div>
