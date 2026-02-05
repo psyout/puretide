@@ -4,6 +4,7 @@ import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { CreditCard, Truck } from 'lucide-react';
 import TermsContent from './TermsContent';
 
 export default function CheckoutClient() {
@@ -551,11 +552,17 @@ export default function CheckoutClient() {
 								{/* Notices */}
 								<div className='mt-6 pt-4 border-t border-deep-tidal-teal/10 space-y-3'>
 									<div>
-										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1'>Credit card transactions</h4>
+										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
+											<CreditCard className='w-4 h-4' />
+											Credit card transactions
+										</h4>
 										<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>5% fee added for credit card payments.</p>
 									</div>
 									<div className='pt-3 border-t border-deep-tidal-teal/10'>
-										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1'>Shipping disclaimer</h4>
+										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
+											<Truck className='w-4 h-4' />
+											Shipping disclaimer
+										</h4>
 										<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>
 											Not responsible for errant shipments due to incorrect addresses. Please double check your address is correct.
 										</p>

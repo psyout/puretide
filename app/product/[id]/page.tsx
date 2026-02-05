@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/types/product';
 import ProductActions from '@/components/ProductActions';
+import ProductTabs from '@/components/ProductTabs';
 import Header from '@/components/Header';
 import {
 	Activity,
@@ -65,8 +66,8 @@ const ProductImage = ({ product, priority = false }: { product: Product; priorit
 			<Image
 				src={product.image}
 				alt={product.name}
-				width={420}
-				height={420}
+				width={400}
+				height={400}
 				unoptimized={product.image.startsWith('http')}
 				priority={priority}
 				className='w-full h-auto max-h-[280px] lg:max-h-[500px] object-contain drop-shadow-xl transition-all duration-300'
@@ -114,10 +115,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
 					<div className='lg:col-start-2'>
-						{/* Category - hidden for now */}
-						<div className='flex-wrap items-center gap-3 mb-8 hidden'>
-							<span className='text-[11px] text-deep-tidal-teal bg-eucalyptus-200/40 px-2 py-1 rounded inline-block'>{product.category}</span>
-						</div>
 						{/* Sold out badge */}
 						{(product.stock <= 0 || product.status === 'stock-out') && (
 							<div className='mb-4'>
@@ -131,14 +128,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						</div>
 						{product.subtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{product.subtitle}</p>}
 						{!product.subtitle && <div className='mb-4' />}
-
 						{/* Mobile Image Container */}
 						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 flex items-center justify-center shadow-sm mb-4 lg:hidden'>
 							<ProductImage product={product} />
 						</div>
-
-						{product.icons && (
-							<div className='flex flex-wrap gap-4 mt-8 lg:mt-4 mb-4'>
+						{/* Icons - Pill style */}
+						{product.icons && product.icons.length > 0 && (
+							<div className='flex flex-wrap gap-2 mt-4 mb-6'>
 								{product.icons.map((iconName: string) => {
 									const Icon = iconMap[iconName as keyof typeof iconMap];
 									if (!Icon) {
@@ -147,40 +143,43 @@ export default async function ProductPage({ params }: ProductPageProps) {
 									return (
 										<div
 											key={iconName}
-											className='flex flex-col items-center'>
-											<div className='h-10 w-10 rounded-full bg-eucalyptus-200/90 flex items-center justify-center'>
-												<Icon className='w-6 h-6 text-deep-tidal-teal-700' />
-											</div>
-											<span className='text-xs text-deep-tidal-teal-700 mt-1'>{iconName}</span>
+											className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-eucalyptus-100'>
+											<Icon className='w-5 h-5 text-deep-tidal-teal-700' />
+											<span className='text-xs font-medium text-deep-tidal-teal-700'>{iconName}</span>
 										</div>
 									);
 								})}
 							</div>
 						)}
-						<p className='text-deep-tidal-teal-700 text-lg mb-4'>{product.description}</p>
-						{product.details && <p className='text-deep-tidal-teal-700 text-sm text-light'>{product.details}</p>}
-						<p className='text-sm text-deep-tidal-teal-700 mt-6 italic font-100'>*For research use only and are not intended for human or animal consumption.</p>
-					</div>
-
-					{/* Desktop Image Container */}
-					<div className='hidden lg:flex bg-white/60 backdrop-blur-sm rounded-lg ui-border p-8 items-center justify-center shadow-sm lg:col-start-1 lg:row-start-1 lg:row-end-3'>
-						<ProductImage
-							product={product}
-							priority
-						/>
-					</div>
-
-					<div className='lg:col-start-2'>
-						<div className='text-4xl font-bold text-deep-tidal-teal-700'>
-							<span className=' text-deep-tidal-teal-700 font-light'>C</span>${product.price.toFixed(2)}
+						{/* Description & Details Tabs */}
+						<div className='mb-6'>
+							<ProductTabs
+								description={product.description}
+								details={product.details}
+							/>
 						</div>
-						<p className='text-sm text-emerald-600 font-medium mb-8'>Free shipping on orders over $400</p>
-
+						{/* Price */}
+						<div className='mt-8'>
+							<div className='text-4xl mt-4 font-bold text-deep-tidal-teal-700'>
+								<span className='text-deep-tidal-teal-700 text-[2rem] font-light'>C</span>${product.price.toFixed(2)}
+							</div>
+							<div className='flex items-center gap-3 text-sm text-deep-tidal-teal-600 mb-6'>
+								<span className='flex items-center gap-1'>
+									<CreditCard className='w-4 h-4' />
+									+5% card fee
+								</span>
+								<span className='text-deep-tidal-teal-300'>•</span>
+								<span className='flex items-center gap-1 text-emerald-600'>
+									<Truck className='w-4 h-4' />
+									Free shipping over $400
+								</span>
+							</div>
+						</div>
 						{/* Discount Table */}
 						{product.slug !== 'bacteriostatic-water' && (
-							<div className='mb-8 max-w-md overflow-hidden rounded-xl border border-deep-tidal-teal/10 bg-white shadow-sm'>
+							<div className='mb-6 max-w-md overflow-hidden rounded-lg border border-deep-tidal-teal/10 bg-white shadow-sm'>
 								<div className='bg-deep-tidal-teal/5 px-4 py-2 border-b border-deep-tidal-teal/10'>
-									<h3 className='text-sm font-bold text-deep-tidal-teal  tracking-wider'>Discount per quantity</h3>
+									<h3 className='text-sm font-bold text-deep-tidal-teal tracking-wider'>Discount per quantity</h3>
 								</div>
 								<div className='overflow-x-auto'>
 									<table className='w-full text-[15px] text-left'>
@@ -213,28 +212,42 @@ export default async function ProductPage({ params }: ProductPageProps) {
 								</div>
 							</div>
 						)}
-
+						{/* 
+						{product.slug !== 'bacteriostatic-water' && (
+							<div className='mb-6'>
+								<p className='text-sm font-semibold text-deep-tidal-teal-700 mb-3'>Buy more, save more</p>
+								<div className='flex gap-2.5 overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible'>
+									<div className='flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-deep-tidal-teal/15 shadow-sm hover:shadow-md hover:border-deep-tidal-teal/25 transition-all duration-200'>
+										<span className='text-sm font-medium text-deep-tidal-teal-500'>2 - 5</span>
+										<span className='text-sm font-bold text-emerald-600'>5% off</span>
+									</div>
+									<div className='flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-deep-tidal-teal/15 shadow-sm hover:shadow-md hover:border-deep-tidal-teal/25 transition-all duration-200'>
+										<span className='text-sm font-medium text-deep-tidal-teal-500'>6 - 7</span>
+										<span className='text-sm font-bold text-emerald-600'>10% off</span>
+									</div>
+									<div className='flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-deep-tidal-teal/15 shadow-sm hover:shadow-md hover:border-deep-tidal-teal/25 transition-all duration-200'>
+										<span className='text-sm font-medium text-deep-tidal-teal-500'>8 - 9</span>
+										<span className='text-sm font-bold text-emerald-600'>15% off</span>
+									</div>
+									<div className='flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-300/40 shadow-sm hover:shadow-md hover:border-emerald-400/50 transition-all duration-200'>
+										<span className='text-sm font-bold text-emerald-700'>10+</span>
+										<span className='text-sm font-bold text-emerald-700'>25% off</span>
+									</div>
+								</div>
+							</div>
+						)}*/}
+						{/* Research disclaimer */}
+						<p className='text-xs text-deep-tidal-teal-600 mb-6 italic'>*For research use only and are not intended for human or animal consumption.</p>
+						{/* Actions - At the end */}
 						<ProductActions product={product} />
+					</div>
 
-						{/* Notices */}
-						<div className='mt-3 flex flex-col sm:flex-row gap-3'>
-							<div className='flex-1 p-2 bg-deep-tidal-teal-50/50'>
-								<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
-									<CreditCard className='w-4 h-4' />
-									Credit card transactions
-								</h4>
-								<p className='text-xs text-deep-tidal-teal-600'>5% fee added for credit card payments.</p>
-							</div>
-							<div className='flex-1 p-2 bg-deep-tidal-teal-50/50'>
-								<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
-									<Truck className='w-4 h-4' />
-									Shipping disclaimer
-								</h4>
-								<p className='text-xs text-deep-tidal-teal-600'>
-									Not responsible for errant shipments due to incorrect addresses. Please double check your address is correct.
-								</p>
-							</div>
-						</div>
+					{/* Desktop Image Container */}
+					<div className='hidden lg:flex bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center shadow-sm lg:col-start-1 lg:row-start-1 h-fit'>
+						<ProductImage
+							product={product}
+							priority
+						/>
 					</div>
 				</div>
 			</div>

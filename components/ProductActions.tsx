@@ -41,7 +41,7 @@ export default function ProductActions({ product }: ProductActionsProps) {
 				</div>
 			)}
 
-			<div className='flex flex-col sm:flex-row gap-4'>
+			<div className='flex flex-row xs:flex-col sm:flex-row gap-4'>
 				<div className='flex-1'>
 					<AddToCartButton
 						product={product}

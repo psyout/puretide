@@ -110,7 +110,7 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 					}, 800);
 				}
 			},
-			{ rootMargin: '100px 0px' },
+			{ rootMargin: '100px 0px' }
 		);
 
 		observer.observe(loadMoreRef.current);
@@ -173,7 +173,7 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 				</div>
 
 				<div>
-					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10'>
+					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 mt-8'>
 						{visibleProducts.length > 0 ? (
 							visibleProducts.map((product) => (
 								<div
