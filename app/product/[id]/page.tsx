@@ -29,6 +29,7 @@ import {
 	Pill,
 	CreditCard,
 	Truck,
+	FlaskConical,
 } from 'lucide-react';
 
 const iconMap = {
@@ -236,8 +237,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
 								</div>
 							</div>
 						)}*/}
-						{/* Research disclaimer */}
-						<p className='text-xs text-deep-tidal-teal-600 mb-6 italic'>*For research use only and are not intended for human or animal consumption.</p>
+						{/* Disclaimers */}
+						<div className='flex flex-col mb-6 '>
+							<div className='flex items-center gap-2 py-2'>
+								<FlaskConical className='w-4 h-4 text-deep-tidal-teal-500 mt-0.5 flex-shrink-0' />
+								<p className='text-xs text-deep-tidal-teal-600'>For research use only. Not intended for human or animal consumption.</p>
+							</div>
+							<div className='flex items-center gap-2 py-2'>
+								<Truck className='w-4 h-4 text-deep-tidal-teal-500 mt-0.5 flex-shrink-0' />
+								<p className='text-xs text-deep-tidal-teal-600'>Not responsible for shipments to incorrect addresses. Please double check.</p>
+							</div>
+						</div>
 						{/* Actions - At the end */}
 						<ProductActions product={product} />
 					</div>

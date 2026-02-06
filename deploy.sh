@@ -20,6 +20,9 @@ rsync -avz .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/"
 rsync -avz .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
 rsync -avz public/ "${SSH_TARGET}:${VPS_PATH}/public/"
 
+echo "Ensuring data directory exists on VPS..."
+ssh "${SSH_TARGET}" "mkdir -p \"${VPS_PATH}/data\" && chmod 755 \"${VPS_PATH}/data\""
+
 echo "Restarting pm2 app (${PM2_APP}) on VPS..."
 # HOSTNAME=0.0.0.0 is the key fix for the 502 error
 ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && HOSTNAME=0.0.0.0 pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 pm2 start server.js --name \"${PM2_APP}\" --max-memory-restart 700M"

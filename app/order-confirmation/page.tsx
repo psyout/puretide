@@ -3,6 +3,10 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import Header from '@/components/Header';
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type Order = {
 	orderNumber?: string;
 	createdAt: string;
