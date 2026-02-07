@@ -7,6 +7,7 @@ import { readSheetProducts, writeSheetProducts, readSheetPromoCodes } from '@/li
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getSmtpConfig, sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, SHIPPING_COSTS, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
+import { createOrderTask, createStockAlertTask } from '@/lib/wrike';
 
 interface OrderPayload {
 	customer: {
@@ -143,6 +144,11 @@ async function updateSheetStock(items: OrderPayload['cartItems']) {
 
 		await writeSheetProducts(updated);
 		await sendLowStockAlert(lowStock);
+		
+		// Create Wrike task for low stock items
+		if (lowStock.length > 0) {
+			await createStockAlertTask(lowStock);
+		}
 	} catch (error) {
 		console.error('Failed to update stock sheet', error);
 	}
@@ -226,6 +232,22 @@ export async function POST(request: Request) {
 		});
 		await fs.writeFile(ordersFile, JSON.stringify(existingOrders, null, 2), 'utf8');
 		await updateSheetStock(payload.cartItems);
+
+		// Create Wrike task for the order
+		await createOrderTask({
+			orderNumber,
+			createdAt,
+			customer: payload.customer,
+			shipToDifferentAddress: payload.shipToDifferentAddress,
+			shippingAddress: payload.shippingAddress,
+			shippingMethod: payload.shippingMethod,
+			subtotal: payload.subtotal,
+			shippingCost: payload.shippingCost,
+			discountAmount: payload.discountAmount,
+			promoCode: payload.promoCode,
+			total: payload.total,
+			cartItems: payload.cartItems,
+		});
 
 		return NextResponse.json({ ok: true, orderId: orderRecord.id });
 	} catch (error) {
