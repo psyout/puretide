@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import type { Product } from '@/types/product';
 
@@ -11,7 +10,6 @@ type AddToCartButtonProps = {
 };
 
 export default function AddToCartButton({ product, quantity = 1, disabled }: AddToCartButtonProps) {
-	const router = useRouter();
 	const { addToCart } = useCart();
 
 	return (

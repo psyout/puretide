@@ -4,6 +4,9 @@ import path from 'path';
 import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
 import { readSheetProducts, writeSheetProducts, readSheetPromoCodes } from '@/lib/stockSheet';
+import { getDiscountedPrice } from '@/lib/pricing';
+import { getSmtpConfig, sendLowStockAlert } from '@/lib/email';
+import { LOW_STOCK_THRESHOLD, SHIPPING_COSTS, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 
 interface OrderPayload {
 	customer: {
@@ -62,10 +65,7 @@ type EmailStatus = {
 	error?: string;
 };
 
-const LOW_STOCK_THRESHOLD = 5;
-const ALERT_EMAIL = process.env.LOW_STOCK_EMAIL ?? 'info@puretide.ca';
-
-function getSmtpConfig() {
+function getSmtpConfigLocal() {
 	const host = process.env.ORDER_SMTP_HOST ?? process.env.SMTP_HOST;
 	const port = process.env.ORDER_SMTP_PORT ? Number(process.env.ORDER_SMTP_PORT) : process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
 	const user = process.env.ORDER_SMTP_USER ?? process.env.SMTP_USER;
@@ -83,11 +83,11 @@ function getSmtpConfig() {
 }
 
 function getOrderNotificationRecipient() {
-	return process.env.ORDER_NOTIFICATION_EMAIL ?? 'orders@puretide.ca';
+	return process.env.ORDER_NOTIFICATION_EMAIL ?? DEFAULT_ORDER_NOTIFICATION_EMAIL;
 }
 
 async function sendOrderEmail(to: string, subject: string, text: string, html: string, replyTo?: string, bccOverride?: string, fromOverride?: string): Promise<EmailStatus> {
-	const smtpConfig = getSmtpConfig();
+	const smtpConfig = getSmtpConfigLocal();
 	if (!smtpConfig) {
 		return { sent: false, skipped: true, error: 'SMTP not configured' };
 	}
@@ -126,47 +126,6 @@ const formatOrderFrom = (value: string, label = 'Puretide Order Confirmation') =
 	return `${label} <${address}>`;
 };
 
-const getItemPrice = (price: number, quantity: number) => {
-	let discount = 0;
-	if (quantity >= 10) discount = 0.25;
-	else if (quantity >= 8) discount = 0.15;
-	else if (quantity >= 6) discount = 0.1;
-	else if (quantity >= 2) discount = 0.05;
-
-	return price * (1 - discount);
-};
-
-async function sendLowStockAlert(items: Array<{ name: string; slug: string; stock: number }>) {
-	if (items.length === 0) {
-		return;
-	}
-	const smtpConfig = getSmtpConfig();
-	if (!smtpConfig) {
-		return;
-	}
-
-	const transporter = nodemailer.createTransport({
-		host: smtpConfig.host,
-		port: smtpConfig.port,
-		secure: smtpConfig.secure,
-		auth: {
-			user: smtpConfig.user,
-			pass: smtpConfig.pass,
-		},
-	});
-
-	const lines = items.map((item) => `- ${item.name} (${item.slug}): ${item.stock}`);
-	const text = `Low stock alert (<= ${LOW_STOCK_THRESHOLD})\n\n${lines.join('\n')}`;
-
-	await transporter.sendMail({
-		from: smtpConfig.from,
-		to: ALERT_EMAIL,
-		subject: 'Low stock alert',
-		text,
-		replyTo: smtpConfig.replyTo ?? smtpConfig.from,
-		bcc: smtpConfig.bcc,
-	});
-}
 
 async function updateSheetStock(items: OrderPayload['cartItems']) {
 	try {
@@ -196,11 +155,11 @@ export async function POST(request: Request) {
 		// Recalculate prices and totals on the server to ensure accuracy and prevent tampering
 		const cartItems = rawPayload.cartItems.map((item) => ({
 			...item,
-			price: getItemPrice(item.price, item.quantity),
+			price: getDiscountedPrice(item.price, item.quantity),
 		}));
 
 		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-		const shippingCost = rawPayload.shippingMethod === 'express' ? 29.99 : 19.99;
+		const shippingCost = rawPayload.shippingMethod === 'express' ? SHIPPING_COSTS.express : SHIPPING_COSTS.regular;
 
 		let discountAmount = 0;
 		if (rawPayload.promoCode) {

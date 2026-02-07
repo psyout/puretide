@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, CartItem } from '@/types/product';
+import { getDiscountedPrice } from '@/lib/pricing';
 
 interface CartContextType {
 	cartItems: CartItem[];
@@ -20,14 +21,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 	const [isInitialized, setIsInitialized] = useState(false);
 
 	const getItemPrice = (item: CartItem) => {
-		const q = item.quantity;
-		let discount = 0;
-		if (q >= 10) discount = 0.25;
-		else if (q >= 8) discount = 0.15;
-		else if (q >= 6) discount = 0.1;
-		else if (q >= 2) discount = 0.05;
-
-		return item.price * (1 - discount);
+		return getDiscountedPrice(item.price, item.quantity);
 	};
 
 	// Load cart from localStorage on mount (client-side only)

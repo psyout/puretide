@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CreditCard, Truck } from 'lucide-react';
 import TermsContent from './TermsContent';
+import { SHIPPING_COSTS } from '@/lib/constants';
 
 export default function CheckoutClient() {
 	const { cartItems, getTotal, clearCart, getItemPrice } = useCart();
@@ -43,7 +44,7 @@ export default function CheckoutClient() {
 	});
 
 	const subtotal = getTotal();
-	const shippingCost = shippingMethod === 'express' ? 29.99 : 19.99;
+	const shippingCost = shippingMethod === 'express' ? SHIPPING_COSTS.express : SHIPPING_COSTS.regular;
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
 	const total = Number((subtotal + shippingCost - discountAmount).toFixed(2));
 
@@ -529,7 +530,7 @@ export default function CheckoutClient() {
 											/>
 											Regular Shipping
 										</span>
-										<span className='text-lg'>${(19.99).toFixed(2)}</span>
+										<span className='text-lg'>${SHIPPING_COSTS.regular.toFixed(2)}</span>
 									</label>
 									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
 										<span className='flex items-center gap-2'>
@@ -541,7 +542,7 @@ export default function CheckoutClient() {
 											/>
 											Express Shipping
 										</span>
-										<span className='text-lg'>${(29.99).toFixed(2)}</span>
+										<span className='text-lg'>${SHIPPING_COSTS.express.toFixed(2)}</span>
 									</label>
 								</div>
 								<div className='border-t border-deep-tidal-teal/10 pt-3 flex justify-between text-xl font-bold'>
