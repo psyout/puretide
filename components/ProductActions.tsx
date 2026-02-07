@@ -23,6 +23,7 @@ export default function ProductActions({ product }: ProductActionsProps) {
 		<div className='space-y-6'>
 			{!isSoldOut && (
 				<div className='flex items-center gap-4'>
+					<p className='text-sm text-deep-tidal-teal-600'>Quantity</p>
 					<div className='flex items-center bg-white ui-border rounded-lg overflow-hidden shadow-sm'>
 						<button
 							onClick={() => handleQuantityChange(quantity - 1)}

@@ -125,7 +125,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						{/* Product name and mg */}
 						<div className='flex items-start gap-2'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-800'>{product.name}</h1>
-							{product.mg && <div className='inline-flex items-start justify-center text-deep-tidal-teal-600 font-bold text-base mt-1'>{product.mg}mg</div>}
+							{product.mg && !product.name.toLowerCase().includes('stack') && (
+								<div className='inline-flex items-start justify-center text-deep-tidal-teal-600 font-bold text-base mt-1'>{product.mg}mg</div>
+							)}
 						</div>
 						{product.subtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{product.subtitle}</p>}
 						{!product.subtitle && <div className='mb-4' />}
@@ -238,14 +240,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</div>
 						)}*/}
 						{/* Disclaimers */}
-						<div className='flex flex-col mb-6 '>
-							<div className='flex items-center gap-2 py-2'>
+						<div className='flex flex-col mb-6'>
+							<div className='flex items-center gap-2'>
 								<FlaskConical className='w-4 h-4 text-deep-tidal-teal-500 mt-0.5 flex-shrink-0' />
-								<p className='text-xs text-deep-tidal-teal-600'>For research use only. Not intended for human or animal consumption.</p>
+								<p className='md:text-[13px] text-xs text-deep-tidal-teal-600'>For research use only. Not intended for human or animal consumption.</p>
 							</div>
 							<div className='flex items-center gap-2 py-2'>
 								<Truck className='w-4 h-4 text-deep-tidal-teal-500 mt-0.5 flex-shrink-0' />
-								<p className='text-xs text-deep-tidal-teal-600'>Not responsible for shipments to incorrect addresses. Please double check.</p>
+								<p className='md:text-[13px] text-xs  text-deep-tidal-teal-600'>Not responsible for shipments to incorrect addresses. Please double check.</p>
 							</div>
 						</div>
 						{/* Actions - At the end */}

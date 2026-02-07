@@ -57,7 +57,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 					</div>
 					<div className='flex items-start gap-2'>
 						<h3 className='text-xl font-extrabold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
-						{product.mg && <span className='text-deep-tidal-teal-600 font-bold text-sm mt-0.5'>{product.mg}mg</span>}
+						{product.mg && !product.name.toLowerCase().includes('stack') && <span className='text-deep-tidal-teal-600 font-bold text-sm mt-0.5'>{product.mg}mg</span>}
 					</div>
 					{product.subtitle && <p className='text-sm text-deep-tidal-teal-600 font-light -mt-1'>({product.subtitle})</p>}
 					<p className='text-deep-tidal-teal-600 text-sm mb-6 line-clamp-2 mt-2'>{product.description}</p>
