@@ -69,7 +69,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			</div>
 
 			{/* Text overlay */}
-			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-6 text-center'>
+			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-6 text-center text-pretty'>
 				<div className='mb-3 lg:mb-6'>
 					<LogoHorizontal
 						className='h-32 lg:h-40 w-auto mx-auto drop-shadow-2xl'

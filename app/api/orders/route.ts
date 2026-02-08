@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
-import { readSheetProducts, writeSheetProducts, readSheetPromoCodes } from '@/lib/stockSheet';
+import { readSheetProducts, writeSheetProducts, readSheetPromoCodes, upsertSheetClient } from '@/lib/stockSheet';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getSmtpConfig, sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, SHIPPING_COSTS, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
@@ -32,6 +32,8 @@ interface OrderPayload {
 		zipCode: string;
 	};
 	shippingMethod: 'regular' | 'express';
+	paymentMethod: 'etransfer' | 'creditcard';
+	cardFee?: number;
 	subtotal: number;
 	shippingCost: number;
 	discountAmount?: number;
@@ -128,7 +130,7 @@ const formatOrderFrom = (value: string, label = 'Puretide Order Confirmation') =
 };
 
 
-async function updateSheetStock(items: OrderPayload['cartItems']) {
+async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array<{ name: string; stock: number }>> {
 	try {
 		const current = await readSheetProducts();
 		const updated = current.map((product) => {
@@ -149,8 +151,17 @@ async function updateSheetStock(items: OrderPayload['cartItems']) {
 		if (lowStock.length > 0) {
 			await createStockAlertTask(lowStock);
 		}
+
+		// Return stock levels for ordered items
+		const orderedItemsStock = items.map((item) => {
+			const product = updated.find((p) => p.id === String(item.id) || p.slug === String(item.id));
+			return { name: item.name, stock: product?.stock ?? 0 };
+		});
+
+		return orderedItemsStock;
 	} catch (error) {
 		console.error('Failed to update stock sheet', error);
+		return [];
 	}
 }
 
@@ -231,7 +242,7 @@ export async function POST(request: Request) {
 			adminEmailStatus,
 		});
 		await fs.writeFile(ordersFile, JSON.stringify(existingOrders, null, 2), 'utf8');
-		await updateSheetStock(payload.cartItems);
+		const updatedStock = await updateSheetStock(payload.cartItems);
 
 		// Create Wrike task for the order
 		await createOrderTask({
@@ -241,12 +252,30 @@ export async function POST(request: Request) {
 			shipToDifferentAddress: payload.shipToDifferentAddress,
 			shippingAddress: payload.shippingAddress,
 			shippingMethod: payload.shippingMethod,
+			paymentMethod: payload.paymentMethod,
+			cardFee: payload.cardFee,
 			subtotal: payload.subtotal,
 			shippingCost: payload.shippingCost,
 			discountAmount: payload.discountAmount,
 			promoCode: payload.promoCode,
 			total: payload.total,
 			cartItems: payload.cartItems,
+			stockLevels: updatedStock,
+		});
+
+		// Save client to Google Sheets for marketing
+		await upsertSheetClient({
+			email: payload.customer.email,
+			firstName: payload.customer.firstName,
+			lastName: payload.customer.lastName,
+			address: payload.customer.address,
+			city: payload.customer.city,
+			province: payload.customer.province,
+			zipCode: payload.customer.zipCode,
+			country: payload.customer.country,
+			orderTotal: payload.total,
+			lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+			productsPurchased: payload.cartItems.map(item => item.name),
 		});
 
 		return NextResponse.json({ ok: true, orderId: orderRecord.id });

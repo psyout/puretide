@@ -205,3 +205,117 @@ export const writeSheetProducts = async (items: Product[]) => {
 		console.error('Error writing products to sheet:', error);
 	}
 };
+
+// Client tracking
+const CLIENT_HEADERS = ['Email', 'First Name', 'Last Name', 'Address', 'City', 'Province', 'Zip', 'Country', 'Orders', 'Total Spent', 'Last Order', 'Products'] as const;
+
+type ClientRecord = {
+	email: string;
+	firstName: string;
+	lastName: string;
+	address: string;
+	city: string;
+	province: string;
+	zipCode: string;
+	country: string;
+	ordersCount: number;
+	totalSpent: number;
+	lastOrderDate: string;
+	products: string[];
+};
+
+export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount' | 'totalSpent' | 'products'> & { orderTotal: number; productsPurchased: string[] }) => {
+	if (!SHEET_ID) return;
+
+	try {
+		const sheets = getSheetsClient();
+		
+		// Check if Clients sheet exists
+		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'Clients');
+
+		if (!sheetExists) {
+			// Create the sheet with headers
+			await sheets.spreadsheets.batchUpdate({
+				spreadsheetId: SHEET_ID,
+				requestBody: {
+					requests: [{ addSheet: { properties: { title: 'Clients' } } }],
+				},
+			});
+			await sheets.spreadsheets.values.update({
+				spreadsheetId: SHEET_ID,
+				range: 'Clients!A1:L1',
+				valueInputOption: 'RAW',
+				requestBody: { values: [[...CLIENT_HEADERS]] },
+			});
+		}
+
+		// Read existing clients
+		const response = await sheets.spreadsheets.values.get({
+			spreadsheetId: SHEET_ID,
+			range: 'Clients!A:L',
+		});
+
+		const rows = response.data.values ?? [];
+		const existingIndex = rows.findIndex((row, i) => i > 0 && row[0]?.toLowerCase() === client.email.toLowerCase());
+
+		if (existingIndex > 0) {
+			// Update existing client
+			const existingRow = rows[existingIndex];
+			const prevOrders = parseNumber(existingRow[8] ?? '0');
+			const prevTotal = parseNumber(existingRow[9] ?? '0');
+			const prevProducts = (existingRow[11] ?? '').split(', ').filter(Boolean);
+			const allProducts = Array.from(new Set([...prevProducts, ...client.productsPurchased]));
+
+			const updatedRow = [
+				client.email,
+				client.firstName,
+				client.lastName,
+				client.address,
+				client.city,
+				client.province,
+				client.zipCode,
+				client.country,
+				String(prevOrders + 1),
+				(prevTotal + client.orderTotal).toFixed(2),
+				client.lastOrderDate,
+				allProducts.join(', '),
+			];
+
+			await sheets.spreadsheets.values.update({
+				spreadsheetId: SHEET_ID,
+				range: `Clients!A${existingIndex + 1}:L${existingIndex + 1}`,
+				valueInputOption: 'RAW',
+				requestBody: { values: [updatedRow] },
+			});
+		} else {
+			// Add new client
+			const newRow = [
+				client.email,
+				client.firstName,
+				client.lastName,
+				client.address,
+				client.city,
+				client.province,
+				client.zipCode,
+				client.country,
+				'1',
+				client.orderTotal.toFixed(2),
+				client.lastOrderDate,
+				client.productsPurchased.join(', '),
+			];
+
+			await sheets.spreadsheets.values.append({
+				spreadsheetId: SHEET_ID,
+				range: 'Clients!A:L',
+				valueInputOption: 'RAW',
+				insertDataOption: 'INSERT_ROWS',
+				requestBody: { values: [newRow] },
+			});
+		}
+
+		console.log('Client record saved to Google Sheets');
+	} catch (error) {
+		console.error('Error saving client to sheet:', error);
+	}
+};

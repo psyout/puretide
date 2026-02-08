@@ -22,7 +22,7 @@ async function createTask(folderId: string, title: string, description: string, 
 	const response = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
 		method: 'POST',
 		headers: {
-			'Authorization': `Bearer ${apiToken}`,
+			Authorization: `Bearer ${apiToken}`,
 			'Content-Type': 'application/json',
 		},
 		body: JSON.stringify({
@@ -67,6 +67,8 @@ type OrderData = {
 		zipCode: string;
 	};
 	shippingMethod: 'regular' | 'express';
+	paymentMethod: 'etransfer' | 'creditcard';
+	cardFee?: number;
 	subtotal: number;
 	shippingCost: number;
 	discountAmount?: number;
@@ -76,6 +78,10 @@ type OrderData = {
 		name: string;
 		price: number;
 		quantity: number;
+	}>;
+	stockLevels?: Array<{
+		name: string;
+		stock: number;
 	}>;
 };
 
@@ -87,14 +93,19 @@ export async function createOrderTask(order: OrderData) {
 	}
 
 	const title = `Order #${order.orderNumber} - ${order.customer.firstName} ${order.customer.lastName}`;
-	
-	const shippingAddr = order.shipToDifferentAddress && order.shippingAddress
-		? order.shippingAddress
-		: order.customer;
 
-	const itemsList = order.cartItems
-		.map(item => `<li>${item.name} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`)
-		.join('');
+	const shippingAddr = order.shipToDifferentAddress && order.shippingAddress ? order.shippingAddress : order.customer;
+
+	const itemsList = order.cartItems.map((item) => `<li>${item.name} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`).join('');
+
+	const stockList = order.stockLevels?.length
+		? order.stockLevels
+				.map((item) => {
+					const isLow = item.stock <= 5;
+					return `<li>${item.name}: <b style="${isLow ? 'color:red' : ''}">${item.stock} units</b>${isLow ? ' ⚠️ LOW' : ''}</li>`;
+				})
+				.join('')
+		: '';
 
 	const description = `
 <h3>Order #${order.orderNumber}</h3>
@@ -104,7 +115,6 @@ export async function createOrderTask(order: OrderData) {
 <p>
 <b>Name:</b> ${order.customer.firstName} ${order.customer.lastName}<br>
 <b>Email:</b> ${order.customer.email}<br>
-<b>Phone:</b> ${order.customer.phone}
 </p>
 <h4>Billing Address</h4>
 <p>
@@ -121,12 +131,16 @@ ${shippingAddr.addressLine2 ? shippingAddr.addressLine2 + '<br>' : ''}${shipping
 <h4>Order Items</h4>
 <ul>${itemsList}</ul>
 <hr>
+<h4>Payment Method</h4>
+<p><b>${order.paymentMethod === 'creditcard' ? '💳 Credit Card' : '🏦 E-Transfer (Interac)'}</b></p>
+<hr>
 <h4>Order Summary</h4>
 <p>
 Subtotal: $${order.subtotal.toFixed(2)}<br>
 Shipping (${order.shippingMethod}): $${order.shippingCost.toFixed(2)}<br>
-${order.discountAmount ? `Discount${order.promoCode ? ` (${order.promoCode})` : ''}: -$${order.discountAmount.toFixed(2)}<br>` : ''}<b>Total: $${order.total.toFixed(2)}</b>
+${order.cardFee ? `Card Fee (5%): $${order.cardFee.toFixed(2)}<br>` : ''}${order.discountAmount ? `Discount${order.promoCode ? ` (${order.promoCode})` : ''}: -$${order.discountAmount.toFixed(2)}<br>` : ''}<b>Total: $${order.total.toFixed(2)}</b>
 </p>
+${stockList ? `<hr><h4>Stock Remaining</h4><ul>${stockList}</ul>` : ''}
 ${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.orderNotes}</p>` : ''}
 <hr>
 <p><b>Status: NEW ORDER - AWAITING PAYMENT</b></p>
@@ -151,10 +165,8 @@ export async function createStockAlertTask(items: Array<{ name: string; slug: st
 	}
 
 	const title = `Low Stock Alert - ${items.length} item${items.length > 1 ? 's' : ''} need restocking`;
-	
-	const itemsList = items
-		.map(item => `<li><b>${item.name}</b> (${item.slug}) - Only ${item.stock} left</li>`)
-		.join('');
+
+	const itemsList = items.map((item) => `<li><b>${item.name}</b> (${item.slug}) - Only ${item.stock} left</li>`).join('');
 
 	const description = `
 <h3>Low Stock Alert</h3>

@@ -33,6 +33,7 @@ export default function CheckoutClient() {
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
 	const [shippingMethod, setShippingMethod] = useState<'regular' | 'express'>('regular');
+	const [paymentMethod, setPaymentMethod] = useState<'etransfer' | 'creditcard'>('etransfer');
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
 	const [shippingAddress, setShippingAddress] = useState({
@@ -46,7 +47,8 @@ export default function CheckoutClient() {
 	const subtotal = getTotal();
 	const shippingCost = shippingMethod === 'express' ? SHIPPING_COSTS.express : SHIPPING_COSTS.regular;
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
-	const total = Number((subtotal + shippingCost - discountAmount).toFixed(2));
+	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
+	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 
 	useEffect(() => {
 		if (cartItems.length === 0 && !hasSubmitted) {
@@ -95,6 +97,8 @@ export default function CheckoutClient() {
 					shipToDifferentAddress,
 					shippingAddress: shipToDifferentAddress ? shippingAddress : undefined,
 					shippingMethod,
+					paymentMethod,
+					cardFee,
 					promoCode: appliedDiscount > 0 ? promoCode : undefined,
 					subtotal,
 					shippingCost,
@@ -545,6 +549,47 @@ export default function CheckoutClient() {
 										<span className='text-lg'>${SHIPPING_COSTS.express.toFixed(2)}</span>
 									</label>
 								</div>
+
+								{/* Payment Method */}
+								<div className='border-t border-deep-tidal-teal/10 pt-3 space-y-2'>
+									<h4 className='text-sm font-semibold text-deep-tidal-teal-700 flex items-center gap-2'>
+										<CreditCard className='w-4 h-4' />
+										Payment Method
+									</h4>
+									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
+										<span className='flex items-center gap-2'>
+											<input
+												type='radio'
+												name='payment'
+												checked={paymentMethod === 'etransfer'}
+												onChange={() => setPaymentMethod('etransfer')}
+											/>
+											E-Transfer (Interac)
+										</span>
+										<span className='text-sm text-emerald-600'>No fee</span>
+									</label>
+									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
+										<span className='flex items-center gap-2'>
+											<input
+												type='radio'
+												name='payment'
+												checked={paymentMethod === 'creditcard'}
+												onChange={() => setPaymentMethod('creditcard')}
+											/>
+											Credit Card
+										</span>
+										<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
+									</label>
+								</div>
+
+								{/* Card Fee (if applicable) */}
+								{cardFee > 0 && (
+									<div className='flex justify-between text-sm text-deep-tidal-teal-600'>
+										<span>Card Fee (5%)</span>
+										<span>${cardFee.toFixed(2)}</span>
+									</div>
+								)}
+
 								<div className='border-t border-deep-tidal-teal/10 pt-3 flex justify-between text-xl font-bold'>
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
@@ -552,14 +597,7 @@ export default function CheckoutClient() {
 
 								{/* Notices */}
 								<div className='mt-6 pt-4 border-t border-deep-tidal-teal/10 space-y-3'>
-									<div>
-										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
-											<CreditCard className='w-4 h-4' />
-											Credit card transactions
-										</h4>
-										<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>5% fee added for credit card payments.</p>
-									</div>
-									<div className='pt-3 border-t border-deep-tidal-teal/10'>
+									<div className='pt-3'>
 										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
 											<Truck className='w-4 h-4' />
 											Shipping disclaimer
