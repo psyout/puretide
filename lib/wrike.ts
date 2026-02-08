@@ -93,46 +93,43 @@ export async function createOrderTask(order: OrderData) {
 		: order.customer;
 
 	const itemsList = order.cartItems
-		.map(item => `• ${item.name} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}`)
-		.join('\n');
+		.map(item => `<li>${item.name} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`)
+		.join('');
 
 	const description = `
-**Order #${order.orderNumber}**
-Date: ${new Date(order.createdAt).toLocaleString('en-CA')}
-
----
-
-**Customer Information**
-Name: ${order.customer.firstName} ${order.customer.lastName}
-Email: ${order.customer.email}
-Phone: ${order.customer.phone}
-
-**Billing Address**
-${order.customer.address}
-${order.customer.addressLine2 ? order.customer.addressLine2 + '\n' : ''}${order.customer.city}, ${order.customer.province} ${order.customer.zipCode}
+<h3>Order #${order.orderNumber}</h3>
+<p>Date: ${new Date(order.createdAt).toLocaleString('en-CA')}</p>
+<hr>
+<h4>Customer Information</h4>
+<p>
+<b>Name:</b> ${order.customer.firstName} ${order.customer.lastName}<br>
+<b>Email:</b> ${order.customer.email}<br>
+<b>Phone:</b> ${order.customer.phone}
+</p>
+<h4>Billing Address</h4>
+<p>
+${order.customer.address}<br>
+${order.customer.addressLine2 ? order.customer.addressLine2 + '<br>' : ''}${order.customer.city}, ${order.customer.province} ${order.customer.zipCode}<br>
 ${order.customer.country}
-
-**Shipping Address**
-${shippingAddr.address}
-${shippingAddr.addressLine2 ? shippingAddr.addressLine2 + '\n' : ''}${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
-
----
-
-**Order Items**
-${itemsList}
-
----
-
-**Order Summary**
-Subtotal: $${order.subtotal.toFixed(2)}
-Shipping (${order.shippingMethod}): $${order.shippingCost.toFixed(2)}
-${order.discountAmount ? `Discount${order.promoCode ? ` (${order.promoCode})` : ''}: -$${order.discountAmount.toFixed(2)}\n` : ''}**Total: $${order.total.toFixed(2)}**
-
----
-
-${order.customer.orderNotes ? `**Order Notes**\n${order.customer.orderNotes}` : ''}
-
-**Status: NEW ORDER - AWAITING PAYMENT**
+</p>
+<h4>Shipping Address</h4>
+<p>
+${shippingAddr.address}<br>
+${shippingAddr.addressLine2 ? shippingAddr.addressLine2 + '<br>' : ''}${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
+</p>
+<hr>
+<h4>Order Items</h4>
+<ul>${itemsList}</ul>
+<hr>
+<h4>Order Summary</h4>
+<p>
+Subtotal: $${order.subtotal.toFixed(2)}<br>
+Shipping (${order.shippingMethod}): $${order.shippingCost.toFixed(2)}<br>
+${order.discountAmount ? `Discount${order.promoCode ? ` (${order.promoCode})` : ''}: -$${order.discountAmount.toFixed(2)}<br>` : ''}<b>Total: $${order.total.toFixed(2)}</b>
+</p>
+${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.orderNotes}</p>` : ''}
+<hr>
+<p><b>Status: NEW ORDER - AWAITING PAYMENT</b></p>
 	`.trim();
 
 	try {
@@ -156,20 +153,16 @@ export async function createStockAlertTask(items: Array<{ name: string; slug: st
 	const title = `Low Stock Alert - ${items.length} item${items.length > 1 ? 's' : ''} need restocking`;
 	
 	const itemsList = items
-		.map(item => `• **${item.name}** (${item.slug}) - Only ${item.stock} left`)
-		.join('\n');
+		.map(item => `<li><b>${item.name}</b> (${item.slug}) - Only ${item.stock} left</li>`)
+		.join('');
 
 	const description = `
-**Low Stock Alert**
-Date: ${new Date().toLocaleString('en-CA')}
-
-The following items have stock levels at or below 5 units:
-
-${itemsList}
-
----
-
-**Action Required:** Restock these items soon to avoid stockouts.
+<h3>Low Stock Alert</h3>
+<p>Date: ${new Date().toLocaleString('en-CA')}</p>
+<p>The following items have stock levels at or below 5 units:</p>
+<ul>${itemsList}</ul>
+<hr>
+<p><b>Action Required:</b> Restock these items soon to avoid stockouts.</p>
 	`.trim();
 
 	try {

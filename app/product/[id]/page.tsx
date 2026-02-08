@@ -130,14 +130,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							)}
 						</div>
 						{product.subtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{product.subtitle}</p>}
-						{!product.subtitle && <div className='mb-4' />}
-						{/* Mobile Image Container */}
-						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 flex items-center justify-center shadow-sm mb-4 lg:hidden'>
-							<ProductImage product={product} />
-						</div>
-						{/* Icons - Pill style */}
+						{!product.subtitle && <div className='mb-2' />}
+
+						{/* Icons */}
 						{product.icons && product.icons.length > 0 && (
-							<div className='flex flex-wrap gap-2 mt-4 mb-6'>
+							<div className='flex flex-wrap gap-2 mb-6 lg:hidden'>
 								{product.icons.map((iconName: string) => {
 									const Icon = iconMap[iconName as keyof typeof iconMap];
 									if (!Icon) {
@@ -154,19 +151,35 @@ export default async function ProductPage({ params }: ProductPageProps) {
 								})}
 							</div>
 						)}
-						{/* Description & Details Tabs */}
-						<div className='mb-6'>
-							<ProductTabs
-								description={product.description}
-								details={product.details}
-							/>
+						{/* Mobile Image Container */}
+						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 flex items-center justify-center shadow-sm mb-4 lg:hidden'>
+							<ProductImage product={product} />
 						</div>
+						{/* Icons - Pill style (desktop only) */}
+						{product.icons && product.icons.length > 0 && (
+							<div className='hidden lg:flex flex-wrap gap-2 mt-0 mb-6'>
+								{product.icons.map((iconName: string) => {
+									const Icon = iconMap[iconName as keyof typeof iconMap];
+									if (!Icon) {
+										return null;
+									}
+									return (
+										<div
+											key={iconName}
+											className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-eucalyptus-100'>
+											<Icon className='w-5 h-5 text-deep-tidal-teal-700' />
+											<span className='text-xs font-medium text-deep-tidal-teal-700'>{iconName}</span>
+										</div>
+									);
+								})}
+							</div>
+						)}
 						{/* Price */}
-						<div className='mt-8'>
-							<div className='text-4xl mt-4 font-bold text-deep-tidal-teal-700'>
+						<div className='mb-4'>
+							<div className='text-4xl font-bold text-deep-tidal-teal-700'>
 								<span className='text-deep-tidal-teal-700 text-[2rem] font-light'>C</span>${product.price.toFixed(2)}
 							</div>
-							<div className='flex items-center gap-3 text-sm text-deep-tidal-teal-600 mb-6'>
+							<div className='flex items-center gap-3 text-sm text-deep-tidal-teal-600'>
 								<span className='flex items-center gap-1'>
 									<CreditCard className='w-4 h-4' />
 									+5% card fee
@@ -215,6 +228,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 								</div>
 							</div>
 						)}
+						{/* Details & Description (accordion) */}
+						<div className='mb-6'>
+							<ProductTabs
+								description={product.description}
+								details={product.details}
+							/>
+						</div>
 						{/* 
 						{product.slug !== 'bacteriostatic-water' && (
 							<div className='mb-6'>
@@ -255,7 +275,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Desktop Image Container */}
-					<div className='hidden lg:flex bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center shadow-sm lg:col-start-1 lg:row-start-1 h-fit'>
+					<div className='hidden lg:flex shadow-lg bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center lg:col-start-1 lg:row-start-1 h-fit'>
 						<ProductImage
 							product={product}
 							priority
