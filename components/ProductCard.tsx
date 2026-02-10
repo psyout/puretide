@@ -59,8 +59,8 @@ export default function ProductCard({ product }: ProductCardProps) {
 						<h3 className='text-xl font-extrabold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors'>{product.name}</h3>
 						{product.mg && !product.name.toLowerCase().includes('stack') && <span className='text-deep-tidal-teal-600 font-bold text-sm mt-0.5'>{product.mg}mg</span>}
 					</div>
-					{product.subtitle && <p className='text-sm text-deep-tidal-teal-600 font-light -mt-1'>({product.subtitle})</p>}
-					<p className='text-deep-tidal-teal-600 text-sm mb-6 line-clamp-2 mt-2'>{product.description}</p>
+					{product.subtitle && <p className='text-sm text-deep-tidal-teal-700 font-light -mt-1'>({product.subtitle})</p>}
+					<p className='text-deep-tidal-teal-700 text-sm mb-6 line-clamp-2 mt-2'>{product.description}</p>
 					<div className='flex justify-between items-center'>
 						<span className='text-2xl font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>
 					</div>

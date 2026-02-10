@@ -1,6 +1,6 @@
 export default function Footer() {
 	return (
-		<footer className='ui-border-t mt-1 pt-8 pb-8'>
+		<footer className='pt-8 pb-8 bg-mineral-white'>
 			<div className='mx-auto max-w-7xl px-6 text-center text-deep-tidal-teal-700 text-sm'>
 				<p className='flex items-center justify-center gap-2 flex-wrap'>
 					<span className='flex items-center gap-2'>

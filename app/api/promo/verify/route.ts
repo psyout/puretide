@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 		const promoCodes = await readSheetPromoCodes();
 
 		if (promoCodes.length === 0) {
-			// This could mean either no codes exist OR the sheet is missing/unreachable
+			// This could mean either no codes exist or the sheet is missing
 			return NextResponse.json({ ok: false, error: 'Promo sheet is empty. Please add a code row after the header.' }, { status: 404 });
 		}
 

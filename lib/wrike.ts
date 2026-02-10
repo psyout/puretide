@@ -49,7 +49,6 @@ type OrderData = {
 		firstName: string;
 		lastName: string;
 		email: string;
-		phone: string;
 		address: string;
 		addressLine2: string;
 		city: string;

@@ -4,12 +4,13 @@ import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CreditCard, Truck } from 'lucide-react';
+import Image from 'next/image';
+import { CreditCard, Truck, Plus, Minus } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS } from '@/lib/constants';
 
 export default function CheckoutClient() {
-	const { cartItems, getTotal, clearCart, getItemPrice } = useCart();
+	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart } = useCart();
 	const router = useRouter();
 	const [formData, setFormData] = useState({
 		firstName: '',
@@ -138,7 +139,7 @@ export default function CheckoutClient() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-2 lg:order-1 lg:col-span-2'>
-						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							<form
 								onSubmit={handleSubmit}
@@ -362,7 +363,7 @@ export default function CheckoutClient() {
 										className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
-								<div className='p-4 border-b border-deep-tidal-teal/10'>
+								<div className='pb-4 pt-0 border-b border-deep-tidal-teal/10'>
 									<div className='flex items-center gap-2 mb-2'>
 										<svg
 											className='w-5 h-5 text-deep-tidal-teal'
@@ -383,14 +384,14 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
-								<div className=' p-4 border-b border-deep-tidal-teal/10'>
+								<div className=' pb-4 border-b border-deep-tidal-teal/10'>
 									<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 									<p className='text-sm text-deep-tidal-teal-800'>
 										After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
 										transfer.
 									</p>
 								</div>
-								<div className='p-4'>
+								<div className='py-1'>
 									<label className='flex items-center gap-3 cursor-pointer'>
 										<input
 											type='checkbox'
@@ -413,7 +414,7 @@ export default function CheckoutClient() {
 								<button
 									type='submit'
 									disabled={isProcessing || !agreedToTerms}
-									className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-muted-sage-400 text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
+									className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
 									{isProcessing ? 'Processing...' : 'Place Order'}
 								</button>
 							</form>
@@ -421,7 +422,7 @@ export default function CheckoutClient() {
 					</div>
 
 					<div className='order-1 lg:order-2 lg:col-span-1'>
-						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
 								<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Your order</h2>
 								<Link
@@ -442,17 +443,56 @@ export default function CheckoutClient() {
 									<span className='text-sm font-semibold underline'>Edit Cart</span>
 								</Link>
 							</div>
-							<div className='space-y-2 mb-4'>
-								{cartItems.map((item) => (
+							<div className='mb-4'>
+								{cartItems.map((item, index) => (
 									<div
 										key={item.id}
-										className='flex justify-between text-md'>
-										<span className='text-deep-tidal-teal-700'>
-											{item.name}
-											<br />
-											<span className='text-md text-deep-tidal-teal-600'>Quantity: {item.quantity}</span>
-										</span>
-										<span className='text-deep-tidal-teal-800 font-semibold text-lg'>${(getItemPrice(item) * item.quantity).toFixed(2)}</span>
+										className={`flex items-center gap-3 ${index < cartItems.length - 1 ? 'pb-4 mb-4 border-b border-deep-tidal-teal/10' : ''}`}>
+										{/* Product Image */}
+										<div className='w-14 h-14 flex-shrink-0  rounded-lg overflow-hidden '>
+											<Image
+												src={item.image}
+												alt={item.name}
+												width={56}
+												height={56}
+												className='w-full h-full object-contain'
+											/>
+										</div>
+
+										{/* Product Details & Price */}
+										<div className='flex-1 min-w-0'>
+											<h3 className='text-sm font-semibold text-deep-tidal-teal-800 leading-tight'>{item.name}</h3>
+											<p className='text-base font-bold text-deep-tidal-teal mt-0.5'>
+												${(getItemPrice(item) * item.quantity).toFixed(2)}
+												{item.quantity > 1 && <span className='text-xs font-normal text-deep-tidal-teal-600 ml-1'>(${getItemPrice(item).toFixed(2)} ea)</span>}
+											</p>
+										</div>
+
+										{/* Quantity Controls */}
+										<div className='flex flex-col items-end gap-1.5'>
+											<div className='flex items-center'>
+												<button
+													type='button'
+													disabled={item.quantity <= 1}
+													onClick={() => updateQuantity(item.id, item.quantity - 1)}
+													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white w-7 h-7 rounded flex items-center justify-center transition-colors disabled:cursor-not-allowed disabled:hover:bg-deep-tidal-teal'>
+													<Minus className='w-3 h-3' />
+												</button>
+												<span className='w-8 text-center text-sm font-medium text-deep-tidal-teal-800'>{item.quantity}</span>
+												<button
+													type='button'
+													onClick={() => updateQuantity(item.id, item.quantity + 1)}
+													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white w-7 h-7 rounded flex items-center justify-center transition-colors'>
+													<Plus className='w-3 h-3' />
+												</button>
+											</div>
+											<button
+												type='button'
+												onClick={() => removeFromCart(item.id)}
+												className='text-xs text-red-500 hover:text-red-600 transition-colors'>
+												Remove
+											</button>
+										</div>
 									</div>
 								))}
 							</div>
@@ -511,7 +551,7 @@ export default function CheckoutClient() {
 								)}
 							</div>
 
-							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-md'>
+							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm'>
 								<div className='flex justify-between'>
 									<span className='text-deep-tidal-teal-700 text-lg'>Subtotal</span>
 									<span className='text-deep-tidal-teal-800 font-semibold text-lg'>${subtotal.toFixed(2)}</span>

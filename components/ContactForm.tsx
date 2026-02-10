@@ -74,7 +74,7 @@ export default function ContactForm() {
 	};
 
 	return (
-		<div className='bg-muted-sage/20 backdrop-blur-md rounded-xl p-6 shadow-lg ui-border'>
+		<div className='bg-muted-sage/20 backdrop-blur-md rounded-xl p-6 shadow-sm ui-border'>
 			<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Send us a Message</h3>
 			<form
 				onSubmit={handleSubmit}

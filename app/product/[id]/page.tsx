@@ -93,7 +93,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<div className='max-w-7xl mx-auto px-6 py-12'>
-					<h1 className='text-4xl font-bold mb-4 text-deep-tidal-teal-800'>Product not found</h1>
+					<h1 className='text-4xl font-bold mb-4 text-deep-tidal-teal-700'>Product not found</h1>
 					<Link
 						href='/'
 						className='text-deep-tidal-teal hover:text-eucalyptus'>
@@ -124,7 +124,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						)}
 						{/* Product name and mg */}
 						<div className='flex items-start gap-2'>
-							<h1 className='text-4xl font-bold text-deep-tidal-teal-800'>{product.name}</h1>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-700'>{product.name}</h1>
 							{product.mg && !product.name.toLowerCase().includes('stack') && (
 								<div className='inline-flex items-start justify-center text-deep-tidal-teal-600 font-bold text-base mt-1'>{product.mg}mg</div>
 							)}
@@ -193,31 +193,31 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						</div>
 						{/* Discount Table */}
 						{product.slug !== 'bacteriostatic-water' && (
-							<div className='mb-6 max-w-md overflow-hidden rounded-lg border border-deep-tidal-teal/10 bg-white shadow-sm'>
+							<div className='mb-6 max-w-md overflow-hidden rounded-lg border border-deep-tidal-teal/10 bg-mineral-white shadow-sm'>
 								<div className='bg-deep-tidal-teal/5 px-4 py-2 border-b border-deep-tidal-teal/10'>
-									<h3 className='text-sm font-bold text-deep-tidal-teal tracking-wider'>Discount per quantity</h3>
+									<h3 className='text-sm font-bold text-deep-tidal-teal-700 tracking-wider'>Discount per quantity</h3>
 								</div>
 								<div className='overflow-x-auto'>
 									<table className='w-full text-[15px] text-left'>
 										<thead>
-											<tr className='border-b border-deep-tidal-teal/5 bg-deep-tidal-teal/[0.02]'>
-												<th className='px-4 py-2 font-semibold text-deep-tidal-teal-800'>Quantity</th>
-												<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>2 - 5</th>
-												<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>6 - 7</th>
-												<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>8 - 9</th>
-												<th className='px-4 py-2 font-medium text-deep-tidal-teal-700'>10 +</th>
+											<tr className='border-b border-deep-tidal-teal/5'>
+												<th className='px-4 py-2 font-semibold text-deep-tidal-teal-700'>Quantity</th>
+												<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>2 - 5</th>
+												<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>6 - 7</th>
+												<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>8 - 9</th>
+												<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>10 +</th>
 											</tr>
 										</thead>
 										<tbody>
 											<tr>
-												<td className='px-4 py-3 font-semibold text-deep-tidal-teal-800 bg-deep-tidal-teal/[0.02]'>Discount</td>
+												<td className='px-4 py-3 font-semibold text-deep-tidal-teal-700'>Discount</td>
 												<td className='px-4 py-3 text-emerald-600 font-bold'>5%</td>
 												<td className='px-4 py-3 text-emerald-600 font-bold'>10%</td>
 												<td className='px-4 py-3 text-emerald-600 font-bold'>15%</td>
 												<td className='px-4 py-3 text-emerald-600 font-bold'>25%</td>
 											</tr>
 											<tr className='border-t border-deep-tidal-teal/5'>
-												<td className='px-4 py-3 font-semibold text-deep-tidal-teal-800 bg-deep-tidal-teal/[0.02]'>Price</td>
+												<td className='px-4 py-3 font-semibold text-deep-tidal-teal-700'>Price</td>
 												<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(product.price * 0.95).toFixed(2)}</td>
 												<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(product.price * 0.9).toFixed(2)}</td>
 												<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(product.price * 0.85).toFixed(2)}</td>
@@ -275,7 +275,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Desktop Image Container */}
-					<div className='hidden lg:flex shadow-lg bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center lg:col-start-1 lg:row-start-1 h-fit'>
+					<div className='hidden lg:flex shadow-md bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center lg:col-start-1 lg:row-start-1 h-fit'>
 						<ProductImage
 							product={product}
 							priority

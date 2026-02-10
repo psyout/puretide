@@ -58,41 +58,67 @@ export default function CartClient() {
 				<h1 className='text-4xl font-bold mb-8 text-deep-tidal-teal-800'>My Cart</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-					<div className='lg:col-span-2 space-y-4'>
-						{cartItems.map((item) => (
-							<div
-								key={item.id}
-								className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 flex items-center gap-6 shadow-lg'>
-								<div className='h-28 w-28 flex items-center justify-center rounded-lg bg-white shadow-sm'>
-									{item.image.startsWith('/') || item.image.startsWith('http') ? (
-										<Image
-											src={item.image}
-											alt={item.name}
-											width={96}
-											height={96}
-											style={{ width: 'auto', height: 'auto' }}
-											unoptimized={item.image.startsWith('http')}
-											className='max-h-24 max-w-24 w-auto h-auto object-contain'
-											priority
-										/>
-									) : (
-										<span className='text-5xl'>{item.image}</span>
-									)}
-								</div>
-								<div className='flex-1'>
-									<div className='flex items-baseline justify-between gap-3 flex-col lg:items-start lg:gap-1'>
-										<h3 className='text-xl font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
-										<div className='flex items-center gap-2'>
-											<p className='text-2xl text-deep-tidal-teal font-bold'>${getItemPrice(item).toFixed(2)}</p>
-											{getItemPrice(item) < item.price && <span className='text-lg text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</span>}
+					<div className='lg:col-span-2'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+							{cartItems.map((item, index) => (
+								<div
+									key={item.id}
+									className={`flex items-center gap-6 ${index < cartItems.length - 1 ? 'pb-6 mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
+									<div className='h-28 w-28 flex-shrink-0 flex items-center justify-center rounded-lg'>
+										{item.image.startsWith('/') || item.image.startsWith('http') ? (
+											<Image
+												src={item.image}
+												alt={item.name}
+												width={96}
+												height={96}
+												style={{ width: 'auto', height: 'auto' }}
+												unoptimized={item.image.startsWith('http')}
+												className='max-h-24 max-w-24 w-auto h-auto object-contain'
+												priority
+											/>
+										) : (
+											<span className='text-5xl'>{item.image}</span>
+										)}
+									</div>
+									<div className='flex-1'>
+										<div className='flex items-baseline justify-between gap-3 flex-col lg:items-start lg:gap-1'>
+											<h3 className='text-xl font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
+											<div className='flex items-center gap-2'>
+												<p className='text-2xl text-deep-tidal-teal font-bold'>${getItemPrice(item).toFixed(2)}</p>
+												{getItemPrice(item) < item.price && (
+													<span className='text-lg text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</span>
+												)}
+											</div>
+										</div>
+										<p className='text-sm text-deep-tidal-teal-700 mt-2'>{item.description}</p>
+										<div className='mt-3 flex w-full items-center justify-flex-start flex-wrap gap-4 lg:hidden'>
+											<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
+												<button
+													disabled={item.quantity <= 1}
+													onClick={() => updateQuantity(item.id, item.quantity - 1)}
+													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded disabled:cursor-not-allowed disabled:hover:bg-deep-tidal-teal'>
+													-
+												</button>
+												<span className='w-8 text-center text-deep-tidal-teal-800'>{item.quantity}</span>
+												<button
+													onClick={() => updateQuantity(item.id, item.quantity + 1)}
+													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
+													+
+												</button>
+											</div>
+											<button
+												onClick={() => removeFromCart(item.id)}
+												className='text-red-400 hover:text-red-300'>
+												Remove
+											</button>
 										</div>
 									</div>
-									<p className='text-sm text-deep-tidal-teal-700 mt-2'>{item.description}</p>
-									<div className='mt-3 flex w-full items-center justify-flex-start flex-wrap gap-4 lg:hidden'>
+									<div className='hidden lg:flex items-center gap-4'>
 										<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
 											<button
+												disabled={item.quantity <= 1}
 												onClick={() => updateQuantity(item.id, item.quantity - 1)}
-												className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
+												className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded disabled:cursor-not-allowed disabled:hover:bg-deep-tidal-teal'>
 												-
 											</button>
 											<span className='w-8 text-center text-deep-tidal-teal-800'>{item.quantity}</span>
@@ -104,37 +130,17 @@ export default function CartClient() {
 										</div>
 										<button
 											onClick={() => removeFromCart(item.id)}
-											className='text-red-400 hover:text-red-300'>
+											className='text-red-400 hover:text-red-300 ml-4'>
 											Remove
 										</button>
 									</div>
 								</div>
-								<div className='hidden lg:flex items-center gap-4'>
-									<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
-										<button
-											onClick={() => updateQuantity(item.id, item.quantity - 1)}
-											className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
-											-
-										</button>
-										<span className='w-8 text-center text-deep-tidal-teal-800'>{item.quantity}</span>
-										<button
-											onClick={() => updateQuantity(item.id, item.quantity + 1)}
-											className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
-											+
-										</button>
-									</div>
-									<button
-										onClick={() => removeFromCart(item.id)}
-										className='text-red-400 hover:text-red-300 ml-4'>
-										Remove
-									</button>
-								</div>
-							</div>
-						))}
+							))}
+						</div>
 					</div>
 
 					<div className='lg:col-span-1'>
-						<div className='bg-muted-sage/20 backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div className='space-y-2 mb-6'>
 								{cartItems.map((item) => (
