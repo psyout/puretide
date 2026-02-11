@@ -33,7 +33,7 @@ export default function CheckoutClient() {
 	const [promoError, setPromoError] = useState<string | null>(null);
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
-	const [shippingMethod, setShippingMethod] = useState<'regular' | 'express'>('regular');
+	const shippingMethod = 'express';
 	const [paymentMethod, setPaymentMethod] = useState<'etransfer' | 'creditcard'>('etransfer');
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
@@ -46,7 +46,7 @@ export default function CheckoutClient() {
 	});
 
 	const subtotal = getTotal();
-	const shippingCost = shippingMethod === 'express' ? SHIPPING_COSTS.express : SHIPPING_COSTS.regular;
+	const shippingCost = SHIPPING_COSTS.express;
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
@@ -563,26 +563,17 @@ export default function CheckoutClient() {
 									</div>
 								)}
 								<div className='space-y-2'>
-									<div className='text-deep-tidal-teal-700'>Shipping</div>
+									<h4 className='text-sm font-semibold text-deep-tidal-teal-700 flex items-center gap-2'>
+										<Truck className='w-4 h-4' />
+										Shipping
+									</h4>
 									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
 										<span className='flex items-center gap-2'>
 											<input
 												type='radio'
 												name='shipping'
-												checked={shippingMethod === 'regular'}
-												onChange={() => setShippingMethod('regular')}
-											/>
-											Regular Shipping
-										</span>
-										<span className='text-lg'>${SHIPPING_COSTS.regular.toFixed(2)}</span>
-									</label>
-									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
-										<span className='flex items-center gap-2'>
-											<input
-												type='radio'
-												name='shipping'
-												checked={shippingMethod === 'express'}
-												onChange={() => setShippingMethod('express')}
+												checked
+												readOnly
 											/>
 											Express Shipping
 										</span>
