@@ -1,7 +1,6 @@
 // Shipping costs
 export const SHIPPING_COSTS = {
-	regular: 19.99,
-	express: 29.99,
+	express: 35.0,
 } as const;
 
 // Stock alert threshold

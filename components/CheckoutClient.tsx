@@ -554,7 +554,7 @@ export default function CheckoutClient() {
 							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm'>
 								<div className='flex justify-between'>
 									<span className='text-deep-tidal-teal-700 text-lg'>Subtotal</span>
-									<span className='text-deep-tidal-teal-800 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
+									<span className='text-deep-tidal-teal-500 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
 									<div className='flex justify-between text-deep-tidal-teal font-bold'>
@@ -577,13 +577,13 @@ export default function CheckoutClient() {
 											/>
 											Express Shipping
 										</span>
-										<span className='text-lg'>${SHIPPING_COSTS.express.toFixed(2)}</span>
+										<span className='text-md text-deep-tidal-teal-500'>${SHIPPING_COSTS.express.toFixed(2)}</span>
 									</label>
 								</div>
 
 								{/* Payment Method */}
 								<div className='border-t border-deep-tidal-teal/10 pt-3 space-y-2'>
-									<h4 className='text-sm font-semibold text-deep-tidal-teal-700 flex items-center gap-2'>
+									<h4 className='text-sm font-semibold text-deep-tidal-teal-800 flex items-center gap-2'>
 										<CreditCard className='w-4 h-4' />
 										Payment Method
 									</h4>
@@ -597,7 +597,7 @@ export default function CheckoutClient() {
 											/>
 											E-Transfer (Interac)
 										</span>
-										<span className='text-sm text-emerald-600'>No fee</span>
+										<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
 									</label>
 									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
 										<span className='flex items-center gap-2'>
