@@ -176,7 +176,7 @@ export async function POST(request: Request) {
 		}));
 
 		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-		const shippingCost = rawPayload.shippingMethod === 'express' ? SHIPPING_COSTS.express : SHIPPING_COSTS.regular;
+		const shippingCost = SHIPPING_COSTS.express;
 
 		let discountAmount = 0;
 		if (rawPayload.promoCode) {
