@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Copy } from 'lucide-react';
 import { products as fallbackProducts } from '@/lib/products';
-import Header from '@/components/Header';
-import type { Product } from '@/types/product';
+import type { Product, PromoCode } from '@/types/product';
 
 const clampStock = (value: number) => Math.max(0, Math.min(9999, value));
 const clampPrice = (value: number) => Math.max(0, Number(value.toFixed(2)));
@@ -40,9 +39,19 @@ export default function StockDashboardPage() {
 	const [rows, setRows] = useState<Product[]>(fallbackProducts);
 	const [isDirty, setIsDirty] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
-	const [activeTab, setActiveTab] = useState<'products' | 'inventory' | 'alerts'>('products');
+	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'clients'>('products');
 	const [searchValue, setSearchValue] = useState('');
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+
+	const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
+	const [ordersLoading, setOrdersLoading] = useState(false);
+
+	const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+	const [promoCodesLoading, setPromoCodesLoading] = useState(false);
+	const [promoCodesDirty, setPromoCodesDirty] = useState(false);
+
+	const [clients, setClients] = useState<Array<Record<string, unknown>>>([]);
+	const [clientsLoading, setClientsLoading] = useState(false);
 
 	useEffect(() => {
 		const load = async () => {
@@ -58,6 +67,39 @@ export default function StockDashboardPage() {
 		};
 		void load();
 	}, []);
+
+	useEffect(() => {
+		if (activeTab !== 'orders') return;
+		setOrdersLoading(true);
+		fetch('/api/orders')
+			.then((r) => r.json())
+			.then((d) => {
+				if (d.ok && d.orders) setOrders(d.orders);
+			})
+			.finally(() => setOrdersLoading(false));
+	}, [activeTab]);
+
+	useEffect(() => {
+		if (activeTab !== 'promos') return;
+		setPromoCodesLoading(true);
+		fetch('/api/promo')
+			.then((r) => r.json())
+			.then((d) => {
+				if (d.ok && d.codes) setPromoCodes(d.codes);
+			})
+			.finally(() => setPromoCodesLoading(false));
+	}, [activeTab]);
+
+	useEffect(() => {
+		if (activeTab !== 'clients') return;
+		setClientsLoading(true);
+		fetch('/api/clients')
+			.then((r) => r.json())
+			.then((d) => {
+				if (d.ok && d.clients) setClients(d.clients);
+			})
+			.finally(() => setClientsLoading(false));
+	}, [activeTab]);
 
 	const updateRow = (id: string, next: Partial<Product>) => {
 		setRows((prev) => prev.map((product) => (product.id === id ? { ...product, ...next } : product)));
@@ -151,6 +193,19 @@ export default function StockDashboardPage() {
 		setIsDirty(true);
 	};
 
+	const handleDuplicateProduct = (product: Product) => {
+		const newId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `p_${Date.now()}`;
+		const duplicated: Product = {
+			...product,
+			id: newId,
+			slug: `${product.slug}-copy-${newId.slice(-6)}`,
+			name: `${product.name} (Copy)`,
+			status: 'draft',
+		};
+		setRows((prev) => [duplicated, ...prev]);
+		setIsDirty(true);
+	};
+
 	const handleDeleteProduct = (id: string) => {
 		const target = rows.find((item) => item.id === id);
 		if (!target) {
@@ -166,6 +221,34 @@ export default function StockDashboardPage() {
 
 	const toggleExpanded = (id: string) => {
 		setExpandedId((prev) => (prev === id ? null : id));
+	};
+
+	const handlePromoChange = (index: number, field: keyof PromoCode, value: string | number | boolean) => {
+		setPromoCodes((prev) => {
+			const next = [...prev];
+			next[index] = { ...next[index], [field]: value };
+			return next;
+		});
+		setPromoCodesDirty(true);
+	};
+
+	const handleAddPromo = () => {
+		setPromoCodes((prev) => [...prev, { code: '', discount: 0, active: true }]);
+		setPromoCodesDirty(true);
+	};
+
+	const handleRemovePromo = (index: number) => {
+		setPromoCodes((prev) => prev.filter((_, i) => i !== index));
+		setPromoCodesDirty(true);
+	};
+
+	const handleSavePromos = async () => {
+		await fetch('/api/promo', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ codes: promoCodes.filter((p) => p.code.trim()) }),
+		});
+		setPromoCodesDirty(false);
 	};
 
 	const filteredRows = useMemo(() => {
@@ -200,89 +283,211 @@ export default function StockDashboardPage() {
 								Products
 							</button>
 							<button
-								onClick={() => setActiveTab('inventory')}
+								onClick={() => setActiveTab('orders')}
 								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
-									activeTab === 'inventory' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+									activeTab === 'orders' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
 								}`}>
-								Inventory
+								Orders
 							</button>
 							<button
-								onClick={() => setActiveTab('alerts')}
+								onClick={() => setActiveTab('promos')}
 								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
-									activeTab === 'alerts' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+									activeTab === 'promos' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
 								}`}>
-								Alerts
+								Promo Codes
+							</button>
+							<button
+								onClick={() => setActiveTab('clients')}
+								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+									activeTab === 'clients' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+								}`}>
+								Clients
 							</button>
 						</nav>
 					</aside>
 
 					<section className='flex flex-col gap-6'>
-						<div className='rounded-2xl border border-black/5 bg-white p-6 shadow-sm flex flex-col gap-4'>
-							<div className='flex flex-wrap items-center justify-between gap-4'>
-								<div>
-									<h1 className='text-2xl font-semibold text-[#1f1f1f]'>Products List</h1>
-									<p className='text-[#7a7a7a] text-sm mt-1'>Manage products in Google Sheets</p>
+						{activeTab === 'products' && (
+							<div className='rounded-2xl border border-black/5 bg-white p-6 shadow-sm flex flex-col gap-4'>
+								<div className='flex flex-wrap items-center justify-between gap-4'>
+									<div>
+										<h1 className='text-2xl font-semibold text-[#1f1f1f]'>Products List</h1>
+										<p className='text-[#7a7a7a] text-sm mt-1'>Manage products in Google Sheets</p>
+									</div>
+									<div className='flex flex-wrap items-center gap-2'>
+										<button
+											onClick={handleAddProduct}
+											className='bg-[#6c5dd3] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#5b4ec7]'>
+											+ Add Product
+										</button>
+										<button
+											onClick={handleSave}
+											disabled={!isDirty}
+											className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:bg-[#bdbdbd]'>
+											Save changes
+										</button>
+										<button
+											onClick={handleReset}
+											className='bg-white border border-black/10 text-[#2f2f2f] font-medium px-4 py-2 rounded-lg hover:bg-[#f5f5f5]'>
+											Reset
+										</button>
+									</div>
 								</div>
-								<div className='flex flex-wrap items-center gap-2'>
-									<button
-										onClick={handleAddProduct}
-										className='bg-[#6c5dd3] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#5b4ec7]'>
-										+ Add Product
-									</button>
-									<button
-										onClick={handleSave}
-										disabled={!isDirty}
-										className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:bg-[#bdbdbd]'>
-										Save changes
-									</button>
-									<button
-										onClick={handleReset}
-										className='bg-white border border-black/10 text-[#2f2f2f] font-medium px-4 py-2 rounded-lg hover:bg-[#f5f5f5]'>
-										Reset
-									</button>
+								<div className='flex flex-wrap items-center justify-between gap-4'>
+									<div className='relative w-full max-w-sm'>
+										<input
+											type='text'
+											value={searchValue}
+											onChange={(event) => setSearchValue(event.target.value)}
+											placeholder='Search product...'
+											className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+										/>
+									</div>
+									{isDirty && <span className='text-xs text-[#7a7a7a]'>Unsaved changes</span>}
 								</div>
-							</div>
-							<div className='flex flex-wrap items-center justify-between gap-4'>
-								<div className='relative w-full max-w-sm'>
-									<input
-										type='text'
-										value={searchValue}
-										onChange={(event) => setSearchValue(event.target.value)}
-										placeholder='Search product...'
-										className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-									/>
-								</div>
-								{isDirty && <span className='text-xs text-[#7a7a7a]'>Unsaved changes</span>}
-							</div>
-						</div>
-
-						{activeTab === 'alerts' && (
-							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6 text-[#6a6a6a]'>
-								Low-stock alerts are sent by the scheduled job on the server. Update stock in Google Sheets and alerts will go out automatically.
 							</div>
 						)}
 
-						{activeTab === 'inventory' && (
+						{activeTab === 'orders' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
-								<div className='grid grid-cols-[2fr_1fr_1fr] items-center text-left text-xs uppercase tracking-wide text-[#9b9b9b] pb-3 border-b border-black/5'>
-									<span>Product name</span>
-									<span>Stock</span>
-									<span>Status</span>
+								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Recent Orders</h2>
+								{ordersLoading ? (
+									<div className='text-[#6a6a6a] py-8'>Loading orders...</div>
+								) : orders.length === 0 ? (
+									<div className='text-[#6a6a6a] py-8'>No orders yet.</div>
+								) : (
+									<div className='divide-y divide-black/5 overflow-x-auto'>
+										<table className='w-full min-w-[640px]'>
+											<thead>
+												<tr className='text-left text-xs uppercase tracking-wide text-[#9b9b9b]'>
+													<th className='pb-3 pr-6 font-medium'>Order #</th>
+													<th className='pb-3 pr-6 font-medium'>Customer</th>
+													<th className='pb-3 pr-6 font-medium'>Products</th>
+													<th className='pb-3 pr-6 font-medium'>Date</th>
+													<th className='pb-3 pr-6 font-medium'>Payment</th>
+													<th className='pb-3 pl-6 text-right font-medium'>Total</th>
+												</tr>
+											</thead>
+											<tbody className='text-sm text-[#2f2f2f]'>
+												{orders.slice(0, 50).map((order) => {
+													const c = order.customer as Record<string, string> | undefined;
+													const cart = (order.cartItems as Array<Record<string, unknown>>) ?? [];
+													const date = order.createdAt ? new Date(String(order.createdAt)).toLocaleDateString() : '-';
+													const products = cart
+														.map((item) => `${String(item.name ?? 'Item')}${Number(item.quantity ?? 1) > 1 ? ` ×${item.quantity}` : ''}`)
+														.join(', ');
+													const payment = order.paymentMethod === 'creditcard' ? 'Card' : order.paymentMethod === 'etransfer' ? 'E-Transfer' : String(order.paymentMethod ?? '-');
+													return (
+														<tr key={String(order.id)} className='border-t border-black/5'>
+															<td className='py-4 pr-6 font-medium'>{String(order.orderNumber ?? order.id ?? '-')}</td>
+															<td className='py-4 pr-6'>{c ? `${c.firstName} ${c.lastName}` : '-'}</td>
+															<td className='py-4 pr-6 text-[#6a6a6a]'>{products || '-'}</td>
+															<td className='py-4 pr-6'>{date}</td>
+															<td className='py-4 pr-6'>{payment}</td>
+															<td className='py-4 pl-6 text-right'>${Number(order.total ?? 0).toFixed(2)}</td>
+														</tr>
+													);
+												})}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</div>
+						)}
+
+						{activeTab === 'promos' && (
+							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
+								<div className='flex items-center justify-between mb-4'>
+									<h2 className='text-xl font-semibold text-[#1f1f1f]'>Promo Codes</h2>
+									<div className='flex gap-2'>
+										<button
+											onClick={handleAddPromo}
+											className='bg-[#6c5dd3] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#5b4ec7]'>
+											+ Add Code
+										</button>
+										<button
+											onClick={handleSavePromos}
+											disabled={!promoCodesDirty}
+											className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:bg-[#bdbdbd]'>
+											Save
+										</button>
+									</div>
 								</div>
-								<div className='divide-y divide-black/5'>
-									{filteredRows.map((product) => (
-										<div
-											key={product.id}
-											className='grid grid-cols-[2fr_1fr_1fr] items-center text-left py-4 text-sm text-[#2f2f2f]'>
-											<span className='font-medium'>{product.name}</span>
-											<span className='text-[#6a6a6a]'>{product.stock}</span>
-											<span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadge(product.status)}`}>
-												{getStatusLabel(product.status)}
-											</span>
+								{promoCodesLoading ? (
+									<div className='text-[#6a6a6a] py-8'>Loading promo codes...</div>
+								) : promoCodes.length === 0 ? (
+									<div className='text-[#6a6a6a] py-8'>No promo codes. Add one to get started.</div>
+								) : (
+									<div className='space-y-4'>
+										{promoCodes.map((promo, i) => (
+											<div
+												key={i}
+												className='flex flex-wrap items-center gap-4 p-4 rounded-lg border border-black/5 bg-[#f4f4f7]'>
+												<input
+													type='text'
+													value={promo.code}
+													onChange={(e) => handlePromoChange(i, 'code', e.target.value.toUpperCase())}
+													placeholder='CODE'
+													className='w-28 px-3 py-2 border border-black/10 rounded text-sm font-mono'
+												/>
+												<input
+													type='number'
+													min={0}
+													max={100}
+													value={promo.discount}
+													onChange={(e) => handlePromoChange(i, 'discount', Number(e.target.value) || 0)}
+													className='w-20 px-3 py-2 border border-black/10 rounded text-sm'
+												/>
+												<span className='text-[#6a6a6a] text-sm'>% off</span>
+												<label className='flex items-center gap-2'>
+													<input
+														type='checkbox'
+														checked={promo.active}
+														onChange={(e) => handlePromoChange(i, 'active', e.target.checked)}
+													/>
+													<span className='text-sm'>Active</span>
+												</label>
+												<button
+													onClick={() => handleRemovePromo(i)}
+													className='text-rose-600 hover:text-rose-700 text-sm'>
+													Remove
+												</button>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						)}
+
+						{activeTab === 'clients' && (
+							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
+								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Clients</h2>
+								{clientsLoading ? (
+									<div className='text-[#6a6a6a] py-8'>Loading clients...</div>
+								) : clients.length === 0 ? (
+									<div className='text-[#6a6a6a] py-8'>No clients yet.</div>
+								) : (
+									<div className='divide-y divide-black/5 overflow-x-auto'>
+										<div className='grid grid-cols-[1.5fr_1fr_1fr_auto_auto] gap-4 pb-3 text-xs uppercase tracking-wide text-[#9b9b9b]'>
+											<span>Email</span>
+											<span>Name</span>
+											<span>Orders</span>
+											<span>Total</span>
+											<span>Last Order</span>
 										</div>
-									))}
-									{filteredRows.length === 0 && <div className='py-6 text-sm text-[#6a6a6a]'>No products found.</div>}
-								</div>
+										{clients.map((client, i) => (
+											<div
+												key={String(client.email ?? i)}
+												className='grid grid-cols-[1.5fr_1fr_1fr_auto_auto] gap-4 py-4 text-sm text-[#2f2f2f]'>
+												<span className='font-medium'>{String(client.email ?? '-')}</span>
+												<span>{[String(client.firstName ?? ''), String(client.lastName ?? '')].filter(Boolean).join(' ') || '-'}</span>
+												<span>{Number(client.ordersCount ?? 0)}</span>
+												<span>${Number(client.totalSpent ?? 0).toFixed(2)}</span>
+												<span>{String(client.lastOrderDate ?? '-')}</span>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 
@@ -329,7 +534,7 @@ export default function StockDashboardPage() {
 																	<option value='stock-out'>Stock Out</option>
 																</select>
 															</div>
-															<div className='flex items-center justify-start gap-2'>
+															<div className='flex items-center justify-start gap-4'>
 																<button
 																	type='button'
 																	onClick={() => toggleExpanded(product.id)}
@@ -338,8 +543,15 @@ export default function StockDashboardPage() {
 																</button>
 																<button
 																	type='button'
+																	onClick={() => handleDuplicateProduct(product)}
+																	className='inline-flex h-9 w-9 items-center justify-center text-[#6c5dd3] hover:text-[#5b4ec7] hover:bg-[#6c5dd3]/10'
+																	title='Duplicate'>
+																	<Copy className='h-4 w-4' />
+																</button>
+																<button
+																	type='button'
 																	onClick={() => handleDeleteProduct(product.id)}
-																	className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-rose-700 hover:text-rose-800 hover:bg-rose-50'>
+																	className='inline-flex h-9 w-9 items-center justify-center text-rose-700 hover:text-rose-800 hover:bg-rose-50'>
 																	<Trash2 className='h-4 w-4' />
 																</button>
 															</div>

@@ -84,43 +84,68 @@ export default function CheckoutClient() {
 		}
 	};
 
+	const buildPayload = () => ({
+		customer: formData,
+		shipToDifferentAddress,
+		shippingAddress: shipToDifferentAddress ? shippingAddress : undefined,
+		shippingMethod,
+		paymentMethod,
+		cardFee,
+		promoCode: appliedDiscount > 0 ? promoCode : undefined,
+		discountAmount: discountAmount || undefined,
+		subtotal,
+		shippingCost,
+		total,
+		cartItems: cartItems.map((item) => ({
+			id: typeof item.id === 'string' ? parseInt(item.id, 10) || 0 : item.id,
+			name: item.name,
+			price: item.price,
+			quantity: item.quantity,
+			image: item.image ?? '',
+			description: item.description ?? '',
+		})),
+	});
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsProcessing(true);
 		setHasSubmitted(true);
 
 		try {
+			if (paymentMethod === 'creditcard') {
+				const response = await fetch('/api/digipay/create', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(buildPayload()),
+				});
+				const data = await response.json();
+				if (!response.ok) {
+					throw new Error(data.error ?? 'Failed to start payment');
+				}
+				if (data.ok && data.redirectUrl) {
+					window.location.href = data.redirectUrl;
+					return;
+				}
+				throw new Error('Invalid response from payment');
+			}
+
 			const response = await fetch('/api/orders', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					customer: formData,
-					shipToDifferentAddress,
-					shippingAddress: shipToDifferentAddress ? shippingAddress : undefined,
-					shippingMethod,
-					paymentMethod,
-					cardFee,
-					promoCode: appliedDiscount > 0 ? promoCode : undefined,
-					subtotal,
-					shippingCost,
-					total,
-					cartItems,
-				}),
+				body: JSON.stringify(buildPayload()),
 			});
 
 			if (!response.ok) {
 				throw new Error('Failed to store order');
 			}
+			clearCart();
+			router.push('/order-confirmation');
 		} catch (error) {
 			console.error('Checkout error', error);
-			alert('We could not place your order. Please try again.');
+			alert(error instanceof Error ? error.message : 'We could not place your order. Please try again.');
 			setIsProcessing(false);
 			setHasSubmitted(false);
-			return;
 		}
-
-		clearCart();
-		router.push('/order-confirmation');
 	};
 
 	if (cartItems.length === 0) {
@@ -384,13 +409,15 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
-								<div className=' pb-4 border-b border-deep-tidal-teal/10'>
-									<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
-									<p className='text-sm text-deep-tidal-teal-800'>
-										After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
-										transfer.
-									</p>
-								</div>
+								{paymentMethod === 'etransfer' && (
+									<div className=' pb-4 border-b border-deep-tidal-teal/10'>
+										<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
+										<p className='text-sm text-deep-tidal-teal-800'>
+											After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
+											transfer.
+										</p>
+									</div>
+								)}
 								<div className='py-1'>
 									<label className='flex items-center gap-3 cursor-pointer'>
 										<input

@@ -31,6 +31,9 @@ yarn-error.log*
 
 # local data
 /data/orders.json
+/data/orders.sqlite
+/data/orders.sqlite-shm
+/data/orders.sqlite-wal
 /data/low-stock.json
 
 # vercel
@@ -42,3 +45,5 @@ next-env.d.ts
 
 EMAIL.md
 DEPLOYMENT.md
+DASHBOARD_IDEAS.md
+DIGIPAY_INTEGRATION.md

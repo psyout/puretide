@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
 import { readSheetProducts, writeSheetProducts, readSheetPromoCodes, upsertSheetClient } from '@/lib/stockSheet';
@@ -8,6 +6,7 @@ import { getDiscountedPrice } from '@/lib/pricing';
 import { getSmtpConfig, sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, SHIPPING_COSTS, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 import { createOrderTask, createStockAlertTask } from '@/lib/wrike';
+import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 
 interface OrderPayload {
 	customer: {
@@ -49,16 +48,18 @@ interface OrderPayload {
 	}>;
 }
 
-async function readOrders(filePath: string) {
+export async function GET() {
 	try {
-		const contents = await fs.readFile(filePath, 'utf8');
-		return JSON.parse(contents) as Array<Record<string, unknown>>;
+		const orders = listOrdersFromDb();
+		const sorted = [...orders].sort((a, b) => {
+			const aT = String(a.createdAt ?? '');
+			const bT = String(b.createdAt ?? '');
+			return bT.localeCompare(aT);
+		});
+		return NextResponse.json({ ok: true, orders: sorted });
 	} catch (error) {
-		const nodeError = error as NodeJS.ErrnoException;
-		if (nodeError.code === 'ENOENT') {
-			return [];
-		}
-		throw error;
+		const message = error instanceof Error ? error.message : 'Failed to read orders';
+		return NextResponse.json({ ok: false, error: message }, { status: 500 });
 	}
 }
 
@@ -129,7 +130,6 @@ const formatOrderFrom = (value: string, label = 'Puretide Order Confirmation') =
 	return `${label} <${address}>`;
 };
 
-
 async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array<{ name: string; stock: number }>> {
 	try {
 		const current = await readSheetProducts();
@@ -146,7 +146,7 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 
 		await writeSheetProducts(updated);
 		await sendLowStockAlert(lowStock);
-		
+
 		// Create Wrike task for low stock items
 		if (lowStock.length > 0) {
 			await createStockAlertTask(lowStock);
@@ -198,12 +198,6 @@ export async function POST(request: Request) {
 			total,
 		};
 
-		const ordersDir = path.join(process.cwd(), 'data');
-		const ordersFile = path.join(ordersDir, 'orders.json');
-
-		await fs.mkdir(ordersDir, { recursive: true });
-		const existingOrders = await readOrders(ordersFile);
-
 		const timestamp = Date.now();
 		const orderNumber = `${timestamp}`.slice(-6);
 		const createdAt = new Date().toISOString();
@@ -211,6 +205,7 @@ export async function POST(request: Request) {
 			id: `order_${timestamp}`,
 			orderNumber,
 			createdAt,
+			paymentStatus: 'paid' as const,
 			...payload,
 		};
 
@@ -228,7 +223,7 @@ export async function POST(request: Request) {
 		const emailStatus = await sendOrderEmail(customerEmail, emailData.customer.subject, emailData.customer.text, emailData.customer.html, undefined, '', orderFrom);
 		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.admin.subject, emailData.admin.text, emailData.admin.html, customerReplyTo, '', orderFrom);
 
-		existingOrders.push({
+		upsertOrderInDb({
 			...orderRecord,
 			emailPreview: {
 				subject: emailData.customer.subject,
@@ -241,27 +236,26 @@ export async function POST(request: Request) {
 			emailStatus,
 			adminEmailStatus,
 		});
-		await fs.writeFile(ordersFile, JSON.stringify(existingOrders, null, 2), 'utf8');
 		const updatedStock = await updateSheetStock(payload.cartItems);
 
 		// Create Wrike task for the order
-		await createOrderTask({
-			orderNumber,
-			createdAt,
-			customer: payload.customer,
-			shipToDifferentAddress: payload.shipToDifferentAddress,
-			shippingAddress: payload.shippingAddress,
-			shippingMethod: payload.shippingMethod,
-			paymentMethod: payload.paymentMethod,
-			cardFee: payload.cardFee,
-			subtotal: payload.subtotal,
-			shippingCost: payload.shippingCost,
-			discountAmount: payload.discountAmount,
-			promoCode: payload.promoCode,
-			total: payload.total,
-			cartItems: payload.cartItems,
-			stockLevels: updatedStock,
-		});
+		// await createOrderTask({
+		//	orderNumber,
+		//	createdAt,
+		//	customer: payload.customer,
+		//	shipToDifferentAddress: payload.shipToDifferentAddress,
+		//	shippingAddress: payload.shippingAddress,
+		//	shippingMethod: payload.shippingMethod,
+		//	paymentMethod: payload.paymentMethod,
+		//	cardFee: payload.cardFee,
+		//	subtotal: payload.subtotal,
+		//	shippingCost: payload.shippingCost,
+		//	discountAmount: payload.discountAmount,
+		//	promoCode: payload.promoCode,
+		//	total: payload.total,
+		//	cartItems: payload.cartItems,
+		//	stockLevels: updatedStock,
+		//});
 
 		// Save client to Google Sheets for marketing
 		await upsertSheetClient({
@@ -275,7 +269,7 @@ export async function POST(request: Request) {
 			country: payload.customer.country,
 			orderTotal: payload.total,
 			lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-			productsPurchased: payload.cartItems.map(item => item.name),
+			productsPurchased: payload.cartItems.map((item) => item.name),
 		});
 
 		return NextResponse.json({ ok: true, orderId: orderRecord.id });

@@ -46,12 +46,12 @@ export default function HeroClient({ slides }: HeroClientProps) {
 					<div
 						key={slide.backgroundImage}
 						className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}>
-						<div className='absolute inset-0 w-full h-full block xs:hidden blur-xs z-0'>
+						<div className='absolute inset-0 w-full h-full block sm:hidden blur-xs z-0'>
 							<Image
 								src={slide.backgroundImage}
 								alt=''
 								fill
-								sizes='100vw'
+								sizes='(min-width: 640px) 0vw, 100vw'
 								className='object-cover'
 							/>
 						</div>
@@ -60,8 +60,8 @@ export default function HeroClient({ slides }: HeroClientProps) {
 							alt={`Hero background ${index + 1}`}
 							fill
 							priority={index === 0}
-							sizes='100vw'
-							className='object-cover hidden xs:block'
+							sizes='(max-width: 639px) 0vw, 100vw'
+							className='object-cover hidden sm:block'
 						/>
 						<div className='absolute inset-0 ' />
 					</div>

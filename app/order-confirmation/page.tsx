@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { promises as fs } from 'fs';
-import path from 'path';
 import Header from '@/components/Header';
+import { getOrderByOrderNumberFromDb, listOrdersFromDb } from '@/lib/ordersDb';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -31,7 +30,7 @@ type Order = {
 		province: string;
 		zipCode: string;
 	};
-	shippingMethod: 'regular' | 'express';
+	shippingMethod: 'express';
 	subtotal: number;
 	shippingCost: number;
 	total: number;
@@ -59,23 +58,20 @@ const formatMoney = (value: number) =>
 		currency: 'CAD',
 	}).format(value);
 
-async function getLatestOrder() {
-	const ordersFile = path.join(process.cwd(), 'data', 'orders.json');
-	try {
-		const contents = await fs.readFile(ordersFile, 'utf8');
-		const orders = JSON.parse(contents) as Order[];
-		return orders.at(-1) ?? null;
-	} catch (error) {
-		const nodeError = error as NodeJS.ErrnoException;
-		if (nodeError.code === 'ENOENT') {
-			return null;
-		}
-		throw error;
-	}
+type OrderWithPayment = Order & { paymentStatus?: string };
+
+async function getOrders(): Promise<OrderWithPayment[]> {
+	return listOrdersFromDb() as OrderWithPayment[];
 }
 
-export default async function OrderConfirmationPage() {
-	const order = await getLatestOrder();
+async function getOrderByNumber(orderNumber: string | null): Promise<OrderWithPayment | null> {
+	if (!orderNumber?.trim()) return null;
+	return getOrderByOrderNumberFromDb(orderNumber.trim()) as OrderWithPayment | null;
+}
+
+export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string }> }) {
+	const { orderNumber: queryOrderNumber } = await searchParams;
+	const order = queryOrderNumber ? await getOrderByNumber(queryOrderNumber) : ((await getOrders()).at(-1) ?? null);
 
 	if (!order) {
 		return (
@@ -96,13 +92,36 @@ export default async function OrderConfirmationPage() {
 		);
 	}
 
+	if (order.paymentStatus === 'pending') {
+		return (
+			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+				<Header />
+				<div className='max-w-7xl mx-auto px-6 py-16 pt-28'>
+					<div className='max-w-2xl mx-auto bg-eucalyptus-100/60 backdrop-blur-sm rounded-lg ui-border p-4 shadow-lg'>
+						<h1 className='text-3xl font-bold text-deep-tidal-teal-800 mb-3'>Processing your payment</h1>
+						<p className='text-deep-tidal-teal-800 mb-6'>
+							Your order was received. Payment is being processed. This page will update when payment is confirmed, or you can check back shortly.
+						</p>
+						<Link
+							href='/'
+							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+							Return to shop
+						</Link>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	const orderNumber = order.orderNumber ?? order.createdAt.replace(/\D/g, '').slice(-6);
 	const orderDate = new Date(order.createdAt).toLocaleDateString('en-CA', {
 		year: 'numeric',
 		month: 'long',
 		day: 'numeric',
 	});
-	const shippingLabel = order.shippingMethod === 'express' ? 'Express Shipping' : 'Regular Shipping';
+	const paymentMethod = (order as Record<string, unknown>).paymentMethod;
+	const isCreditCardOrder = paymentMethod === 'creditcard';
+	const shippingLabel = order.shippingMethod === 'express' ? 'Express Shipping' : '';
 	const billingAddressLines = [
 		`${order.customer.firstName} ${order.customer.lastName}`,
 		order.customer.address,
@@ -125,7 +144,11 @@ export default async function OrderConfirmationPage() {
 			<div className='max-w-7xl mx-auto px-6 py-12 pt-28'>
 				<div className='max-w-4xl mx-auto bg-muted-sage/30 backdrop-blur-sm rounded-lg ui-border shadow-lg p-6'>
 					<h1 className='text-3xl font-bold text-deep-tidal-teal-800 mb-2 mt-2'>Thank you. Your order has been received.</h1>
-					<p className='text-deep-tidal-teal-800 mb-6'>Payment is completed only via Interac e&ndash;Transfer in Canada.</p>
+					<p className='text-deep-tidal-teal-800 mb-6'>
+						{isCreditCardOrder
+							? 'Your credit card payment has been received.'
+							: 'Payment is completed only via Interac e&ndash;Transfer in Canada.'}
+					</p>
 
 					<div className='grid grid-cols-1 md:grid-cols-4 gap-4 text-md mb-8'>
 						<div className='bg-mineral-white rounded-lg ui-border p-4'>
@@ -142,51 +165,53 @@ export default async function OrderConfirmationPage() {
 						</div>
 						<div className='bg-mineral-white rounded-lg ui-border p-4'>
 							<div className='text-deep-tidal-teal-600'>Payment method</div>
-							<div className='text-deep-tidal-teal-800 font-semibold'>Interac e&ndash;Transfer</div>
+							<div className='text-deep-tidal-teal-800 font-semibold'>{isCreditCardOrder ? 'Credit card' : 'Interac e-Transfer'}</div>
 						</div>
 					</div>
 
-					<div className='rounded-lg bg-mineral-white ui-border mb-8 p-4'>
-						<h2 className='text-2xl font-semibold text-deep-tidal-teal-800 mb-4'>Interac e&ndash;Transfer Instructions</h2>
-						<p className='text-deep-tidal-teal-800 mb-4'>
-							After placing your order, please send an Interac e&ndash;Transfer following the instructions below. Enter everything exactly as shown so your payment is
-							automatically accepted.
-						</p>
-						<div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-md'>
-							<div>
-								<div className='text-deep-tidal-teal-600'>Recipient Name</div>
-								<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.recipientName}</div>
-							</div>
-							<div>
-								<div className='text-deep-tidal-teal-600'>Recipient Email</div>
-								<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.recipientEmail}</div>
-							</div>
-							<div>
-								<div className='text-deep-tidal-teal-600'>Security Question</div>
-								<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.securityQuestion}</div>
-							</div>
-							<div>
-								<div className='text-deep-tidal-teal-600'>Security Answer</div>
-								<div className='text-deep-tidal-teal-800 font-semibold'>
-									{paymentDetails.securityAnswerPrefix}
-									{orderNumber}
+					{!isCreditCardOrder && (
+						<div className='rounded-lg bg-mineral-white ui-border mb-8 p-4'>
+							<h2 className='text-2xl font-semibold text-deep-tidal-teal-800 mb-4'>Interac e&ndash;Transfer Instructions</h2>
+							<p className='text-deep-tidal-teal-800 mb-4'>
+								After placing your order, please send an Interac e&ndash;Transfer following the instructions below. Enter everything exactly as shown so your payment is
+								automatically accepted.
+							</p>
+							<div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-md'>
+								<div>
+									<div className='text-deep-tidal-teal-600'>Recipient Name</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.recipientName}</div>
+								</div>
+								<div>
+									<div className='text-deep-tidal-teal-600'>Recipient Email</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.recipientEmail}</div>
+								</div>
+								<div>
+									<div className='text-deep-tidal-teal-600'>Security Question</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.securityQuestion}</div>
+								</div>
+								<div>
+									<div className='text-deep-tidal-teal-600'>Security Answer</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>
+										{paymentDetails.securityAnswerPrefix}
+										{orderNumber}
+									</div>
+								</div>
+								<div>
+									<div className='text-deep-tidal-teal-600'>Memo / Message</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>{orderNumber}</div>
 								</div>
 							</div>
-							<div>
-								<div className='text-deep-tidal-teal-600'>Memo / Message</div>
-								<div className='text-deep-tidal-teal-800 font-semibold'>{orderNumber}</div>
+							<div className='text-xs text-deep-tidal-teal-700 mt-4 space-y-2'>
+								<p>Important: Use the exact Security Question and Answer above. Any changes can delay payment acceptance or have your payment refused.</p>
+								<p>If your bank does not allow a memo, you can leave it empty.</p>
+								<p>We only accept e&ndash;Transfers sent to the email listed above. Do not send payments to any other email address.</p>
+								<p>If your payment is not accepted, please go to your banking app, cancel and re&ndash;send with the correct instructions above.</p>
+								<p>
+									Should you encounter any payment&ndash;related issues, please contact our support at: <span className='font-semibold'>{paymentDetails.supportEmail}</span>
+								</p>
 							</div>
 						</div>
-						<div className='text-xs text-deep-tidal-teal-700 mt-4 space-y-2'>
-							<p>Important: Use the exact Security Question and Answer above. Any changes can delay payment acceptance or have your payment refused.</p>
-							<p>If your bank does not allow a memo, you can leave it empty.</p>
-							<p>We only accept e&ndash;Transfers sent to the email listed above. Do not send payments to any other email address.</p>
-							<p>If your payment is not accepted, please go to your banking app, cancel and re&ndash;send with the correct instructions above.</p>
-							<p>
-								Should you encounter any payment&ndash;related issues, please contact our support at: <span className='font-semibold'>{paymentDetails.supportEmail}</span>
-							</p>
-						</div>
-					</div>
+					)}
 
 					<div className='grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8'>
 						<div className='bg-mineral-white rounded-lg ui-border p-4'>

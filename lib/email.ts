@@ -79,3 +79,40 @@ export async function sendLowStockAlert(
 		bcc: config.bcc,
 	});
 }
+
+export type SendMailOptions = {
+	to: string;
+	subject: string;
+	text: string;
+	html: string;
+	replyTo?: string;
+	bcc?: string;
+	from?: string;
+};
+
+/**
+ * Send a single email (e.g. order confirmation). Uses ORDER SMTP config if available.
+ */
+export async function sendMail(options: SendMailOptions): Promise<{ sent: boolean; error?: string }> {
+	const config = getSmtpConfig('ORDER');
+	if (!config) {
+		return { sent: false, error: 'SMTP not configured' };
+	}
+	const transporter = createTransporter(config);
+	const from = options.from ?? config.from;
+	try {
+		await transporter.sendMail({
+			from,
+			to: options.to,
+			subject: options.subject,
+			text: options.text,
+			html: options.html,
+			replyTo: options.replyTo ?? config.replyTo ?? config.from,
+			bcc: options.bcc ?? config.bcc,
+		});
+		return { sent: true };
+	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Unknown error';
+		return { sent: false, error: message };
+	}
+}

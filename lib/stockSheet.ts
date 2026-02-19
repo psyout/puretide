@@ -11,6 +11,32 @@ const HEADERS = ['id', 'slug', 'name', 'subtitle', 'description', 'details', 'pr
 type HeaderKey = (typeof HEADERS)[number];
 const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description', 'details', 'price', 'stock', 'category'];
 
+const getErrorCode = (error: unknown) => (error && typeof error === 'object' && 'code' in error ? String((error as { code?: string }).code ?? '') : '');
+const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const isExpectedSheetsFallbackError = (error: unknown) => {
+	const message = getErrorMessage(error).toLowerCase();
+	const code = getErrorCode(error).toUpperCase();
+	return (
+		message.includes('google sheets credentials are not configured') ||
+		message.includes('getaddrinfo enotfound') ||
+		code === 'ENOTFOUND' ||
+		code === 'ETIMEDOUT' ||
+		code === 'ECONNRESET'
+	);
+};
+
+const reportSheetsError = (label: string, error: unknown) => {
+	if (process.env.NODE_ENV === 'production' && isExpectedSheetsFallbackError(error)) {
+		return;
+	}
+	if (isExpectedSheetsFallbackError(error)) {
+		console.warn(`${label}: ${getErrorMessage(error)}`);
+		return;
+	}
+	console.error(`${label}:`, error);
+};
+
 const getSheetsClient = () => {
 	if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
 		throw new Error('Google Sheets credentials are not configured');
@@ -127,7 +153,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 
 		return sheetProducts;
 	} catch (error) {
-		console.error('Error reading products from sheet:', error);
+		reportSheetsError('Error reading products from sheet', error);
 		return baseProducts;
 	}
 };
@@ -165,7 +191,73 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 			active: (row[2] ?? '').trim().toLowerCase() === 'true',
 		}));
 	} catch (error) {
-		console.error('Error reading promo codes from sheet:', error);
+		reportSheetsError('Error reading promo codes from sheet', error);
+		return [];
+	}
+};
+
+export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
+	if (!SHEET_ID) return;
+
+	try {
+		const sheets = getSheetsClient();
+		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'PromoCodes');
+		if (!sheetExists) {
+			console.error('Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, Active');
+			return;
+		}
+		const values = [
+			['Code', 'Discount', 'Active'],
+			...codes.map((c) => [c.code, String(c.discount), c.active ? 'true' : 'false']),
+		];
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: 'PromoCodes!A1:C',
+			valueInputOption: 'RAW',
+			requestBody: { values },
+		});
+	} catch (error) {
+		reportSheetsError('Error writing promo codes to sheet', error);
+		throw error;
+	}
+};
+
+export const readSheetClients = async (): Promise<ClientRecord[]> => {
+	if (!SHEET_ID) return [];
+
+	try {
+		const sheets = getSheetsClient();
+		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'Clients');
+		if (!sheetExists) return [];
+
+		const response = await sheets.spreadsheets.values.get({
+			spreadsheetId: SHEET_ID,
+			range: 'Clients!A:L',
+		});
+		const rows = response.data.values ?? [];
+		if (rows.length <= 1) return [];
+
+		const [, ...dataRows] = rows as string[][];
+		return dataRows.map((row) => ({
+			email: (row[0] ?? '').trim(),
+			firstName: (row[1] ?? '').trim(),
+			lastName: (row[2] ?? '').trim(),
+			address: (row[3] ?? '').trim(),
+			city: (row[4] ?? '').trim(),
+			province: (row[5] ?? '').trim(),
+			zipCode: (row[6] ?? '').trim(),
+			country: (row[7] ?? '').trim(),
+			ordersCount: parseNumber(row[8] ?? '0'),
+			totalSpent: parseNumber(row[9] ?? '0'),
+			lastOrderDate: (row[10] ?? '').trim(),
+			products: (row[11] ?? '')
+				.split(', ')
+				.filter(Boolean),
+		}));
+	} catch (error) {
+		reportSheetsError('Error reading clients from sheet', error);
 		return [];
 	}
 };
@@ -202,7 +294,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 			requestBody: { values },
 		});
 	} catch (error) {
-		console.error('Error writing products to sheet:', error);
+		reportSheetsError('Error writing products to sheet', error);
 	}
 };
 
@@ -316,6 +408,6 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 
 		console.log('Client record saved to Google Sheets');
 	} catch (error) {
-		console.error('Error saving client to sheet:', error);
+		reportSheetsError('Error saving client to sheet', error);
 	}
 };

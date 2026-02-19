@@ -15,7 +15,7 @@ export default function CartIcon() {
 	useEffect(() => {
 		setMounted(true);
 		prevCountRef.current = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-	}, []);
+	}, [cartItems]);
 
 	useEffect(() => {
 		if (mounted && itemCount > prevCountRef.current) {
