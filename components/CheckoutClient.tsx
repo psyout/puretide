@@ -37,6 +37,7 @@ export default function CheckoutClient() {
 	const [paymentMethod, setPaymentMethod] = useState<'etransfer' | 'creditcard'>('etransfer');
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
+	const [checkoutError, setCheckoutError] = useState<string | null>(null);
 	const [shippingAddress, setShippingAddress] = useState({
 		address: '',
 		addressLine2: '',
@@ -110,6 +111,7 @@ export default function CheckoutClient() {
 		e.preventDefault();
 		setIsProcessing(true);
 		setHasSubmitted(true);
+		setCheckoutError(null);
 
 		try {
 			if (paymentMethod === 'creditcard') {
@@ -142,7 +144,7 @@ export default function CheckoutClient() {
 			router.push('/order-confirmation');
 		} catch (error) {
 			console.error('Checkout error', error);
-			alert(error instanceof Error ? error.message : 'We could not place your order. Please try again.');
+			setCheckoutError(error instanceof Error ? error.message : 'We could not place your order. Please try again.');
 			setIsProcessing(false);
 			setHasSubmitted(false);
 		}
@@ -166,6 +168,18 @@ export default function CheckoutClient() {
 					<div className='order-2 lg:order-1 lg:col-span-2'>
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
+							{checkoutError && (
+								<div className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3'>
+									<p className='flex-1 text-red-800 text-sm'>{checkoutError}</p>
+									<button
+										type='button'
+										onClick={() => setCheckoutError(null)}
+										className='text-red-600 hover:text-red-800 font-medium text-sm shrink-0'
+										aria-label='Dismiss'>
+										Dismiss
+									</button>
+								</div>
+							)}
 							<form
 								onSubmit={handleSubmit}
 								className='space-y-4'>
