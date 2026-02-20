@@ -36,7 +36,13 @@ function escapeXml(s: string): string {
 }
 
 function parsePostbackBody(rawBody: string): Record<string, unknown> {
-  if (rawBody.startsWith('{')) return JSON.parse(rawBody) as Record<string, unknown>;
+  if (rawBody.startsWith('{')) {
+    try {
+      return JSON.parse(rawBody) as Record<string, unknown>;
+    } catch {
+      // fall through to form-urlencoded parsing
+    }
+  }
   const params = new URLSearchParams(rawBody);
   for (const [key, value] of Array.from(params.entries())) {
     const raw = key.startsWith('{') ? key : value;
@@ -210,6 +216,7 @@ async function queueFulfillmentAndProcessNow(session: string) {
 }
 
 export async function POST(request: Request) {
+  try {
   const forwarded = request.headers.get('x-forwarded-for');
   const clientIp = forwarded?.split(',')[0].trim() || request.headers.get('x-real-ip') || '';
   const allowedIps = getAllowedIps();
@@ -262,4 +269,8 @@ export async function POST(request: Request) {
   await queueFulfillmentAndProcessNow(session);
   console.log(`[DigiPay postback] Order ${session} marked paid and fulfillment queued`);
   return xmlResponse('ok', 100, 'Purchase successfully processed', session);
+  } catch (error) {
+    console.error('[DigiPay postback] Unhandled error', error);
+    return xmlResponse('fail', 104, 'Unable to process purchase');
+  }
 }
