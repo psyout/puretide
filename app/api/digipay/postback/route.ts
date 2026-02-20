@@ -13,7 +13,13 @@ import {
   upsertRetryJobInDb,
 } from '@/lib/ordersDb';
 
-const DIGIPAY_ALLOWED_IP = '185.240.29.227';
+const DIGIPAY_ALLOWED_IP_DEFAULT = '185.240.29.227';
+
+function getAllowedIps(): string[] {
+  const env = process.env.DIGIPAY_POSTBACK_ALLOWED_IP;
+  if (env) return env.split(',').map((s) => s.trim()).filter(Boolean);
+  return [DIGIPAY_ALLOWED_IP_DEFAULT];
+}
 const MAX_RETRY_ATTEMPTS = 6;
 const RETRY_BASE_DELAY_SECONDS = 30;
 let hasWarnedMissingHmacSecret = false;
@@ -82,7 +88,7 @@ async function updateSheetStock(items: Array<{ id: number; name: string; price: 
 }
 
 async function runFulfillmentForSession(session: string) {
-  const order = getOrderBySessionFromDb(session) as Record<string, any> | null;
+  const order = (await getOrderBySessionFromDb(session)) as Record<string, any> | null;
   if (!order) throw new Error(`Order not found for session ${session}`);
 
   const customer = order.customer as Parameters<typeof buildOrderEmails>[0]['customer'];
@@ -98,7 +104,7 @@ async function runFulfillmentForSession(session: string) {
     await updateSheetStock(cartItems);
     fulfillmentStatus.stockUpdated = true;
     fulfillmentStatus.updatedAt = new Date().toISOString();
-    upsertOrderInDb({ ...order, fulfillmentStatus });
+    await upsertOrderInDb({ ...order, fulfillmentStatus });
   }
 
   if (!fulfillmentStatus.emailsSent) {
@@ -128,7 +134,7 @@ async function runFulfillmentForSession(session: string) {
 
     fulfillmentStatus.emailsSent = true;
     fulfillmentStatus.updatedAt = new Date().toISOString();
-    upsertOrderInDb({
+    await upsertOrderInDb({
       ...order,
       emailStatus: { sent: emailStatus.sent, skipped: false, error: emailStatus.error },
       adminEmailStatus: { sent: adminEmailStatus.sent, skipped: false, error: adminEmailStatus.error },
@@ -152,13 +158,13 @@ async function runFulfillmentForSession(session: string) {
     });
     fulfillmentStatus.clientSynced = true;
     fulfillmentStatus.updatedAt = new Date().toISOString();
-    upsertOrderInDb({ ...order, fulfillmentStatus });
+    await upsertOrderInDb({ ...order, fulfillmentStatus });
   }
 }
 
-function enqueueRetry(session: string, message: string) {
+async function enqueueRetry(session: string, message: string) {
   const now = new Date().toISOString();
-  const existing = getRetryJobBySessionFromDb(session);
+  const existing = await getRetryJobBySessionFromDb(session);
   const job: RetryJob = existing && existing.status === 'pending'
     ? { ...existing, lastError: message, updatedAt: now }
     : {
@@ -171,19 +177,19 @@ function enqueueRetry(session: string, message: string) {
         lastError: message,
         status: 'pending',
       };
-  upsertRetryJobInDb(job);
+  await upsertRetryJobInDb(job);
 }
 
 async function processRetryQueue() {
   const nowIso = new Date().toISOString();
-  for (const job of listDuePendingRetryJobsFromDb(nowIso)) {
+  for (const job of await listDuePendingRetryJobsFromDb(nowIso)) {
     try {
       await runFulfillmentForSession(job.session);
-      upsertRetryJobInDb({ ...job, status: 'completed', updatedAt: nowIso });
+      await upsertRetryJobInDb({ ...job, status: 'completed', updatedAt: nowIso });
     } catch (error) {
       const attempts = job.attempts + 1;
       const failed = attempts >= MAX_RETRY_ATTEMPTS;
-      upsertRetryJobInDb({
+      await upsertRetryJobInDb({
         ...job,
         attempts,
         updatedAt: nowIso,
@@ -195,8 +201,8 @@ async function processRetryQueue() {
   }
 }
 
-function queueFulfillmentAndProcessNow(session: string) {
-  enqueueRetry(session, 'Postback accepted. Fulfillment queued.');
+async function queueFulfillmentAndProcessNow(session: string) {
+  await enqueueRetry(session, 'Postback accepted. Fulfillment queued.');
   // Do not delay DigiPay acknowledgement; process queued work opportunistically.
   void processRetryQueue().catch((error) => {
     console.error('Failed processing fulfillment retry queue after postback ack', error);
@@ -206,7 +212,11 @@ function queueFulfillmentAndProcessNow(session: string) {
 export async function POST(request: Request) {
   const forwarded = request.headers.get('x-forwarded-for');
   const clientIp = forwarded?.split(',')[0].trim() || request.headers.get('x-real-ip') || '';
-  if (clientIp !== DIGIPAY_ALLOWED_IP) return xmlResponse('fail', 101, `Request from unauthorized IP: ${clientIp}`);
+  const allowedIps = getAllowedIps();
+  if (!clientIp || !allowedIps.includes(clientIp)) {
+    console.warn(`[DigiPay postback] Rejected IP: ${clientIp || '(empty)'}. Allowed: ${allowedIps.join(', ')}`);
+    return xmlResponse('fail', 101, `Request from unauthorized IP: ${clientIp || 'unknown'}`);
+  }
 
   const rawBody = await request.text();
   const hmac = verifyHmacSignature(rawBody, request);
@@ -218,9 +228,21 @@ export async function POST(request: Request) {
   const session = typeof data.session === 'string' ? data.session.trim() : '';
   if (!session) return xmlResponse('fail', 102, "Invalid session variable: 'empty'");
 
+  // DigiPay sandbox test session: return success without processing
+  const siteId = process.env.DIGIPAY_SITE_ID ?? '';
+  const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID ?? '';
+  const testSessions = [
+    siteId && `${siteId}_test`,
+    sandboxSiteId && `${sandboxSiteId}_test`,
+  ].filter(Boolean) as string[];
+
+  if (testSessions.length > 0 && testSessions.includes(session)) {
+    return xmlResponse('ok', 100, 'Test successful', `TEST-${Date.now()}`);
+  }
+
   await processRetryQueue();
 
-  const order = getOrderBySessionFromDb(session) as Record<string, any> | null;
+  const order = (await getOrderBySessionFromDb(session)) as Record<string, any> | null;
   if (!order) return xmlResponse('fail', 102, `Invalid session variable: '${session}'`);
   if (order.paymentStatus === 'paid') return xmlResponse('ok', 100, 'Order already processed', session);
 
@@ -230,13 +252,14 @@ export async function POST(request: Request) {
   if (!rawAmount || Number.isNaN(paidAmount)) return xmlResponse('fail', 102, 'Invalid amount format');
   if (Math.abs(paidAmount - expectedAmount) > 0.01) return xmlResponse('fail', 104, `Amount mismatch. Expected ${expectedAmount}, received ${paidAmount}`);
 
-  upsertOrderInDb({
+  await upsertOrderInDb({
     ...order,
     paymentStatus: 'paid',
     paidAt: new Date().toISOString(),
     fulfillmentStatus: order.fulfillmentStatus ?? { stockUpdated: false, emailsSent: false, clientSynced: false },
   });
 
-  queueFulfillmentAndProcessNow(session);
+  await queueFulfillmentAndProcessNow(session);
+  console.log(`[DigiPay postback] Order ${session} marked paid and fulfillment queued`);
   return xmlResponse('ok', 100, 'Purchase successfully processed', session);
 }

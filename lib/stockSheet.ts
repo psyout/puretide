@@ -169,7 +169,7 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 			spreadsheetId: SHEET_ID,
 		});
 
-		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'PromoCodes');
+		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'PromoCodes');
 
 		if (!sheetExists) {
 			console.error('Sheet "PromoCodes" not found in the spreadsheet. Please create a tab named "PromoCodes".');
@@ -202,7 +202,7 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 	try {
 		const sheets = getSheetsClient();
 		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'PromoCodes');
+		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'PromoCodes');
 		if (!sheetExists) {
 			console.error('Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, Active');
 			return;
@@ -229,7 +229,7 @@ export const readSheetClients = async (): Promise<ClientRecord[]> => {
 	try {
 		const sheets = getSheetsClient();
 		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'Clients');
+		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'Clients');
 		if (!sheetExists) return [];
 
 		const response = await sheets.spreadsheets.values.get({
@@ -324,7 +324,7 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 		
 		// Check if Clients sheet exists
 		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-		const sheetExists = spreadsheet.data.sheets?.some((s) => s.properties?.title === 'Clients');
+		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'Clients');
 
 		if (!sheetExists) {
 			// Create the sheet with headers
@@ -349,7 +349,7 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 		});
 
 		const rows = response.data.values ?? [];
-		const existingIndex = rows.findIndex((row, i) => i > 0 && row[0]?.toLowerCase() === client.email.toLowerCase());
+		const existingIndex = rows.findIndex((row: string[], i: number) => i > 0 && row[0]?.toLowerCase() === client.email.toLowerCase());
 
 		if (existingIndex > 0) {
 			// Update existing client

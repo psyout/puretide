@@ -43,7 +43,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-EMAIL.md
-DEPLOYMENT.md
+
 DASHBOARD_IDEAS.md
-DIGIPAY_INTEGRATION.md
+DIGIPAY_SANDBOX_TESTING.md

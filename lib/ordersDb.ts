@@ -1,8 +1,6 @@
-import Database from 'better-sqlite3';
-import { existsSync, mkdirSync, readFileSync } from 'fs';
+import initSqlJs from 'sql.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
-
-type DbInstance = Database.Database;
 
 export type StoredOrder = Record<string, unknown>;
 
@@ -22,9 +20,13 @@ export type RetryJob = {
 const DB_PATH = path.join(process.cwd(), 'data', 'orders.sqlite');
 const LEGACY_ORDERS_JSON_PATH = path.join(process.cwd(), 'data', 'orders.json');
 
+type SqlJsDatabase = import('sql.js').SqlJsDatabase;
+
 declare global {
 	// eslint-disable-next-line no-var
-	var __ordersDb: DbInstance | undefined;
+	var __ordersDb: SqlJsDatabase | undefined;
+	// eslint-disable-next-line no-var
+	var __ordersDbInit: Promise<SqlJsDatabase> | undefined;
 }
 
 function normalizeOrder(order: StoredOrder): StoredOrder {
@@ -42,48 +44,69 @@ function normalizeOrder(order: StoredOrder): StoredOrder {
 	};
 }
 
-function getDb(): DbInstance {
-	if (globalThis.__ordersDb) return globalThis.__ordersDb;
-
+function persistDb(db: SqlJsDatabase): void {
 	mkdirSync(path.dirname(DB_PATH), { recursive: true });
-	const db = new Database(DB_PATH);
-	db.pragma('journal_mode = WAL');
-
-	db.exec(`
-		CREATE TABLE IF NOT EXISTS orders (
-			id TEXT PRIMARY KEY,
-			order_number TEXT NOT NULL UNIQUE,
-			created_at TEXT NOT NULL,
-			payment_status TEXT NOT NULL,
-			order_json TEXT NOT NULL,
-			updated_at TEXT NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
-		CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
-		CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status);
-
-		CREATE TABLE IF NOT EXISTS retry_jobs (
-			id TEXT PRIMARY KEY,
-			session TEXT NOT NULL UNIQUE,
-			attempts INTEGER NOT NULL DEFAULT 0,
-			next_run_at TEXT NOT NULL,
-			created_at TEXT NOT NULL,
-			updated_at TEXT NOT NULL,
-			last_error TEXT,
-			status TEXT NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_retry_jobs_status_next_run ON retry_jobs(status, next_run_at);
-	`);
-
-	migrateLegacyOrdersJson(db);
-
-	globalThis.__ordersDb = db;
-	return db;
+	const data = db.export();
+	writeFileSync(DB_PATH, Buffer.from(data));
 }
 
-function migrateLegacyOrdersJson(db: DbInstance) {
-	const countRow = db.prepare('SELECT COUNT(*) as count FROM orders').get() as { count: number };
-	if (countRow.count > 0) return;
+async function getDb(): Promise<SqlJsDatabase> {
+	if (globalThis.__ordersDb) return globalThis.__ordersDb;
+	if (globalThis.__ordersDbInit) return globalThis.__ordersDbInit;
+
+	globalThis.__ordersDbInit = (async () => {
+		const SQL = await initSqlJs();
+		let db: SqlJsDatabase;
+
+		if (existsSync(DB_PATH)) {
+			const buffer = readFileSync(DB_PATH);
+			db = new SQL.Database(buffer);
+		} else {
+			db = new SQL.Database();
+		}
+
+		db.run(`
+			CREATE TABLE IF NOT EXISTS orders (
+				id TEXT PRIMARY KEY,
+				order_number TEXT NOT NULL UNIQUE,
+				created_at TEXT NOT NULL,
+				payment_status TEXT NOT NULL,
+				order_json TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)');
+		db.run('CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number)');
+		db.run('CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status)');
+
+		db.run(`
+			CREATE TABLE IF NOT EXISTS retry_jobs (
+				id TEXT PRIMARY KEY,
+				session TEXT NOT NULL UNIQUE,
+				attempts INTEGER NOT NULL DEFAULT 0,
+				next_run_at TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL,
+				last_error TEXT,
+				status TEXT NOT NULL
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_retry_jobs_status_next_run ON retry_jobs(status, next_run_at)');
+
+		await migrateLegacyOrdersJson(db);
+		persistDb(db);
+
+		globalThis.__ordersDb = db;
+		return db;
+	})();
+
+	return globalThis.__ordersDbInit;
+}
+
+async function migrateLegacyOrdersJson(db: SqlJsDatabase): Promise<void> {
+	const result = db.exec('SELECT COUNT(*) as count FROM orders');
+	const count = result.length > 0 && result[0].values[0] ? (result[0].values[0][0] as number) : 0;
+	if (count > 0) return;
 	if (!existsSync(LEGACY_ORDERS_JSON_PATH)) return;
 
 	try {
@@ -91,32 +114,22 @@ function migrateLegacyOrdersJson(db: DbInstance) {
 		const parsed = JSON.parse(raw);
 		if (!Array.isArray(parsed) || parsed.length === 0) return;
 
-		const stmt = db.prepare(`
-			INSERT INTO orders (id, order_number, created_at, payment_status, order_json, updated_at)
-			VALUES (@id, @orderNumber, @createdAt, @paymentStatus, @orderJson, @updatedAt)
-			ON CONFLICT(order_number) DO UPDATE SET
-				id = excluded.id,
-				created_at = excluded.created_at,
-				payment_status = excluded.payment_status,
-				order_json = excluded.order_json,
-				updated_at = excluded.updated_at
-		`);
-
 		const now = new Date().toISOString();
-		const insertMany = db.transaction((items: StoredOrder[]) => {
-			for (const item of items) {
-				const normalized = normalizeOrder(item);
-				stmt.run({
-					id: String(normalized.id),
-					orderNumber: String(normalized.orderNumber),
-					createdAt: String(normalized.createdAt),
-					paymentStatus: String(normalized.paymentStatus),
-					orderJson: JSON.stringify(normalized),
-					updatedAt: now,
-				});
-			}
-		});
-		insertMany(parsed as StoredOrder[]);
+		for (const item of parsed as StoredOrder[]) {
+			const normalized = normalizeOrder(item);
+			db.run(
+				`INSERT OR REPLACE INTO orders (id, order_number, created_at, payment_status, order_json, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?)`,
+				[
+					String(normalized.id),
+					String(normalized.orderNumber),
+					String(normalized.createdAt),
+					String(normalized.paymentStatus),
+					JSON.stringify(normalized),
+					now,
+				]
+			);
+		}
 	} catch (error) {
 		console.error('Failed to migrate legacy orders.json to SQLite', error);
 	}
@@ -130,136 +143,143 @@ function parseOrderJson(raw: string): StoredOrder {
 	}
 }
 
-export function listOrdersFromDb(): StoredOrder[] {
-	const db = getDb();
-	const rows = db
-		.prepare('SELECT order_json FROM orders ORDER BY created_at DESC')
-		.all() as Array<{ order_json: string }>;
-	return rows.map((row) => parseOrderJson(row.order_json));
+export async function listOrdersFromDb(): Promise<StoredOrder[]> {
+	const db = await getDb();
+	const result = db.exec('SELECT order_json FROM orders ORDER BY created_at DESC');
+	if (result.length === 0) return [];
+	const rows = result[0];
+	const colIdx = rows.columns.indexOf('order_json');
+	return rows.values.map((row) => parseOrderJson(String(row[colIdx])));
 }
 
-export function getOrderByOrderNumberFromDb(orderNumber: string): StoredOrder | null {
-	const db = getDb();
-	const row = db
-		.prepare('SELECT order_json FROM orders WHERE order_number = ? LIMIT 1')
-		.get(orderNumber) as { order_json: string } | undefined;
-	return row ? parseOrderJson(row.order_json) : null;
+export async function getOrderByOrderNumberFromDb(orderNumber: string): Promise<StoredOrder | null> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT order_json FROM orders WHERE order_number = ? LIMIT 1');
+	stmt.bind([orderNumber]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as { order_json: string };
+	stmt.free();
+	return parseOrderJson(row.order_json);
 }
 
-export function getOrderBySessionFromDb(session: string): StoredOrder | null {
-	const db = getDb();
-	const row = db
-		.prepare('SELECT order_json FROM orders WHERE order_number = ? OR id = ? LIMIT 1')
-		.get(session, session) as { order_json: string } | undefined;
-	return row ? parseOrderJson(row.order_json) : null;
+export async function getOrderBySessionFromDb(session: string): Promise<StoredOrder | null> {
+	const db = await getDb();
+	const stmt = db.prepare(
+		'SELECT order_json FROM orders WHERE order_number = ? OR id = ? LIMIT 1'
+	);
+	stmt.bind([session, session]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as { order_json: string };
+	stmt.free();
+	return parseOrderJson(row.order_json);
 }
 
-export function upsertOrderInDb(order: StoredOrder): StoredOrder {
-	const db = getDb();
+export async function upsertOrderInDb(order: StoredOrder): Promise<StoredOrder> {
+	const db = await getDb();
 	const normalized = normalizeOrder(order);
 	const now = new Date().toISOString();
-	db.prepare(`
-		INSERT INTO orders (id, order_number, created_at, payment_status, order_json, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-		ON CONFLICT(order_number) DO UPDATE SET
+	db.run(
+		`INSERT INTO orders (id, order_number, created_at, payment_status, order_json, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(order_number) DO UPDATE SET
 			id = excluded.id,
 			created_at = excluded.created_at,
 			payment_status = excluded.payment_status,
 			order_json = excluded.order_json,
-			updated_at = excluded.updated_at
-	`).run(
-		String(normalized.id),
-		String(normalized.orderNumber),
-		String(normalized.createdAt),
-		String(normalized.paymentStatus),
-		JSON.stringify(normalized),
-		now,
+			updated_at = excluded.updated_at`,
+		[
+			String(normalized.id),
+			String(normalized.orderNumber),
+			String(normalized.createdAt),
+			String(normalized.paymentStatus),
+			JSON.stringify(normalized),
+			now,
+		]
 	);
+	persistDb(db);
 	return normalized;
 }
 
-export function getRetryJobBySessionFromDb(session: string): RetryJob | null {
-	const db = getDb();
-	const row = db
-		.prepare('SELECT * FROM retry_jobs WHERE session = ? LIMIT 1')
-		.get(session) as
-		| {
-				id: string;
-				session: string;
-				attempts: number;
-				next_run_at: string;
-				created_at: string;
-				updated_at: string;
-				last_error?: string;
-				status: RetryJobStatus;
-		  }
-		| undefined;
-	if (!row) return null;
+export async function getRetryJobBySessionFromDb(session: string): Promise<RetryJob | null> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM retry_jobs WHERE session = ? LIMIT 1');
+	stmt.bind([session]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as Record<string, unknown>;
+	stmt.free();
 	return {
-		id: row.id,
-		session: row.session,
+		id: String(row.id),
+		session: String(row.session),
 		attempts: Number(row.attempts),
-		nextRunAt: row.next_run_at,
-		createdAt: row.created_at,
-		updatedAt: row.updated_at,
-		lastError: row.last_error,
-		status: row.status,
+		nextRunAt: String(row.next_run_at),
+		createdAt: String(row.created_at),
+		updatedAt: String(row.updated_at),
+		lastError: row.last_error != null ? String(row.last_error) : undefined,
+		status: row.status as RetryJobStatus,
 	};
 }
 
-export function listDuePendingRetryJobsFromDb(nowIso: string): RetryJob[] {
-	const db = getDb();
-	const rows = db
-		.prepare('SELECT * FROM retry_jobs WHERE status = ? AND next_run_at <= ? ORDER BY next_run_at ASC')
-		.all('pending', nowIso) as Array<{
-		id: string;
-		session: string;
-		attempts: number;
-		next_run_at: string;
-		created_at: string;
-		updated_at: string;
-		last_error?: string;
-		status: RetryJobStatus;
-	}>;
-
-	return rows.map((row) => ({
-		id: row.id,
-		session: row.session,
-		attempts: Number(row.attempts),
-		nextRunAt: row.next_run_at,
-		createdAt: row.created_at,
-		updatedAt: row.updated_at,
-		lastError: row.last_error,
-		status: row.status,
-	}));
+export async function listDuePendingRetryJobsFromDb(nowIso: string): Promise<RetryJob[]> {
+	const db = await getDb();
+	const stmt = db.prepare(
+		'SELECT * FROM retry_jobs WHERE status = ? AND next_run_at <= ? ORDER BY next_run_at ASC'
+	);
+	stmt.bind(['pending', nowIso]);
+	const rows: RetryJob[] = [];
+	while (stmt.step()) {
+		const row = stmt.getAsObject() as Record<string, unknown>;
+		rows.push({
+			id: String(row.id),
+			session: String(row.session),
+			attempts: Number(row.attempts),
+			nextRunAt: String(row.next_run_at),
+			createdAt: String(row.created_at),
+			updatedAt: String(row.updated_at),
+			lastError: row.last_error != null ? String(row.last_error) : undefined,
+			status: row.status as RetryJobStatus,
+		});
+	}
+	stmt.free();
+	return rows;
 }
 
-export function upsertRetryJobInDb(job: RetryJob): RetryJob {
-	const db = getDb();
+export async function upsertRetryJobInDb(job: RetryJob): Promise<RetryJob> {
+	const db = await getDb();
 	const normalized: RetryJob = {
 		...job,
 		id: job.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 		status: job.status ?? 'pending',
 	};
-	db.prepare(`
-		INSERT INTO retry_jobs (id, session, attempts, next_run_at, created_at, updated_at, last_error, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(session) DO UPDATE SET
+	db.run(
+		`INSERT INTO retry_jobs (id, session, attempts, next_run_at, created_at, updated_at, last_error, status)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(session) DO UPDATE SET
 			id = excluded.id,
 			attempts = excluded.attempts,
 			next_run_at = excluded.next_run_at,
 			updated_at = excluded.updated_at,
 			last_error = excluded.last_error,
-			status = excluded.status
-	`).run(
-		normalized.id,
-		normalized.session,
-		normalized.attempts,
-		normalized.nextRunAt,
-		normalized.createdAt,
-		normalized.updatedAt,
-		normalized.lastError ?? null,
-		normalized.status,
+			status = excluded.status`,
+		[
+			normalized.id,
+			normalized.session,
+			normalized.attempts,
+			normalized.nextRunAt,
+			normalized.createdAt,
+			normalized.updatedAt,
+			normalized.lastError ?? null,
+			normalized.status,
+		]
 	);
+	persistDb(db);
 	return normalized;
 }

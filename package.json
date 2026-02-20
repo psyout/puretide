@@ -9,7 +9,8 @@
 		"lint": "next lint"
 	},
 	"dependencies": {
-		"better-sqlite3": "^12.6.2",
+		"sharp": "^0.33.0",
+		"sql.js": "^1.11.0",
 		"googleapis": "^170.1.0",
 		"lucide-react": "^0.562.0",
 		"next": "^14.2.0",
@@ -17,8 +18,10 @@
 		"react": "^18.3.0",
 		"react-dom": "^18.3.0"
 	},
+	"overrides": {
+		"glob": "^10.4.5"
+	},
 	"devDependencies": {
-		"@types/better-sqlite3": "^7.6.13",
 		"@types/node": "^20",
 		"@types/nodemailer": "^7.0.5",
 		"@types/react": "^18",

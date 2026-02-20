@@ -61,12 +61,12 @@ const formatMoney = (value: number) =>
 type OrderWithPayment = Order & { paymentStatus?: string };
 
 async function getOrders(): Promise<OrderWithPayment[]> {
-	return listOrdersFromDb() as OrderWithPayment[];
+	return (await listOrdersFromDb()) as OrderWithPayment[];
 }
 
 async function getOrderByNumber(orderNumber: string | null): Promise<OrderWithPayment | null> {
 	if (!orderNumber?.trim()) return null;
-	return getOrderByOrderNumberFromDb(orderNumber.trim()) as OrderWithPayment | null;
+	return (await getOrderByOrderNumberFromDb(orderNumber.trim())) as OrderWithPayment | null;
 }
 
 export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string }> }) {

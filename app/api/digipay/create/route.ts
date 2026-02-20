@@ -116,15 +116,19 @@ export async function POST(request: Request) {
 			...payload,
 		};
 
-		upsertOrderInDb(orderRecord as Record<string, unknown>);
+		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
-		// Build DigiPay redirect
+		// Build DigiPay redirect (use sandbox site when DIGIPAY_USE_SANDBOX=true)
+		const useSandbox = process.env.DIGIPAY_USE_SANDBOX === 'true';
+		const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID;
+		const effectiveSiteId = useSandbox && sandboxSiteId ? sandboxSiteId : siteId;
+
 		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?orderNumber=${orderNumber}`;
 		const chargeAmountForGateway = total.toFixed(2);
 
 		const redirectUrl = buildDigipayPaymentUrl(
 			{
-				siteId,
+				siteId: effectiveSiteId,
 				chargeAmount: chargeAmountForGateway,
 				orderDescription: `Order #${orderNumber}`,
 				session: orderNumber,

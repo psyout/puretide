@@ -9,6 +9,8 @@ const nextConfig = {
 	// Reduce client bundle size for icon library
 	experimental: {
 		optimizePackageImports: ['lucide-react'],
+		// Prevents MODULE_NOT_FOUND vendor-chunks errors with googleapis
+		serverComponentsExternalPackages: ['googleapis', 'sql.js'],
 	},
 	// Block all search engines from indexing
 	async headers() {

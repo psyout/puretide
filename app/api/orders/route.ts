@@ -50,7 +50,7 @@ interface OrderPayload {
 
 export async function GET() {
 	try {
-		const orders = listOrdersFromDb();
+		const orders = await listOrdersFromDb();
 		const sorted = [...orders].sort((a, b) => {
 			const aT = String(a.createdAt ?? '');
 			const bT = String(b.createdAt ?? '');
@@ -223,7 +223,7 @@ export async function POST(request: Request) {
 		const emailStatus = await sendOrderEmail(customerEmail, emailData.customer.subject, emailData.customer.text, emailData.customer.html, undefined, '', orderFrom);
 		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.admin.subject, emailData.admin.text, emailData.admin.html, customerReplyTo, '', orderFrom);
 
-		upsertOrderInDb({
+		await upsertOrderInDb({
 			...orderRecord,
 			emailPreview: {
 				subject: emailData.customer.subject,
