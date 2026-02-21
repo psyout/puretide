@@ -45,6 +45,7 @@ export default function CheckoutClient() {
 		province: 'British Columbia',
 		zipCode: '',
 	});
+	const [honeypotCompany, setHoneypotCompany] = useState(''); // honeypot: leave empty
 
 	const subtotal = getTotal();
 	const shippingCost = SHIPPING_COSTS.express;
@@ -97,6 +98,7 @@ export default function CheckoutClient() {
 		subtotal,
 		shippingCost,
 		total,
+		company: honeypotCompany,
 		cartItems: cartItems.map((item) => ({
 			id: typeof item.id === 'string' ? parseInt(item.id, 10) || 0 : item.id,
 			name: item.name,
@@ -183,6 +185,18 @@ export default function CheckoutClient() {
 							<form
 								onSubmit={handleSubmit}
 								className='space-y-4'>
+								<div className='absolute -left-[9999px] w-1 h-1 overflow-hidden' aria-hidden>
+									<label htmlFor='checkout-company'>Company</label>
+									<input
+										type='text'
+										id='checkout-company'
+										name='company'
+										tabIndex={-1}
+										autoComplete='off'
+										value={honeypotCompany}
+										onChange={(e) => setHoneypotCompany(e.target.value)}
+									/>
+								</div>
 								<div>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
 									<input

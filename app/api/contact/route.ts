@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 type ContactPayload = {
 	name: string;
 	email: string;
 	message: string;
+	website?: string;
 };
 
 function getSmtpConfig() {
@@ -30,9 +32,21 @@ function getSmtpConfig() {
 	return { host, port, user, pass, from, replyTo, bcc, secure };
 }
 
+const CONTACT_RATE_LIMIT = 5;
+const CONTACT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
 export async function POST(request: Request) {
 	try {
+		const { allowed } = checkRateLimit(request, 'contact', CONTACT_RATE_LIMIT, CONTACT_WINDOW_MS);
+		if (!allowed) {
+			return NextResponse.json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
+		}
+
 		const payload = (await request.json()) as ContactPayload;
+		if (typeof payload?.website === 'string' && payload.website.trim() !== '') {
+			return NextResponse.json({ ok: false, error: 'Invalid request.' }, { status: 400 });
+		}
+
 		const name = payload?.name?.trim();
 		const email = payload?.email?.trim();
 		const message = payload?.message?.trim();

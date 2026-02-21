@@ -5,6 +5,7 @@ import { getDiscountedPrice } from '@/lib/pricing';
 import { SHIPPING_COSTS } from '@/lib/constants';
 import { buildDigipayPaymentUrl } from '@/lib/digipay';
 import { upsertOrderInDb } from '@/lib/ordersDb';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 interface OrderPayload {
 	customer: {
@@ -56,21 +57,34 @@ export async function POST(request: Request) {
 		return NextResponse.json({ ok: false, error: 'DigiPay not configured (missing DIGIPAY_* env vars)' }, { status: 500 });
 	}
 
+	const CHECKOUT_RATE_LIMIT = 10;
+	const CHECKOUT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
 	try {
-		const rawPayload = (await request.json()) as OrderPayload;
+		const { allowed } = checkRateLimit(request, 'checkout', CHECKOUT_RATE_LIMIT, CHECKOUT_WINDOW_MS);
+		if (!allowed) {
+			return NextResponse.json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
+		}
+
+		const rawPayload = (await request.json()) as OrderPayload & { company?: string };
+		if (typeof rawPayload.company === 'string' && rawPayload.company.trim() !== '') {
+			return NextResponse.json({ ok: false, error: 'Invalid request.' }, { status: 400 });
+		}
+
+		const { company: _hp, ...orderPayload } = rawPayload;
 
 		// Validate payment method
-		if (!['creditcard', 'etransfer'].includes(rawPayload.paymentMethod)) {
+		if (!['creditcard', 'etransfer'].includes(orderPayload.paymentMethod)) {
 			return NextResponse.json({ ok: false, error: 'Invalid payment method' }, { status: 400 });
 		}
 
 		// Validate cart
-		if (!Array.isArray(rawPayload.cartItems) || rawPayload.cartItems.length === 0) {
+		if (!Array.isArray(orderPayload.cartItems) || orderPayload.cartItems.length === 0) {
 			return NextResponse.json({ ok: false, error: 'Invalid cart' }, { status: 400 });
 		}
 
 		// Recalculate prices server-side
-		const cartItems = rawPayload.cartItems.map((item) => ({
+		const cartItems = orderPayload.cartItems.map((item) => ({
 			...item,
 			price: getDiscountedPrice(item.price, item.quantity),
 		}));
@@ -82,9 +96,9 @@ export async function POST(request: Request) {
 		// Promo code validation
 		let discountAmount = 0;
 
-		if (rawPayload.promoCode) {
+		if (orderPayload.promoCode) {
 			const promoCodes = await readSheetPromoCodes();
-			const promo = promoCodes.find((p) => p.code === rawPayload.promoCode?.trim().toUpperCase() && p.active);
+			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 
 			if (promo) {
 				discountAmount = Number((subtotal * (promo.discount / 100)).toFixed(2));
@@ -92,20 +106,20 @@ export async function POST(request: Request) {
 		}
 
 		// Safe card fee handling
-		const cardFee = rawPayload.paymentMethod === 'creditcard' && Number.isFinite(Number(rawPayload.cardFee)) ? Number(rawPayload.cardFee) : 0;
+		const cardFee = orderPayload.paymentMethod === 'creditcard' && Number.isFinite(Number(orderPayload.cardFee)) ? Number(orderPayload.cardFee) : 0;
 
 		const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 
 		// Optional tamper detection
-		if (Math.abs(total - rawPayload.total) > 0.01) {
+		if (Math.abs(total - orderPayload.total) > 0.01) {
 			console.warn('Total mismatch detected', {
-				clientTotal: rawPayload.total,
+				clientTotal: orderPayload.total,
 				serverTotal: total,
 			});
 		}
 
 		const payload: OrderPayload = {
-			...rawPayload,
+			...orderPayload,
 			cartItems,
 			subtotal,
 			shippingCost,

@@ -7,6 +7,7 @@ export default function ContactForm() {
 		name: '',
 		email: '',
 		message: '',
+		website: '', // honeypot: leave empty
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [formStatus, setFormStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({
@@ -46,6 +47,7 @@ export default function ContactForm() {
 					name: trimmedName,
 					email: trimmedEmail,
 					message: trimmedMessage,
+					website: formData.website,
 				}),
 			});
 
@@ -65,7 +67,7 @@ export default function ContactForm() {
 			}
 
 			setFormStatus({ type: 'success', message: 'Thanks for reaching out. We will reply as soon as possible.' });
-			setFormData({ name: '', email: '', message: '' });
+			setFormData({ name: '', email: '', message: '', website: '' });
 		} catch (error) {
 			setFormStatus({ type: 'error', message: 'Unable to send your message right now.' });
 		} finally {
@@ -79,6 +81,18 @@ export default function ContactForm() {
 			<form
 				onSubmit={handleSubmit}
 				className='space-y-6'>
+				<div className='absolute -left-[9999px] w-1 h-1 overflow-hidden' aria-hidden>
+					<label htmlFor='contact-website'>Website</label>
+					<input
+						type='text'
+						id='contact-website'
+						name='website'
+						tabIndex={-1}
+						autoComplete='off'
+						value={formData.website}
+						onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+					/>
+				</div>
 				<div>
 					<label
 						htmlFor='name'

@@ -3,10 +3,11 @@ import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
 import { readSheetProducts, writeSheetProducts, readSheetPromoCodes, upsertSheetClient } from '@/lib/stockSheet';
 import { getDiscountedPrice } from '@/lib/pricing';
-import { getSmtpConfig, sendLowStockAlert } from '@/lib/email';
+import { sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, SHIPPING_COSTS, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 import { createOrderTask, createStockAlertTask } from '@/lib/wrike';
 import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 interface OrderPayload {
 	customer: {
@@ -165,12 +166,30 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 	}
 }
 
+const CHECKOUT_RATE_LIMIT = 10;
+const CHECKOUT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
 export async function POST(request: Request) {
 	try {
-		const rawPayload = (await request.json()) as OrderPayload;
+		const { allowed } = checkRateLimit(request, 'checkout', CHECKOUT_RATE_LIMIT, CHECKOUT_WINDOW_MS);
+		if (!allowed) {
+			return NextResponse.json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
+		}
+
+		const rawPayload = (await request.json()) as OrderPayload & { company?: string };
+		if (typeof rawPayload.company === 'string' && rawPayload.company.trim() !== '') {
+			return NextResponse.json({ ok: false, error: 'Invalid request.' }, { status: 400 });
+		}
+
+		const { company: _hp, ...orderPayload } = rawPayload;
+
+		// Validate cart
+		if (!Array.isArray(orderPayload.cartItems) || orderPayload.cartItems.length === 0) {
+			return NextResponse.json({ ok: false, error: 'Invalid cart' }, { status: 400 });
+		}
 
 		// Recalculate prices and totals on the server to ensure accuracy and prevent tampering
-		const cartItems = rawPayload.cartItems.map((item) => ({
+		const cartItems = orderPayload.cartItems.map((item) => ({
 			...item,
 			price: getDiscountedPrice(item.price, item.quantity),
 		}));
@@ -179,9 +198,9 @@ export async function POST(request: Request) {
 		const shippingCost = SHIPPING_COSTS.express;
 
 		let discountAmount = 0;
-		if (rawPayload.promoCode) {
+		if (orderPayload.promoCode) {
 			const promoCodes = await readSheetPromoCodes();
-			const promo = promoCodes.find((p) => p.code === rawPayload.promoCode?.trim().toUpperCase() && p.active);
+			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
 				discountAmount = Number((subtotal * (promo.discount / 100)).toFixed(2));
 			}
@@ -190,7 +209,7 @@ export async function POST(request: Request) {
 		const total = Number((subtotal + shippingCost - discountAmount).toFixed(2));
 
 		const payload: OrderPayload = {
-			...rawPayload,
+			...orderPayload,
 			cartItems,
 			subtotal,
 			shippingCost,
@@ -221,7 +240,7 @@ export async function POST(request: Request) {
 		const adminRecipient = getOrderNotificationRecipient();
 		const customerEmail = payload.customer.email;
 		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
-		const smtpConfig = getSmtpConfig();
+		const smtpConfig = getSmtpConfigLocal();
 		const orderFrom = smtpConfig ? formatOrderFrom(smtpConfig.from) : undefined;
 		const emailStatus = await sendOrderEmail(customerEmail, emailData.customer.subject, emailData.customer.text, emailData.customer.html, undefined, '', orderFrom);
 		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.admin.subject, emailData.admin.text, emailData.admin.html, customerReplyTo, '', orderFrom);
