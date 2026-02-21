@@ -151,7 +151,13 @@ export async function POST(request: Request) {
 		if (order.paymentStatus === 'paid') return xmlResponse('ok', 100, 'Order already processed', session);
 
 		/* ---------- Amount Validation ---------- */
-		const rawAmount = typeof data.amount === 'string' ? data.amount.trim() : '';
+		const amountVal = data.amount;
+		const rawAmount =
+			typeof amountVal === 'number'
+				? String(amountVal)
+				: typeof amountVal === 'string'
+					? amountVal.trim()
+					: '';
 
 		const paidAmount = Number(rawAmount.replace('_', '.'));
 		const expectedAmount = Number(order.total ?? 0);

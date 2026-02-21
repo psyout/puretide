@@ -31,10 +31,11 @@ rsync -avz .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
 rsync -avz public/ "${SSH_TARGET}:${VPS_PATH}/public/"
 rsync -avz package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
 
-echo "Installing deps on VPS (sharp, sql.js, styled-jsx — standalone tracer omits some)..."
+echo "Installing deps on VPS (standalone omits styled-jsx, sharp, sql.js .wasm)..."
 ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && npm install --omit=dev"
 
-echo "Syncing sql.js WASM (standalone tracer omits .wasm binaries)..."
+echo "Ensuring sql.js dist exists and syncing WASM (standalone omits .wasm)..."
+ssh "${SSH_TARGET}" "mkdir -p \"${VPS_PATH}/node_modules/sql.js/dist\""
 rsync -avz node_modules/sql.js/dist/sql-wasm.wasm "${SSH_TARGET}:${VPS_PATH}/node_modules/sql.js/dist/"
 
 echo "Ensuring data directory exists on VPS..."
