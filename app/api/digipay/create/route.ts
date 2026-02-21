@@ -110,6 +110,7 @@ export async function POST(request: Request) {
 			subtotal,
 			shippingCost,
 			discountAmount,
+			cardFee,
 			total,
 		};
 

@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { buildOrderEmails } from '@/lib/orderEmail';
-import { readSheetProducts, writeSheetProducts, upsertSheetClient } from '@/lib/stockSheet';
-import { sendMail, sendLowStockAlert } from '@/lib/email';
-import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
-import { type RetryJob, getOrderBySessionFromDb, getRetryJobBySessionFromDb, listDuePendingRetryJobsFromDb, upsertOrderInDb, upsertRetryJobInDb } from '@/lib/ordersDb';
+import { getOrderBySessionFromDb, upsertOrderInDb, upsertRetryJobInDb } from '@/lib/ordersDb';
 
 const DIGIPAY_ALLOWED_IP_DEFAULT = '185.240.29.227';
-const MAX_RETRY_ATTEMPTS = 6;
 const RETRY_BASE_DELAY_SECONDS = 30;
 let hasWarnedMissingHmacSecret = false;
 
@@ -102,10 +97,6 @@ function verifyHmacSignature(rawBody: string, request: Request): { ok: true } | 
 	return { ok: false, message: 'Invalid signature' };
 }
 
-function getBackoffSeconds(attempts: number): number {
-	return Math.min(60 * 60, RETRY_BASE_DELAY_SECONDS * 2 ** Math.max(0, attempts - 1));
-}
-
 /* ----------------------------- POST ----------------------------- */
 
 export async function POST(request: Request) {
@@ -146,7 +137,7 @@ export async function POST(request: Request) {
 		/* ---------- Load Order ---------- */
 		const order = await getOrderBySessionFromDb(session);
 
-		if (!order) return xmlResponse('fail', 102, `Invalid session variable: '${session}'`);
+		if (!order) return xmlResponse('fail', 102, 'Invalid session variable');
 
 		if (order.paymentStatus === 'paid') return xmlResponse('ok', 100, 'Order already processed', session);
 
