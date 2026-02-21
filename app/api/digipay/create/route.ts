@@ -59,6 +59,16 @@ export async function POST(request: Request) {
 	try {
 		const rawPayload = (await request.json()) as OrderPayload;
 
+		// Validate payment method
+		if (!['creditcard', 'etransfer'].includes(rawPayload.paymentMethod)) {
+			return NextResponse.json({ ok: false, error: 'Invalid payment method' }, { status: 400 });
+		}
+
+		// Validate cart
+		if (!Array.isArray(rawPayload.cartItems) || rawPayload.cartItems.length === 0) {
+			return NextResponse.json({ ok: false, error: 'Invalid cart' }, { status: 400 });
+		}
+
 		// Recalculate prices server-side
 		const cartItems = rawPayload.cartItems.map((item) => ({
 			...item,
@@ -71,6 +81,7 @@ export async function POST(request: Request) {
 
 		// Promo code validation
 		let discountAmount = 0;
+
 		if (rawPayload.promoCode) {
 			const promoCodes = await readSheetPromoCodes();
 			const promo = promoCodes.find((p) => p.code === rawPayload.promoCode?.trim().toUpperCase() && p.active);
@@ -80,9 +91,8 @@ export async function POST(request: Request) {
 			}
 		}
 
-		// Keep current checkout behavior (5% fee is passed from client),
-		// but still enforce that non-card payments have no card fee.
-		const cardFee = rawPayload.paymentMethod === 'creditcard' ? Number(rawPayload.cardFee ?? 0) : 0;
+		// Safe card fee handling
+		const cardFee = rawPayload.paymentMethod === 'creditcard' && Number.isFinite(Number(rawPayload.cardFee)) ? Number(rawPayload.cardFee) : 0;
 
 		const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 
@@ -105,7 +115,6 @@ export async function POST(request: Request) {
 
 		const timestamp = Date.now();
 		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
-
 		const createdAt = new Date().toISOString();
 
 		const orderRecord = {
@@ -118,18 +127,26 @@ export async function POST(request: Request) {
 
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
-		// Build DigiPay redirect (use sandbox site when DIGIPAY_USE_SANDBOX=true)
+		// Branch for e-transfer (manual payment)
+		if (payload.paymentMethod === 'etransfer') {
+			return NextResponse.json({
+				ok: true,
+				orderNumber,
+				manualPayment: true,
+			});
+		}
+
+		// Build DigiPay redirect (credit card only)
 		const useSandbox = process.env.DIGIPAY_USE_SANDBOX === 'true';
 		const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID;
 		const effectiveSiteId = useSandbox && sandboxSiteId ? sandboxSiteId : siteId;
 
 		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?orderNumber=${orderNumber}`;
-		const chargeAmountForGateway = total.toFixed(2);
 
 		const redirectUrl = buildDigipayPaymentUrl(
 			{
 				siteId: effectiveSiteId,
-				chargeAmount: chargeAmountForGateway,
+				chargeAmount: total.toFixed(2),
 				orderDescription: `Order #${orderNumber}`,
 				session: orderNumber,
 				pburl,
@@ -147,10 +164,16 @@ export async function POST(request: Request) {
 			encryptionKey,
 		);
 
-		return NextResponse.json({ ok: true, redirectUrl, orderNumber });
+		return NextResponse.json({
+			ok: true,
+			redirectUrl,
+			orderNumber,
+		});
 	} catch (error) {
 		console.error('DigiPay create error', error);
+
 		const message = error instanceof Error ? error.message : 'Failed to create payment';
+
 		return NextResponse.json({ ok: false, error: message }, { status: 500 });
 	}
 }
