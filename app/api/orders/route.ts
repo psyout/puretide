@@ -209,6 +209,9 @@ export async function POST(request: Request) {
 			...payload,
 		};
 
+		// Save order to DB first so it's always stored even if email fails
+		await upsertOrderInDb(orderRecord as Record<string, unknown>);
+
 		const emailData = buildOrderEmails({
 			...payload,
 			orderNumber,
@@ -223,6 +226,7 @@ export async function POST(request: Request) {
 		const emailStatus = await sendOrderEmail(customerEmail, emailData.customer.subject, emailData.customer.text, emailData.customer.html, undefined, '', orderFrom);
 		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.admin.subject, emailData.admin.text, emailData.admin.html, customerReplyTo, '', orderFrom);
 
+		// Update order with email preview and status (order already saved above)
 		await upsertOrderInDb({
 			...orderRecord,
 			emailPreview: {
@@ -235,7 +239,7 @@ export async function POST(request: Request) {
 			},
 			emailStatus,
 			adminEmailStatus,
-		});
+		} as Record<string, unknown>);
 		const updatedStock = await updateSheetStock(payload.cartItems);
 
 		// Create Wrike task for the order
