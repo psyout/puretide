@@ -36,8 +36,8 @@ export function checkRateLimit(
 	maxRequests: number,
 	windowMs: number = WINDOW_MS,
 ): { allowed: boolean; ip: string } {
-	const ip = getClientIp(request);
-	if (!ip) return { allowed: true, ip: '' }; // no IP (e.g. server-side) → allow
+	const rawIp = getClientIp(request);
+	const ip = rawIp || 'anonymous'; // treat missing IP as single bucket to avoid bypass
 
 	const storeKey = `${key}:${ip}`;
 	const now = Date.now();

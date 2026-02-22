@@ -2,10 +2,10 @@
 
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CreditCard, Truck, Plus, Minus } from 'lucide-react';
+import { CreditCard, Truck, Plus, Minus, Trash2 } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS } from '@/lib/constants';
 
@@ -17,7 +17,6 @@ export default function CheckoutClient() {
 		lastName: '',
 		country: 'Canada',
 		email: '',
-		phone: '',
 		address: '',
 		addressLine2: '',
 		city: '',
@@ -46,12 +45,35 @@ export default function CheckoutClient() {
 		zipCode: '',
 	});
 	const [honeypotCompany, setHoneypotCompany] = useState(''); // honeypot: leave empty
+	const idempotencyKeyRef = useRef<string | null>(null);
+	const getOrCreateIdempotencyKey = () => {
+		if (!idempotencyKeyRef.current) {
+			idempotencyKeyRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		}
+		return idempotencyKeyRef.current;
+	};
 
-	const subtotal = getTotal();
+	// When promo is applied, do not stack with volume discount: use raw subtotal and apply promo only
+	const subtotalWithVolume = getTotal();
+	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
+	const subtotal = appliedDiscount > 0 ? subtotalRaw : subtotalWithVolume;
 	const shippingCost = SHIPPING_COSTS.express;
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
+
+	const getDisplayPrice = (item: (typeof cartItems)[0]) => (appliedDiscount > 0 ? item.price : getItemPrice(item));
+
+	// Canadian postal code
+	const isValidCanadianPostalCode = (zip: string) => /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/.test((zip || '').trim().replace(/\s{2,}/g, ' '));
+	const isQuebecPostalCode = (zip: string) => /^[GHJ]/i.test((zip || '').trim().replace(/\s/g, ''));
+	const normalizedZip = (zip: string) => (zip || '').trim().replace(/\s/g, '');
+	const billingZipInvalidFormat = normalizedZip(formData.zipCode).length > 0 && !isValidCanadianPostalCode(formData.zipCode);
+	const shippingZipInvalidFormat = shipToDifferentAddress && normalizedZip(shippingAddress.zipCode).length > 0 && !isValidCanadianPostalCode(shippingAddress.zipCode);
+	const billingZipBlocked = isQuebecPostalCode(formData.zipCode);
+	const shippingZipBlocked = shipToDifferentAddress && isQuebecPostalCode(shippingAddress.zipCode);
+	const hasBlockedPostalCode = billingZipBlocked || shippingZipBlocked;
+	const hasInvalidPostalCodeFormat = billingZipInvalidFormat || shippingZipInvalidFormat;
 
 	useEffect(() => {
 		if (cartItems.length === 0 && !hasSubmitted) {
@@ -99,6 +121,7 @@ export default function CheckoutClient() {
 		shippingCost,
 		total,
 		company: honeypotCompany,
+		idempotencyKey: getOrCreateIdempotencyKey(),
 		cartItems: cartItems.map((item) => ({
 			id: typeof item.id === 'string' ? parseInt(item.id, 10) || 0 : item.id,
 			name: item.name,
@@ -111,9 +134,17 @@ export default function CheckoutClient() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		setCheckoutError(null);
+		if (hasInvalidPostalCodeFormat) {
+			setCheckoutError('Please enter a valid Canadian postal code (e.g. A1A 1A1).');
+			return;
+		}
+		if (hasBlockedPostalCode) {
+			setCheckoutError('We do not ship to Quebec. Please contact us if you have questions.');
+			return;
+		}
 		setIsProcessing(true);
 		setHasSubmitted(true);
-		setCheckoutError(null);
 
 		try {
 			if (paymentMethod === 'creditcard') {
@@ -127,6 +158,7 @@ export default function CheckoutClient() {
 					throw new Error(data.error ?? 'Failed to start payment');
 				}
 				if (data.ok && data.redirectUrl) {
+					// Cart is cleared on order-confirmation when paymentStatus === 'paid' to avoid losing cart if redirect fails
 					window.location.href = data.redirectUrl;
 					return;
 				}
@@ -139,11 +171,19 @@ export default function CheckoutClient() {
 				body: JSON.stringify(buildPayload()),
 			});
 
+			const data = await response.json();
 			if (!response.ok) {
-				throw new Error('Failed to store order');
+				throw new Error(data?.error ?? 'Failed to store order');
+			}
+			const orderNumber = data.orderNumber ?? '';
+			if (!orderNumber) {
+				setCheckoutError('Your order was received but we could not show the confirmation. Please check your email or contact us.');
+				setIsProcessing(false);
+				setHasSubmitted(false);
+				return;
 			}
 			clearCart();
-			router.push('/order-confirmation');
+			router.push(`/order-confirmation?orderNumber=${encodeURIComponent(orderNumber)}`);
 		} catch (error) {
 			console.error('Checkout error', error);
 			setCheckoutError(error instanceof Error ? error.message : 'We could not place your order. Please try again.');
@@ -171,7 +211,10 @@ export default function CheckoutClient() {
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							{checkoutError && (
-								<div className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3'>
+								<div
+									role='alert'
+									aria-live='assertive'
+									className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3'>
 									<p className='flex-1 text-red-800 text-sm'>{checkoutError}</p>
 									<button
 										type='button'
@@ -185,7 +228,9 @@ export default function CheckoutClient() {
 							<form
 								onSubmit={handleSubmit}
 								className='space-y-4'>
-								<div className='absolute -left-[9999px] w-1 h-1 overflow-hidden' aria-hidden>
+								<div
+									className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
+									aria-hidden>
 									<label htmlFor='checkout-company'>Company</label>
 									<input
 										type='text'
@@ -280,7 +325,6 @@ export default function CheckoutClient() {
 										<option value='Nova Scotia'>Nova Scotia</option>
 										<option value='Ontario'>Ontario</option>
 										<option value='Prince Edward Island'>Prince Edward Island</option>
-										<option value='Quebec'>Quebec</option>
 										<option value='Saskatchewan'>Saskatchewan</option>
 										<option value='Northwest Territories'>Northwest Territories</option>
 										<option value='Nunavut'>Nunavut</option>
@@ -292,11 +336,15 @@ export default function CheckoutClient() {
 									<input
 										type='text'
 										value={formData.zipCode}
-										onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+										onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
 										autoComplete='postal-code'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										placeholder=''
+										maxLength={7}
+										className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat || billingZipBlocked ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
 										required
 									/>
+									{billingZipBlocked && <p className='text-sm text-red-600 mt-1'>We do not ship to Quebec. Please contact us if you have questions.</p>}
+									{billingZipInvalidFormat && !billingZipBlocked && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
 								</div>
 
 								<div>
@@ -328,15 +376,19 @@ export default function CheckoutClient() {
 
 								<div className='flex items-start gap-2 text-sm text-deep-tidal-teal-800'>
 									<input
+										id='checkout-ship-different'
 										type='checkbox'
 										checked={shipToDifferentAddress}
 										onChange={(e) => setShipToDifferentAddress(e.target.checked)}
 										className='mt-1'
+										aria-describedby={shipToDifferentAddress ? 'shipping-address-fields' : undefined}
 									/>
-									<span>Ship to a different address?</span>
+									<label htmlFor='checkout-ship-different'>Ship to a different address?</label>
 								</div>
 								{shipToDifferentAddress && (
-									<div className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
+									<div
+										id='shipping-address-fields'
+										className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
 										<div>
 											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
 											<input
@@ -387,7 +439,6 @@ export default function CheckoutClient() {
 												<option value='Nova Scotia'>Nova Scotia</option>
 												<option value='Ontario'>Ontario</option>
 												<option value='Prince Edward Island'>Prince Edward Island</option>
-												<option value='Quebec'>Quebec</option>
 												<option value='Saskatchewan'>Saskatchewan</option>
 												<option value='Northwest Territories'>Northwest Territories</option>
 												<option value='Nunavut'>Nunavut</option>
@@ -399,11 +450,15 @@ export default function CheckoutClient() {
 											<input
 												type='text'
 												value={shippingAddress.zipCode}
-												onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value })}
+												onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
 												autoComplete='shipping postal-code'
-												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												placeholder='A1A 1A1'
+												maxLength={7}
+												className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat || shippingZipBlocked ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
 												required
 											/>
+											{shippingZipBlocked && <p className='text-sm text-red-600 mt-1'>We do not ship to Quebec. Please contact us if you have questions.</p>}
+											{shippingZipInvalidFormat && !shippingZipBlocked && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
 										</div>
 									</div>
 								)}
@@ -441,14 +496,20 @@ export default function CheckoutClient() {
 									<div className=' pb-4 border-b border-deep-tidal-teal/10'>
 										<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 										<p className='text-sm text-deep-tidal-teal-800'>
-											After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to complete the
-											transfer.
+											After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to
+											complete the transfer.
 										</p>
 									</div>
 								)}
-								<div className='py-1'>
-									<label className='flex items-center gap-3 cursor-pointer'>
+								<div
+									className='py-1'
+									id='checkout-terms-note'>
+									{!agreedToTerms && <p className='text-xs text-deep-tidal-teal-600 mb-2'>You must agree to the terms to place your order.</p>}
+									<label
+										htmlFor='checkout-terms'
+										className='flex items-center gap-3 cursor-pointer'>
 										<input
+											id='checkout-terms'
 											type='checkbox'
 											checked={agreedToTerms}
 											onChange={(e) => setAgreedToTerms(e.target.checked)}
@@ -469,6 +530,7 @@ export default function CheckoutClient() {
 								<button
 									type='submit'
 									disabled={isProcessing || !agreedToTerms}
+									aria-describedby={!agreedToTerms ? 'checkout-terms-note' : undefined}
 									className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
 									{isProcessing ? 'Processing...' : 'Place Order'}
 								</button>
@@ -518,35 +580,32 @@ export default function CheckoutClient() {
 										<div className='flex-1 min-w-0'>
 											<h3 className='text-sm font-semibold text-deep-tidal-teal-800 leading-tight'>{item.name}</h3>
 											<p className='text-base font-bold text-deep-tidal-teal mt-0.5'>
-												${(getItemPrice(item) * item.quantity).toFixed(2)}
-												{item.quantity > 1 && <span className='text-xs font-normal text-deep-tidal-teal-600 ml-1'>(${getItemPrice(item).toFixed(2)} ea)</span>}
+												${(getDisplayPrice(item) * item.quantity).toFixed(2)}
+												{item.quantity > 1 && <span className='text-xs font-normal text-deep-tidal-teal-600 ml-1'>(${getDisplayPrice(item).toFixed(2)} ea)</span>}
 											</p>
 										</div>
 
 										{/* Quantity Controls */}
-										<div className='flex flex-col items-end gap-1.5'>
-											<div className='flex items-center'>
+										<div className='flex items-center'>
+											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
 												<button
 													type='button'
-													disabled={item.quantity <= 1}
-													onClick={() => updateQuantity(item.id, item.quantity - 1)}
-													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white w-7 h-7 rounded flex items-center justify-center transition-colors disabled:cursor-not-allowed disabled:hover:bg-deep-tidal-teal'>
-													<Minus className='w-3 h-3' />
+													onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1)}
+													className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+													aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
+													{item.quantity === 1 ? <Trash2 className='w-4 h-4 text-red-500' /> : <Minus className='w-4 h-4' />}
 												</button>
-												<span className='w-8 text-center text-sm font-medium text-deep-tidal-teal-800'>{item.quantity}</span>
+												<span className='min-w-[1.75rem] px-1.5 py-1 text-center text-sm font-medium text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10'>
+													{item.quantity}
+												</span>
 												<button
 													type='button'
 													onClick={() => updateQuantity(item.id, item.quantity + 1)}
-													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white w-7 h-7 rounded flex items-center justify-center transition-colors'>
-													<Plus className='w-3 h-3' />
+													className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+													aria-label='Increase quantity'>
+													<Plus className='w-4 h-4' />
 												</button>
 											</div>
-											<button
-												type='button'
-												onClick={() => removeFromCart(item.id)}
-												className='text-xs text-red-500 hover:text-red-600 transition-colors'>
-												Remove
-											</button>
 										</div>
 									</div>
 								))}
@@ -629,6 +688,7 @@ export default function CheckoutClient() {
 												name='shipping'
 												checked
 												readOnly
+												aria-label='Express Shipping'
 											/>
 											Express Shipping
 										</span>
@@ -668,7 +728,7 @@ export default function CheckoutClient() {
 									</label>
 								</div>
 
-								{/* Card Fee (if applicable) */}
+								{/* Card Fee */}
 								{cardFee > 0 && (
 									<div className='flex justify-between text-sm text-deep-tidal-teal-600'>
 										<span>Card Fee (5%)</span>

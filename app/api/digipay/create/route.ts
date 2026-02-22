@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { readSheetPromoCodes } from '@/lib/stockSheet';
+import { readSheetPromoCodes, readSheetProducts } from '@/lib/stockSheet';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { SHIPPING_COSTS } from '@/lib/constants';
 import { buildDigipayPaymentUrl } from '@/lib/digipay';
 import { upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { validateOrderPostalCodes } from '@/lib/postalValidation';
+import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
+import { getIdempotencyKey, getCachedDigipay, setCachedDigipay } from '@/lib/idempotency';
 
 interface OrderPayload {
 	customer: {
@@ -13,7 +16,6 @@ interface OrderPayload {
 		lastName: string;
 		country: string;
 		email: string;
-		phone: string;
 		address: string;
 		addressLine2: string;
 		city: string;
@@ -66,16 +68,24 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
 		}
 
-		const rawPayload = (await request.json()) as OrderPayload & { company?: string };
+		const rawPayload = (await request.json()) as OrderPayload & { company?: string; idempotencyKey?: string };
 		if (typeof rawPayload.company === 'string' && rawPayload.company.trim() !== '') {
 			return NextResponse.json({ ok: false, error: 'Invalid request.' }, { status: 400 });
 		}
 
-		const { company: _hp, ...orderPayload } = rawPayload;
+		const idemKey = getIdempotencyKey(request, rawPayload);
+		if (idemKey) {
+			const cached = getCachedDigipay(idemKey);
+			if (cached) {
+				return NextResponse.json({ ok: true, redirectUrl: cached.redirectUrl, orderNumber: cached.orderNumber });
+			}
+		}
 
-		// Validate payment method
-		if (!['creditcard', 'etransfer'].includes(orderPayload.paymentMethod)) {
-			return NextResponse.json({ ok: false, error: 'Invalid payment method' }, { status: 400 });
+		const { company: _hp, idempotencyKey: _idem, ...orderPayload } = rawPayload;
+
+		// This route is for credit card only; e-transfer uses POST /api/orders
+		if (orderPayload.paymentMethod !== 'creditcard') {
+			return NextResponse.json({ ok: false, error: 'Invalid payment method for this endpoint.' }, { status: 400 });
 		}
 
 		// Validate cart
@@ -83,39 +93,62 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: 'Invalid cart' }, { status: 400 });
 		}
 
-		// Recalculate prices server-side
-		const cartItems = orderPayload.cartItems.map((item) => ({
-			...item,
-			price: getDiscountedPrice(item.price, item.quantity),
-		}));
+		const postalError = validateOrderPostalCodes(orderPayload);
+		if (postalError) {
+			return NextResponse.json({ ok: false, error: postalError }, { status: 400 });
+		}
+		if (orderPayload.shipToDifferentAddress) {
+			const shippingError = validateShippingAddress(orderPayload.shippingAddress);
+			if (shippingError) {
+				return NextResponse.json({ ok: false, error: shippingError }, { status: 400 });
+			}
+		}
 
-		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+		const customerError = validateCustomer(orderPayload.customer);
+		if (customerError) {
+			return NextResponse.json({ ok: false, error: customerError }, { status: 400 });
+		}
 
+		const stockError = await validateStockAvailability(orderPayload.cartItems, readSheetProducts);
+		if (stockError) {
+			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
+		}
+
+		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		const shippingCost = SHIPPING_COSTS.express;
-
-		// Promo code validation
+		let cartItems: typeof orderPayload.cartItems;
 		let discountAmount = 0;
 
 		if (orderPayload.promoCode) {
 			const promoCodes = await readSheetPromoCodes();
 			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
-
 			if (promo) {
-				discountAmount = Number((subtotal * (promo.discount / 100)).toFixed(2));
+				cartItems = orderPayload.cartItems.map((item) => ({ ...item, price: item.price }));
+				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+				discountAmount = Number((subtotalWithPromo * (promo.discount / 100)).toFixed(2));
+			} else {
+				cartItems = orderPayload.cartItems.map((item) => ({
+					...item,
+					price: getDiscountedPrice(item.price, item.quantity),
+				}));
 			}
+		} else {
+			cartItems = orderPayload.cartItems.map((item) => ({
+				...item,
+				price: getDiscountedPrice(item.price, item.quantity),
+			}));
 		}
+
+		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
 		// Safe card fee handling
 		const cardFee = orderPayload.paymentMethod === 'creditcard' && Number.isFinite(Number(orderPayload.cardFee)) ? Number(orderPayload.cardFee) : 0;
 
 		const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 
-		// Optional tamper detection
+		// Reject tampered totals
 		if (Math.abs(total - orderPayload.total) > 0.01) {
-			console.warn('Total mismatch detected', {
-				clientTotal: orderPayload.total,
-				serverTotal: total,
-			});
+			return NextResponse.json({ ok: false, error: 'Order total mismatch. Please refresh and try again.' }, { status: 400 });
 		}
 
 		const payload: OrderPayload = {
@@ -142,16 +175,7 @@ export async function POST(request: Request) {
 
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
-		// Branch for e-transfer (manual payment)
-		if (payload.paymentMethod === 'etransfer') {
-			return NextResponse.json({
-				ok: true,
-				orderNumber,
-				manualPayment: true,
-			});
-		}
-
-		// Build DigiPay redirect (credit card only)
+		// Build DigiPay redirect (credit card only; e-transfer uses POST /api/orders)
 		const useSandbox = process.env.DIGIPAY_USE_SANDBOX === 'true';
 		const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID;
 		const effectiveSiteId = useSandbox && sandboxSiteId ? sandboxSiteId : siteId;
@@ -179,6 +203,7 @@ export async function POST(request: Request) {
 			encryptionKey,
 		);
 
+		if (idemKey) setCachedDigipay(idemKey, orderNumber, redirectUrl);
 		return NextResponse.json({
 			ok: true,
 			redirectUrl,

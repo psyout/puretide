@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import { readSheetPromoCodes } from '@/lib/stockSheet';
+import { checkRateLimit } from '@/lib/rateLimit';
+
+const PROMO_VERIFY_RATE_LIMIT = 20;
+const PROMO_VERIFY_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 export async function POST(request: Request) {
 	try {
-		const { code } = (await request.json()) as { code: string };
-		if (!code) {
+		const { allowed } = checkRateLimit(request, 'promo-verify', PROMO_VERIFY_RATE_LIMIT, PROMO_VERIFY_WINDOW_MS);
+		if (!allowed) {
+			return NextResponse.json({ ok: false, error: 'Too many attempts. Please try again later.' }, { status: 429 });
+		}
+
+		const body = (await request.json()) as { code?: unknown };
+		const code = typeof body?.code === 'string' ? body.code : String(body?.code ?? '').trim();
+		if (!code.trim()) {
 			return NextResponse.json({ ok: false, error: 'Code is required' }, { status: 400 });
 		}
 
@@ -25,7 +35,6 @@ export async function POST(request: Request) {
 		return NextResponse.json({ ok: true, discount: promo.discount });
 	} catch (error) {
 		console.error('Promo verification error:', error);
-		const message = error instanceof Error ? error.message : 'Internal server error';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		return NextResponse.json({ ok: false, error: 'Something went wrong. Please try again later.' }, { status: 500 });
 	}
 }

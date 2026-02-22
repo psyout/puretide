@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getOrderBySessionFromDb, upsertOrderInDb, upsertRetryJobInDb } from '@/lib/ordersDb';
+import { getOrderBySessionFromDb, upsertOrderInDb } from '@/lib/ordersDb';
+import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
 
 const DIGIPAY_ALLOWED_IP_DEFAULT = '185.240.29.227';
-const RETRY_BASE_DELAY_SECONDS = 30;
 let hasWarnedMissingHmacSecret = false;
 
 /* ----------------------------- Helpers ----------------------------- */
@@ -57,16 +57,22 @@ function parsePostbackBody(rawBody: string): Record<string, unknown> {
 
 	const params = new URLSearchParams(rawBody);
 
+	// DigiPay may send a JSON string in a form value
 	for (const [, value] of Array.from(params.entries())) {
 		if (!value.startsWith('{')) continue;
 		try {
-			return JSON.parse(value);
+			return JSON.parse(value) as Record<string, unknown>;
 		} catch {
 			// try next
 		}
 	}
 
-	return {};
+	// Flat form: session=xxx&amount=yyy&status=approved
+	const flat: Record<string, unknown> = {};
+	for (const [key, value] of Array.from(params.entries())) {
+		flat[key] = value;
+	}
+	return flat;
 }
 
 function verifyHmacSignature(rawBody: string, request: Request): { ok: true } | { ok: false; message: string } {
@@ -157,31 +163,34 @@ export async function POST(request: Request) {
 
 		if (Math.abs(paidAmount - expectedAmount) > 0.01) return xmlResponse('fail', 104, `Amount mismatch. Expected ${expectedAmount}, received ${paidAmount}`);
 
-		/* ---------- Mark Paid ---------- */
+		const paidAt = new Date().toISOString();
+
+		/* ---------- Run Fulfillment first; mark paid only after success ---------- */
+		let emailStatus: { sent: boolean; skipped: boolean; error?: string };
+		let adminEmailStatus: { sent: boolean; skipped: boolean; error?: string };
+		try {
+			const result = await runFulfillment(order as FulfillmentOrder);
+			emailStatus = result.emailStatus;
+			adminEmailStatus = result.adminEmailStatus;
+		} catch (fulfillError) {
+			console.error('[DigiPay postback] Fulfillment failed', fulfillError);
+			return xmlResponse('fail', 104, 'Unable to process purchase');
+		}
+
 		await upsertOrderInDb({
 			...order,
 			paymentStatus: 'paid',
-			paidAt: new Date().toISOString(),
-			fulfillmentStatus: order.fulfillmentStatus ?? {
-				stockUpdated: false,
-				emailsSent: false,
-				clientSynced: false,
+			paidAt,
+			fulfillmentStatus: {
+				stockUpdated: true,
+				emailsSent: true,
+				clientSynced: (order.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
 			},
-		});
+			emailStatus,
+			adminEmailStatus,
+		} as Record<string, unknown>);
 
-		/* ---------- Queue Fulfillment ---------- */
-		await upsertRetryJobInDb({
-			id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-			session,
-			attempts: 0,
-			nextRunAt: new Date(Date.now() + RETRY_BASE_DELAY_SECONDS * 1000).toISOString(),
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-			lastError: 'Postback accepted. Fulfillment queued.',
-			status: 'pending',
-		});
-
-		console.log(`[DigiPay postback] Order ${session} marked paid and queued`);
+		console.log(`[DigiPay postback] Order ${session} marked paid and fulfilled`);
 
 		return xmlResponse('ok', 100, 'Purchase successfully processed', session);
 	} catch (error) {

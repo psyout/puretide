@@ -16,8 +16,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 	const { addToCart } = useCart();
 	const router = useRouter();
 	const [isNavigating, setIsNavigating] = useState(false);
-	const isSoldOut = product.stock <= 0 || product.status === 'stock-out';
-	const isLowStock = !isSoldOut && product.stock < 10;
+	const stock = Number(product.stock) || 0;
+	const isSoldOut = stock <= 0 || product.status === 'stock-out';
+	const isLowStock = !isSoldOut && stock < 10;
 
 	const handleViewClick = (e: React.MouseEvent) => {
 		e.preventDefault();

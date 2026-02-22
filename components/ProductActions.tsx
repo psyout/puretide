@@ -10,12 +10,13 @@ type ProductActionsProps = {
 };
 
 export default function ProductActions({ product }: ProductActionsProps) {
+	const stock = Number(product.stock) || 0;
 	const [quantity, setQuantity] = useState(1);
-	const isSoldOut = product.stock <= 0 || product.status === 'stock-out';
+	const isSoldOut = stock <= 0 || product.status === 'stock-out';
 
 	const handleQuantityChange = (newQuantity: number) => {
 		if (newQuantity < 1) return;
-		if (newQuantity > product.stock && product.stock > 0) return;
+		if (stock > 0 && newQuantity > stock) return;
 		setQuantity(newQuantity);
 	};
 

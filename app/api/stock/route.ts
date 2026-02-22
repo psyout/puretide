@@ -82,15 +82,54 @@ export async function GET() {
 	}
 }
 
+function requireStockApiKey(request: Request): boolean {
+	const key = process.env.STOCK_API_KEY;
+	if (!key) return false;
+	const provided = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+	return provided === key;
+}
+
+function validateStockItems(items: unknown): { valid: true; items: Product[] } | { valid: false; error: string } {
+	if (!Array.isArray(items) || items.length === 0) {
+		return { valid: false, error: 'items must be a non-empty array.' };
+	}
+	const MAX_STOCK = 999999;
+	for (let i = 0; i < items.length; i++) {
+		const item = items[i];
+		if (!item || typeof item !== 'object') {
+			return { valid: false, error: `items[${i}] must be an object.` };
+		}
+		if (typeof (item as Product).id !== 'string' || !(item as Product).id.trim()) {
+			return { valid: false, error: `items[${i}] must have a non-empty id.` };
+		}
+		if (typeof (item as Product).slug !== 'string' || !(item as Product).slug.trim()) {
+			return { valid: false, error: `items[${i}] must have a non-empty slug.` };
+		}
+		const stock = Number((item as Product).stock);
+		if (Number.isNaN(stock) || stock < 0 || stock > MAX_STOCK) {
+			return { valid: false, error: `items[${i}] stock must be a number between 0 and ${MAX_STOCK}.` };
+		}
+	}
+	return { valid: true, items: items as Product[] };
+}
+
 export async function POST(request: Request) {
 	try {
-		const payload = (await request.json()) as { items: Product[] };
-		const items = payload?.items ?? [];
-		const existing = await readSheetProducts();
+		if (!requireStockApiKey(request)) {
+			return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
+		}
+
+		const payload = (await request.json()) as { items?: unknown };
+		const itemsPayload = payload?.items ?? [];
+		const validation = validateStockItems(itemsPayload);
+		if (!validation.valid) {
+			return NextResponse.json({ ok: false, error: validation.error }, { status: 400 });
+		}
+		const items = validation.items;
 
 		await writeSheetProducts(items);
 
-		const lowStock = items.filter((item) => item.stock <= LOW_STOCK_THRESHOLD);
+		const lowStock = items.filter((item) => Number(item.stock) <= LOW_STOCK_THRESHOLD);
 
 		await sendLowStockAlert(lowStock);
 

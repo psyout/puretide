@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Header from '@/components/Header';
-import { getOrderByOrderNumberFromDb, listOrdersFromDb } from '@/lib/ordersDb';
+import { OrderConfirmationCartClear } from '@/components/OrderConfirmationCartClear';
+import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -9,12 +10,13 @@ export const revalidate = 0;
 type Order = {
 	orderNumber?: string;
 	createdAt: string;
+	paymentMethod?: string;
+	paymentStatus?: string;
 	customer: {
 		firstName: string;
 		lastName: string;
 		country: string;
 		email: string;
-		phone: string;
 		address: string;
 		addressLine2: string;
 		city: string;
@@ -33,6 +35,8 @@ type Order = {
 	shippingMethod: 'express';
 	subtotal: number;
 	shippingCost: number;
+	discountAmount?: number;
+	promoCode?: string;
 	total: number;
 	cartItems: Array<{
 		id: number;
@@ -58,20 +62,14 @@ const formatMoney = (value: number) =>
 		currency: 'CAD',
 	}).format(value);
 
-type OrderWithPayment = Order & { paymentStatus?: string };
-
-async function getOrders(): Promise<OrderWithPayment[]> {
-	return (await listOrdersFromDb()) as OrderWithPayment[];
-}
-
-async function getOrderByNumber(orderNumber: string | null): Promise<OrderWithPayment | null> {
+async function getOrderByNumber(orderNumber: string | null): Promise<Order | null> {
 	if (!orderNumber?.trim()) return null;
-	return (await getOrderByOrderNumberFromDb(orderNumber.trim())) as OrderWithPayment | null;
+	return (await getOrderByOrderNumberFromDb(orderNumber.trim())) as Order | null;
 }
 
 export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string }> }) {
 	const { orderNumber: queryOrderNumber } = await searchParams;
-	const order = queryOrderNumber ? await getOrderByNumber(queryOrderNumber) : ((await getOrders()).at(-1) ?? null);
+	const order = queryOrderNumber?.trim() ? await getOrderByNumber(queryOrderNumber) : null;
 
 	if (!order) {
 		return (
@@ -119,7 +117,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		month: 'long',
 		day: 'numeric',
 	});
-	const paymentMethod = (order as Record<string, unknown>).paymentMethod;
+	const paymentMethod = order.paymentMethod;
 	const isCreditCardOrder = paymentMethod === 'creditcard';
 	const shippingLabel = order.shippingMethod === 'express' ? 'Express Shipping' : '';
 	const billingAddressLines = [
@@ -140,6 +138,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+			<OrderConfirmationCartClear orderNumber={orderNumber} paymentStatus={order.paymentStatus ?? undefined} />
 			<Header />
 			<div className='max-w-7xl mx-auto px-6 py-12 pt-28'>
 				<div className='max-w-4xl mx-auto bg-muted-sage/30 backdrop-blur-sm rounded-lg ui-border shadow-lg p-6'>
@@ -233,6 +232,12 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 									<span>Subtotal</span>
 									<span className='text-deep-tidal-teal-800 font-semibold'>{formatMoney(order.subtotal)}</span>
 								</div>
+								{order.discountAmount != null && order.discountAmount > 0 && (
+									<div className='flex justify-between text-deep-tidal-teal-700'>
+										<span>Discount{order.promoCode ? ` (${order.promoCode})` : ''}</span>
+										<span className='text-deep-tidal-teal-800 font-semibold'>-{formatMoney(order.discountAmount)}</span>
+									</div>
+								)}
 								<div className='flex justify-between text-deep-tidal-teal-700'>
 									<span>Shipping</span>
 									<span className='text-deep-tidal-teal-800 font-semibold'>
@@ -268,6 +273,13 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 					<div className='text-xs text-deep-tidal-teal-700 p-[6px]'>
 						<p>Your personal data will be used to process your order, support your experience on this website, and for other purposes described in our privacy policy.</p>
 						<p>Products are for research use only and are not intended for human or animal consumption.</p>
+					</div>
+					<div className='mt-6'>
+						<Link
+							href='/'
+							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+							Continue shopping
+						</Link>
 					</div>
 				</div>
 			</div>

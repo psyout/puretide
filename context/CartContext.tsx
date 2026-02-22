@@ -8,7 +8,7 @@ interface CartContextType {
 	cartItems: CartItem[];
 	addToCart: (product: Product, quantity?: number) => void;
 	removeFromCart: (productId: string) => void;
-	updateQuantity: (productId: string, quantity: number) => void;
+	updateQuantity: (productId: string, quantity: number, maxQuantity?: number) => void;
 	clearCart: () => void;
 	getItemPrice: (item: CartItem) => number;
 	getTotal: () => number;
@@ -24,6 +24,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		return getDiscountedPrice(item.price, item.quantity);
 	};
 
+	const CART_MAX_QUANTITY = 99;
+
 	// Load cart from localStorage on mount (client-side only)
 	useEffect(() => {
 		if (typeof window !== 'undefined') {
@@ -36,6 +38,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 					}
 				} catch (e) {
 					console.error('Failed to parse cart from localStorage:', e);
+					localStorage.removeItem('privacy-shop-cart');
 				}
 			}
 			setIsInitialized(true);
@@ -50,12 +53,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 	}, [cartItems, isInitialized]);
 
 	const addToCart = (product: Product, quantity = 1) => {
+		const stock = Number(product.stock) || 0;
+		const maxQ = stock > 0 ? Math.min(stock, CART_MAX_QUANTITY) : CART_MAX_QUANTITY;
+		const toAdd = Math.min(Math.max(1, quantity), maxQ);
 		setCartItems((prevItems) => {
 			const existingItem = prevItems.find((item) => item.id === product.id);
 			if (existingItem) {
-				return prevItems.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item));
+				const newQ = Math.min(existingItem.quantity + toAdd, maxQ);
+				return prevItems.map((item) => (item.id === product.id ? { ...item, quantity: newQ } : item));
 			}
-			return [...prevItems, { ...product, quantity }];
+			return [...prevItems, { ...product, quantity: toAdd }];
 		});
 	};
 
@@ -63,12 +70,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		setCartItems((prevItems) => prevItems.filter((item) => item.id !== productId));
 	};
 
-	const updateQuantity = (productId: string, quantity: number) => {
+	const updateQuantity = (productId: string, quantity: number, maxQuantity?: number) => {
 		if (quantity <= 0) {
 			removeFromCart(productId);
 			return;
 		}
-		setCartItems((prevItems) => prevItems.map((item) => (item.id === productId ? { ...item, quantity } : item)));
+		const capped = maxQuantity != null ? Math.min(quantity, Math.max(0, maxQuantity)) : Math.min(quantity, CART_MAX_QUANTITY);
+		setCartItems((prevItems) => prevItems.map((item) => (item.id === productId ? { ...item, quantity: capped } : item)));
 	};
 
 	const clearCart = () => {

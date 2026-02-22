@@ -1,12 +1,12 @@
 type OrderEmailInput = {
   orderNumber: string;
   createdAt: string;
+  paymentMethod?: "etransfer" | "creditcard";
   customer: {
     firstName: string;
     lastName: string;
     country: string;
     email: string;
-    phone: string;
     address: string;
     addressLine2: string;
     city: string;
@@ -69,10 +69,12 @@ type OrderEmailResult = {
 };
 
 export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
+  const isCreditCard = input.paymentMethod === "creditcard";
   const orderDate = formatDate(input.createdAt);
   const orderName = `${input.customer.firstName} ${input.customer.lastName}`.trim();
   const securityAnswer = `${paymentDetails.securityAnswerPrefix}${input.orderNumber}`;
   const shippingLabel = input.shippingMethod === "express" ? "Express Shipping" : "Regular Shipping";
+  const paymentMethodLabel = isCreditCard ? "Credit card" : "Interac e-Transfer";
   const billingLines = [
     orderName,
     input.customer.address,
@@ -106,13 +108,11 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     )
     .join("");
 
-  const customerText = [
-    "Pure Tide",
-    "",
-    "Thank you for your order",
-    `Hi ${input.customer.firstName},`,
-    "",
-    "We have received your order and it is on hold until payment is confirmed.",
+  const customerIntro = isCreditCard
+    ? "Thank you for your order. Your credit card payment has been received."
+    : "We have received your order and it is on hold until payment is confirmed.";
+
+  const eTransferInstructionsText = [
     "",
     "Interac e-Transfer Instructions",
     "",
@@ -136,6 +136,16 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     "",
     `Should you encounter any payment related issues, please contact our support at: ${paymentDetails.supportEmail}`,
     "",
+  ];
+
+  const customerText = [
+    "Pure Tide",
+    "",
+    "Thank you for your order",
+    `Hi ${input.customer.firstName},`,
+    "",
+    customerIntro,
+    ...(isCreditCard ? [] : eTransferInstructionsText),
     "Order summary",
     `Order #${input.orderNumber} (${orderDate})`,
     "",
@@ -143,10 +153,10 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     itemsText,
     "",
     `Subtotal: ${formatMoney(input.subtotal)}`,
-    input.discountAmount ? `Discount (${input.promoCode}): -${formatMoney(input.discountAmount)}` : null,
+    input.discountAmount ? `Discount (${input.promoCode ?? 'promo'}): -${formatMoney(input.discountAmount)}` : null,
     `Shipping: ${shippingLabel} ${formatMoney(input.shippingCost)}`,
     `Total: ${formatMoney(input.total)}`,
-    "Payment method: Interac e-Transfer",
+    `Payment method: ${paymentMethodLabel}`,
     "",
     "Billing address",
     ...billingLines,
@@ -155,15 +165,13 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     ...shippingLines,
     "",
     `Thanks again! If you need any help with your order, please contact us at ${paymentDetails.supportEmail}.`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-  const customerHtml = `
-    <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
-      <h2 style="margin: 0 0 8px;">Pure Tide</h2>
-      <h3 style="margin: 0 0 16px;">Thank you for your order</h3>
-      <p>Hi ${input.customer.firstName},</p>
-      <p>We have received your order and it is on hold until payment is confirmed.</p>
-
+  const eTransferBlockHtml = isCreditCard
+    ? ""
+    : `
       <h4 style="margin: 24px 0 8px;">Interac e-Transfer Instructions</h4>
       <p>After placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.</p>
       <ul>
@@ -179,6 +187,15 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <p>If your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.</p>
       <p><strong>Email notice:</strong> If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.</p>
       <p>Should you encounter any payment related issues, please contact our support at: <strong>${paymentDetails.supportEmail}</strong></p>
+  `;
+
+  const customerHtml = `
+    <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
+      <h2 style="margin: 0 0 8px;">Pure Tide</h2>
+      <h3 style="margin: 0 0 16px;">Thank you for your order</h3>
+      <p>Hi ${input.customer.firstName},</p>
+      <p>${customerIntro}</p>
+      ${eTransferBlockHtml}
 
       <h4 style="margin: 24px 0 8px;">Order summary</h4>
       <p><strong>Order #${input.orderNumber}</strong> (${orderDate})</p>
@@ -195,10 +212,10 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         </tbody>
       </table>
       <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
-      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode}):</strong> -${formatMoney(input.discountAmount)}</p>` : ""}
+      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode ?? 'promo'}):</strong> -${formatMoney(input.discountAmount)}</p>` : ""}
       <p><strong>Shipping:</strong> ${shippingLabel} ${formatMoney(input.shippingCost)}</p>
       <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
-      <p><strong>Payment method:</strong> Interac e-Transfer</p>
+      <p><strong>Payment method:</strong> ${paymentMethodLabel}</p>
 
       <h4 style="margin: 24px 0 8px;">Billing address</h4>
       <p>${billingLines.join("<br />")}</p>
@@ -208,6 +225,16 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <p style="margin-top: 24px;">Thanks again! If you need any help with your order, please contact us at ${paymentDetails.supportEmail}.</p>
     </div>
   `;
+
+  const adminETransferBlock = [
+    "",
+    "Interac e-Transfer details",
+    `Recipient Name: ${paymentDetails.recipientName}`,
+    `Recipient Email: ${paymentDetails.recipientEmail}`,
+    `Security Question: ${paymentDetails.securityQuestion}`,
+    `Security Answer: ${securityAnswer}`,
+    `Memo/Message: ${input.orderNumber}`,
+  ];
 
   const adminText = [
     "New order received",
@@ -223,17 +250,11 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     itemsText,
     "",
     `Subtotal: ${formatMoney(input.subtotal)}`,
-    input.discountAmount ? `Discount (${input.promoCode}): -${formatMoney(input.discountAmount)}` : null,
+    input.discountAmount ? `Discount (${input.promoCode ?? 'promo'}): -${formatMoney(input.discountAmount)}` : null,
     `Shipping: ${shippingLabel} ${formatMoney(input.shippingCost)}`,
     `Total: ${formatMoney(input.total)}`,
-    "Payment method: Interac e-Transfer",
-    "",
-    "Interac e-Transfer details",
-    `Recipient Name: ${paymentDetails.recipientName}`,
-    `Recipient Email: ${paymentDetails.recipientEmail}`,
-    `Security Question: ${paymentDetails.securityQuestion}`,
-    `Security Answer: ${securityAnswer}`,
-    `Memo/Message: ${input.orderNumber}`,
+    `Payment method: ${paymentMethodLabel}`,
+    ...(isCreditCard ? [] : adminETransferBlock),
     adminNotes ? "" : null,
     adminNotes ? "Order notes" : null,
     adminNotes ? adminNotes : null,
@@ -266,11 +287,14 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         </tbody>
       </table>
       <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
-      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode}):</strong> -${formatMoney(input.discountAmount)}</p>` : ""}
+      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode ?? 'promo'}):</strong> -${formatMoney(input.discountAmount)}</p>` : ""}
       <p><strong>Shipping:</strong> ${shippingLabel} ${formatMoney(input.shippingCost)}</p>
       <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
-      <p><strong>Payment method:</strong> Interac e-Transfer</p>
-
+      <p><strong>Payment method:</strong> ${paymentMethodLabel}</p>
+      ${
+        isCreditCard
+          ? ""
+          : `
       <h4 style="margin: 24px 0 8px;">Interac e-Transfer details</h4>
       <ul>
         <li><strong>Recipient Name:</strong> ${paymentDetails.recipientName}</li>
@@ -279,6 +303,8 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         <li><strong>Security Answer:</strong> ${securityAnswer}</li>
         <li><strong>Memo/Message:</strong> ${input.orderNumber}</li>
       </ul>
+      `
+      }
       ${
         adminNotes
           ? `<h4 style="margin: 24px 0 8px;">Order notes</h4><p>${adminNotes}</p>`
@@ -287,9 +313,13 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     </div>
   `;
 
+  const customerSubject = isCreditCard
+    ? `Order #${input.orderNumber} - Order confirmation`
+    : `Order #${input.orderNumber} - Interac e-Transfer instructions`;
+
   return {
     customer: {
-      subject: `Order #${input.orderNumber} - Interac e-Transfer instructions`,
+      subject: customerSubject,
       text: customerText,
       html: customerHtml,
     },

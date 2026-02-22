@@ -36,6 +36,17 @@ export default function ContactForm() {
 			return;
 		}
 
+		const MAX_NAME_LENGTH = 100;
+		const MAX_MESSAGE_LENGTH = 2000;
+		if (trimmedName.length > MAX_NAME_LENGTH) {
+			setFormStatus({ type: 'error', message: 'Name is too long.' });
+			return;
+		}
+		if (trimmedMessage.length > MAX_MESSAGE_LENGTH) {
+			setFormStatus({ type: 'error', message: 'Message is too long.' });
+			return;
+		}
+
 		setIsSubmitting(true);
 		setFormStatus({ type: 'idle', message: '' });
 
@@ -59,10 +70,11 @@ export default function ContactForm() {
 			}
 
 			if (!response.ok || data?.ok === false) {
-				setFormStatus({
-					type: 'error',
-					message: data?.error ?? 'Something went wrong. Please try again.',
-				});
+				const message =
+					response.status === 429
+						? 'Too many requests. Please try again later.'
+						: (data?.error ?? 'Something went wrong. Please try again.');
+				setFormStatus({ type: 'error', message });
 				return;
 			}
 
@@ -105,6 +117,7 @@ export default function ContactForm() {
 						value={formData.name}
 						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
 						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+						maxLength={100}
 						required
 					/>
 				</div>
@@ -135,6 +148,7 @@ export default function ContactForm() {
 						onChange={(e) => setFormData({ ...formData, message: e.target.value })}
 						rows={6}
 						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal resize-none'
+						maxLength={2000}
 						required
 					/>
 				</div>

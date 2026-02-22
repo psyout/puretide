@@ -17,6 +17,7 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 	const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
 	const loadMoreRef = useRef<HTMLDivElement | null>(null);
 	const [items, setItems] = useState<Product[]>(initialItems);
+	const [stockError, setStockError] = useState<string | null>(null);
 
 	// 1. Fetch products from API
 	useEffect(() => {
@@ -32,9 +33,12 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 						return status === 'published' || status === 'stock-out';
 					});
 					setItems(visibleItems);
+					setStockError(null);
+				} else if (isMounted && !data.ok) {
+					setStockError('Couldn’t refresh stock. Showing cached data.');
 				}
 			} catch {
-				// keep current items on fetch failure
+				if (isMounted) setStockError('Couldn’t refresh stock. Showing cached data.');
 			}
 		};
 
@@ -172,6 +176,9 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 					</div>
 				</div>
 
+				{stockError && (
+					<p className='text-center text-sm text-deep-tidal-teal-600/80 mb-2' role='status'>{stockError}</p>
+				)}
 				<div>
 					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 mt-8'>
 						{visibleProducts.length > 0 ? (

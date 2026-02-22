@@ -1,13 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 
 export default function CartClient() {
 	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice } = useCart();
 	const router = useRouter();
+	const [showClearConfirm, setShowClearConfirm] = useState(false);
 	const total = getTotal();
 
 	if (cartItems.length === 0) {
@@ -90,49 +93,49 @@ export default function CartClient() {
 												)}
 											</div>
 										</div>
-										<p className='text-sm text-deep-tidal-teal-700 mt-2'>{item.description}</p>
+										<p className='text-[13px] text-deep-tidal-teal-700 mt-2'>{item.description}</p>
 										<div className='mt-3 flex w-full items-center justify-flex-start flex-wrap gap-4 lg:hidden'>
-											<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
+											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
 												<button
-													disabled={item.quantity <= 1}
-													onClick={() => updateQuantity(item.id, item.quantity - 1)}
-													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded disabled:cursor-not-allowed disabled:hover:bg-deep-tidal-teal'>
-													-
+													onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, item.stock)}
+													className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+													aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
+													{item.quantity === 1 ? (
+														<Trash2 className='w-5 h-5 text-red-500' />
+													) : (
+														<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>−</span>
+													)}
 												</button>
-												<span className='w-8 text-center text-deep-tidal-teal-800'>{item.quantity}</span>
+												<span className='min-w-[2rem] px-2 py-1.5 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10'>{item.quantity}</span>
 												<button
-													onClick={() => updateQuantity(item.id, item.quantity + 1)}
-													className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
-													+
+													onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)}
+													className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+													aria-label='Increase quantity'>
+													<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>+</span>
 												</button>
 											</div>
-											<button
-												onClick={() => removeFromCart(item.id)}
-												className='text-red-400 hover:text-red-300'>
-												Remove
-											</button>
 										</div>
 									</div>
-									<div className='hidden lg:flex items-center gap-4'>
-										<div className='flex items-center gap-2 text-deep-tidal-teal-800'>
+									<div className='hidden lg:flex items-center'>
+										<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
 											<button
-												disabled={item.quantity <= 1}
-												onClick={() => updateQuantity(item.id, item.quantity - 1)}
-												className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded disabled:cursor-not-allowed disabled:hover:bg-deep-tidal-teal'>
-												-
+												onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, item.stock)}
+												className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+												aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
+												{item.quantity === 1 ? (
+													<Trash2 className='w-5 h-5 text-red-500' />
+												) : (
+													<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>−</span>
+												)}
 											</button>
-											<span className='w-8 text-center text-deep-tidal-teal-800'>{item.quantity}</span>
+											<span className='min-w-[2rem] px-2 py-1.5 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10'>{item.quantity}</span>
 											<button
-												onClick={() => updateQuantity(item.id, item.quantity + 1)}
-												className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white w-8 h-8 rounded'>
-												+
+												onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)}
+												className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+												aria-label='Increase quantity'>
+												<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>+</span>
 											</button>
 										</div>
-										<button
-											onClick={() => removeFromCart(item.id)}
-											className='text-red-400 hover:text-red-300 ml-4'>
-											Remove
-										</button>
 									</div>
 								</div>
 							))}
@@ -165,11 +168,26 @@ export default function CartClient() {
 								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded transition-colors mb-4'>
 								Proceed to Checkout
 							</button>
-							<button
-								onClick={clearCart}
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-2 px-4 rounded transition-colors'>
-								Clear Cart
-							</button>
+							{showClearConfirm ? (
+								<div className='flex gap-2'>
+									<button
+										onClick={() => { clearCart(); setShowClearConfirm(false); }}
+										className='flex-1 border border-red-500 text-red-600 hover:bg-red-50 font-semibold py-2 px-4 rounded transition-colors'>
+										Yes, clear cart
+									</button>
+									<button
+										onClick={() => setShowClearConfirm(false)}
+										className='flex-1 border border-deep-tidal-teal/30 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 font-semibold py-2 px-4 rounded transition-colors'>
+										Cancel
+									</button>
+								</div>
+							) : (
+								<button
+									onClick={() => setShowClearConfirm(true)}
+									className='w-full border border-deep-tidal-teal/30 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 font-semibold py-2 px-4 rounded transition-colors'>
+									Clear Cart
+								</button>
+							)}
 						</div>
 					</div>
 				</div>

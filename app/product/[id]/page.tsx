@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation';
 import { products as fallbackProducts } from '@/lib/products';
 import { readSheetProducts } from '@/lib/stockSheet';
 import Link from 'next/link';
@@ -90,18 +91,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 	const product = items.find((item) => item.slug === slug || item.id === slug);
 
 	if (!product || !['published', 'stock-out'].includes(product.status ?? 'published')) {
-		return (
-			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-				<div className='max-w-7xl mx-auto px-6 py-12'>
-					<h1 className='text-4xl font-bold mb-4 text-deep-tidal-teal-700'>Product not found</h1>
-					<Link
-						href='/'
-						className='text-deep-tidal-teal hover:text-eucalyptus'>
-						← Back to Products
-					</Link>
-				</div>
-			</div>
-		);
+		notFound();
 	}
 
 	return (

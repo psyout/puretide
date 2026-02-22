@@ -34,6 +34,8 @@ function getSmtpConfig() {
 
 const CONTACT_RATE_LIMIT = 5;
 const CONTACT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const MAX_NAME_LENGTH = 100;
+const MAX_MESSAGE_LENGTH = 2000;
 
 export async function POST(request: Request) {
 	try {
@@ -53,6 +55,13 @@ export async function POST(request: Request) {
 
 		if (!name || !email || !message) {
 			return NextResponse.json({ ok: false, error: 'Missing required fields.' }, { status: 400 });
+		}
+
+		if (name.length > MAX_NAME_LENGTH) {
+			return NextResponse.json({ ok: false, error: 'Name is too long.' }, { status: 400 });
+		}
+		if (message.length > MAX_MESSAGE_LENGTH) {
+			return NextResponse.json({ ok: false, error: 'Message is too long.' }, { status: 400 });
 		}
 
 		const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

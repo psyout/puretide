@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
 import { readSheetProducts, writeSheetProducts, readSheetPromoCodes, upsertSheetClient } from '@/lib/stockSheet';
@@ -8,6 +9,9 @@ import { LOW_STOCK_THRESHOLD, SHIPPING_COSTS, DEFAULT_ORDER_NOTIFICATION_EMAIL }
 import { createOrderTask, createStockAlertTask } from '@/lib/wrike';
 import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { validateOrderPostalCodes } from '@/lib/postalValidation';
+import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
+import { getIdempotencyKey, getCachedOrder, setCachedOrder } from '@/lib/idempotency';
 
 interface OrderPayload {
 	customer: {
@@ -15,7 +19,6 @@ interface OrderPayload {
 		lastName: string;
 		country: string;
 		email: string;
-		phone: string;
 		address: string;
 		addressLine2: string;
 		city: string;
@@ -49,8 +52,18 @@ interface OrderPayload {
 	}>;
 }
 
-export async function GET() {
+function requireOrdersApiKey(request: Request): boolean {
+	const key = process.env.ORDERS_API_KEY;
+	if (!key) return false;
+	const provided = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+	return provided === key;
+}
+
+export async function GET(request: Request) {
 	try {
+		if (!requireOrdersApiKey(request)) {
+			return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
+		}
 		const orders = await listOrdersFromDb();
 		const sorted = [...orders].sort((a, b) => {
 			const aT = String(a.createdAt ?? '');
@@ -176,35 +189,73 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
 		}
 
-		const rawPayload = (await request.json()) as OrderPayload & { company?: string };
+		const rawPayload = (await request.json()) as OrderPayload & { company?: string; idempotencyKey?: string };
 		if (typeof rawPayload.company === 'string' && rawPayload.company.trim() !== '') {
 			return NextResponse.json({ ok: false, error: 'Invalid request.' }, { status: 400 });
 		}
 
-		const { company: _hp, ...orderPayload } = rawPayload;
+		const idemKey = getIdempotencyKey(request, rawPayload);
+		if (idemKey) {
+			const cached = getCachedOrder(idemKey);
+			if (cached) {
+				return NextResponse.json({ ok: true, orderId: cached.orderId, orderNumber: cached.orderNumber });
+			}
+		}
+
+		const { company: _hp, idempotencyKey: _idem, ...orderPayload } = rawPayload;
 
 		// Validate cart
 		if (!Array.isArray(orderPayload.cartItems) || orderPayload.cartItems.length === 0) {
 			return NextResponse.json({ ok: false, error: 'Invalid cart' }, { status: 400 });
 		}
 
-		// Recalculate prices and totals on the server to ensure accuracy and prevent tampering
-		const cartItems = orderPayload.cartItems.map((item) => ({
-			...item,
-			price: getDiscountedPrice(item.price, item.quantity),
-		}));
+		const postalError = validateOrderPostalCodes(orderPayload);
+		if (postalError) {
+			return NextResponse.json({ ok: false, error: postalError }, { status: 400 });
+		}
+		if (orderPayload.shipToDifferentAddress) {
+			const shippingError = validateShippingAddress(orderPayload.shippingAddress);
+			if (shippingError) {
+				return NextResponse.json({ ok: false, error: shippingError }, { status: 400 });
+			}
+		}
 
-		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+		const customerError = validateCustomer(orderPayload.customer);
+		if (customerError) {
+			return NextResponse.json({ ok: false, error: customerError }, { status: 400 });
+		}
+
+		const stockError = await validateStockAvailability(orderPayload.cartItems, readSheetProducts);
+		if (stockError) {
+			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
+		}
+
+		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
+		let cartItems: typeof orderPayload.cartItems;
+		let discountAmount = 0;
 		const shippingCost = SHIPPING_COSTS.express;
 
-		let discountAmount = 0;
 		if (orderPayload.promoCode) {
 			const promoCodes = await readSheetPromoCodes();
 			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
-				discountAmount = Number((subtotal * (promo.discount / 100)).toFixed(2));
+				cartItems = orderPayload.cartItems.map((item) => ({ ...item, price: item.price }));
+				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+				discountAmount = Number((subtotalWithPromo * (promo.discount / 100)).toFixed(2));
+			} else {
+				cartItems = orderPayload.cartItems.map((item) => ({
+					...item,
+					price: getDiscountedPrice(item.price, item.quantity),
+				}));
 			}
+		} else {
+			cartItems = orderPayload.cartItems.map((item) => ({
+				...item,
+				price: getDiscountedPrice(item.price, item.quantity),
+			}));
 		}
+
+		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
 		const total = Number((subtotal + shippingCost - discountAmount).toFixed(2));
 
@@ -217,11 +268,10 @@ export async function POST(request: Request) {
 			total,
 		};
 
-		const timestamp = Date.now();
-		const orderNumber = `${timestamp}`.slice(-6);
+		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
 		const createdAt = new Date().toISOString();
 		const orderRecord = {
-			id: `order_${timestamp}`,
+			id: `order_${orderNumber}`,
 			orderNumber,
 			createdAt,
 			paymentStatus: 'paid' as const,
@@ -295,7 +345,8 @@ export async function POST(request: Request) {
 			productsPurchased: payload.cartItems.map((item) => item.name),
 		});
 
-		return NextResponse.json({ ok: true, orderId: orderRecord.id });
+		if (idemKey) setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
+		return NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber });
 	} catch (error) {
 		console.error('Failed to store order', error);
 		return NextResponse.json({ ok: false, error: 'Failed to store order' }, { status: 500 });
