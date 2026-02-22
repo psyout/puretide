@@ -7,56 +7,8 @@ import type { Product } from '@/types/product';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
 import Header from '@/components/Header';
-import {
-	Activity,
-	Droplets,
-	Flower2,
-	Gauge,
-	HeartPulse,
-	Leaf,
-	Moon,
-	Scale,
-	Sparkles,
-	Timer,
-	Zap,
-	Bone,
-	Clock,
-	Brain,
-	Shield,
-	Heart,
-	Flame,
-	TrendingUp,
-	Sun,
-	Pill,
-	CreditCard,
-	Truck,
-	FlaskConical,
-} from 'lucide-react';
-
-const iconMap = {
-	Activity: Activity,
-	Hydration: Droplets,
-	Wellness: Flower2,
-	Performance: Gauge,
-	Vitality: HeartPulse,
-	Natural: Leaf,
-	Sleep: Moon,
-	Balance: Scale,
-	Energy: Sparkles,
-	FastActing: Timer,
-	Recovery: Zap,
-	'Muscle Health': Bone,
-	AntiAging: Clock,
-	Cognitive: Brain,
-	Immune: Shield,
-	'Sexual Health': Heart,
-	Metabolic: Flame,
-	Growth: TrendingUp,
-	Longevity: Clock,
-	Skin: Sun,
-	Digestive: Pill,
-	Intimacy: Heart,
-};
+import { CreditCard, FlaskConical, Truck } from 'lucide-react';
+import { iconMap } from '@/lib/productIcons';
 
 type ProductPageProps = {
 	params: { id: string };

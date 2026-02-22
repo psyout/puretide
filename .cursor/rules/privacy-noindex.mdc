@@ -1,0 +1,12 @@
+---
+description: Keep the site under the radar — never remove or weaken search-engine blocking
+alwaysApply: true
+---
+
+# Privacy: Block Search Engine Indexing
+
+This project must **stay under the radar**. When changing `next.config.js` or any HTTP headers:
+
+- **Keep** the `X-Robots-Tag` header with value `noindex, nofollow, noarchive, nosnippet, noimageindex` on all routes (`/:path*`).
+- **Do not** remove, relax, or make it conditional (e.g. only in dev). It must remain in production.
+- If adding or reordering headers, leave the robots block in place and document it with a comment: "Keep: block all search engines from indexing".

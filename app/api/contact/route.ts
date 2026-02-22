@@ -37,6 +37,11 @@ const CONTACT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const MAX_NAME_LENGTH = 100;
 const MAX_MESSAGE_LENGTH = 2000;
 
+/** Sanitize for email subject/header use: strip newlines and control chars to avoid header injection */
+function sanitizeForEmailSubject(s: string): string {
+	return s.replace(/[\r\n\x00-\x1f\x7f]/g, '').slice(0, MAX_NAME_LENGTH);
+}
+
 export async function POST(request: Request) {
 	try {
 		const { allowed } = checkRateLimit(request, 'contact', CONTACT_RATE_LIMIT, CONTACT_WINDOW_MS);
@@ -84,7 +89,8 @@ export async function POST(request: Request) {
 			},
 		});
 
-		const subject = `New contact message from ${name}`;
+		const safeName = sanitizeForEmailSubject(name);
+		const subject = `New contact message from ${safeName}`;
 		const text = [
 			'New contact form submission',
 			'',
@@ -100,7 +106,7 @@ export async function POST(request: Request) {
 			to: ['info@puretide.ca'],
 			subject,
 			text,
-			replyTo: `${name} <${email}>`,
+			replyTo: `${safeName} <${email}>`,
 			bcc: smtpConfig.bcc,
 		});
 
