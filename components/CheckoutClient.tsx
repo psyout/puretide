@@ -224,7 +224,7 @@ export default function CheckoutClient() {
 					<div className='order-2 lg:order-1 lg:col-span-2'>
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
-							{checkoutError && (
+							{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
 								<div
 									role='alert'
 									aria-live='assertive'
@@ -233,9 +233,9 @@ export default function CheckoutClient() {
 									<button
 										type='button'
 										onClick={() => setCheckoutError(null)}
-										className='text-red-600 hover:text-red-800 font-medium text-sm shrink-0'
+										className='text-red-600 hover:text-red-800 font-bold text-md shrink-0 p-1'
 										aria-label='Dismiss'>
-										Dismiss
+										×
 									</button>
 								</div>
 							)}
@@ -261,22 +261,34 @@ export default function CheckoutClient() {
 									<input
 										type='text'
 										value={formData.firstName}
-										onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+										onChange={(e) => {
+											setFormData({ ...formData, firstName: e.target.value });
+											if (checkoutError?.includes('First name')) setCheckoutError(null);
+										}}
 										autoComplete='given-name'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
+									{checkoutError && checkoutError.includes('First name') && (
+										<p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>
+									)}
 								</div>
 								<div>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
 									<input
 										type='text'
 										value={formData.lastName}
-										onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+										onChange={(e) => {
+											setFormData({ ...formData, lastName: e.target.value });
+											if (checkoutError?.includes('Last name')) setCheckoutError(null);
+										}}
 										autoComplete='family-name'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
+									{checkoutError && checkoutError.includes('Last name') && (
+										<p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>
+									)}
 								</div>
 								<div>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>

@@ -106,7 +106,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 				</div>
 				{/* Content – title, description, icons, price */}
 				<div className='px-4 pb-3 md:px-6 md:pb-4'>
-					<h3 className='text-base md:text-lg font-bold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2'>{product.name}</h3>
+					<h3 className='text-xl md:text-xl font-bold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2'>{product.name}</h3>
 					{product.subtitle && <p className='text-xs text-deep-tidal-teal-600 mt-0.5 line-clamp-1'>({product.subtitle})</p>}
 					{product.description && <p className='text-[14px] text-deep-tidal-teal-600 mt-2 line-clamp-2 leading-relaxed'>{product.description}</p>}
 					{product.icons && product.icons.length > 0 && (
@@ -126,7 +126,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 						</div>
 					)}
 					<div className='mt-3'>
-						<span className='text-lg md:text-xl font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>
+						<span className='text-3xl md:text-2xl font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>
 					</div>
 				</div>
 			</Link>
@@ -135,7 +135,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 			<div
 				className={`absolute inset-0 md:hidden flex items-center justify-center gap-3 bg-white/40 transition-opacity duration-300 ${showActions ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'}`}
 				onClick={() => setShowActions(false)}>
-				<div onClick={(e) => e.stopPropagation()} className='flex items-center gap-2'>
+				<div
+					onClick={(e) => e.stopPropagation()}
+					className='flex items-center gap-2'>
 					{actionButtons}
 				</div>
 			</div>

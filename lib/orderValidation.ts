@@ -36,8 +36,10 @@ export function validateCustomer(customer: CustomerInput): string | null {
 	const zipCode = (customer.zipCode ?? '').trim();
 
 	if (!first) return 'First name is required.';
+	if (first.length < 3) return 'First name must be at least 3 characters for card payments. If your name is shorter, please use your full first name.';
 	if (first.length > MAX_LENGTH.firstName) return 'First name is too long.';
 	if (!last) return 'Last name is required.';
+	if (last.length < 3) return 'Last name must be at least 3 characters for card payments. If your name is shorter, please use your full last name.';
 	if (last.length > MAX_LENGTH.lastName) return 'Last name is too long.';
 	if (!email) return 'Email is required.';
 	if (!EMAIL_REGEX.test(email)) return 'Please enter a valid email address.';
@@ -85,15 +87,10 @@ export function validateShippingAddress(addr: ShippingAddressInput | null | unde
 
 export type CartItemForStock = { id: number; name?: string; quantity: number };
 
-export async function validateStockAvailability(
-	cartItems: CartItemForStock[],
-	getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string }>>
-): Promise<string | null> {
+export async function validateStockAvailability(cartItems: CartItemForStock[], getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string }>>): Promise<string | null> {
 	const products = await getProducts();
 	for (const item of cartItems) {
-		const product = products.find(
-			(p) => String(item.id) === p.id || String(item.id) === p.slug
-		);
+		const product = products.find((p) => String(item.id) === p.id || String(item.id) === p.slug);
 		if (!product) {
 			return `Product "${item.name ?? item.id}" is not available.`;
 		}
