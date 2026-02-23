@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
+import { requireDashboardAuth } from '@/lib/dashboardAuth';
 import { readSheetClients } from '@/lib/stockSheet';
 
-function requireClientsApiKey(request: Request): boolean {
-	const key = process.env.CLIENTS_API_KEY;
-	if (!key) return true;
-	const provided = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
-	return provided === key;
-}
-
 export async function GET(request: Request) {
-	if (!requireClientsApiKey(request)) {
-		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
-	}
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
 	try {
 		const clients = await readSheetClients();
 		return NextResponse.json({ ok: true, clients });

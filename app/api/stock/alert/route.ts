@@ -105,8 +105,9 @@ const sendLowStockAlert = async (items: Product[]) => {
 
 const buildSignature = (items: Product[]) => {
 	const normalized = [...items]
-		.sort((a, b) => a.id.localeCompare(b.id))
-		.map((item) => `${item.id}:${item.stock}`)
+		.filter((item) => item != null && String(item.id ?? '').trim() !== '')
+		.sort((a, b) => String(a.id ?? '').localeCompare(String(b.id ?? '')))
+		.map((item) => `${String(item.id ?? '')}:${Number(item.stock ?? 0)}`)
 		.join('|');
 	return crypto.createHash('sha256').update(normalized).digest('hex');
 };
@@ -125,7 +126,19 @@ const writeAlertState = async (signature: string, sentAt: string) => {
 	await fs.writeFile(ALERT_STATE_PATH, JSON.stringify({ signature, sentAt }), 'utf8');
 };
 
-export async function POST() {
+function requireCronSecret(request: Request): boolean {
+	const secret = process.env.CRON_SECRET;
+	if (!secret) return true;
+	const provided =
+		request.headers.get('x-cron-secret') ??
+		request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+	return provided === secret;
+}
+
+export async function POST(request: Request) {
+	if (!requireCronSecret(request)) {
+		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
+	}
 	try {
 		const items = await readSheetProducts();
 		const lowStock = items.filter((item) => item.stock <= LOW_STOCK_THRESHOLD);

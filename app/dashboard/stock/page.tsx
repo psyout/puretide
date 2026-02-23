@@ -45,22 +45,34 @@ export default function StockDashboardPage() {
 
 	const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
 	const [ordersLoading, setOrdersLoading] = useState(false);
+	const [ordersError, setOrdersError] = useState<string | null>(null);
 
 	const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
 	const [promoCodesLoading, setPromoCodesLoading] = useState(false);
 	const [promoCodesDirty, setPromoCodesDirty] = useState(false);
+	const [promoCodesError, setPromoCodesError] = useState<string | null>(null);
 
 	const [clients, setClients] = useState<Array<Record<string, unknown>>>([]);
 	const [clientsLoading, setClientsLoading] = useState(false);
+	const [clientsError, setClientsError] = useState<string | null>(null);
+
+	const [productsError, setProductsError] = useState<string | null>(null);
+	const [saveError, setSaveError] = useState<string | null>(null);
+	const [savePromosError, setSavePromosError] = useState<string | null>(null);
 
 	useEffect(() => {
 		const load = async () => {
 			try {
+				setProductsError(null);
 				const response = await fetch('/api/stock');
-				const data = (await response.json()) as { ok: boolean; items?: Product[] };
-				if (data.ok && data.items) {
+				const data = (await response.json()) as { ok?: boolean; items?: Product[]; error?: string };
+				if (response.ok && data.ok && data.items) {
 					setRows(data.items);
+				} else {
+					setProductsError(data.error ?? 'Failed to load products.');
 				}
+			} catch (e) {
+				setProductsError(e instanceof Error ? e.message : 'Failed to load products.');
 			} finally {
 				setIsLoading(false);
 			}
@@ -70,35 +82,80 @@ export default function StockDashboardPage() {
 
 	useEffect(() => {
 		if (activeTab !== 'orders') return;
+		let cancelled = false;
 		setOrdersLoading(true);
-		fetch('/api/orders')
-			.then((r) => r.json())
-			.then((d) => {
-				if (d.ok && d.orders) setOrders(d.orders);
-			})
-			.finally(() => setOrdersLoading(false));
+		setOrdersError(null);
+		(async () => {
+			try {
+				const response = await fetch('/api/dashboard/orders', { credentials: 'include' });
+				const data = (await response.json()) as { ok?: boolean; orders?: Array<Record<string, unknown>>; error?: string };
+				if (cancelled) return;
+				if (response.ok && data.ok && data.orders) {
+					setOrders(data.orders);
+				} else {
+					setOrdersError(data.error ?? (response.status === 401 ? 'Unauthorized. Sign in at /dashboard/login.' : 'Failed to load orders.'));
+				}
+			} catch (e) {
+				if (!cancelled) setOrdersError(e instanceof Error ? e.message : 'Failed to load orders.');
+			} finally {
+				if (!cancelled) setOrdersLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
 	}, [activeTab]);
 
 	useEffect(() => {
 		if (activeTab !== 'promos') return;
+		let cancelled = false;
 		setPromoCodesLoading(true);
-		fetch('/api/promo')
-			.then((r) => r.json())
-			.then((d) => {
-				if (d.ok && d.codes) setPromoCodes(d.codes);
-			})
-			.finally(() => setPromoCodesLoading(false));
+		setPromoCodesError(null);
+		(async () => {
+			try {
+				const response = await fetch('/api/dashboard/promo', { credentials: 'include' });
+				const data = (await response.json()) as { ok?: boolean; codes?: PromoCode[]; error?: string };
+				if (cancelled) return;
+				if (response.ok && data.ok && data.codes) {
+					setPromoCodes(data.codes);
+				} else {
+					setPromoCodesError(data.error ?? 'Failed to load promo codes.');
+				}
+			} catch (e) {
+				if (!cancelled) setPromoCodesError(e instanceof Error ? e.message : 'Failed to load promo codes.');
+			} finally {
+				if (!cancelled) setPromoCodesLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
 	}, [activeTab]);
 
 	useEffect(() => {
 		if (activeTab !== 'clients') return;
+		let cancelled = false;
 		setClientsLoading(true);
-		fetch('/api/clients')
-			.then((r) => r.json())
-			.then((d) => {
-				if (d.ok && d.clients) setClients(d.clients);
-			})
-			.finally(() => setClientsLoading(false));
+		setClientsError(null);
+		(async () => {
+			try {
+				const response = await fetch('/api/dashboard/clients', { credentials: 'include' });
+				const data = (await response.json()) as { ok?: boolean; clients?: Array<Record<string, unknown>>; error?: string };
+				if (cancelled) return;
+				if (response.ok && data.ok && data.clients) {
+					setClients(data.clients);
+				} else {
+					setClientsError(data.error ?? 'Failed to load clients.');
+				}
+			} catch (e) {
+				if (!cancelled) setClientsError(e instanceof Error ? e.message : 'Failed to load clients.');
+			} finally {
+				if (!cancelled) setClientsLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
 	}, [activeTab]);
 
 	const updateRow = (id: string, next: Partial<Product>) => {
@@ -174,12 +231,19 @@ export default function StockDashboardPage() {
 	};
 
 	const handleSave = async () => {
-		await fetch('/api/stock', {
+		setSaveError(null);
+		const response = await fetch('/api/dashboard/stock', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ items: rows }),
+			credentials: 'include',
 		});
-		setIsDirty(false);
+		const data = (await response.json()) as { ok?: boolean; error?: string };
+		if (response.ok && data.ok) {
+			setIsDirty(false);
+		} else {
+			setSaveError(data.error ?? (response.status === 401 ? 'Unauthorized. Sign in at /dashboard/login.' : 'Failed to save.'));
+		}
 	};
 
 	const handleReset = () => {
@@ -243,12 +307,19 @@ export default function StockDashboardPage() {
 	};
 
 	const handleSavePromos = async () => {
-		await fetch('/api/promo', {
+		setSavePromosError(null);
+		const response = await fetch('/api/dashboard/promo', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ codes: promoCodes.filter((p) => p.code.trim()) }),
+			credentials: 'include',
 		});
-		setPromoCodesDirty(false);
+		const data = (await response.json()) as { ok?: boolean; error?: string };
+		if (response.ok && data.ok) {
+			setPromoCodesDirty(false);
+		} else {
+			setSavePromosError(data.error ?? (response.status === 401 ? 'Unauthorized. Use dashboard login.' : 'Failed to save promo codes.'));
+		}
 	};
 
 	const filteredRows = useMemo(() => {
@@ -275,6 +346,16 @@ export default function StockDashboardPage() {
 							</div>
 						</div>
 						<nav className='space-y-2 text-sm text-[#4a4a4a]'>
+							<a
+								href='/dashboard/login'
+								onClick={async (e) => {
+									e.preventDefault();
+									await fetch('/api/dashboard/signout', { method: 'POST', credentials: 'include' });
+									window.location.href = '/dashboard/login';
+								}}
+								className='w-full text-left px-4 py-3 rounded-xl transition-colors bg-white border border-black/5 hover:bg-[#f4f4f7] block text-rose-600 hover:text-rose-700'>
+								Sign out
+							</a>
 							<button
 								onClick={() => setActiveTab('products')}
 								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
@@ -333,6 +414,11 @@ export default function StockDashboardPage() {
 										</button>
 									</div>
 								</div>
+								{(productsError || saveError) && (
+									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800'>
+										{productsError ?? saveError}
+									</div>
+								)}
 								<div className='flex flex-wrap items-center justify-between gap-4'>
 									<div className='relative w-full max-w-sm'>
 										<input
@@ -351,10 +437,13 @@ export default function StockDashboardPage() {
 						{activeTab === 'orders' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
 								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Recent Orders</h2>
+								{ordersError && (
+									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{ordersError}</div>
+								)}
 								{ordersLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading orders...</div>
 								) : orders.length === 0 ? (
-									<div className='text-[#6a6a6a] py-8'>No orders yet.</div>
+									<div className='text-[#6a6a6a] py-8'>{ordersError ? 'Could not load orders.' : 'No orders yet.'}</div>
 								) : (
 									<div className='divide-y divide-black/5 overflow-x-auto'>
 										<table className='w-full min-w-[640px]'>
@@ -413,6 +502,11 @@ export default function StockDashboardPage() {
 										</button>
 									</div>
 								</div>
+								{(promoCodesError || savePromosError) && (
+									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>
+										{promoCodesError ?? savePromosError}
+									</div>
+								)}
 								{promoCodesLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading promo codes...</div>
 								) : promoCodes.length === 0 ? (
@@ -462,6 +556,9 @@ export default function StockDashboardPage() {
 						{activeTab === 'clients' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
 								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Clients</h2>
+								{clientsError && (
+									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{clientsError}</div>
+								)}
 								{clientsLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading clients...</div>
 								) : clients.length === 0 ? (

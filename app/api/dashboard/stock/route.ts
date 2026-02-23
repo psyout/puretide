@@ -1,34 +1,15 @@
 import { NextResponse } from 'next/server';
-import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
+import { requireDashboardAuth } from '@/lib/dashboardAuth';
+import { writeSheetProducts } from '@/lib/stockSheet';
 import { validateStockItems } from '@/lib/stockValidation';
 import { sendLowStockAlert } from '@/lib/email';
-import type { Product } from '@/types/product';
 
 const LOW_STOCK_THRESHOLD = 5;
 
-export async function GET() {
-	try {
-		const items = await readSheetProducts();
-		return NextResponse.json({ ok: true, items });
-	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to read stock';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
-	}
-}
-
-function requireStockApiKey(request: Request): boolean {
-	const key = process.env.STOCK_API_KEY;
-	if (!key) return false;
-	const provided = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
-	return provided === key;
-}
-
 export async function POST(request: Request) {
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
 	try {
-		if (!requireStockApiKey(request)) {
-			return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
-		}
-
 		const payload = (await request.json()) as { items?: unknown };
 		const itemsPayload = payload?.items ?? [];
 		const validation = validateStockItems(itemsPayload);
@@ -36,13 +17,9 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: validation.error }, { status: 400 });
 		}
 		const items = validation.items;
-
 		await writeSheetProducts(items);
-
 		const lowStock = items.filter((item) => Number(item.stock) <= LOW_STOCK_THRESHOLD);
-
 		await sendLowStockAlert(lowStock);
-
 		return NextResponse.json({ ok: true });
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Failed to update stock';

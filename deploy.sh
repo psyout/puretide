@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Set these in the environment or .env (e.g. export VPS_HOST=your-server.com). Do not commit production values.
 VPS_USER="${VPS_USER:-root}"
-VPS_HOST="${VPS_HOST:-82.221.139.21}"
+VPS_HOST="${VPS_HOST:-}"
 VPS_PATH="${VPS_PATH:-/var/www/puretide}"
 PM2_APP="${PM2_APP:-puretide}"
+
+if [[ -z "${VPS_HOST}" ]]; then
+  echo "Error: VPS_HOST is not set. Set it in the environment (e.g. export VPS_HOST=your-server.com)."
+  exit 1
+fi
 
 SSH_TARGET="${VPS_USER}@${VPS_HOST}"
 

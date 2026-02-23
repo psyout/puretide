@@ -1,18 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireDashboardAuth } from '@/lib/dashboardAuth';
 import { readSheetPromoCodes, writeSheetPromoCodes } from '@/lib/stockSheet';
 import type { PromoCode } from '@/types/product';
 
-function requirePromoApiKey(request: Request): boolean {
-	const key = process.env.PROMO_API_KEY;
-	if (!key) return true;
-	const provided = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
-	return provided === key;
-}
-
 export async function GET(request: Request) {
-	if (!requirePromoApiKey(request)) {
-		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
-	}
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
 	try {
 		const codes = await readSheetPromoCodes();
 		return NextResponse.json({ ok: true, codes });
@@ -23,11 +16,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-	if (!requirePromoApiKey(request)) {
-		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
-	}
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
 	try {
-		const payload = (await request.json()) as { codes: PromoCode[] };
+		const payload = (await request.json()) as { codes?: PromoCode[] };
 		const codes = payload?.codes ?? [];
 		await writeSheetPromoCodes(codes);
 		return NextResponse.json({ ok: true });
