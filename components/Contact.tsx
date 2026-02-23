@@ -18,7 +18,7 @@ export default function Contact() {
 					{/* Contact Information */}
 					<div className='flex flex-col md:flex-row lg:flex-col gap-6'>
 						<div className='flex-1 bg-muted-sage/20 backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
-							<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Contact Information</h3>
+							<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-2'>Contact Information</h3>
 							<div className='space-y-6'>
 								<div className='flex items-start gap-4'>
 									<div className='mt-1'>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,9 +17,19 @@ export default function ProductCard({ product }: ProductCardProps) {
 	const { addToCart } = useCart();
 	const router = useRouter();
 	const [isNavigating, setIsNavigating] = useState(false);
+	const [showActions, setShowActions] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
 	const stock = Number(product.stock) || 0;
 	const isSoldOut = stock <= 0 || product.status === 'stock-out';
 	const isLowStock = !isSoldOut && stock < 10;
+
+	useEffect(() => {
+		const m = window.matchMedia('(max-width: 767px)');
+		setIsMobile(m.matches);
+		const fn = () => setIsMobile(m.matches);
+		m.addEventListener('change', fn);
+		return () => m.removeEventListener('change', fn);
+	}, []);
 
 	const handleViewClick = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -67,7 +77,13 @@ export default function ProductCard({ product }: ProductCardProps) {
 
 			<Link
 				href={`/product/${product.slug}`}
-				className='flex flex-1 min-h-0 flex-col'>
+				className='flex flex-1 min-h-0 flex-col'
+				onClick={(e) => {
+					if (isMobile && !showActions) {
+						e.preventDefault();
+						setShowActions(true);
+					}
+				}}>
 				{/* Image – framed area with even padding */}
 				<div className='m-4 md:m-5 rounded-lg bg-eucalyptus-50/60 flex justify-center items-center min-h-[10rem] md:min-h-[12rem]'>
 					{product.image.startsWith('/') || product.image.startsWith('http') ? (
@@ -117,10 +133,16 @@ export default function ProductCard({ product }: ProductCardProps) {
 				</div>
 			</Link>
 
-			{/* Mobile: always-visible actions */}
-			<div className='flex items-center gap-2 p-4 pt-0 md:hidden'>{actionButtons}</div>
+			{/* Mobile: buttons only on tap (same as desktop hover) */}
+			<div
+				className={`absolute inset-0 md:hidden flex items-center justify-center gap-3 bg-white/40 transition-opacity duration-300 ${showActions ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'}`}
+				onClick={() => setShowActions(false)}>
+				<div onClick={(e) => e.stopPropagation()} className='flex items-center gap-2'>
+					{actionButtons}
+				</div>
+			</div>
 
-			{/* Desktop: hover overlay (full card) */}
+			{/* Desktop: buttons only on hover (overlay) */}
 			<div className='absolute inset-0 bg-white/40 opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 hidden md:block' />
 			<div className='absolute inset-0 hidden md:flex items-center justify-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 [&>*]:pointer-events-auto'>
 				{actionButtons}
