@@ -25,8 +25,8 @@ echo "Cleaning old build artifacts and killing ghost processes on VPS..."
 ssh "${SSH_TARGET}" "fuser -k 3000/tcp || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone .next/static"
 
 echo "Syncing build artifacts to ${SSH_TARGET}:${VPS_PATH}..."
-# Copy symlinks as symlinks; server's npm install populates node_modules so standalone symlinks are not followed (avoids rsync "No such file or directory" when -L dereferences broken paths)
-rsync -avz .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/"
+# Do NOT sync standalone's node_modules (symlinks cause rsync "No such file or directory"). Server populates node_modules via npm install below.
+rsync -avz --exclude='node_modules' .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/"
 rsync -avz .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
 rsync -avz public/ "${SSH_TARGET}:${VPS_PATH}/public/"
 rsync -avz package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
