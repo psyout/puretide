@@ -10,6 +10,9 @@
  *   add 127.0.0.1,::1 to DIGIPAY_POSTBACK_ALLOWED_IP so local postback is accepted
  *
  * Usage: node scripts/simulate-transactions.mjs [BASE_URL]
+ *
+ * When BASE_URL is http://localhost:3000, orders are stored in local data/orders.sqlite.
+ * When BASE_URL is your production URL, orders are stored on the server's DB.
  */
 
 const BASE_URL = process.argv[2] || 'http://localhost:3000';
@@ -91,12 +94,27 @@ async function run() {
     process.exit(1);
   }
 
-  const etransferData = await etransferRes.json();
+  const etransferText = await etransferRes.text();
+  let etransferData;
+  try {
+    etransferData = JSON.parse(etransferText);
+  } catch {
+    console.error('E-transfer response was not JSON. Status:', etransferRes.status);
+    console.error('Body (first 200 chars):', etransferText.slice(0, 200));
+    process.exit(1);
+  }
   if (!etransferRes.ok) {
     console.error('E-transfer failed:', etransferRes.status, etransferData);
   } else {
     console.log('E-transfer response:', etransferData);
-    console.log('Check: customer email + admin notification, and product stock decreased by 1.');
+    const orderNum = etransferData.orderNumber ?? etransferData.id ?? '?';
+    console.log('');
+    console.log('E-transfer email flow:');
+    console.log('  1. Customer should receive order confirmation at:', customer.email);
+    console.log('  2. Admin should receive notification at orders@puretide.ca (or ORDER_NOTIFICATION_EMAIL)');
+    console.log('  Order number:', orderNum);
+    console.log('  If no emails arrived, check server logs for "[Orders] Order', orderNum, 'admin email not sent: ..."');
+    console.log('  Also check: product stock decreased by 1 in Google Sheet.');
   }
   console.log('');
 

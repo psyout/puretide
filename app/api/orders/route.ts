@@ -295,6 +295,13 @@ export async function POST(request: Request) {
 		const emailStatus = await sendOrderEmail(customerEmail, emailData.customer.subject, emailData.customer.text, emailData.customer.html, undefined, '', orderFrom);
 		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.admin.subject, emailData.admin.text, emailData.admin.html, customerReplyTo, '', orderFrom);
 
+		if (!emailStatus.sent) {
+			console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : emailStatus.error ?? 'unknown'}`);
+		}
+		if (!adminEmailStatus.sent) {
+			console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : adminEmailStatus.error ?? 'unknown'}`);
+		}
+
 		// Update order with email preview and status (order already saved above)
 		await upsertOrderInDb({
 			...orderRecord,

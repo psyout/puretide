@@ -177,6 +177,13 @@ export async function POST(request: Request) {
 			return xmlResponse('fail', 104, 'Unable to process purchase');
 		}
 
+		if (!emailStatus.sent) {
+			console.warn(`[DigiPay postback] Order ${session} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : emailStatus.error ?? 'unknown'}`);
+		}
+		if (!adminEmailStatus.sent) {
+			console.warn(`[DigiPay postback] Order ${session} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : adminEmailStatus.error ?? 'unknown'}`);
+		}
+
 		await upsertOrderInDb({
 			...order,
 			paymentStatus: 'paid',
