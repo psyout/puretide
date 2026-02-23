@@ -501,7 +501,7 @@ export default function CheckoutClient() {
 										</svg>
 										<h3 className='font-semibold text-deep-tidal-teal-800'>Privacy Notice</h3>
 									</div>
-									<p className='text-sm text-deep-tidal-teal-700'>
+									<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
 										All information is encrypted and stored securely. We do not share your data with third parties. Payments are processed anonymously. Your identity
 										remains protected.
 									</p>
@@ -759,6 +759,13 @@ export default function CheckoutClient() {
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>
+
+								{paymentMethod === 'creditcard' && (
+									<p className='mt-3 pt-3 border-t border-deep-tidal-teal/10 text-xs text-deep-tidal-teal-600 leading-relaxed text-pretty'>
+										The final amount charged may differ by approximately 2–3% due to foreign exchange (FX) conversion fees applied by your credit card issuer. These fees
+										are set by the issuer and are outside our control.
+									</p>
+								)}
 
 								{/* Notices */}
 								<div className='mt-6 pt-4 border-t border-deep-tidal-teal/10 space-y-3'>
