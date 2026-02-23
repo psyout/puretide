@@ -5,6 +5,8 @@ import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { hasProductImage } from '@/lib/productImage';
+import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Trash2 } from 'lucide-react';
 
 export default function CartClient() {
@@ -68,7 +70,7 @@ export default function CartClient() {
 									key={item.id}
 									className={`flex items-center gap-6 ${index < cartItems.length - 1 ? 'pb-6 mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
 									<div className='h-28 w-28 flex-shrink-0 flex items-center justify-center rounded-lg'>
-										{item.image.startsWith('/') || item.image.startsWith('http') ? (
+										{hasProductImage(item.image) ? (
 											<Image
 												src={item.image}
 												alt={item.name}
@@ -80,7 +82,7 @@ export default function CartClient() {
 												priority
 											/>
 										) : (
-											<span className='text-5xl'>{item.image}</span>
+											<ProductImagePlaceholder className='max-h-24 max-w-24' />
 										)}
 									</div>
 									<div className='flex-1'>

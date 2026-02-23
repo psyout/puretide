@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { hasProductImage } from '@/lib/productImage';
+import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { CreditCard, Truck, Plus, Minus, Trash2 } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS } from '@/lib/constants';
@@ -80,6 +82,18 @@ export default function CheckoutClient() {
 			router.push('/cart');
 		}
 	}, [cartItems.length, hasSubmitted, router]);
+
+	// When user navigates back from DigiPay (bfcache restore), reset processing state so they can edit and resubmit
+	useEffect(() => {
+		const onPageShow = (e: PageTransitionEvent) => {
+			if (e.persisted) {
+				setIsProcessing(false);
+				setHasSubmitted(false);
+			}
+		};
+		window.addEventListener('pageshow', onPageShow);
+		return () => window.removeEventListener('pageshow', onPageShow);
+	}, []);
 
 	const handleApplyPromo = async () => {
 		if (!promoCode.trim()) return;
@@ -566,14 +580,19 @@ export default function CheckoutClient() {
 										key={item.id}
 										className={`flex items-center gap-3 ${index < cartItems.length - 1 ? 'pb-4 mb-4 border-b border-deep-tidal-teal/10' : ''}`}>
 										{/* Product Image */}
-										<div className='w-14 h-14 flex-shrink-0  rounded-lg overflow-hidden '>
-											<Image
-												src={item.image}
-												alt={item.name}
-												width={56}
-												height={56}
-												className='w-full h-full object-contain'
-											/>
+										<div className='w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden flex items-center justify-center'>
+											{hasProductImage(item.image) ? (
+												<Image
+													src={item.image}
+													alt={item.name}
+													width={56}
+													height={56}
+													className='w-full h-full object-contain'
+													unoptimized={item.image.startsWith('http')}
+												/>
+											) : (
+												<ProductImagePlaceholder className='w-14 h-14' />
+											)}
 										</div>
 
 										{/* Product Details & Price */}

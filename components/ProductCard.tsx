@@ -7,6 +7,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { iconMap } from '@/lib/productIcons';
+import { hasProductImage } from '@/lib/productImage';
+import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Eye, ShoppingCart, Loader2 } from 'lucide-react';
 
 interface ProductCardProps {
@@ -86,7 +88,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 				}}>
 				{/* Image – framed area with even padding */}
 				<div className='m-4 md:m-5 rounded-lg bg-eucalyptus-50/60 flex justify-center items-center min-h-[10rem] md:min-h-[12rem]'>
-					{product.image.startsWith('/') || product.image.startsWith('http') ? (
+					{hasProductImage(product.image) ? (
 						<div className='relative w-36 h-36 md:w-52 md:h-52'>
 							<Image
 								src={product.image}
@@ -99,11 +101,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 							/>
 						</div>
 					) : (
-						<span
-							className='text-4xl md:text-5xl'
-							style={{ width: 'auto', height: 'auto' }}>
-							{product.image}
-						</span>
+						<ProductImagePlaceholder className='w-36 h-36 md:w-52 md:h-52' />
 					)}
 				</div>
 				{/* Content – title, description, icons, price */}

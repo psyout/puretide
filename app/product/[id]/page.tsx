@@ -4,6 +4,8 @@ import { readSheetProducts } from '@/lib/stockSheet';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/types/product';
+import { hasProductImage } from '@/lib/productImage';
+import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
 import Header from '@/components/Header';
@@ -15,7 +17,7 @@ type ProductPageProps = {
 };
 
 const ProductImage = ({ product, priority = false }: { product: Product; priority?: boolean }) => {
-	if (product.image.startsWith('/') || product.image.startsWith('http')) {
+	if (hasProductImage(product.image)) {
 		return (
 			<Image
 				src={product.image}
@@ -28,7 +30,9 @@ const ProductImage = ({ product, priority = false }: { product: Product; priorit
 			/>
 		);
 	}
-	return <div className='text-9xl'>{product.image}</div>;
+	return (
+		<ProductImagePlaceholder className='w-full h-auto max-h-[280px] lg:max-h-[500px] object-contain' />
+	);
 };
 
 export default async function ProductPage({ params }: ProductPageProps) {
