@@ -4,8 +4,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, CartItem } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 
+export type PaymentMethod = 'etransfer' | 'creditcard';
+
 interface CartContextType {
 	cartItems: CartItem[];
+	paymentMethod: PaymentMethod;
+	setPaymentMethod: (method: PaymentMethod) => void;
 	addToCart: (product: Product, quantity?: number) => void;
 	removeFromCart: (productId: string) => void;
 	updateQuantity: (productId: string, quantity: number, maxQuantity?: number) => void;
@@ -16,9 +20,19 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const PAYMENT_STORAGE_KEY = 'privacy-shop-payment-method';
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
+	const [paymentMethod, setPaymentMethodState] = useState<PaymentMethod>('etransfer');
 	const [isInitialized, setIsInitialized] = useState(false);
+
+	const setPaymentMethod = (method: PaymentMethod) => {
+		setPaymentMethodState(method);
+		if (typeof window !== 'undefined') {
+			localStorage.setItem(PAYMENT_STORAGE_KEY, method);
+		}
+	};
 
 	const getItemPrice = (item: CartItem) => {
 		return getDiscountedPrice(item.price, item.quantity);
@@ -26,7 +40,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 	const CART_MAX_QUANTITY = 99;
 
-	// Load cart from localStorage on mount (client-side only)
+	// Load cart and payment method from localStorage on mount (client-side only)
 	useEffect(() => {
 		if (typeof window !== 'undefined') {
 			const savedCart = localStorage.getItem('privacy-shop-cart');
@@ -40,6 +54,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 					console.error('Failed to parse cart from localStorage:', e);
 					localStorage.removeItem('privacy-shop-cart');
 				}
+			}
+			const savedPayment = localStorage.getItem(PAYMENT_STORAGE_KEY);
+			if (savedPayment === 'etransfer' || savedPayment === 'creditcard') {
+				setPaymentMethodState(savedPayment);
 			}
 			setIsInitialized(true);
 		}
@@ -91,6 +109,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		<CartContext.Provider
 			value={{
 				cartItems,
+				paymentMethod,
+				setPaymentMethod,
 				addToCart,
 				removeFromCart,
 				updateQuantity,

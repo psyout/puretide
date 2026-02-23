@@ -7,10 +7,10 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
-import { Trash2 } from 'lucide-react';
+import { Trash2, CreditCard } from 'lucide-react';
 
 export default function CartClient() {
-	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice } = useCart();
+	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
 	const [showClearConfirm, setShowClearConfirm] = useState(false);
 	const total = getTotal();
@@ -159,11 +159,57 @@ export default function CartClient() {
 									</div>
 								))}
 							</div>
+							{/* Payment Method */}
+							<div className='border-t border-deep-tidal-teal/10 pt-3 mb-3 space-y-2'>
+								<h3 className='text-sm font-semibold text-deep-tidal-teal-800 flex items-center gap-2'>
+									<CreditCard className='w-4 h-4' />
+									Payment Method
+								</h3>
+								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 cursor-pointer'>
+									<span className='flex items-center gap-2'>
+										<input
+											type='radio'
+											name='cart-payment'
+											checked={paymentMethod === 'etransfer'}
+											onChange={() => setPaymentMethod('etransfer')}
+											className='rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal'
+										/>
+										E-Transfer (Interac)
+									</span>
+									<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
+								</label>
+								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 cursor-pointer'>
+									<span className='flex items-center gap-2'>
+										<input
+											type='radio'
+											name='cart-payment'
+											checked={paymentMethod === 'creditcard'}
+											onChange={() => setPaymentMethod('creditcard')}
+											className='rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal'
+										/>
+										Credit Card
+									</span>
+									<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
+								</label>
+							</div>
+							{paymentMethod === 'creditcard' && (
+								<div className='flex justify-between text-sm text-deep-tidal-teal-600 mb-2'>
+									<span>Est. card fee (5%)</span>
+									<span>${(total * 0.05).toFixed(2)}</span>
+								</div>
+							)}
 							<div className='ui-border-t pt-4 mb-6'>
 								<div className='flex justify-between text-xl font-bold'>
-									<span className='text-deep-tidal-teal-800'>Total</span>
-									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
+									<span className='text-deep-tidal-teal-800'>{paymentMethod === 'creditcard' ? 'Est. total' : 'Total'}</span>
+									<span className='text-deep-tidal-teal'>
+										${(paymentMethod === 'creditcard' ? total * 1.05 : total).toFixed(2)}
+									</span>
 								</div>
+								{paymentMethod === 'creditcard' && (
+									<p className='text-xs text-deep-tidal-teal-600 mt-2'>
+										Shipping and final total confirmed at checkout.
+									</p>
+								)}
 							</div>
 							<button
 								onClick={() => router.push('/checkout')}

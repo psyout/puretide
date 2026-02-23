@@ -12,7 +12,7 @@ import TermsContent from './TermsContent';
 import { SHIPPING_COSTS } from '@/lib/constants';
 
 export default function CheckoutClient() {
-	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart } = useCart();
+	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
 	const [formData, setFormData] = useState({
 		firstName: '',
@@ -35,7 +35,6 @@ export default function CheckoutClient() {
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
 	const shippingMethod = 'express';
-	const [paymentMethod, setPaymentMethod] = useState<'etransfer' | 'creditcard'>('etransfer');
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
 	const [checkoutError, setCheckoutError] = useState<string | null>(null);
