@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { readSheetPromoCodes, readSheetProducts } from '@/lib/stockSheet';
 import { getDiscountedPrice } from '@/lib/pricing';
-import { SHIPPING_COSTS } from '@/lib/constants';
+import { getEffectiveShippingCost } from '@/lib/constants';
 import { buildDigipayPaymentUrl } from '@/lib/digipay';
 import { upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
 		}
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
-		const shippingCost = SHIPPING_COSTS.express;
+		const shippingCost = getEffectiveShippingCost();
 		let cartItems: typeof orderPayload.cartItems;
 		let discountAmount = 0;
 

@@ -9,7 +9,7 @@ import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { CreditCard, Truck, Plus, Minus, Trash2 } from 'lucide-react';
 import TermsContent from './TermsContent';
-import { SHIPPING_COSTS } from '@/lib/constants';
+import { SHIPPING_COSTS, getEffectiveShippingCost } from '@/lib/constants';
 
 export default function CheckoutClient() {
 	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod } = useCart();
@@ -58,7 +58,7 @@ export default function CheckoutClient() {
 	const subtotalWithVolume = getTotal();
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
 	const subtotal = appliedDiscount > 0 ? subtotalRaw : subtotalWithVolume;
-	const shippingCost = SHIPPING_COSTS.express;
+	const shippingCost = getEffectiveShippingCost();
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
@@ -268,9 +268,7 @@ export default function CheckoutClient() {
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
-									{checkoutError && checkoutError.includes('First name') && (
-										<p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>
-									)}
+									{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
 								</div>
 								<div>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
@@ -285,9 +283,7 @@ export default function CheckoutClient() {
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
 									/>
-									{checkoutError && checkoutError.includes('Last name') && (
-										<p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>
-									)}
+									{checkoutError && checkoutError.includes('Last name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
 								</div>
 								<div>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>
@@ -722,7 +718,7 @@ export default function CheckoutClient() {
 											/>
 											Express Shipping
 										</span>
-										<span className='text-md text-deep-tidal-teal-500'>${SHIPPING_COSTS.express.toFixed(2)}</span>
+										<span className='text-md text-deep-tidal-teal-500'>{shippingCost === 0 ? 'Free' : `$${SHIPPING_COSTS.express.toFixed(2)}`}</span>
 									</label>
 								</div>
 

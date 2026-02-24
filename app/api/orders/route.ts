@@ -5,7 +5,7 @@ import nodemailer from 'nodemailer';
 import { readSheetProducts, writeSheetProducts, readSheetPromoCodes, upsertSheetClient } from '@/lib/stockSheet';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { sendLowStockAlert } from '@/lib/email';
-import { LOW_STOCK_THRESHOLD, SHIPPING_COSTS, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
+import { LOW_STOCK_THRESHOLD, getEffectiveShippingCost, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 import { createOrderTask, createStockAlertTask } from '@/lib/wrike';
 import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
@@ -233,7 +233,7 @@ export async function POST(request: Request) {
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		let cartItems: typeof orderPayload.cartItems;
 		let discountAmount = 0;
-		const shippingCost = SHIPPING_COSTS.express;
+		const shippingCost = getEffectiveShippingCost();
 
 		if (orderPayload.promoCode) {
 			const promoCodes = await readSheetPromoCodes();

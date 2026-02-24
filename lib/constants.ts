@@ -3,6 +3,13 @@ export const SHIPPING_COSTS = {
 	express: 35.0,
 } as const;
 
+/** Set NEXT_PUBLIC_DISABLE_SHIPPING_FEE=true in .env to zero shipping for real card test; remove or set false for production. */
+export const DISABLE_SHIPPING_FEE_FOR_TEST = process.env.NEXT_PUBLIC_DISABLE_SHIPPING_FEE === 'true';
+
+export function getEffectiveShippingCost(): number {
+	return DISABLE_SHIPPING_FEE_FOR_TEST ? 0 : SHIPPING_COSTS.express;
+}
+
 // Stock alert threshold
 export const LOW_STOCK_THRESHOLD = 5;
 
