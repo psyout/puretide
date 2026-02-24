@@ -22,8 +22,8 @@ export default function ProductTabs({ description, details }: ProductInfoProps) 
 					<span className='text-sm font-bold text-deep-tidal-teal-700 tracking-wider'>Description</span>
 					<ChevronDown className={`w-4 h-4 text-deep-tidal-teal-600 transition-transform duration-200 ${descriptionOpen ? 'rotate-180' : ''}`} />
 				</button>
-				<div className={`overflow-hidden transition-all duration-200 ${descriptionOpen ? 'max-h-96' : 'max-h-0'} bg-mineral-white`}>
-					<p className='px-4 py-3 text-[15px] text-deep-tidal-teal-700 text-pretty tracking-normal'>{description}</p>
+				<div className={`overflow-hidden transition-all duration-200 min-h-0 ${descriptionOpen ? 'max-h-96' : 'max-h-0'} bg-mineral-white`}>
+					<p className='px-4 py-3 text-[15px] text-deep-tidal-teal-700 text-pretty tracking-normal break-words hyphens-auto'>{description}</p>
 				</div>
 			</div>
 
@@ -36,8 +36,8 @@ export default function ProductTabs({ description, details }: ProductInfoProps) 
 						<span className='text-sm font-bold text-deep-tidal-teal-700 tracking-wider '>Details</span>
 						<ChevronDown className={`w-4 h-4 text-deep-tidal-teal-600 transition-transform duration-200 ${detailsOpen ? 'rotate-180' : ''}`} />
 					</button>
-					<div className={`overflow-hidden transition-all duration-200 ${detailsOpen ? 'max-h-96' : 'max-h-0'} bg-mineral-white`}>
-						<p className='px-4 py-3 text-[15px] text-deep-tidal-teal-700 text-pretty'>{details}</p>
+					<div className={`overflow-hidden transition-all duration-200 min-h-0 ${detailsOpen ? 'max-h-96' : 'max-h-0'} bg-mineral-white`}>
+						<p className='px-4 py-3 text-[15px] text-deep-tidal-teal-700 text-pretty break-words hyphens-auto'>{details}</p>
 					</div>
 				</div>
 			)}

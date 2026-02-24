@@ -51,8 +51,8 @@ type Order = {
 const paymentDetails = {
 	recipientName: 'Pure Tide Payments',
 	recipientEmail: 'orders@puretide.ca',
-	securityQuestion: 'Order number no.',
-	securityAnswerPrefix: 'PT',
+	securityQuestion: 'Order number',
+	securityAnswerPrefix: '',
 	supportEmail: 'info@puretide.ca',
 };
 

@@ -64,7 +64,7 @@ export default function CartClient() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='lg:col-span-2'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-md'>
 							{cartItems.map((item, index) => (
 								<div
 									key={item.id}
@@ -145,7 +145,7 @@ export default function CartClient() {
 					</div>
 
 					<div className='lg:col-span-1'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md'>
 							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div className='space-y-2 mb-6'>
 								{cartItems.map((item) => (
@@ -201,15 +201,9 @@ export default function CartClient() {
 							<div className='ui-border-t pt-4 mb-6'>
 								<div className='flex justify-between text-xl font-bold'>
 									<span className='text-deep-tidal-teal-800'>{paymentMethod === 'creditcard' ? 'Est. total' : 'Total'}</span>
-									<span className='text-deep-tidal-teal'>
-										${(paymentMethod === 'creditcard' ? total * 1.05 : total).toFixed(2)}
-									</span>
+									<span className='text-deep-tidal-teal'>${(paymentMethod === 'creditcard' ? total * 1.05 : total).toFixed(2)}</span>
 								</div>
-								{paymentMethod === 'creditcard' && (
-									<p className='text-xs text-deep-tidal-teal-600 mt-2'>
-										Shipping and final total confirmed at checkout.
-									</p>
-								)}
+								{paymentMethod === 'creditcard' && <p className='text-xs text-deep-tidal-teal-600 mt-2'>Shipping and final total confirmed at checkout.</p>}
 							</div>
 							<button
 								onClick={() => router.push('/checkout')}
@@ -219,7 +213,10 @@ export default function CartClient() {
 							{showClearConfirm ? (
 								<div className='flex gap-2'>
 									<button
-										onClick={() => { clearCart(); setShowClearConfirm(false); }}
+										onClick={() => {
+											clearCart();
+											setShowClearConfirm(false);
+										}}
 										className='flex-1 border border-red-500 text-red-600 hover:bg-red-50 font-semibold py-2 px-4 rounded transition-colors'>
 										Yes, clear cart
 									</button>

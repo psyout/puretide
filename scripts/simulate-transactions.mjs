@@ -15,9 +15,14 @@
  * When BASE_URL is your production URL, orders are stored on the server's DB.
  */
 
+import { config as dotenvConfig } from 'dotenv';
+dotenvConfig(); // load .env so script uses same shipping/totals as server
+
 const BASE_URL = process.argv[2] || 'http://localhost:3000';
 
-const EXPRESS_SHIPPING = 35.0;
+// Must match server: lib/constants getEffectiveShippingCost() and SHIPPING_COSTS.express
+const DISABLE_SHIPPING_FEE = process.env.NEXT_PUBLIC_DISABLE_SHIPPING_FEE === 'true';
+const EXPRESS_SHIPPING = DISABLE_SHIPPING_FEE ? 0 : 35.0;
 const CARD_FEE_PERCENT = 0.05;
 
 const customer = {

@@ -221,7 +221,7 @@ export default function CheckoutClient() {
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-2 lg:order-1 lg:col-span-2'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-md'>
 							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
 								<div
@@ -516,7 +516,7 @@ export default function CheckoutClient() {
 								{paymentMethod === 'etransfer' && (
 									<div className=' pb-4 border-b border-deep-tidal-teal/10'>
 										<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
-										<p className='text-sm text-deep-tidal-teal-800'>
+										<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
 											After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to
 											complete the transfer.
 										</p>
@@ -560,7 +560,7 @@ export default function CheckoutClient() {
 					</div>
 
 					<div className='order-1 lg:order-2 lg:col-span-1'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-lg'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md'>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
 								<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Your order</h2>
 								<Link
@@ -775,7 +775,7 @@ export default function CheckoutClient() {
 								)}
 
 								{/* Notices */}
-								<div className='mt-6 pt-4 border-t border-deep-tidal-teal/10 space-y-3'>
+								<div className='mt-6 pt-2 border-t border-deep-tidal-teal/10 space-y-3'>
 									<div className='pt-3'>
 										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
 											<Truck className='w-4 h-4' />
