@@ -185,25 +185,13 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Recipient Email</div>
 									<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.recipientEmail}</div>
 								</div>
-								<div>
-									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Security Question</div>
-									<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.securityQuestion}</div>
-								</div>
-								<div>
-									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Security Answer</div>
-									<div className='text-deep-tidal-teal-800 font-semibold'>
-										{paymentDetails.securityAnswerPrefix}
-										{orderNumber}
-									</div>
-								</div>
+
 								<div>
 									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Memo / Message</div>
 									<div className='text-deep-tidal-teal-800 font-semibold'>{orderNumber}</div>
 								</div>
 							</div>
 							<div className='text-xs text-deep-tidal-teal-600 mt-4 pt-4 border-t border-deep-tidal-teal/10 space-y-2'>
-								<p>Important: Use the exact Security Question and Answer above. Any changes can delay payment acceptance or have your payment refused.</p>
-								<p>If your bank does not allow a memo, you can leave it empty.</p>
 								<p>We only accept e&ndash;Transfers sent to the email listed above. Do not send payments to any other email address.</p>
 								<p>If your payment is not accepted, please go to your banking app, cancel and re&ndash;send with the correct instructions above.</p>
 								<p>
