@@ -39,8 +39,6 @@ type OrderEmailInput = {
 const paymentDetails = {
 	recipientName: 'Pure Tide Payments',
 	recipientEmail: 'orders@puretide.ca',
-	securityQuestion: 'Order number ',
-	securityAnswerPrefix: '',
 	supportEmail: 'info@puretide.ca',
 };
 
@@ -72,7 +70,6 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const isCreditCard = input.paymentMethod === 'creditcard';
 	const orderDate = formatDate(input.createdAt);
 	const orderName = `${input.customer.firstName} ${input.customer.lastName}`.trim();
-	const securityAnswer = `${paymentDetails.securityAnswerPrefix}${input.orderNumber}`;
 	const shippingLabel = input.shippingMethod === 'express' ? 'Express Shipping' : 'Regular Shipping';
 	const paymentMethodLabel = isCreditCard ? 'Credit card' : 'Interac e-Transfer';
 	const billingLines = [
@@ -116,13 +113,6 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		'',
 		`Recipient Name: ${paymentDetails.recipientName}`,
 		`Recipient Email: ${paymentDetails.recipientEmail}`,
-		`Security Question: ${paymentDetails.securityQuestion}`,
-		`Security Answer: ${securityAnswer}`,
-		`Memo/Message: ${input.orderNumber}`,
-		'',
-		'Important: Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.',
-		'',
-		'If your bank does not allow a memo, you can leave it empty.',
 		'',
 		'We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.',
 		'',
@@ -173,12 +163,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <ul>
         <li><strong>Recipient Name:</strong> ${paymentDetails.recipientName}</li>
         <li><strong>Recipient Email:</strong> ${paymentDetails.recipientEmail}</li>
-        <li><strong>Security Question:</strong> ${paymentDetails.securityQuestion}</li>
-        <li><strong>Security Answer:</strong> ${securityAnswer}</li>
-        <li><strong>Memo/Message:</strong> ${input.orderNumber}</li>
       </ul>
-      <p><strong>Important:</strong> Use the exact Security Question and Answer above. Any changes can delay your payment acceptance or have your payment refused.</p>
-      <p>If your bank does not allow a memo, you can leave it empty.</p>
       <p>We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.</p>
       <p>If your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.</p>
       <p><strong>Email notice:</strong> If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.</p>
@@ -222,15 +207,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     </div>
   `;
 
-	const adminETransferBlock = [
-		'',
-		'Interac e-Transfer details',
-		`Recipient Name: ${paymentDetails.recipientName}`,
-		`Recipient Email: ${paymentDetails.recipientEmail}`,
-		`Security Question: ${paymentDetails.securityQuestion}`,
-		`Security Answer: ${securityAnswer}`,
-		`Memo/Message: ${input.orderNumber}`,
-	];
+	const adminETransferBlock = ['', 'Interac e-Transfer details', `Recipient Name: ${paymentDetails.recipientName}`, `Recipient Email: ${paymentDetails.recipientEmail}`];
 
 	const adminText = [
 		'New order received',
@@ -295,9 +272,6 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <ul>
         <li><strong>Recipient Name:</strong> ${paymentDetails.recipientName}</li>
         <li><strong>Recipient Email:</strong> ${paymentDetails.recipientEmail}</li>
-        <li><strong>Security Question:</strong> ${paymentDetails.securityQuestion}</li>
-        <li><strong>Security Answer:</strong> ${securityAnswer}</li>
-        <li><strong>Memo/Message:</strong> ${input.orderNumber}</li>
       </ul>
       `
 		}

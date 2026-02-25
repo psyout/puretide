@@ -517,8 +517,7 @@ export default function CheckoutClient() {
 									<div className=' pb-4 border-b border-deep-tidal-teal/10'>
 										<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
 										<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
-											After placing your order, please send an Interac e-Transfer with the instructions provided. You will receive the question and password to
-											complete the transfer.
+											After placing your order, please send an Interac e-Transfer with the instructions provided.
 										</p>
 									</div>
 								)}
