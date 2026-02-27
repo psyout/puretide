@@ -26,13 +26,11 @@ const ProductImage = ({ product, priority = false }: { product: Product; priorit
 				height={400}
 				unoptimized={product.image.startsWith('http')}
 				priority={priority}
-				className='w-full h-auto max-h-[280px] lg:max-h-[500px] object-contain drop-shadow-xl transition-all duration-300'
+				className='w-full h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl transition-all duration-300'
 			/>
 		);
 	}
-	return (
-		<ProductImagePlaceholder className='w-full h-auto max-h-[280px] lg:max-h-[500px] object-contain' />
-	);
+	return <ProductImagePlaceholder className='w-full h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain' />;
 };
 
 export default async function ProductPage({ params }: ProductPageProps) {
@@ -60,8 +58,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					← Back to Products
 				</Link>
 
-				<div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
-					<div className='lg:col-start-2'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
+					<div className='md:col-start-2'>
 						{/* Sold out badge */}
 						{(product.stock <= 0 || product.status === 'stock-out') && (
 							<div className='mb-4'>
@@ -80,7 +78,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 						{/* Icons */}
 						{product.icons && product.icons.length > 0 && (
-							<div className='flex flex-wrap gap-2 mb-6 lg:hidden'>
+							<div className='flex flex-wrap gap-2 mb-6 md:hidden'>
 								{product.icons.map((iconName: string) => {
 									const Icon = iconMap[iconName as keyof typeof iconMap];
 									if (!Icon) {
@@ -98,12 +96,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</div>
 						)}
 						{/* Mobile Image Container */}
-						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 flex items-center justify-center shadow-sm mb-4 lg:hidden'>
+						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 flex items-center justify-center shadow-sm mb-4 md:hidden'>
 							<ProductImage product={product} />
 						</div>
 						{/* Icons - Pill style (desktop only) */}
 						{product.icons && product.icons.length > 0 && (
-							<div className='hidden lg:flex flex-wrap gap-2 mt-0 mb-6'>
+							<div className='hidden md:flex flex-wrap gap-2 mt-0 mb-6'>
 								{product.icons.map((iconName: string) => {
 									const Icon = iconMap[iconName as keyof typeof iconMap];
 									if (!Icon) {
@@ -221,7 +219,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Desktop Image Container */}
-					<div className='hidden lg:flex shadow-md bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center lg:col-start-1 lg:row-start-1 h-fit'>
+					<div className='hidden md:flex shadow-md bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center md:col-start-1 md:row-start-1 h-fit'>
 						<ProductImage
 							product={product}
 							priority
