@@ -747,7 +747,7 @@ export default function CheckoutClient() {
 												name='payment'
 												checked={paymentMethod === 'creditcard'}
 												onChange={() => {
-													setPaymentMethod('creditcard');
+													setPaymentMethod('etransfer');
 													setShowCreditCardAlert(true);
 												}}
 											/>
@@ -838,7 +838,10 @@ export default function CheckoutClient() {
 						<div className='mt-5 flex justify-end'>
 							<button
 								type='button'
-								onClick={() => setShowCreditCardAlert(false)}
+								onClick={() => {
+									setPaymentMethod('etransfer');
+									setShowCreditCardAlert(false);
+								}}
 								className='px-4 py-2 rounded bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 transition-colors font-semibold'>
 								Got it
 							</button>
