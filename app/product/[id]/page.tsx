@@ -67,11 +67,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</div>
 						)}
 						{/* Product name and mg */}
-						<div className='flex items-start gap-2'>
-							<h1 className='text-4xl font-bold text-deep-tidal-teal-700'>{product.name}</h1>
-							{product.mg && !product.name.toLowerCase().includes('stack') && (
-								<div className='inline-flex items-start justify-center text-deep-tidal-teal-600 font-bold text-base mt-1'>{product.mg}mg</div>
-							)}
+						<div>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-700 leading-tight'>
+								{product.name}
+								{product.mg && !product.name.toLowerCase().includes('stack') && (
+									<span className='ml-2 inline-block align-top text-base text-deep-tidal-teal-600 font-bold whitespace-nowrap'>{product.mg}mg</span>
+								)}
+							</h1>
 						</div>
 						{product.subtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{product.subtitle}</p>}
 						{!product.subtitle && <div className='mb-2' />}
@@ -120,7 +122,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						)}
 						{/* Price */}
 						<div className='mb-4'>
-							<div className='text-4xl font-bold text-deep-tidal-teal-700'>
+							<div className='text-4xl font-bold text-deep-tidal-teal-700 mt-8'>
 								<span className='text-deep-tidal-teal-700 text-[2rem] font-light'>C</span>${product.price.toFixed(2)}
 							</div>
 							<div className='flex items-center gap-3 text-sm text-deep-tidal-teal-600'>

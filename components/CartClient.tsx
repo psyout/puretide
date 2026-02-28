@@ -13,6 +13,7 @@ export default function CartClient() {
 	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
 	const [showClearConfirm, setShowClearConfirm] = useState(false);
+	const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 	const total = getTotal();
 
 	if (cartItems.length === 0) {
@@ -69,7 +70,10 @@ export default function CartClient() {
 								<div
 									key={item.id}
 									className={`flex items-center gap-6 ${index < cartItems.length - 1 ? 'pb-6 mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
-									<div className='h-28 w-28 flex-shrink-0 flex items-center justify-center rounded-lg'>
+									<Link
+										href={`/product/${item.slug || item.id}`}
+										className='h-28 w-28 flex-shrink-0 flex items-center justify-center rounded-lg hover:opacity-90 transition-opacity'
+										aria-label={`View ${item.name} details`}>
 										{hasProductImage(item.image) ? (
 											<Image
 												src={item.image}
@@ -84,7 +88,7 @@ export default function CartClient() {
 										) : (
 											<ProductImagePlaceholder className='max-h-24 max-w-24' />
 										)}
-									</div>
+									</Link>
 									<div className='flex-1'>
 										<div className='flex items-baseline justify-between gap-3 flex-col lg:items-start lg:gap-1'>
 											<h3 className='text-xl font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
@@ -95,7 +99,9 @@ export default function CartClient() {
 												)}
 											</div>
 										</div>
-										<p className='text-[13px] text-deep-tidal-teal-700 mt-2'>{item.description}</p>
+										<p className='mt-2 text-[clamp(0.84rem,2.9vw,0.9rem)] leading-[clamp(1.28rem,4.2vw,1.45rem)] text-deep-tidal-teal-700 text-wrap break-words hyphens-auto'>
+											{item.description}
+										</p>
 										<div className='mt-3 flex w-full items-center justify-flex-start flex-wrap gap-4 lg:hidden'>
 											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
 												<button
@@ -184,7 +190,10 @@ export default function CartClient() {
 											type='radio'
 											name='cart-payment'
 											checked={paymentMethod === 'creditcard'}
-											onChange={() => setPaymentMethod('creditcard')}
+											onChange={() => {
+												setPaymentMethod('creditcard');
+												setShowCreditCardAlert(true);
+											}}
 											className='rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal'
 										/>
 										Credit Card
@@ -237,6 +246,24 @@ export default function CartClient() {
 					</div>
 				</div>
 			</div>
+			{showCreditCardAlert && (
+				<div className='fixed inset-0 z-50 bg-black/45 p-4 flex items-center justify-center'>
+					<div className='w-full max-w-md rounded-xl bg-mineral-white shadow-2xl ui-border p-6'>
+						<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>Credit Card Notice</h3>
+						<p className='text-sm text-deep-tidal-teal-700 leading-relaxed'>
+							Credit card payments are temporarily unavailable. Please use e-transfer as an alternative payment method at checkout. Secure card processing will be available soon.
+						</p>
+						<div className='mt-5 flex justify-end'>
+							<button
+								type='button'
+								onClick={() => setShowCreditCardAlert(false)}
+								className='px-4 py-2 rounded bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 transition-colors font-semibold'>
+								Got it
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

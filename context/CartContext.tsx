@@ -55,10 +55,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 					localStorage.removeItem('privacy-shop-cart');
 				}
 			}
-			const savedPayment = localStorage.getItem(PAYMENT_STORAGE_KEY);
-			if (savedPayment === 'etransfer' || savedPayment === 'creditcard') {
-				setPaymentMethodState(savedPayment);
-			}
+			// Always default to e-transfer on first render of a session.
+			// This keeps the radio selected by default even if a previous visit used credit card.
+			setPaymentMethodState('etransfer');
+			localStorage.setItem(PAYMENT_STORAGE_KEY, 'etransfer');
 			setIsInitialized(true);
 		}
 	}, []);

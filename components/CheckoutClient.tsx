@@ -37,6 +37,7 @@ export default function CheckoutClient() {
 	const shippingMethod = 'express';
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
+	const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 	const [checkoutError, setCheckoutError] = useState<string | null>(null);
 	const [shippingAddress, setShippingAddress] = useState({
 		address: '',
@@ -745,7 +746,10 @@ export default function CheckoutClient() {
 												type='radio'
 												name='payment'
 												checked={paymentMethod === 'creditcard'}
-												onChange={() => setPaymentMethod('creditcard')}
+												onChange={() => {
+													setPaymentMethod('creditcard');
+													setShowCreditCardAlert(true);
+												}}
 											/>
 											Credit Card
 										</span>
@@ -819,6 +823,24 @@ export default function CheckoutClient() {
 								}}
 								className='px-6 py-2 rounded bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-medium transition-colors'>
 								I Agree
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+			{showCreditCardAlert && (
+				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
+					<div className='bg-mineral-white rounded-xl max-w-md w-full shadow-2xl ui-border p-6'>
+						<h2 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>Credit Card Notice</h2>
+						<p className='text-sm text-deep-tidal-teal-700 leading-relaxed'>
+							Credit card payments are temporarily unavailable. Please use e-transfer as an alternative payment method at checkout. Secure card processing will be available soon
+						</p>
+						<div className='mt-5 flex justify-end'>
+							<button
+								type='button'
+								onClick={() => setShowCreditCardAlert(false)}
+								className='px-4 py-2 rounded bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 transition-colors font-semibold'>
+								Got it
 							</button>
 						</div>
 					</div>

@@ -2,7 +2,7 @@ import ContactForm from './ContactForm';
 
 export default function Contact() {
 	return (
-		<section className='py-20 bg-white'>
+		<section id='contact' className='py-20 bg-white'>
 			<div className='mx-auto max-w-7xl px-6'>
 				<div className='text-center mb-12'>
 					<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Get in Touch</h2>

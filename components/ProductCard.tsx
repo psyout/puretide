@@ -106,20 +106,26 @@ export default function ProductCard({ product }: ProductCardProps) {
 				</div>
 				{/* Content – title, description, icons, price */}
 				<div className='px-4 pb-3 md:px-6 md:pb-4'>
-					<h3 className='text-xl md:text-xl font-bold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2'>{product.name}</h3>
+					<h3 className='text-[clamp(1.3rem,4.8vw,1.45rem)] md:text-[clamp(1.3rem,2.3vw,1.25rem)] leading-[clamp(1.7rem,5.6vw,1.95rem)] md:leading-[clamp(1.6rem,2.8vw,1.8rem)] font-bold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2 text-wrap break-words hyphens-auto'>
+						{product.name}
+					</h3>
 					{product.subtitle && <p className='text-xs text-deep-tidal-teal-600 mt-0.5 line-clamp-1'>({product.subtitle})</p>}
-					{product.description && <p className='text-[14px] text-deep-tidal-teal-600 mt-2 line-clamp-2 leading-relaxed'>{product.description}</p>}
+					{product.description && (
+						<p className='mt-2 line-clamp-2 text-[clamp(0.9rem,2.9vw,1rem)] leading-[clamp(1.35rem,4.4vw,1.55rem)] text-deep-tidal-teal-600 text-wrap break-words hyphens-auto'>
+							{product.description}
+						</p>
+					)}
 					{product.icons && product.icons.length > 0 && (
-						<div className='flex flex-wrap gap-1.5 mt-2'>
+						<div className='flex flex-wrap gap-[clamp(0.3rem,1.6vw,0.45rem)] mt-2'>
 							{product.icons.slice(0, 4).map((iconName: string) => {
 								const Icon = iconMap[iconName];
 								if (!Icon) return null;
 								return (
 									<span
 										key={iconName}
-										className='inline-flex items-center justify-center w-7 h-7 rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'
+										className='inline-flex items-center justify-center w-[clamp(2.1rem,8.4vw,2.25rem)] h-[clamp(2.1rem,8.4vw,2.25rem)] rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'
 										title={iconName}>
-										<Icon className='w-3.5 h-3.5' />
+										<Icon className='w-[1.2rem] h-[1.2rem] md:w-[1rem] md:h-[1rem]' />
 									</span>
 								);
 							})}

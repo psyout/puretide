@@ -43,7 +43,7 @@ export default function About() {
 	];
 
 	return (
-		<section>
+		<section id='about'>
 			<div className='relative w-full py-32 overflow-hidden'>
 				<div className='absolute inset-0 z-0 '>
 					<Image
