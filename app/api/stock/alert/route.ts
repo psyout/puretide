@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { readSheetProducts } from '@/lib/stockSheet';
 import type { Product } from '@/types/product';
+import { isExplicitDevBypassEnabled } from '@/lib/authEnv';
+import { buildSafeApiError } from '@/lib/apiError';
 
 const LOW_STOCK_THRESHOLD = 5;
 const ALERT_EMAIL = process.env.LOW_STOCK_EMAIL ?? 'info@puretide.ca';
@@ -128,7 +130,9 @@ const writeAlertState = async (signature: string, sentAt: string) => {
 
 function requireCronSecret(request: Request): boolean {
 	const secret = process.env.CRON_SECRET;
-	if (!secret) return true;
+	if (!secret) {
+		return isExplicitDevBypassEnabled('ALLOW_UNAUTH_CRON_ALERT');
+	}
 	const provided =
 		request.headers.get('x-cron-secret') ??
 		request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
@@ -167,7 +171,7 @@ export async function POST(request: Request) {
 		await writeAlertState(signature, now.toISOString());
 		return NextResponse.json({ ok: true, count: lowStock.length, skipped: false });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to send alert';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to send alert.', error, logLabel: 'stock-alert:post' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

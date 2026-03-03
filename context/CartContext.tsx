@@ -21,6 +21,43 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const PAYMENT_STORAGE_KEY = 'privacy-shop-payment-method';
+const CART_STORAGE_KEY = 'privacy-shop-cart';
+const CART_MAX_QUANTITY = 99;
+
+function sanitizeCartItem(raw: unknown): CartItem | null {
+	if (!raw || typeof raw !== 'object') return null;
+	const item = raw as Partial<CartItem>;
+	const id = typeof item.id === 'string' ? item.id.trim() : '';
+	const slug = typeof item.slug === 'string' ? item.slug.trim() : id;
+	const name = typeof item.name === 'string' ? item.name.trim() : '';
+	const quantity = Number(item.quantity);
+	const price = Number(item.price);
+	const stock = Number(item.stock);
+
+	if (!id || !name || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0) {
+		return null;
+	}
+
+	const safeStock = Number.isFinite(stock) && stock >= 0 ? stock : CART_MAX_QUANTITY;
+	const maxQuantity = Math.min(Math.max(1, safeStock), CART_MAX_QUANTITY);
+
+	return {
+		id,
+		slug,
+		name,
+		subtitle: typeof item.subtitle === 'string' ? item.subtitle : undefined,
+		description: typeof item.description === 'string' ? item.description : '',
+		details: typeof item.details === 'string' ? item.details : undefined,
+		icons: Array.isArray(item.icons) ? item.icons.filter((entry): entry is string => typeof entry === 'string') : undefined,
+		price,
+		stock: safeStock,
+		image: typeof item.image === 'string' ? item.image : '',
+		category: typeof item.category === 'string' ? item.category : '',
+		mg: typeof item.mg === 'string' ? item.mg : undefined,
+		status: item.status,
+		quantity: Math.min(Math.floor(quantity), maxQuantity),
+	};
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -38,21 +75,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		return getDiscountedPrice(item.price, item.quantity);
 	};
 
-	const CART_MAX_QUANTITY = 99;
-
 	// Load cart and payment method from localStorage on mount (client-side only)
 	useEffect(() => {
 		if (typeof window !== 'undefined') {
-			const savedCart = localStorage.getItem('privacy-shop-cart');
+			const savedCart = localStorage.getItem(CART_STORAGE_KEY);
 			if (savedCart) {
 				try {
 					const parsedCart = JSON.parse(savedCart);
 					if (Array.isArray(parsedCart)) {
-						setCartItems(parsedCart);
+						const sanitized = parsedCart
+							.map((entry) => sanitizeCartItem(entry))
+							.filter((entry): entry is CartItem => entry != null);
+						setCartItems(sanitized);
 					}
 				} catch (e) {
 					console.error('Failed to parse cart from localStorage:', e);
-					localStorage.removeItem('privacy-shop-cart');
+					localStorage.removeItem(CART_STORAGE_KEY);
 				}
 			}
 			// Always default to e-transfer on first render of a session.
@@ -66,7 +104,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 	// Save cart to localStorage whenever it changes, but only after initialization
 	useEffect(() => {
 		if (isInitialized && typeof window !== 'undefined') {
-			localStorage.setItem('privacy-shop-cart', JSON.stringify(cartItems));
+			localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
 		}
 	}, [cartItems, isInitialized]);
 

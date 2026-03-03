@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { readSheetPromoCodes, writeSheetPromoCodes } from '@/lib/stockSheet';
 import type { PromoCode } from '@/types/product';
+import { isExplicitDevBypassEnabled } from '@/lib/authEnv';
+import { buildSafeApiError } from '@/lib/apiError';
 
 function requirePromoApiKey(request: Request): boolean {
 	const key = process.env.PROMO_API_KEY;
-	if (!key) return true;
+	if (!key) {
+		return isExplicitDevBypassEnabled('ALLOW_UNAUTH_PROMO_API');
+	}
 	const provided = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
 	return provided === key;
 }
@@ -17,8 +21,8 @@ export async function GET(request: Request) {
 		const codes = await readSheetPromoCodes();
 		return NextResponse.json({ ok: true, codes });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to read promo codes';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to read promo codes.', error, logLabel: 'promo:get' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }
 
@@ -32,7 +36,7 @@ export async function POST(request: Request) {
 		await writeSheetPromoCodes(codes);
 		return NextResponse.json({ ok: true });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to update promo codes';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to update promo codes.', error, logLabel: 'promo:post' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

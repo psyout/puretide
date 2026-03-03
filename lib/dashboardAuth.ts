@@ -22,7 +22,8 @@ export function createSessionCookie(): { name: string; value: string; options: s
 	const signature = signValue(`dashboard-${timestamp}`, secret);
 	const value = `${timestamp}.${signature}`;
 	const maxAge = COOKIE_MAX_AGE_DAYS * 24 * 60 * 60;
-	const options = `Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`;
+	const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+	const options = `Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
 	return { name: COOKIE_NAME, value, options };
 }
 
@@ -37,7 +38,18 @@ export function verifySessionCookie(cookieHeader: string | null): boolean {
 	const [timestamp, signature] = value.split('.');
 	if (!timestamp || !signature) return false;
 	const expected = signValue(`dashboard-${timestamp}`, secret);
-	if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+	let signatureBuffer: Buffer;
+	let expectedBuffer: Buffer;
+	try {
+		signatureBuffer = Buffer.from(signature, 'hex');
+		expectedBuffer = Buffer.from(expected, 'hex');
+	} catch {
+		return false;
+	}
+	if (signatureBuffer.length === 0 || expectedBuffer.length === 0 || signatureBuffer.length !== expectedBuffer.length) {
+		return false;
+	}
+	if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
 		return false;
 	}
 	const ts = Number(timestamp);

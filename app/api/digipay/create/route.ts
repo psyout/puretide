@@ -9,6 +9,9 @@ import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
 import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
 import { getIdempotencyKey, getCachedDigipay, setCachedDigipay } from '@/lib/idempotency';
+import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
+import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
+import { buildSafeApiError } from '@/lib/apiError';
 
 interface OrderPayload {
 	customer: {
@@ -113,6 +116,12 @@ export async function POST(request: Request) {
 		if (stockError) {
 			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
 		}
+		const products = await readSheetProducts();
+		const trustedCart = normalizeCartItemsWithTrustedPrices(orderPayload.cartItems, products);
+		if (!trustedCart.ok) {
+			return NextResponse.json({ ok: false, error: trustedCart.error }, { status: 400 });
+		}
+		const trustedCartItems = trustedCart.items;
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		const shippingCost = getEffectiveShippingCost();
@@ -123,17 +132,17 @@ export async function POST(request: Request) {
 			const promoCodes = await readSheetPromoCodes();
 			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
-				cartItems = orderPayload.cartItems.map((item) => ({ ...item, price: item.price }));
+				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
 				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 				discountAmount = Number((subtotalWithPromo * (promo.discount / 100)).toFixed(2));
 			} else {
-				cartItems = orderPayload.cartItems.map((item) => ({
+				cartItems = trustedCartItems.map((item) => ({
 					...item,
 					price: getDiscountedPrice(item.price, item.quantity),
 				}));
 			}
 		} else {
-			cartItems = orderPayload.cartItems.map((item) => ({
+			cartItems = trustedCartItems.map((item) => ({
 				...item,
 				price: getDiscountedPrice(item.price, item.quantity),
 			}));
@@ -179,8 +188,13 @@ export async function POST(request: Request) {
 		const useSandbox = process.env.DIGIPAY_USE_SANDBOX === 'true';
 		const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID;
 		const effectiveSiteId = useSandbox && sandboxSiteId ? sandboxSiteId : siteId;
+		const confirmationToken = createOrderConfirmationToken(orderNumber);
+		const confirmationParams = new URLSearchParams({ orderNumber });
+		if (confirmationToken) {
+			confirmationParams.set('token', confirmationToken);
+		}
 
-		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?orderNumber=${orderNumber}`;
+		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
 
 		const redirectUrl = buildDigipayPaymentUrl(
 			{
@@ -210,10 +224,7 @@ export async function POST(request: Request) {
 			orderNumber,
 		});
 	} catch (error) {
-		console.error('DigiPay create error', error);
-
-		const message = error instanceof Error ? error.message : 'Failed to create payment';
-
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'digipay:create' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

@@ -68,6 +68,15 @@ type OrderEmailResult = {
 	admin: OrderEmailPayload;
 };
 
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
 export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const isCreditCard = input.paymentMethod === 'creditcard';
 	const orderDate = formatDate(input.createdAt);
@@ -92,13 +101,23 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		input.customer.country,
 	].filter(Boolean);
 	const adminNotes = input.customer.orderNotes?.trim();
+	const customerFirstNameHtml = escapeHtml(input.customer.firstName);
+	const orderDateHtml = escapeHtml(orderDate);
+	const orderNumberHtml = escapeHtml(input.orderNumber);
+	const securityAnswerHtml = escapeHtml(securityAnswer);
+	const paymentMethodLabelHtml = escapeHtml(paymentMethodLabel);
+	const shippingLabelHtml = escapeHtml(shippingLabel);
+	const billingLinesHtml = billingLines.map((line) => escapeHtml(line));
+	const shippingLinesHtml = shippingLines.map((line) => escapeHtml(line));
+	const adminNotesHtml = adminNotes ? escapeHtml(adminNotes) : null;
+	const promoCodeHtml = escapeHtml(input.promoCode ?? 'promo');
 
 	const itemsText = input.cartItems.map((item) => `- ${item.name} x${item.quantity} (${formatMoney(item.price * item.quantity)})`).join('\n');
 	const itemsHtml = input.cartItems
 		.map(
 			(item) => `
               <tr>
-                <td style="padding: 6px 0;">${item.name}</td>
+                <td style="padding: 6px 0;">${escapeHtml(item.name)}</td>
                 <td style="padding: 6px 0;">x${item.quantity}</td>
                 <td style="padding: 6px 0; text-align: right;">${formatMoney(item.price * item.quantity)}</td>
               </tr>
@@ -169,7 +188,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         <li><strong>Recipient Name:</strong> ${paymentDetails.recipientName}</li>
         <li><strong>Recipient Email:</strong> ${paymentDetails.recipientEmail}</li>
         <li><strong>Security Question:</strong> ${paymentDetails.securityQuestion}</li>
-        <li><strong>Password/Answer:</strong> ${securityAnswer}</li>
+        <li><strong>Password/Answer:</strong> ${securityAnswerHtml}</li>
       </ul>
       <p>We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.</p>
       <p>If your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.</p>
@@ -181,12 +200,12 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
       <h2 style="margin: 0 0 8px;">Pure Tide</h2>
       <h3 style="margin: 0 0 16px;">Thank you for your order</h3>
-      <p>Hi ${input.customer.firstName},</p>
+      <p>Hi ${customerFirstNameHtml},</p>
       <p>${customerIntro}</p>
       ${eTransferBlockHtml}
 
       <h4 style="margin: 24px 0 8px;">Order summary</h4>
-      <p><strong>Order #${input.orderNumber}</strong> (${orderDate})</p>
+      <p><strong>Order #${orderNumberHtml}</strong> (${orderDateHtml})</p>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
         <thead>
           <tr>
@@ -200,15 +219,15 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         </tbody>
       </table>
       <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
-      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode ?? 'promo'}):</strong> -${formatMoney(input.discountAmount)}</p>` : ''}
-      <p><strong>Shipping:</strong> ${shippingLabel} ${formatMoney(input.shippingCost)}</p>
+      ${input.discountAmount ? `<p><strong>Discount (${promoCodeHtml}):</strong> -${formatMoney(input.discountAmount)}</p>` : ''}
+      <p><strong>Shipping:</strong> ${shippingLabelHtml} ${formatMoney(input.shippingCost)}</p>
       <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
-      <p><strong>Payment method:</strong> ${paymentMethodLabel}</p>
+      <p><strong>Payment method:</strong> ${paymentMethodLabelHtml}</p>
 
       <h4 style="margin: 24px 0 8px;">Billing address</h4>
-      <p>${billingLines.join('<br />')}</p>
+      <p>${billingLinesHtml.join('<br />')}</p>
       <h4 style="margin: 16px 0 8px;">Shipping address</h4>
-      <p>${shippingLines.join('<br />')}</p>
+      <p>${shippingLinesHtml.join('<br />')}</p>
 
       <p style="margin-top: 24px;">Thanks again! If you need any help with your order, please contact us at ${paymentDetails.supportEmail}.</p>
     </div>
@@ -245,13 +264,13 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const adminHtml = `
     <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
       <h2 style="margin: 0 0 8px;">New order received</h2>
-      <p><strong>Order #${input.orderNumber}</strong> (${orderDate})</p>
+      <p><strong>Order #${orderNumberHtml}</strong> (${orderDateHtml})</p>
 
       <h4 style="margin: 24px 0 8px;">Customer</h4>
-      <p>${billingLines.join('<br />')}</p>
+      <p>${billingLinesHtml.join('<br />')}</p>
 
       <h4 style="margin: 16px 0 8px;">Shipping address</h4>
-      <p>${shippingLines.join('<br />')}</p>
+      <p>${shippingLinesHtml.join('<br />')}</p>
 
       <h4 style="margin: 24px 0 8px;">Products</h4>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
@@ -267,10 +286,10 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         </tbody>
       </table>
       <p><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
-      ${input.discountAmount ? `<p><strong>Discount (${input.promoCode ?? 'promo'}):</strong> -${formatMoney(input.discountAmount)}</p>` : ''}
-      <p><strong>Shipping:</strong> ${shippingLabel} ${formatMoney(input.shippingCost)}</p>
+      ${input.discountAmount ? `<p><strong>Discount (${promoCodeHtml}):</strong> -${formatMoney(input.discountAmount)}</p>` : ''}
+      <p><strong>Shipping:</strong> ${shippingLabelHtml} ${formatMoney(input.shippingCost)}</p>
       <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
-      <p><strong>Payment method:</strong> ${paymentMethodLabel}</p>
+      <p><strong>Payment method:</strong> ${paymentMethodLabelHtml}</p>
       ${
 			isCreditCard
 				? ''
@@ -282,7 +301,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       </ul>
       `
 		}
-      ${adminNotes ? `<h4 style="margin: 24px 0 8px;">Order notes</h4><p>${adminNotes}</p>` : ''}
+      ${adminNotesHtml ? `<h4 style="margin: 24px 0 8px;">Order notes</h4><p>${adminNotesHtml}</p>` : ''}
     </div>
   `;
 

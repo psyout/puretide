@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createSessionCookie } from '@/lib/dashboardAuth';
+import { checkRateLimit } from '@/lib/rateLimit';
+import { buildSafeApiError } from '@/lib/apiError';
 
 export async function POST(request: Request) {
 	try {
+		const { allowed } = checkRateLimit(request, 'dashboard-login', 10, 60 * 60 * 1000);
+		if (!allowed) {
+			return NextResponse.json({ ok: false, error: 'Too many login attempts. Please try again later.' }, { status: 429 });
+		}
 		const secretEnv = process.env.DASHBOARD_SECRET;
 		if (!secretEnv || secretEnv.trim() === '') {
 			return NextResponse.json(
@@ -23,7 +29,7 @@ export async function POST(request: Request) {
 		res.headers.set('Set-Cookie', `${name}=${value}; ${options}`);
 		return res;
 	} catch (e) {
-		const message = e instanceof Error ? e.message : 'Failed to create session';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to create session.', error: e, logLabel: 'dashboard-session:post' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

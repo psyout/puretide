@@ -11,6 +11,26 @@ import { CreditCard, Truck, Plus, Minus, Trash2 } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost } from '@/lib/constants';
 
+const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
+
+function isTrustedPaymentRedirect(urlRaw: string): boolean {
+	try {
+		const url = new URL(urlRaw);
+		if (url.protocol !== 'https:') {
+			return false;
+		}
+		const envHosts =
+			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS
+				?.split(',')
+				.map((host) => host.trim().toLowerCase())
+				.filter(Boolean) ?? [];
+		const allowedHosts = new Set([DIGIPAY_DEFAULT_HOST, ...envHosts]);
+		return allowedHosts.has(url.hostname.toLowerCase());
+	} catch {
+		return false;
+	}
+}
+
 export default function CheckoutClient() {
 	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
@@ -37,7 +57,6 @@ export default function CheckoutClient() {
 	const shippingMethod = 'express';
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
-	const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 	const [checkoutError, setCheckoutError] = useState<string | null>(null);
 	const [shippingAddress, setShippingAddress] = useState({
 		address: '',
@@ -172,6 +191,9 @@ export default function CheckoutClient() {
 					throw new Error(data.error ?? 'Failed to start payment');
 				}
 				if (data.ok && data.redirectUrl) {
+					if (!isTrustedPaymentRedirect(data.redirectUrl)) {
+						throw new Error('Received an invalid payment redirect URL. Please contact support.');
+					}
 					// Cart is cleared on order-confirmation when paymentStatus === 'paid' to avoid losing cart if redirect fails
 					window.location.href = data.redirectUrl;
 					return;
@@ -190,14 +212,21 @@ export default function CheckoutClient() {
 				throw new Error(data?.error ?? 'Failed to store order');
 			}
 			const orderNumber = data.orderNumber ?? '';
+			const confirmationToken = data.confirmationToken ?? '';
 			if (!orderNumber) {
 				setCheckoutError('Your order was received but we could not show the confirmation. Please check your email or contact us.');
 				setIsProcessing(false);
 				setHasSubmitted(false);
 				return;
 			}
+			if (!confirmationToken) {
+				setCheckoutError('Your order was received but the confirmation link is missing. Please check your email or contact us.');
+				setIsProcessing(false);
+				setHasSubmitted(false);
+				return;
+			}
 			clearCart();
-			router.push(`/order-confirmation?orderNumber=${encodeURIComponent(orderNumber)}`);
+			router.push(`/order-confirmation?orderNumber=${encodeURIComponent(orderNumber)}&token=${encodeURIComponent(confirmationToken)}`);
 		} catch (error) {
 			console.error('Checkout error', error);
 			setCheckoutError(error instanceof Error ? error.message : 'We could not place your order. Please try again.');
@@ -550,7 +579,7 @@ export default function CheckoutClient() {
 								</div>
 								<button
 									type='submit'
-									disabled={isProcessing || !agreedToTerms}
+									disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
 									aria-describedby={!agreedToTerms ? 'checkout-terms-note' : undefined}
 									className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
 									{isProcessing ? 'Processing...' : 'Place Order'}
@@ -626,7 +655,11 @@ export default function CheckoutClient() {
 												</span>
 												<button
 													type='button'
-													onClick={() => updateQuantity(item.id, item.quantity + 1)}
+													onClick={() => {
+														const stock = Number(item.stock) || 0;
+														const maxQuantity = stock > 0 ? Math.min(stock, 99) : 99;
+														updateQuantity(item.id, item.quantity + 1, maxQuantity);
+													}}
 													className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
 													aria-label='Increase quantity'>
 													<Plus className='w-4 h-4' />
@@ -746,10 +779,7 @@ export default function CheckoutClient() {
 												type='radio'
 												name='payment'
 												checked={paymentMethod === 'creditcard'}
-												onChange={() => {
-													setPaymentMethod('etransfer');
-													setShowCreditCardAlert(true);
-												}}
+												onChange={() => setPaymentMethod('creditcard')}
 											/>
 											Credit Card
 										</span>
@@ -828,6 +858,11 @@ export default function CheckoutClient() {
 					</div>
 				</div>
 			)}
+			{/*
+				Credit card unavailable modal retained for potential future use.
+				Disabled now that card payments are enabled again.
+			*/}
+			{/*
 			{showCreditCardAlert && (
 				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
 					<div className='bg-mineral-white rounded-xl max-w-md w-full shadow-2xl ui-border p-6'>
@@ -849,6 +884,7 @@ export default function CheckoutClient() {
 					</div>
 				</div>
 			)}
+			*/}
 		</div>
 	);
 }

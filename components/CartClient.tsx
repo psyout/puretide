@@ -13,7 +13,6 @@ export default function CartClient() {
 	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
 	const [showClearConfirm, setShowClearConfirm] = useState(false);
-	const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 	const total = getTotal();
 
 	if (cartItems.length === 0) {
@@ -190,10 +189,7 @@ export default function CartClient() {
 											type='radio'
 											name='cart-payment'
 											checked={paymentMethod === 'creditcard'}
-											onChange={() => {
-													setPaymentMethod('etransfer');
-												setShowCreditCardAlert(true);
-											}}
+											onChange={() => setPaymentMethod('creditcard')}
 											className='rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal'
 										/>
 										Credit Card
@@ -246,6 +242,11 @@ export default function CartClient() {
 					</div>
 				</div>
 			</div>
+			{/*
+				Credit card unavailable modal retained for potential future use.
+				Disabled now that card payments are enabled again.
+			*/}
+			{/*
 			{showCreditCardAlert && (
 				<div className='fixed inset-0 z-50 bg-black/45 p-4 flex items-center justify-center'>
 					<div className='w-full max-w-md rounded-xl bg-mineral-white shadow-2xl ui-border p-6'>
@@ -267,6 +268,7 @@ export default function CartClient() {
 					</div>
 				</div>
 			)}
+			*/}
 		</div>
 	);
 }

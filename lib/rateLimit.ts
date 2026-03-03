@@ -3,11 +3,35 @@
  * Use for contact form and checkout to reduce bot/abuse.
  */
 
+function normalizeIp(value: string): string {
+	let candidate = value.trim();
+	if (!candidate) return '';
+	if (candidate.startsWith('[') && candidate.endsWith(']')) {
+		candidate = candidate.slice(1, -1);
+	}
+	// Remove optional port from IPv4 "1.2.3.4:1234" format.
+	if (/^\d+\.\d+\.\d+\.\d+:\d+$/.test(candidate)) {
+		candidate = candidate.split(':')[0];
+	}
+	const isIpv4 = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(candidate);
+	const isIpv6 = /^[0-9a-fA-F:]+$/.test(candidate);
+	return isIpv4 || isIpv6 ? candidate : '';
+}
+
 function getClientIp(request: Request): string {
+	const directHeaders = ['cf-connecting-ip', 'x-real-ip', 'x-vercel-forwarded-for'];
+	for (const header of directHeaders) {
+		const value = request.headers.get(header);
+		if (!value) continue;
+		const normalized = normalizeIp(value);
+		if (normalized) return normalized;
+	}
 	const forwarded = request.headers.get('x-forwarded-for');
-	if (forwarded) return forwarded.split(',')[0].trim();
-	const realIp = request.headers.get('x-real-ip');
-	if (realIp) return realIp.trim();
+	if (forwarded) {
+		const candidates = forwarded.split(',').map((part) => normalizeIp(part));
+		const firstValid = candidates.find(Boolean);
+		if (firstValid) return firstValid;
+	}
 	return '';
 }
 

@@ -12,6 +12,9 @@ import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
 import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
 import { getIdempotencyKey, getCachedOrder, setCachedOrder } from '@/lib/idempotency';
+import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
+import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
+import { buildSafeApiError } from '@/lib/apiError';
 
 interface OrderPayload {
 	customer: {
@@ -72,8 +75,8 @@ export async function GET(request: Request) {
 		});
 		return NextResponse.json({ ok: true, orders: sorted });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to read orders';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to read orders.', error, logLabel: 'orders:get' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }
 
@@ -198,7 +201,8 @@ export async function POST(request: Request) {
 		if (idemKey) {
 			const cached = getCachedOrder(idemKey);
 			if (cached) {
-				return NextResponse.json({ ok: true, orderId: cached.orderId, orderNumber: cached.orderNumber });
+				const confirmationToken = createOrderConfirmationToken(cached.orderNumber);
+				return NextResponse.json({ ok: true, orderId: cached.orderId, orderNumber: cached.orderNumber, confirmationToken });
 			}
 		}
 
@@ -229,6 +233,12 @@ export async function POST(request: Request) {
 		if (stockError) {
 			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
 		}
+		const products = await readSheetProducts();
+		const trustedCart = normalizeCartItemsWithTrustedPrices(orderPayload.cartItems, products);
+		if (!trustedCart.ok) {
+			return NextResponse.json({ ok: false, error: trustedCart.error }, { status: 400 });
+		}
+		const trustedCartItems = trustedCart.items;
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		let cartItems: typeof orderPayload.cartItems;
@@ -239,17 +249,17 @@ export async function POST(request: Request) {
 			const promoCodes = await readSheetPromoCodes();
 			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
-				cartItems = orderPayload.cartItems.map((item) => ({ ...item, price: item.price }));
+				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
 				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 				discountAmount = Number((subtotalWithPromo * (promo.discount / 100)).toFixed(2));
 			} else {
-				cartItems = orderPayload.cartItems.map((item) => ({
+				cartItems = trustedCartItems.map((item) => ({
 					...item,
 					price: getDiscountedPrice(item.price, item.quantity),
 				}));
 			}
 		} else {
-			cartItems = orderPayload.cartItems.map((item) => ({
+			cartItems = trustedCartItems.map((item) => ({
 				...item,
 				price: getDiscountedPrice(item.price, item.quantity),
 			}));
@@ -353,10 +363,10 @@ export async function POST(request: Request) {
 		});
 
 		if (idemKey) setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
-		return NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber });
+		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);
+		return NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber, confirmationToken });
 	} catch (error) {
-		console.error('Failed to store order', error);
-		const message = error instanceof Error ? error.message : 'Failed to store order';
-		return NextResponse.json({ ok: false, error: message }, { status: 500 });
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to store order.', error, logLabel: 'orders:post' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

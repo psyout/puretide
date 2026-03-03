@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { OrderConfirmationCartClear } from '@/components/OrderConfirmationCartClear';
 import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
+import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -67,9 +68,11 @@ async function getOrderByNumber(orderNumber: string | null): Promise<Order | nul
 	return (await getOrderByOrderNumberFromDb(orderNumber.trim())) as Order | null;
 }
 
-export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string }> }) {
-	const { orderNumber: queryOrderNumber } = await searchParams;
-	const order = queryOrderNumber?.trim() ? await getOrderByNumber(queryOrderNumber) : null;
+export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string; token?: string }> }) {
+	const { orderNumber: queryOrderNumber, token } = await searchParams;
+	const orderNumberParam = queryOrderNumber?.trim();
+	const isAllowed = orderNumberParam ? verifyOrderConfirmationToken(orderNumberParam, token?.trim()) : false;
+	const order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
 
 	if (!order) {
 		return (

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VPS_USER="${VPS_USER:-root}"
+VPS_USER="${VPS_USER:-deploy}"
 VPS_HOST="${VPS_HOST:-82.221.139.21}"
 VPS_PATH="${VPS_PATH:-/var/www/puretide}"
 PM2_APP="${PM2_APP:-puretide}"
@@ -19,10 +19,10 @@ if [[ ! -d .next/standalone ]]; then
   exit 1
 fi
 
-echo "Cleaning old build artifacts and killing ghost processes on VPS..."
-# This kills anything currently holding port 3000 so PM2 can start fresh
+echo "Cleaning old build artifacts on VPS..."
+# Stop only the managed PM2 app to reduce deploy blast radius
 # Preserve data/ (orders.sqlite, optional orders.json) - only remove app artifacts
-ssh "${SSH_TARGET}" "fuser -k 3000/tcp || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone .next/static"
+ssh "${SSH_TARGET}" "pm2 stop \"${PM2_APP}\" || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone .next/static"
 
 echo "Syncing build artifacts to ${SSH_TARGET}:${VPS_PATH}..."
 # Do NOT sync standalone's node_modules (symlinks cause rsync "No such file or directory"). Server populates node_modules via npm install below.
@@ -39,7 +39,7 @@ ssh "${SSH_TARGET}" "mkdir -p \"${VPS_PATH}/node_modules/sql.js/dist\""
 rsync -avz node_modules/sql.js/dist/sql-wasm.wasm "${SSH_TARGET}:${VPS_PATH}/node_modules/sql.js/dist/"
 
 echo "Ensuring data directory exists on VPS..."
-ssh "${SSH_TARGET}" "mkdir -p \"${VPS_PATH}/data\" && chmod 755 \"${VPS_PATH}/data\""
+ssh "${SSH_TARGET}" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
 echo "Restarting pm2 app (${PM2_APP}) on VPS..."
 # HOSTNAME=0.0.0.0 is the key fix for the 502 error
 ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && HOSTNAME=0.0.0.0 pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 pm2 start server.js --name \"${PM2_APP}\" --max-memory-restart 700M"
