@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VPS_USER="${VPS_USER:-deploy}"
+VPS_USER="${VPS_USER:-root}"
 VPS_HOST="${VPS_HOST:-82.221.139.21}"
 VPS_PATH="${VPS_PATH:-/var/www/puretide}"
 PM2_APP="${PM2_APP:-puretide}"
@@ -10,6 +10,9 @@ SSH_TARGET="${VPS_USER}@${VPS_HOST}"
 
 echo "Linting..."
 npm run lint
+
+echo "Cleaning local build cache..."
+rm -rf .next
 
 echo "Building locally..."
 npm run build
