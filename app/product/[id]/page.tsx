@@ -58,7 +58,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					← Back to Products
 				</Link>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12'>
 					<div className='md:col-start-2'>
 						{/* Sold out badge */}
 						{(product.stock <= 0 || product.status === 'stock-out') && (
@@ -221,11 +221,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Desktop Image Container */}
-					<div className='hidden md:flex  p-4 items-center justify-center md:col-start-1 md:row-start-1 h-fit'>
-						<ProductImage
-							product={product}
-							priority
-						/>
+					<div className='hidden md:flex md:col-start-1 md:row-start-1 md:justify-center lg:sticky lg:top-24 h-fit'>
+						<div className='w-full max-w-sm rounded-2xl  p-4 '>
+							<ProductImage
+								product={product}
+								priority
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
