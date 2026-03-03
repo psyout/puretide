@@ -75,7 +75,7 @@ const config: Config = {
 				'fade-in-up': {
 					'0%': {
 						opacity: '0',
-						transform: 'translateY(20px)',
+						transform: 'translateY(10px)',
 					},
 					'100%': {
 						opacity: '1',
@@ -84,7 +84,7 @@ const config: Config = {
 				},
 			},
 			animation: {
-				'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+				'fade-in-up': 'fade-in-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards',
 			},
 			scale: {
 				'103': '1.03',

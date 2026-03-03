@@ -1,21 +1,32 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ProductCard from './ProductCard';
 import type { Product } from '@/types/product';
-import { Loader2 } from 'lucide-react';
 
 type ProductGridClientProps = {
 	initialItems: Product[];
 };
 
+type GridLoadSettings = {
+	initialCount: number;
+	loadBatchSize: number;
+};
+
+function getGridLoadSettings(width: number): GridLoadSettings {
+	// Tailwind lg breakpoint (desktop): 1024+
+	if (width >= 1024) {
+		return { initialCount: 6, loadBatchSize: 3 };
+	}
+	// Tablet + mobile
+	return { initialCount: 2, loadBatchSize: 2 };
+}
+
 export default function ProductGridClient({ initialItems }: ProductGridClientProps) {
 	const [selectedCategory, setSelectedCategory] = useState('All');
+	const [loadSettings, setLoadSettings] = useState<GridLoadSettings>({ initialCount: 2, loadBatchSize: 2 });
 	const [visibleCount, setVisibleCount] = useState(2);
-	const [isLoadingMore, setIsLoadingMore] = useState(false);
-	const [isMobile, setIsMobile] = useState(true);
 	const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
-	const loadMoreRef = useRef<HTMLDivElement | null>(null);
 	const [items, setItems] = useState<Product[]>(initialItems);
 	const [stockError, setStockError] = useState<string | null>(null);
 
@@ -51,20 +62,18 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 		};
 	}, []);
 
-	// 2. Handle mobile detection
+	// 2. Handle responsive load settings
 	useEffect(() => {
-		const checkMobile = () => {
-			const mobile = window.innerWidth < 640;
-			setIsMobile(mobile);
-			if (!mobile && visibleCount === 2) {
-				setVisibleCount(6);
-			}
+		const updateSettings = () => {
+			const next = getGridLoadSettings(window.innerWidth);
+			setLoadSettings(next);
+			setVisibleCount((prev) => Math.max(prev, next.initialCount));
 		};
 
-		checkMobile();
-		window.addEventListener('resize', checkMobile);
-		return () => window.removeEventListener('resize', checkMobile);
-	}, [visibleCount]);
+		updateSettings();
+		window.addEventListener('resize', updateSettings);
+		return () => window.removeEventListener('resize', updateSettings);
+	}, []);
 
 	// 3. Memoized categories and filtered products (Must be before useEffects that use them)
 	const categories = useMemo(() => ['All', ...Array.from(new Set(items.map((product) => product.category)))], [items]);
@@ -78,11 +87,10 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 
 	// 4. Update animated IDs
 	useEffect(() => {
-		const initialBatchSize = isMobile ? 2 : 6;
 		const newIds = filteredProducts
 			.slice(0, visibleCount)
 			.map((p) => p.id)
-			.filter((id, index) => index >= initialBatchSize && !animatedIds.has(id));
+			.filter((id, index) => index >= loadSettings.initialCount && !animatedIds.has(id));
 
 		if (newIds.length > 0) {
 			setAnimatedIds((prev) => {
@@ -91,37 +99,15 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 				return next;
 			});
 		}
-	}, [visibleCount, isMobile, filteredProducts, animatedIds]);
+	}, [visibleCount, filteredProducts, animatedIds, loadSettings.initialCount]);
 
 	// 5. Reset visible count on category change
 	useEffect(() => {
-		setVisibleCount(isMobile ? 2 : 6);
-	}, [selectedCategory, isMobile]);
-
-	// 6. Infinite scroll observer
-	useEffect(() => {
-		if (!loadMoreRef.current || isLoadingMore) {
-			return;
-		}
-
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries[0]?.isIntersecting && visibleCount < filteredProducts.length) {
-					setIsLoadingMore(true);
-					setTimeout(() => {
-						setVisibleCount((count) => Math.min(count + (isMobile ? 2 : 6), filteredProducts.length));
-						setIsLoadingMore(false);
-					}, 800);
-				}
-			},
-			{ rootMargin: '100px 0px' }
-		);
-
-		observer.observe(loadMoreRef.current);
-		return () => observer.disconnect();
-	}, [filteredProducts.length, visibleCount, isLoadingMore, isMobile]);
+		setVisibleCount(loadSettings.initialCount);
+	}, [selectedCategory, loadSettings.initialCount]);
 
 	const visibleProducts = filteredProducts.slice(0, visibleCount);
+	const hasMoreProducts = visibleCount < filteredProducts.length;
 
 	return (
 		<div
@@ -177,7 +163,11 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 				</div>
 
 				{stockError && (
-					<p className='text-center text-sm text-deep-tidal-teal-600/80 mb-2' role='status'>{stockError}</p>
+					<p
+						className='text-center text-sm text-deep-tidal-teal-600/80 mb-2'
+						role='status'>
+						{stockError}
+					</p>
 				)}
 				<div>
 					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 mt-8'>
@@ -195,20 +185,16 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 							</div>
 						)}
 					</div>
-					<div className='mt-12 flex flex-col items-center justify-center gap-4 min-h-[100px]'>
-						{visibleCount < filteredProducts.length ? (
-							<>
-								<div
-									ref={loadMoreRef}
-									className='flex items-center justify-center p-4'>
-									<Loader2 className={`w-8 h-8 text-deep-tidal-teal ${isLoadingMore ? 'animate-spin opacity-100' : 'opacity-0'}`} />
-								</div>
-								{isLoadingMore && <p className='text-sm text-deep-tidal-teal-600/60 font-medium animate-pulse'>Loading more products...</p>}
-							</>
-						) : (
-							<></>
-						)}
-					</div>
+					{hasMoreProducts && (
+						<div className='mt-12 flex justify-center min-h-[100px] items-start'>
+							<button
+								type='button'
+								onClick={() => setVisibleCount((count) => Math.min(count + loadSettings.loadBatchSize, filteredProducts.length))}
+								className='rounded-full bg-deep-tidal-teal px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-deep-tidal-teal-600 cursor-pointer'>
+								Load more
+							</button>
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

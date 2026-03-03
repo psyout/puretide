@@ -221,7 +221,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Desktop Image Container */}
-					<div className='hidden md:flex shadow-md bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 items-center justify-center md:col-start-1 md:row-start-1 h-fit'>
+					<div className='hidden md:flex  p-4 items-center justify-center md:col-start-1 md:row-start-1 h-fit'>
 						<ProductImage
 							product={product}
 							priority
