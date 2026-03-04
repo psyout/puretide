@@ -94,7 +94,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 				}
 			}
 			// Always default to e-transfer on first render of a session.
-			// This keeps the radio selected by default even if a previous visit used credit card.
+			// When credit card is disabled via env, keep e-transfer.
 			setPaymentMethodState('etransfer');
 			localStorage.setItem(PAYMENT_STORAGE_KEY, 'etransfer');
 			setIsInitialized(true);

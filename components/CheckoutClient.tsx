@@ -9,7 +9,7 @@ import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { CreditCard, Truck, Plus, Minus, Trash2 } from 'lucide-react';
 import TermsContent from './TermsContent';
-import { SHIPPING_COSTS, getEffectiveShippingCost } from '@/lib/constants';
+import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD } from '@/lib/constants';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 
@@ -80,6 +80,7 @@ export default function CheckoutClient() {
 	const subtotal = appliedDiscount > 0 ? subtotalRaw : subtotalWithVolume;
 	const shippingCost = getEffectiveShippingCost();
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
+	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 
@@ -146,8 +147,8 @@ export default function CheckoutClient() {
 		shipToDifferentAddress,
 		shippingAddress: shipToDifferentAddress ? shippingAddress : undefined,
 		shippingMethod,
-		paymentMethod,
-		cardFee,
+		paymentMethod: useCreditCard ? 'creditcard' : 'etransfer',
+		cardFee: useCreditCard ? cardFee : 0,
 		promoCode: appliedDiscount > 0 ? promoCode : undefined,
 		discountAmount: discountAmount || undefined,
 		subtotal,
@@ -180,7 +181,7 @@ export default function CheckoutClient() {
 		setHasSubmitted(true);
 
 		try {
-			if (paymentMethod === 'creditcard') {
+			if (useCreditCard) {
 				const response = await fetch('/api/digipay/create', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -773,7 +774,7 @@ export default function CheckoutClient() {
 										</span>
 										<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
 									</label>
-									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
+									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 cursor-pointer'>
 										<span className='flex items-center gap-2'>
 											<input
 												type='radio'
@@ -858,25 +859,17 @@ export default function CheckoutClient() {
 					</div>
 				</div>
 			)}
-			{/*
-				Credit card unavailable modal retained for potential future use.
-				Disabled now that card payments are enabled again.
-			*/}
-			{/*
-			{showCreditCardAlert && (
+			{paymentMethod === 'creditcard' && !ENABLE_CREDIT_CARD && (
 				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
 					<div className='bg-mineral-white rounded-xl max-w-md w-full shadow-2xl ui-border p-6'>
 						<h2 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>Credit Card Notice</h2>
 						<p className='text-sm text-deep-tidal-teal-700 leading-relaxed'>
-							Credit card payments are temporarily unavailable. Please use e-transfer as an alternative payment method at checkout. Secure card processing will be available soon
+							Credit card payments are temporarily unavailable. Please use e-transfer as an alternative payment method at checkout. Secure card processing will be available soon.
 						</p>
 						<div className='mt-5 flex justify-end'>
 							<button
 								type='button'
-								onClick={() => {
-									setPaymentMethod('etransfer');
-									setShowCreditCardAlert(false);
-								}}
+								onClick={() => setPaymentMethod('etransfer')}
 								className='px-4 py-2 rounded bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 transition-colors font-semibold'>
 								Got it
 							</button>
@@ -884,7 +877,6 @@ export default function CheckoutClient() {
 					</div>
 				</div>
 			)}
-			*/}
 		</div>
 	);
 }

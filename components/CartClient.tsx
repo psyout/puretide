@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Trash2, CreditCard } from 'lucide-react';
+import { ENABLE_CREDIT_CARD } from '@/lib/constants';
 
 export default function CartClient() {
 	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice, paymentMethod, setPaymentMethod } = useCart();
@@ -242,12 +243,7 @@ export default function CartClient() {
 					</div>
 				</div>
 			</div>
-			{/*
-				Credit card unavailable modal retained for potential future use.
-				Disabled now that card payments are enabled again.
-			*/}
-			{/*
-			{showCreditCardAlert && (
+			{paymentMethod === 'creditcard' && !ENABLE_CREDIT_CARD && (
 				<div className='fixed inset-0 z-50 bg-black/45 p-4 flex items-center justify-center'>
 					<div className='w-full max-w-md rounded-xl bg-mineral-white shadow-2xl ui-border p-6'>
 						<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>Credit Card Notice</h3>
@@ -257,10 +253,7 @@ export default function CartClient() {
 						<div className='mt-5 flex justify-end'>
 							<button
 								type='button'
-								onClick={() => {
-									setPaymentMethod('etransfer');
-									setShowCreditCardAlert(false);
-								}}
+								onClick={() => setPaymentMethod('etransfer')}
 								className='px-4 py-2 rounded bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 transition-colors font-semibold'>
 								Got it
 							</button>
@@ -268,7 +261,6 @@ export default function CartClient() {
 					</div>
 				</div>
 			)}
-			*/}
 		</div>
 	);
 }

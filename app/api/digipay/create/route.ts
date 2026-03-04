@@ -90,6 +90,9 @@ export async function POST(request: Request) {
 		if (orderPayload.paymentMethod !== 'creditcard') {
 			return NextResponse.json({ ok: false, error: 'Invalid payment method for this endpoint.' }, { status: 400 });
 		}
+		if (process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD === 'false') {
+			return NextResponse.json({ ok: false, error: 'Credit card payments are temporarily disabled. Please use e-transfer.' }, { status: 503 });
+		}
 
 		// Validate cart
 		if (!Array.isArray(orderPayload.cartItems) || orderPayload.cartItems.length === 0) {

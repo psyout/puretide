@@ -6,6 +6,9 @@ export const SHIPPING_COSTS = {
 /** Set NEXT_PUBLIC_DISABLE_SHIPPING_FEE=true in .env to zero shipping for real card test; remove or set false for production. */
 export const DISABLE_SHIPPING_FEE_FOR_TEST = process.env.NEXT_PUBLIC_DISABLE_SHIPPING_FEE === 'true';
 
+/** Set NEXT_PUBLIC_ENABLE_CREDIT_CARD=false to hide credit card and force e-transfer (e.g. when DigiPay has issues). Omit or true = credit card enabled. */
+export const ENABLE_CREDIT_CARD = process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD !== 'false';
+
 export function getEffectiveShippingCost(): number {
 	return DISABLE_SHIPPING_FEE_FOR_TEST ? 0 : SHIPPING_COSTS.express;
 }
