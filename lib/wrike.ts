@@ -3,19 +3,19 @@ const WRIKE_API_BASE = 'https://www.wrike.com/api/v4';
 type WrikeConfig = {
 	apiToken: string;
 	ordersFolderId: string;
-	stockAlertsFolderId: string;
+	clientsFolderId: string;
 };
 
 function getWrikeConfig(): WrikeConfig | null {
 	const apiToken = process.env.WRIKE_API_TOKEN;
 	const ordersFolderId = process.env.WRIKE_ORDERS_FOLDER_ID;
-	const stockAlertsFolderId = process.env.WRIKE_STOCK_ALERTS_FOLDER_ID;
+	const clientsFolderId = process.env.WRIKE_CLIENTS_FOLDER_ID;
 
-	if (!apiToken || !ordersFolderId || !stockAlertsFolderId) {
+	if (!apiToken || !ordersFolderId || !clientsFolderId) {
 		return null;
 	}
 
-	return { apiToken, ordersFolderId, stockAlertsFolderId };
+	return { apiToken, ordersFolderId, clientsFolderId };
 }
 
 async function createTask(folderId: string, title: string, description: string, apiToken: string) {
@@ -157,33 +157,63 @@ ${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.order
 	}
 }
 
-export async function createStockAlertTask(items: Array<{ name: string; slug: string; stock: number }>) {
+type ClientData = {
+	email: string;
+	firstName: string;
+	lastName: string;
+	address: string;
+	city: string;
+	province: string;
+	zipCode: string;
+	country: string;
+	orderTotal: number;
+	lastOrderDate: string;
+	productsPurchased: string[];
+};
+
+export async function createClientTask(client: ClientData) {
 	const config = getWrikeConfig();
-	if (!config || items.length === 0) {
+	if (!config) {
 		return null;
 	}
 
-	const title = `Low Stock Alert - ${items.length} item${items.length > 1 ? 's' : ''} need restocking`;
+	const title = `Client: ${client.firstName} ${client.lastName} - Order $${client.orderTotal.toFixed(2)}`;
 
-	const itemsList = items.map((item) => `<li><b>${item.name}</b> (${item.slug}) - Only ${item.stock} left</li>`).join('');
+	const productsList = client.productsPurchased.length
+		? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>`
+		: '<p>None</p>';
 
 	const description = `
-<h3>Low Stock Alert</h3>
-<p>Date: ${new Date().toLocaleString('en-CA')}</p>
-<p>The following items have stock levels at or below 5 units:</p>
-<ul>${itemsList}</ul>
+<h3>Client Record</h3>
+<p>Date: ${client.lastOrderDate}</p>
 <hr>
-<p><b>Action Required:</b> Restock these items soon to avoid stockouts.</p>
+<h4>Contact</h4>
+<p>
+<b>Name:</b> ${client.firstName} ${client.lastName}<br>
+<b>Email:</b> ${client.email}<br>
+</p>
+<h4>Address</h4>
+<p>
+${client.address}<br>
+${client.city}, ${client.province} ${client.zipCode}<br>
+${client.country}
+</p>
+<hr>
+<h4>Order Total</h4>
+<p><b>$${client.orderTotal.toFixed(2)}</b></p>
+<hr>
+<h4>Products Purchased</h4>
+${productsList}
 	`.trim();
 
 	try {
-		const task = await createTask(config.stockAlertsFolderId, title, description, config.apiToken);
+		const task = await createTask(config.clientsFolderId, title, description, config.apiToken);
 		if (task) {
-			console.log('Wrike stock alert task created:', task.id);
+			console.log('Wrike client task created:', task.id);
 		}
 		return task;
 	} catch (error) {
-		console.error('Failed to create Wrike stock alert task:', error);
+		console.error('Failed to create Wrike client task:', error);
 		return null;
 	}
 }

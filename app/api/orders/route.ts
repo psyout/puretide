@@ -6,7 +6,7 @@ import { readSheetProducts, writeSheetProducts, readSheetPromoCodes, upsertSheet
 import { getDiscountedPrice } from '@/lib/pricing';
 import { sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, getEffectiveShippingCost, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
-import { createOrderTask, createStockAlertTask } from '@/lib/wrike';
+import { createOrderTask, createClientTask } from '@/lib/wrike';
 import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
@@ -163,11 +163,6 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 
 		await writeSheetProducts(updated);
 		await sendLowStockAlert(lowStock);
-
-		// Create Wrike task for low stock items
-		if (lowStock.length > 0) {
-			await createStockAlertTask(lowStock);
-		}
 
 		// Return stock levels for ordered items
 		const orderedItemsStock = items.map((item) => {
@@ -329,26 +324,26 @@ export async function POST(request: Request) {
 		const updatedStock = await updateSheetStock(payload.cartItems);
 
 		// Create Wrike task for the order
-		// await createOrderTask({
-		//	orderNumber,
-		//	createdAt,
-		//	customer: payload.customer,
-		//	shipToDifferentAddress: payload.shipToDifferentAddress,
-		//	shippingAddress: payload.shippingAddress,
-		//	shippingMethod: payload.shippingMethod,
-		//	paymentMethod: payload.paymentMethod,
-		//	cardFee: payload.cardFee,
-		//	subtotal: payload.subtotal,
-		//	shippingCost: payload.shippingCost,
-		//	discountAmount: payload.discountAmount,
-		//	promoCode: payload.promoCode,
-		//	total: payload.total,
-		//	cartItems: payload.cartItems,
-		//	stockLevels: updatedStock,
-		//});
+		await createOrderTask({
+			orderNumber,
+			createdAt,
+			customer: payload.customer,
+			shipToDifferentAddress: payload.shipToDifferentAddress,
+			shippingAddress: payload.shippingAddress,
+			shippingMethod: payload.shippingMethod,
+			paymentMethod: payload.paymentMethod,
+			cardFee: payload.cardFee,
+			subtotal: payload.subtotal,
+			shippingCost: payload.shippingCost,
+			discountAmount: payload.discountAmount,
+			promoCode: payload.promoCode,
+			total: payload.total,
+			cartItems: payload.cartItems,
+			stockLevels: updatedStock,
+		});
 
 		// Save client to Google Sheets for marketing
-		await upsertSheetClient({
+		const clientPayload = {
 			email: payload.customer.email,
 			firstName: payload.customer.firstName,
 			lastName: payload.customer.lastName,
@@ -360,7 +355,9 @@ export async function POST(request: Request) {
 			orderTotal: payload.total,
 			lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
 			productsPurchased: payload.cartItems.map((item) => item.name),
-		});
+		};
+		await upsertSheetClient(clientPayload);
+		await createClientTask(clientPayload);
 
 		if (idemKey) setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
 		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);

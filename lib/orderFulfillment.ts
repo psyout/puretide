@@ -3,7 +3,7 @@ import { buildOrderEmails } from '@/lib/orderEmail';
 import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
 import { sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
-import { createStockAlertTask } from '@/lib/wrike';
+import { createClientTask } from '@/lib/wrike';
 
 export type FulfillmentOrder = {
 	orderNumber: string;
@@ -138,10 +138,6 @@ export async function updateSheetStock(
 		await writeSheetProducts(updated);
 		await sendLowStockAlert(lowStock);
 
-		if (lowStock.length > 0) {
-			await createStockAlertTask(lowStock);
-		}
-
 		const orderedItemsStock = items.map((item) => {
 			const product = updated.find((p) => p.id === String(item.id) || p.slug === String(item.id));
 			return { name: item.name, stock: product?.stock ?? 0 };
@@ -207,6 +203,20 @@ export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfil
 	);
 
 	await updateSheetStock(order.cartItems);
+
+	await createClientTask({
+		email: order.customer.email,
+		firstName: order.customer.firstName,
+		lastName: order.customer.lastName,
+		address: order.customer.address,
+		city: order.customer.city,
+		province: order.customer.province,
+		zipCode: order.customer.zipCode,
+		country: order.customer.country,
+		orderTotal: order.total,
+		lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+		productsPurchased: order.cartItems.map((item) => item.name),
+	});
 
 	return { emailStatus, adminEmailStatus };
 }
