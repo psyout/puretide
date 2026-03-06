@@ -3,6 +3,7 @@
  * Simulate e-transfer and credit card transactions to verify:
  * - Emails are sent (customer + admin)
  * - Stock is decremented in the sheet
+ * - Wrike tasks created (Orders + Clients folders)
  *
  * Prerequisites:
  * - App running (e.g. npm run dev) at BASE_URL (default http://localhost:3000)
@@ -120,6 +121,7 @@ async function run() {
     console.log('  Order number:', orderNum);
     console.log('  If no emails arrived, check server logs for "[Orders] Order', orderNum, 'admin email not sent: ..."');
     console.log('  Also check: product stock decreased by 1 in Google Sheet.');
+    console.log('  Wrike: Order + Client tasks should appear in Wrike (if WRIKE_* env vars are set).');
   }
   console.log('');
 
@@ -186,10 +188,11 @@ async function run() {
     console.log('For local testing, add 127.0.0.1,::1 to DIGIPAY_POSTBACK_ALLOWED_IP in .env');
   } else {
     console.log('Postback OK. Order marked paid, fulfillment run.');
-    console.log('Check: customer email + admin notification, and product stock decreased by 1 again.');
+    console.log('Check: customer email + admin notification, product stock decreased by 1, and Wrike Order + Client tasks.');
   }
   console.log('');
-  console.log('Done. Verify inbox and Google Sheet stock for product id 1 (BPC 157).');
+  console.log('Done. Verify: inbox, Google Sheet stock for product id 1 (BPC 157), and Wrike Orders/Clients folders.');
+  console.log('To test Wrike config only: npm run test:wrike');
 }
 
 run().catch((e) => {

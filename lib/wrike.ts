@@ -1,4 +1,4 @@
-const WRIKE_API_BASE = 'https://www.wrike.com/api/v4';
+const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
 type WrikeConfig = {
 	apiToken: string;
@@ -34,7 +34,7 @@ async function createTask(folderId: string, title: string, description: string, 
 
 	if (!response.ok) {
 		const error = await response.text();
-		console.error('Wrike API error:', error);
+		console.error('[Wrike] API error:', response.status, error);
 		return null;
 	}
 
@@ -87,7 +87,12 @@ type OrderData = {
 export async function createOrderTask(order: OrderData) {
 	const config = getWrikeConfig();
 	if (!config) {
-		console.log('Wrike not configured, skipping task creation');
+		const missing = [
+			!process.env.WRIKE_API_TOKEN && 'WRIKE_API_TOKEN',
+			!process.env.WRIKE_ORDERS_FOLDER_ID && 'WRIKE_ORDERS_FOLDER_ID',
+			!process.env.WRIKE_CLIENTS_FOLDER_ID && 'WRIKE_CLIENTS_FOLDER_ID',
+		].filter(Boolean);
+		console.warn('[Wrike] Skipping order task: not configured. Missing:', missing.join(', ') || 'unknown');
 		return null;
 	}
 
@@ -174,6 +179,12 @@ type ClientData = {
 export async function createClientTask(client: ClientData) {
 	const config = getWrikeConfig();
 	if (!config) {
+		const missing = [
+			!process.env.WRIKE_API_TOKEN && 'WRIKE_API_TOKEN',
+			!process.env.WRIKE_ORDERS_FOLDER_ID && 'WRIKE_ORDERS_FOLDER_ID',
+			!process.env.WRIKE_CLIENTS_FOLDER_ID && 'WRIKE_CLIENTS_FOLDER_ID',
+		].filter(Boolean);
+		console.warn('[Wrike] Skipping client task: not configured. Missing:', missing.join(', ') || 'unknown');
 		return null;
 	}
 

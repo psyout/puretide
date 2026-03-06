@@ -3,7 +3,7 @@ import { buildOrderEmails } from '@/lib/orderEmail';
 import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
 import { sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
-import { createClientTask } from '@/lib/wrike';
+import { createOrderTask, createClientTask } from '@/lib/wrike';
 
 export type FulfillmentOrder = {
 	orderNumber: string;
@@ -202,7 +202,26 @@ export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfil
 		orderFrom
 	);
 
-	await updateSheetStock(order.cartItems);
+	const stockLevels = await updateSheetStock(order.cartItems);
+
+	const orderForWrike = order as FulfillmentOrder & { paymentMethod?: 'etransfer' | 'creditcard'; cardFee?: number };
+	await createOrderTask({
+		orderNumber: order.orderNumber,
+		createdAt: order.createdAt,
+		customer: order.customer,
+		shipToDifferentAddress: order.shipToDifferentAddress,
+		shippingAddress: order.shippingAddress,
+		shippingMethod: order.shippingMethod,
+		paymentMethod: orderForWrike.paymentMethod ?? 'creditcard',
+		cardFee: orderForWrike.cardFee,
+		subtotal: order.subtotal,
+		shippingCost: order.shippingCost,
+		discountAmount: order.discountAmount,
+		promoCode: order.promoCode,
+		total: order.total,
+		cartItems: order.cartItems,
+		stockLevels,
+	});
 
 	await createClientTask({
 		email: order.customer.email,
