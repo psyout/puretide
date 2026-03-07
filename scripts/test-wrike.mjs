@@ -4,8 +4,9 @@
  * Verifies WRIKE_API_TOKEN, WRIKE_ORDERS_FOLDER_ID, WRIKE_CLIENTS_FOLDER_ID.
  *
  * Usage:
- *   node scripts/test-wrike.mjs           - Create test tasks (requires folder IDs in .env)
- *   node scripts/test-wrike.mjs --list    - List all folders with API IDs (use these in .env)
+ *   node scripts/test-wrike.mjs              - Create test tasks (requires folder IDs in .env)
+ *   node scripts/test-wrike.mjs --list       - List folders with API IDs
+ *   node scripts/test-wrike.mjs --list-fields - List custom field IDs (for WRIKE_CLIENT_EMAIL_FIELD_ID)
  *
  * If you get "Invalid Folder ID", run with --list to get the correct IDs from the API.
  * The numeric IDs in the Wrike URL may differ from the API folder IDs.
@@ -19,6 +20,7 @@ const apiToken = process.env.WRIKE_API_TOKEN;
 const ordersFolderId = process.env.WRIKE_ORDERS_FOLDER_ID;
 const clientsFolderId = process.env.WRIKE_CLIENTS_FOLDER_ID;
 const listMode = process.argv.includes('--list');
+const listFieldsMode = process.argv.includes('--list-fields');
 
 async function createTask(folderId, title, description) {
   const res = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
@@ -54,12 +56,39 @@ async function listFolders() {
   console.log('\nCopy the id values for your Orders and Clients folders into .env');
 }
 
+async function listCustomFields() {
+  const res = await fetch(`${WRIKE_API_BASE}/customfields`, {
+    headers: { Authorization: `Bearer ${apiToken}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Wrike API ${res.status}: ${text}`);
+  }
+  const data = await res.json();
+  const fields = data.data || [];
+  console.log('Custom fields (for client stacking, create "Client Email" and set WRIKE_CLIENT_EMAIL_FIELD_ID):\n');
+  fields.forEach((f) => {
+    console.log(`  ${f.title}  →  id: ${f.id}`);
+  });
+  console.log('\nAdd WRIKE_CLIENT_EMAIL_FIELD_ID=<id> to .env so multiple orders from the same client update one task.');
+}
+
 async function run() {
   console.log('Wrike integration test\n');
 
   if (!apiToken) {
     console.error('Missing WRIKE_API_TOKEN. Add it to .env and try again.');
     process.exit(1);
+  }
+
+  if (listFieldsMode) {
+    try {
+      await listCustomFields();
+    } catch (err) {
+      console.error('Error:', err.message);
+      process.exit(1);
+    }
+    return;
   }
 
   if (listMode) {

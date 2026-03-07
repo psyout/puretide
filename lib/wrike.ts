@@ -18,18 +18,26 @@ function getWrikeConfig(): WrikeConfig | null {
 	return { apiToken, ordersFolderId, clientsFolderId };
 }
 
-async function createTask(folderId: string, title: string, description: string, apiToken: string) {
+type CustomFieldInput = { id: string; value: string };
+
+async function createTask(
+	folderId: string,
+	title: string,
+	description: string,
+	apiToken: string,
+	customFields?: CustomFieldInput[]
+) {
+	const body: Record<string, unknown> = { title, description, status: 'Active' };
+	if (Array.isArray(customFields) && customFields.length > 0) {
+		body.customFields = customFields;
+	}
 	const response = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${apiToken}`,
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({
-			title,
-			description,
-			status: 'Active',
-		}),
+		body: JSON.stringify(body),
 	});
 
 	if (!response.ok) {
@@ -38,6 +46,51 @@ async function createTask(folderId: string, title: string, description: string, 
 		return null;
 	}
 
+	const data = await response.json();
+	return data.data?.[0] ?? null;
+}
+
+async function getTasksInFolder(folderId: string, apiToken: string): Promise<Array<{ id: string; title: string; description?: string; customFields?: Array<{ id: string; value: string }> }>> {
+	const response = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
+		headers: { Authorization: `Bearer ${apiToken}` },
+	});
+	if (!response.ok) return [];
+	const data = await response.json();
+	return data.data ?? [];
+}
+
+async function getTask(taskId: string, apiToken: string): Promise<{ id: string; title: string; description?: string } | null> {
+	const response = await fetch(`${WRIKE_API_BASE}/tasks/${taskId}`, {
+		headers: { Authorization: `Bearer ${apiToken}` },
+	});
+	if (!response.ok) return null;
+	const data = await response.json();
+	const tasks = data.data;
+	return Array.isArray(tasks) && tasks.length > 0 ? tasks[0] : null;
+}
+
+async function updateTask(
+	taskId: string,
+	updates: { title?: string; description?: string; customFields?: CustomFieldInput[] },
+	apiToken: string
+): Promise<unknown> {
+	const body: Record<string, unknown> = {};
+	if (updates.title !== undefined) body.title = updates.title;
+	if (updates.description !== undefined) body.description = updates.description;
+	if (Array.isArray(updates.customFields) && updates.customFields.length > 0) body.customFields = updates.customFields;
+	const response = await fetch(`${WRIKE_API_BASE}/tasks/${taskId}`, {
+		method: 'PUT',
+		headers: {
+			Authorization: `Bearer ${apiToken}`,
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(body),
+	});
+	if (!response.ok) {
+		const error = await response.text();
+		console.error('[Wrike] API update error:', response.status, error);
+		return null;
+	}
 	const data = await response.json();
 	return data.data?.[0] ?? null;
 }
@@ -176,28 +229,25 @@ type ClientData = {
 	productsPurchased: string[];
 };
 
-export async function createClientTask(client: ClientData) {
-	const config = getWrikeConfig();
-	if (!config) {
-		const missing = [
-			!process.env.WRIKE_API_TOKEN && 'WRIKE_API_TOKEN',
-			!process.env.WRIKE_ORDERS_FOLDER_ID && 'WRIKE_ORDERS_FOLDER_ID',
-			!process.env.WRIKE_CLIENTS_FOLDER_ID && 'WRIKE_CLIENTS_FOLDER_ID',
-		].filter(Boolean);
-		console.warn('[Wrike] Skipping client task: not configured. Missing:', missing.join(', ') || 'unknown');
-		return null;
-	}
-
-	const title = `Client: ${client.firstName} ${client.lastName} - Order $${client.orderTotal.toFixed(2)}`;
-
+function buildOrderBlock(client: ClientData): string {
 	const productsList = client.productsPurchased.length
 		? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>`
 		: '<p>None</p>';
-
-	const description = `
-<h3>Client Record</h3>
-<p>Date: ${client.lastOrderDate}</p>
+	return `
 <hr>
+<h4>Order – ${client.lastOrderDate}</h4>
+<p><b>Total: $${client.orderTotal.toFixed(2)}</b></p>
+<h5>Products</h5>
+${productsList}
+	`.trim();
+}
+
+function buildFullClientDescription(client: ClientData): string {
+	const productsList = client.productsPurchased.length
+		? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>`
+		: '<p>None</p>';
+	return `
+<h3>Client Record</h3>
 <h4>Contact</h4>
 <p>
 <b>Name:</b> ${client.firstName} ${client.lastName}<br>
@@ -210,15 +260,76 @@ ${client.city}, ${client.province} ${client.zipCode}<br>
 ${client.country}
 </p>
 <hr>
-<h4>Order Total</h4>
-<p><b>$${client.orderTotal.toFixed(2)}</b></p>
-<hr>
-<h4>Products Purchased</h4>
+<h4>Order – ${client.lastOrderDate}</h4>
+<p><b>Total: $${client.orderTotal.toFixed(2)}</b></p>
+<h5>Products</h5>
 ${productsList}
 	`.trim();
+}
+
+export async function createClientTask(client: ClientData) {
+	const config = getWrikeConfig();
+	if (!config) {
+		const missing = [
+			!process.env.WRIKE_API_TOKEN && 'WRIKE_API_TOKEN',
+			!process.env.WRIKE_ORDERS_FOLDER_ID && 'WRIKE_ORDERS_FOLDER_ID',
+			!process.env.WRIKE_CLIENTS_FOLDER_ID && 'WRIKE_CLIENTS_FOLDER_ID',
+		].filter(Boolean);
+		console.warn('[Wrike] Skipping client task: not configured. Missing:', missing.join(', ') || 'unknown');
+		return null;
+	}
+
+	const clientEmailFieldId = process.env.WRIKE_CLIENT_EMAIL_FIELD_ID;
+	const title = `${client.firstName} ${client.lastName}`;
+	const orderTotalFieldId = process.env.WRIKE_ORDER_TOTAL_FIELD_ID;
+	const customFieldsOnCreate: CustomFieldInput[] = [];
+	if (clientEmailFieldId) {
+		customFieldsOnCreate.push({ id: clientEmailFieldId, value: client.email });
+	}
+	if (orderTotalFieldId) {
+		customFieldsOnCreate.push({ id: orderTotalFieldId, value: `$${client.orderTotal.toFixed(2)}` });
+	}
 
 	try {
-		const task = await createTask(config.clientsFolderId, title, description, config.apiToken);
+		// Stack by client: find existing task by email if custom field is configured
+		if (clientEmailFieldId) {
+			const tasks = await getTasksInFolder(config.clientsFolderId, config.apiToken);
+			const normalizedEmail = client.email.trim().toLowerCase();
+			const existing = tasks.find((t) => {
+				const cf = t.customFields ?? [];
+				const emailVal = cf.find((f) => f.id === clientEmailFieldId)?.value?.trim().toLowerCase();
+				return emailVal === normalizedEmail;
+			});
+
+			if (existing) {
+				const current = await getTask(existing.id, config.apiToken);
+				const prevDesc = (current?.description ?? '').trim();
+				const newBlock = buildOrderBlock(client);
+				const updatedDesc = prevDesc ? `${prevDesc}\n${newBlock}` : buildFullClientDescription(client);
+				const updatePayload: { description: string; customFields?: CustomFieldInput[] } = { description: updatedDesc };
+				const updateCustomFields: CustomFieldInput[] = [];
+				updateCustomFields.push({ id: clientEmailFieldId, value: client.email });
+				if (orderTotalFieldId) {
+					updateCustomFields.push({ id: orderTotalFieldId, value: `$${client.orderTotal.toFixed(2)}` });
+				}
+				updatePayload.customFields = updateCustomFields;
+				const updated = await updateTask(existing.id, updatePayload, config.apiToken);
+				if (updated) {
+					console.log('[Wrike] Client task updated (order appended):', existing.id);
+				}
+				return updated ?? null;
+			}
+		}
+
+		// New client: create task
+		const description = buildFullClientDescription(client);
+		const task = await createTask(
+			config.clientsFolderId,
+			title,
+			description,
+			config.apiToken,
+			customFieldsOnCreate.length > 0 ? customFieldsOnCreate : undefined
+		);
 		if (task) {
 			console.log('Wrike client task created:', task.id);
 		}
