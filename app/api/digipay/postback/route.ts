@@ -112,7 +112,12 @@ export async function POST(request: Request) {
 		const allowedIps = getAllowedIps();
 
 		if (!clientIp || !allowedIps.includes(clientIp)) {
-			console.warn(`[DigiPay postback] Rejected IP: ${clientIp || '(empty)'}`);
+			console.warn(
+				JSON.stringify({
+					label: 'digipay:postback:rejected_ip',
+					clientIp: clientIp || '(empty)',
+				}),
+			);
 			return xmlResponse('fail', 101, `Request from unauthorized IP: ${clientIp || 'unknown'}`);
 		}
 
@@ -120,7 +125,10 @@ export async function POST(request: Request) {
 
 		/* ---------- HMAC ---------- */
 		const hmac = verifyHmacSignature(rawBody, request);
-		if (!hmac.ok) return xmlResponse('fail', 103, hmac.message);
+		if (!hmac.ok) {
+			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_hmac', message: hmac.message }));
+			return xmlResponse('fail', 103, hmac.message);
+		}
 
 		/* ---------- Parse ---------- */
 		const data = parsePostbackBody(rawBody);
@@ -128,7 +136,10 @@ export async function POST(request: Request) {
 
 		const session = typeof data.session === 'string' ? data.session.trim() : '';
 
-		if (!session) return xmlResponse('fail', 102, "Invalid session variable: 'empty'");
+		if (!session) {
+			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_session', session: '(empty)' }));
+			return xmlResponse('fail', 102, "Invalid session variable: 'empty'");
+		}
 
 		/* ---------- Payment Status Validation ---------- */
 		const statusRaw = typeof data.status === 'string' ? data.status.trim().toLowerCase() : typeof data.result === 'string' ? data.result.trim().toLowerCase() : '';
@@ -136,32 +147,46 @@ export async function POST(request: Request) {
 		const approvedStatuses = ['approved', 'success', 'completed'];
 
 		if (!approvedStatuses.includes(statusRaw)) {
-			console.warn(`[DigiPay postback] Payment not approved. Status: ${statusRaw}`);
+			console.warn(JSON.stringify({ label: 'digipay:postback:not_approved', session, status: statusRaw }));
 			return xmlResponse('fail', 105, 'Payment not approved');
 		}
 
 		/* ---------- Load Order ---------- */
 		const order = await getOrderBySessionFromDb(session);
 
-		if (!order) return xmlResponse('fail', 102, 'Invalid session variable');
+		if (!order) {
+			console.warn(JSON.stringify({ label: 'digipay:postback:unknown_session', session }));
+			return xmlResponse('fail', 102, 'Invalid session variable');
+		}
 
 		if (order.paymentStatus === 'paid') return xmlResponse('ok', 100, 'Order already processed', session);
 
 		/* ---------- Amount Validation ---------- */
 		const amountVal = data.amount;
-		const rawAmount =
-			typeof amountVal === 'number'
-				? String(amountVal)
-				: typeof amountVal === 'string'
-					? amountVal.trim()
-					: '';
+		const rawAmount = typeof amountVal === 'number' ? String(amountVal) : typeof amountVal === 'string' ? amountVal.trim() : '';
 
 		const paidAmount = Number(rawAmount.replace('_', '.'));
 		const expectedAmount = Number(order.total ?? 0);
 
-		if (!rawAmount || Number.isNaN(paidAmount)) return xmlResponse('fail', 102, 'Invalid amount format');
+		if (!rawAmount || Number.isNaN(paidAmount)) {
+			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_amount', session, rawAmount }));
+			return xmlResponse('fail', 102, 'Invalid amount format');
+		}
 
-		if (Math.abs(paidAmount - expectedAmount) > 0.01) return xmlResponse('fail', 104, `Amount mismatch. Expected ${expectedAmount}, received ${paidAmount}`);
+		if (Math.abs(paidAmount - expectedAmount) > 0.01) {
+			console.warn(
+				JSON.stringify({
+					label: 'digipay:postback:amount_mismatch',
+					session,
+					expectedAmount,
+					paidAmount,
+					rawAmount,
+				}),
+			);
+			return xmlResponse('fail', 104, `Amount mismatch. Expected ${expectedAmount}, received ${paidAmount}`);
+		}
+
+		console.log(JSON.stringify({ label: 'digipay:postback:approved', session, paidAmount }));
 
 		const paidAt = new Date().toISOString();
 
@@ -173,15 +198,16 @@ export async function POST(request: Request) {
 			emailStatus = result.emailStatus;
 			adminEmailStatus = result.adminEmailStatus;
 		} catch (fulfillError) {
-			console.error('[DigiPay postback] Fulfillment failed', fulfillError);
+			console.error(JSON.stringify({ label: 'digipay:postback:fulfillment_failed', session }));
+			console.error(fulfillError);
 			return xmlResponse('fail', 104, 'Unable to process purchase');
 		}
 
 		if (!emailStatus.sent) {
-			console.warn(`[DigiPay postback] Order ${session} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : emailStatus.error ?? 'unknown'}`);
+			console.warn(`[DigiPay postback] Order ${session} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : (emailStatus.error ?? 'unknown')}`);
 		}
 		if (!adminEmailStatus.sent) {
-			console.warn(`[DigiPay postback] Order ${session} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : adminEmailStatus.error ?? 'unknown'}`);
+			console.warn(`[DigiPay postback] Order ${session} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : (adminEmailStatus.error ?? 'unknown')}`);
 		}
 
 		await upsertOrderInDb({
@@ -197,11 +223,12 @@ export async function POST(request: Request) {
 			adminEmailStatus,
 		} as Record<string, unknown>);
 
-		console.log(`[DigiPay postback] Order ${session} marked paid and fulfilled`);
+		console.log(JSON.stringify({ label: 'digipay:postback:marked_paid', session }));
 
 		return xmlResponse('ok', 100, 'Purchase successfully processed', session);
 	} catch (error) {
-		console.error('[DigiPay postback] Unhandled error', error);
+		console.error(JSON.stringify({ label: 'digipay:postback:unhandled_error' }));
+		console.error(error);
 		return xmlResponse('fail', 104, 'Unable to process purchase');
 	}
 }

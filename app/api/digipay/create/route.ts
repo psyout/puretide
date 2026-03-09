@@ -180,16 +180,6 @@ export async function POST(request: Request) {
 		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
 		const createdAt = new Date().toISOString();
 
-		const orderRecord = {
-			id: `order_${timestamp}`,
-			orderNumber,
-			createdAt,
-			paymentStatus: 'pending' as const,
-			...payload,
-		};
-
-		await upsertOrderInDb(orderRecord as Record<string, unknown>);
-
 		// Build DigiPay redirect (credit card only; e-transfer uses POST /api/orders)
 		const useSandbox = process.env.DIGIPAY_USE_SANDBOX === 'true';
 		const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID;
@@ -201,6 +191,23 @@ export async function POST(request: Request) {
 		}
 
 		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
+
+		const orderRecord = {
+			id: `order_${timestamp}`,
+			orderNumber,
+			createdAt,
+			paymentStatus: 'pending' as const,
+			paymentProvider: 'digipay',
+			digipay: {
+				useSandbox,
+				siteId: effectiveSiteId,
+				pburl,
+				tcomplete,
+			},
+			...payload,
+		};
+
+		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
 		const redirectUrl = buildDigipayPaymentUrl(
 			{
@@ -223,6 +230,18 @@ export async function POST(request: Request) {
 			encryptionKey,
 		);
 
+		console.log(
+			JSON.stringify({
+				label: 'digipay:create',
+				orderNumber,
+				total,
+				useSandbox,
+				effectiveSiteId,
+				pburl,
+				tcomplete,
+			}),
+		);
+
 		if (idemKey) setCachedDigipay(idemKey, orderNumber, redirectUrl);
 		return NextResponse.json({
 			ok: true,
@@ -231,6 +250,7 @@ export async function POST(request: Request) {
 		});
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'digipay:create' });
+		console.error(JSON.stringify({ label: 'digipay:create:error', errorId: safe.errorId }));
 		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }
