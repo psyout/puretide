@@ -53,9 +53,18 @@ async function createOrderSubtasks(parentTaskId: string, folderId: string, apiTo
 	const subitems = ['Create shipping labels', 'Pick product', 'Package products', 'Ship out', 'Send customer ship notification with tracking'];
 	const created: Array<unknown> = [];
 	for (const title of subitems) {
-		const subtask = await createTask(folderId, title, '', apiToken, { superTaskId: parentTaskId });
-		if (subtask) created.push(subtask);
+		try {
+			const subtask = await createTask(folderId, title, '', apiToken, { superTaskId: parentTaskId });
+			if (subtask) {
+				created.push(subtask);
+			} else {
+				console.warn('[Wrike] Failed to create order subtask:', { parentTaskId, title });
+			}
+		} catch (error) {
+			console.error('[Wrike] Error creating order subtask:', { parentTaskId, title, error });
+		}
 	}
+	console.log('[Wrike] Order subtasks created:', { parentTaskId, createdCount: created.length, expectedCount: subitems.length });
 	return created;
 }
 
