@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: 'Invalid or expired promo code' }, { status: 404 });
 		}
 
-		return NextResponse.json({ ok: true, discount: promo.discount });
+		return NextResponse.json({ ok: true, discount: promo.discount, freeShipping: Boolean(promo.freeShipping) });
 	} catch (error) {
 		console.error('Promo verification error:', error);
 		return NextResponse.json({ ok: false, error: 'Something went wrong. Please try again later.' }, { status: 500 });

@@ -17,13 +17,7 @@ const getErrorMessage = (error: unknown) => (error instanceof Error ? error.mess
 const isExpectedSheetsFallbackError = (error: unknown) => {
 	const message = getErrorMessage(error).toLowerCase();
 	const code = getErrorCode(error).toUpperCase();
-	return (
-		message.includes('google sheets credentials are not configured') ||
-		message.includes('getaddrinfo enotfound') ||
-		code === 'ENOTFOUND' ||
-		code === 'ETIMEDOUT' ||
-		code === 'ECONNRESET'
-	);
+	return message.includes('google sheets credentials are not configured') || message.includes('getaddrinfo enotfound') || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'ECONNRESET';
 };
 
 const reportSheetsError = (label: string, error: unknown) => {
@@ -178,18 +172,22 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:C',
+			range: 'PromoCodes!A1:D',
 		});
 
 		const rows = response.data.values ?? [];
 		if (rows.length <= 1) return []; // Only header or empty
 
 		const [, ...dataRows] = rows as string[][];
-		return dataRows.map((row) => ({
-			code: (row[0] ?? '').trim().toUpperCase(),
-			discount: parseNumber(row[1] ?? '0'),
-			active: (row[2] ?? '').trim().toLowerCase() === 'true',
-		}));
+		return dataRows.map((row) => {
+			const hasFourColumns = row.length >= 4;
+			return {
+				code: (row[0] ?? '').trim().toUpperCase(),
+				discount: parseNumber(row[1] ?? '0'),
+				freeShipping: hasFourColumns ? (row[2] ?? '').trim().toLowerCase() === 'true' : false,
+				active: (hasFourColumns ? row[3] : (row[2] ?? '')).trim().toLowerCase() === 'true',
+			};
+		});
 	} catch (error) {
 		reportSheetsError('Error reading promo codes from sheet', error);
 		return [];
@@ -204,16 +202,13 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
 		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'PromoCodes');
 		if (!sheetExists) {
-			console.error('Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, Active');
+			console.error('Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active');
 			return;
 		}
-		const values = [
-			['Code', 'Discount', 'Active'],
-			...codes.map((c) => [c.code, String(c.discount), c.active ? 'true' : 'false']),
-		];
+		const values = [['Code', 'Discount', 'FreeShipping', 'Active'], ...codes.map((c) => [c.code, String(c.discount), c.freeShipping ? 'true' : 'false', c.active ? 'true' : 'false'])];
 		await sheets.spreadsheets.values.update({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:C',
+			range: 'PromoCodes!A1:D',
 			valueInputOption: 'RAW',
 			requestBody: { values },
 		});
@@ -252,9 +247,7 @@ export const readSheetClients = async (): Promise<ClientRecord[]> => {
 			ordersCount: parseNumber(row[8] ?? '0'),
 			totalSpent: parseNumber(row[9] ?? '0'),
 			lastOrderDate: (row[10] ?? '').trim(),
-			products: (row[11] ?? '')
-				.split(', ')
-				.filter(Boolean),
+			products: (row[11] ?? '').split(', ').filter(Boolean),
 		}));
 	} catch (error) {
 		reportSheetsError('Error reading clients from sheet', error);
@@ -321,7 +314,7 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 
 	try {
 		const sheets = getSheetsClient();
-		
+
 		// Check if Clients sheet exists
 		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
 		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'Clients');

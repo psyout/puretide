@@ -58,7 +58,12 @@ interface OrderPayload {
 function requireOrdersApiKey(request: Request): boolean {
 	const key = process.env.ORDERS_API_KEY;
 	if (!key) return false;
-	const provided = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+	const provided =
+		request.headers.get('x-api-key') ??
+		request.headers
+			.get('authorization')
+			?.replace(/^Bearer\s+/i, '')
+			.trim();
 	return provided === key;
 }
 
@@ -238,12 +243,15 @@ export async function POST(request: Request) {
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		let cartItems: typeof orderPayload.cartItems;
 		let discountAmount = 0;
-		const shippingCost = getEffectiveShippingCost();
+		let shippingCost = getEffectiveShippingCost();
 
 		if (orderPayload.promoCode) {
 			const promoCodes = await readSheetPromoCodes();
 			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
+				if (promo.freeShipping) {
+					shippingCost = 0;
+				}
 				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
 				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 				discountAmount = Number((subtotalWithPromo * (promo.discount / 100)).toFixed(2));
@@ -301,10 +309,10 @@ export async function POST(request: Request) {
 		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.admin.subject, emailData.admin.text, emailData.admin.html, customerReplyTo, '', orderFrom);
 
 		if (!emailStatus.sent) {
-			console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : emailStatus.error ?? 'unknown'}`);
+			console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : (emailStatus.error ?? 'unknown')}`);
 		}
 		if (!adminEmailStatus.sent) {
-			console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : adminEmailStatus.error ?? 'unknown'}`);
+			console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : (adminEmailStatus.error ?? 'unknown')}`);
 		}
 
 		// Update order with email preview and status (order already saved above)

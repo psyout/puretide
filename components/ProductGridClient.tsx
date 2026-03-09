@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import ProductCard from './ProductCard';
 import type { Product } from '@/types/product';
 
@@ -8,33 +8,19 @@ type ProductGridClientProps = {
 	initialItems: Product[];
 };
 
-type GridLoadSettings = {
-	initialCount: number;
-	loadBatchSize: number;
-};
-
-function getGridLoadSettings(width: number): GridLoadSettings {
-	// Tailwind lg breakpoint (desktop): 1024+
-	if (width >= 1024) {
-		return { initialCount: 6, loadBatchSize: 3 };
-	}
-	// Tablet + mobile
-	return { initialCount: 2, loadBatchSize: 2 };
-}
-
 export default function ProductGridClient({ initialItems }: ProductGridClientProps) {
 	const [selectedCategory, setSelectedCategory] = useState('All');
-	const [loadSettings, setLoadSettings] = useState<GridLoadSettings>({ initialCount: 2, loadBatchSize: 2 });
-	const [visibleCount, setVisibleCount] = useState(2);
-	const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
 	const [items, setItems] = useState<Product[]>(initialItems);
 	const [stockError, setStockError] = useState<string | null>(null);
+	const [isLoading, setIsLoading] = useState(initialItems.length === 0);
+	const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
 
 	// 1. Fetch products from API
 	useEffect(() => {
 		let isMounted = true;
 
 		const load = async () => {
+			if (isMounted) setIsLoading(true);
 			try {
 				const response = await fetch('/api/stock', { cache: 'no-store' });
 				const data = (await response.json()) as { ok: boolean; items?: Product[] };
@@ -50,6 +36,8 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 				}
 			} catch {
 				if (isMounted) setStockError('Couldn’t refresh stock. Showing cached data.');
+			} finally {
+				if (isMounted) setIsLoading(false);
 			}
 		};
 
@@ -62,19 +50,6 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 		};
 	}, []);
 
-	// 2. Handle responsive load settings
-	useEffect(() => {
-		const updateSettings = () => {
-			const next = getGridLoadSettings(window.innerWidth);
-			setLoadSettings(next);
-			setVisibleCount((prev) => Math.max(prev, next.initialCount));
-		};
-
-		updateSettings();
-		window.addEventListener('resize', updateSettings);
-		return () => window.removeEventListener('resize', updateSettings);
-	}, []);
-
 	// 3. Memoized categories and filtered products (Must be before useEffects that use them)
 	const categories = useMemo(() => ['All', ...Array.from(new Set(items.map((product) => product.category)))], [items]);
 
@@ -85,29 +60,34 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 		return items.filter((product) => product.category === selectedCategory);
 	}, [selectedCategory, items]);
 
-	// 4. Update animated IDs
+	const visibleProducts = filteredProducts;
+	const expectedImageIds = useMemo(() => visibleProducts.map((p) => p.id), [visibleProducts]);
+	const expectedImageIdsKey = useMemo(() => expectedImageIds.join('|'), [expectedImageIds]);
+
 	useEffect(() => {
-		const newIds = filteredProducts
-			.slice(0, visibleCount)
-			.map((p) => p.id)
-			.filter((id, index) => index >= loadSettings.initialCount && !animatedIds.has(id));
+		setLoadedImageIds(new Set());
+	}, [expectedImageIdsKey]);
 
-		if (newIds.length > 0) {
-			setAnimatedIds((prev) => {
-				const next = new Set(prev);
-				newIds.forEach((id) => next.add(id));
-				return next;
-			});
-		}
-	}, [visibleCount, filteredProducts, animatedIds, loadSettings.initialCount]);
+	const handleImageLoaded = useCallback((productId: string) => {
+		setLoadedImageIds((prev) => {
+			if (prev.has(productId)) return prev;
+			const next = new Set(prev);
+			next.add(productId);
+			return next;
+		});
+	}, []);
 
-	// 5. Reset visible count on category change
-	useEffect(() => {
-		setVisibleCount(loadSettings.initialCount);
-	}, [selectedCategory, loadSettings.initialCount]);
+	const allImagesLoaded = useMemo(() => {
+		if (expectedImageIds.length === 0) return true;
+		return expectedImageIds.every((id) => loadedImageIds.has(id));
+	}, [expectedImageIds, loadedImageIds]);
 
-	const visibleProducts = filteredProducts.slice(0, visibleCount);
-	const hasMoreProducts = visibleCount < filteredProducts.length;
+	const showSkeleton = isLoading || (visibleProducts.length > 0 && !allImagesLoaded);
+	const skeletonCount = useMemo(() => {
+		if (visibleProducts.length > 0) return visibleProducts.length;
+		if (initialItems.length > 0) return initialItems.length;
+		return 6;
+	}, [visibleProducts.length, initialItems.length]);
 
 	return (
 		<div
@@ -170,31 +150,47 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 					</p>
 				)}
 				<div>
-					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 mt-8'>
+					<div className='relative mt-8'>
+						{showSkeleton && (
+							<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10'>
+								{Array.from({ length: skeletonCount }).map((_, index) => (
+									<div
+										key={index}
+										className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg animate-pulse'>
+										<div className='flex items-start gap-5'>
+											<div className='h-28 w-28 flex-shrink-0 rounded-lg bg-deep-tidal-teal/10' />
+											<div className='flex-1 space-y-3'>
+												<div className='h-6 bg-deep-tidal-teal/15 rounded w-3/4' />
+												<div className='h-4 bg-deep-tidal-teal/10 rounded w-full' />
+												<div className='h-4 bg-deep-tidal-teal/10 rounded w-4/5' />
+												<div className='h-10 bg-deep-tidal-teal/10 rounded w-32 mt-2' />
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						)}
 						{visibleProducts.length > 0 ? (
-							visibleProducts.map((product) => (
-								<div
-									key={product.id}
-									className={animatedIds.has(product.id) ? 'animate-fade-in-up' : ''}>
-									<ProductCard product={product} />
-								</div>
-							))
-						) : (
-							<div className='col-span-2 text-center py-12'>
+							<div
+								className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 transition-opacity duration-300 ${
+									showSkeleton ? 'opacity-0 pointer-events-none select-none' : 'opacity-100'
+								}`}
+								aria-hidden={showSkeleton}>
+								{visibleProducts.map((product) => (
+									<div key={product.id}>
+										<ProductCard
+											product={product}
+											onImageLoaded={handleImageLoaded}
+										/>
+									</div>
+								))}
+							</div>
+						) : isLoading ? null : (
+							<div className='text-center py-12'>
 								<p className='text-deep-tidal-teal-700 text-lg'>No products found in this category.</p>
 							</div>
 						)}
 					</div>
-					{hasMoreProducts && (
-						<div className='mt-12 flex justify-center min-h-[100px] items-start'>
-							<button
-								type='button'
-								onClick={() => setVisibleCount((count) => Math.min(count + loadSettings.loadBatchSize, filteredProducts.length))}
-								className='rounded-full bg-deep-tidal-teal px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-deep-tidal-teal-600 cursor-pointer'>
-								Load more
-							</button>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>

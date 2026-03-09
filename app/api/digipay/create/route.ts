@@ -127,7 +127,7 @@ export async function POST(request: Request) {
 		const trustedCartItems = trustedCart.items;
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
-		const shippingCost = getEffectiveShippingCost();
+		let shippingCost = getEffectiveShippingCost();
 		let cartItems: typeof orderPayload.cartItems;
 		let discountAmount = 0;
 
@@ -135,6 +135,9 @@ export async function POST(request: Request) {
 			const promoCodes = await readSheetPromoCodes();
 			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
+				if (promo.freeShipping) {
+					shippingCost = 0;
+				}
 				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
 				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 				discountAmount = Number((subtotalWithPromo * (promo.discount / 100)).toFixed(2));

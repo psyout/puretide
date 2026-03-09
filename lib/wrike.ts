@@ -20,16 +20,15 @@ function getWrikeConfig(): WrikeConfig | null {
 
 type CustomFieldInput = { id: string; value: string };
 
-async function createTask(
-	folderId: string,
-	title: string,
-	description: string,
-	apiToken: string,
-	customFields?: CustomFieldInput[]
-) {
+async function createTask(folderId: string, title: string, description: string, apiToken: string, options?: { customFields?: CustomFieldInput[]; superTaskId?: string }) {
 	const body: Record<string, unknown> = { title, description, status: 'Active' };
+	const customFields = options?.customFields;
 	if (Array.isArray(customFields) && customFields.length > 0) {
 		body.customFields = customFields;
+	}
+	const superTaskId = options?.superTaskId;
+	if (superTaskId) {
+		body.superTaskId = superTaskId;
 	}
 	const response = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
 		method: 'POST',
@@ -48,6 +47,16 @@ async function createTask(
 
 	const data = await response.json();
 	return data.data?.[0] ?? null;
+}
+
+async function createOrderSubtasks(parentTaskId: string, folderId: string, apiToken: string) {
+	const subitems = ['Create shipping labels', 'Pick product', 'Package products', 'Ship out', 'Send customer ship notification with tracking'];
+	const created: Array<unknown> = [];
+	for (const title of subitems) {
+		const subtask = await createTask(folderId, title, '', apiToken, { superTaskId: parentTaskId });
+		if (subtask) created.push(subtask);
+	}
+	return created;
 }
 
 async function getTasksInFolder(folderId: string, apiToken: string): Promise<Array<{ id: string; title: string; description?: string; customFields?: Array<{ id: string; value: string }> }>> {
@@ -69,11 +78,7 @@ async function getTask(taskId: string, apiToken: string): Promise<{ id: string; 
 	return Array.isArray(tasks) && tasks.length > 0 ? tasks[0] : null;
 }
 
-async function updateTask(
-	taskId: string,
-	updates: { title?: string; description?: string; customFields?: CustomFieldInput[] },
-	apiToken: string
-): Promise<unknown> {
+async function updateTask(taskId: string, updates: { title?: string; description?: string; customFields?: CustomFieldInput[] }, apiToken: string): Promise<unknown> {
 	const body: Record<string, unknown> = {};
 	if (updates.title !== undefined) body.title = updates.title;
 	if (updates.description !== undefined) body.description = updates.description;
@@ -207,6 +212,7 @@ ${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.order
 		const task = await createTask(config.ordersFolderId, title, description, config.apiToken);
 		if (task) {
 			console.log('Wrike order task created:', task.id);
+			await createOrderSubtasks(task.id, config.ordersFolderId, config.apiToken);
 		}
 		return task;
 	} catch (error) {
@@ -230,9 +236,7 @@ type ClientData = {
 };
 
 function buildOrderBlock(client: ClientData): string {
-	const productsList = client.productsPurchased.length
-		? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>`
-		: '<p>None</p>';
+	const productsList = client.productsPurchased.length ? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>` : '<p>None</p>';
 	return `
 <hr>
 <h4>Order – ${client.lastOrderDate}</h4>
@@ -243,9 +247,7 @@ ${productsList}
 }
 
 function buildFullClientDescription(client: ClientData): string {
-	const productsList = client.productsPurchased.length
-		? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>`
-		: '<p>None</p>';
+	const productsList = client.productsPurchased.length ? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>` : '<p>None</p>';
 	return `
 <h3>Client Record</h3>
 <h4>Contact</h4>
@@ -297,7 +299,10 @@ export async function createClientTask(client: ClientData) {
 			const normalizedEmail = client.email.trim().toLowerCase();
 			const existing = tasks.find((t) => {
 				const cf = t.customFields ?? [];
-				const emailVal = cf.find((f) => f.id === clientEmailFieldId)?.value?.trim().toLowerCase();
+				const emailVal = cf
+					.find((f) => f.id === clientEmailFieldId)
+					?.value?.trim()
+					.toLowerCase();
 				return emailVal === normalizedEmail;
 			});
 
@@ -323,13 +328,7 @@ export async function createClientTask(client: ClientData) {
 
 		// New client: create task
 		const description = buildFullClientDescription(client);
-		const task = await createTask(
-			config.clientsFolderId,
-			title,
-			description,
-			config.apiToken,
-			customFieldsOnCreate.length > 0 ? customFieldsOnCreate : undefined
-		);
+		const task = await createTask(config.clientsFolderId, title, description, config.apiToken, { customFields: customFieldsOnCreate.length > 0 ? customFieldsOnCreate : undefined });
 		if (task) {
 			console.log('Wrike client task created:', task.id);
 		}

@@ -20,8 +20,7 @@ function isTrustedPaymentRedirect(urlRaw: string): boolean {
 			return false;
 		}
 		const envHosts =
-			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS
-				?.split(',')
+			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS?.split(',')
 				.map((host) => host.trim().toLowerCase())
 				.filter(Boolean) ?? [];
 		const allowedHosts = new Set([DIGIPAY_DEFAULT_HOST, ...envHosts]);
@@ -51,6 +50,7 @@ export default function CheckoutClient() {
 	const [showPromoInput, setShowPromoInput] = useState(false);
 	const [promoCode, setPromoCode] = useState('');
 	const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
+	const [appliedFreeShipping, setAppliedFreeShipping] = useState(false);
 	const [promoError, setPromoError] = useState<string | null>(null);
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
@@ -77,8 +77,9 @@ export default function CheckoutClient() {
 	// When promo is applied, do not stack with volume discount: use raw subtotal and apply promo only
 	const subtotalWithVolume = getTotal();
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
-	const subtotal = appliedDiscount > 0 ? subtotalRaw : subtotalWithVolume;
-	const shippingCost = getEffectiveShippingCost();
+	const promoApplied = appliedDiscount > 0 || appliedFreeShipping;
+	const subtotal = promoApplied ? subtotalRaw : subtotalWithVolume;
+	const shippingCost = appliedFreeShipping ? 0 : getEffectiveShippingCost();
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
 	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
@@ -127,13 +128,15 @@ export default function CheckoutClient() {
 				body: JSON.stringify({ code: promoCode }),
 			});
 
-			const data = await response.json();
+			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
 			if (data.ok) {
-				setAppliedDiscount(data.discount);
+				setAppliedDiscount(Number(data.discount ?? 0));
+				setAppliedFreeShipping(Boolean(data.freeShipping));
 				setPromoError(null);
 			} else {
 				setPromoError(data.error || 'Invalid code');
 				setAppliedDiscount(0);
+				setAppliedFreeShipping(false);
 			}
 		} catch (error) {
 			setPromoError('Failed to verify code');
@@ -149,7 +152,7 @@ export default function CheckoutClient() {
 		shippingMethod,
 		paymentMethod: useCreditCard ? 'creditcard' : 'etransfer',
 		cardFee: useCreditCard ? cardFee : 0,
-		promoCode: appliedDiscount > 0 ? promoCode : undefined,
+		promoCode: promoApplied ? promoCode : undefined,
 		discountAmount: discountAmount || undefined,
 		subtotal,
 		shippingCost,
@@ -698,20 +701,21 @@ export default function CheckoutClient() {
 												value={promoCode}
 												onChange={(e) => setPromoCode(e.target.value)}
 												placeholder='Promo code'
-												disabled={isVerifyingPromo || appliedDiscount > 0}
+												disabled={isVerifyingPromo || promoApplied}
 												className='flex-1 bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
 											/>
 											<button
 												type='button'
 												onClick={handleApplyPromo}
-												disabled={isVerifyingPromo || appliedDiscount > 0 || !promoCode.trim()}
+												disabled={isVerifyingPromo || promoApplied || !promoCode.trim()}
 												className='bg-deep-tidal-teal text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-deep-tidal-teal-900 transition-colors disabled:opacity-50 cursor-pointer'>
-												{isVerifyingPromo ? '...' : appliedDiscount > 0 ? 'Applied' : 'Apply'}
+												{isVerifyingPromo ? '...' : promoApplied ? 'Applied' : 'Apply'}
 											</button>
-											{appliedDiscount > 0 && (
+											{promoApplied && (
 												<button
 													onClick={() => {
 														setAppliedDiscount(0);
+														setAppliedFreeShipping(false);
 														setPromoCode('');
 													}}
 													className='text-xs text-red-500 underline'>
@@ -720,7 +724,13 @@ export default function CheckoutClient() {
 											)}
 										</div>
 										{promoError && <p className='text-xs text-red-500 font-medium'>{promoError}</p>}
-										{appliedDiscount > 0 && <p className='text-xs text-deep-tidal-teal-400 font-bold'>Discount applied! {appliedDiscount}% off subtotal.</p>}
+										{(appliedDiscount > 0 || appliedFreeShipping) && (
+											<p className='text-xs text-deep-tidal-teal-400 font-bold'>
+												Promo applied!
+												{appliedDiscount > 0 ? ` ${appliedDiscount}% off subtotal.` : ''}
+												{appliedFreeShipping ? ' Free shipping.' : ''}
+											</p>
+										)}
 									</div>
 								)}
 							</div>

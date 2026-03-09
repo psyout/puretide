@@ -17,6 +17,7 @@ export interface Product {
 export interface PromoCode {
 	code: string;
 	discount: number; // percentage, e.g., 10 for 10%
+	freeShipping?: boolean;
 	active: boolean;
 }
 

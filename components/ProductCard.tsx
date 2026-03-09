@@ -13,14 +13,16 @@ import { Eye, ShoppingCart, Loader2 } from 'lucide-react';
 
 interface ProductCardProps {
 	product: Product;
+	onImageLoaded?: (productId: string) => void;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, onImageLoaded }: ProductCardProps) {
 	const { addToCart } = useCart();
 	const router = useRouter();
 	const [isNavigating, setIsNavigating] = useState(false);
 	const [showActions, setShowActions] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
+	const [hasReportedImageLoaded, setHasReportedImageLoaded] = useState(false);
 	const stock = Number(product.stock) || 0;
 	const isSoldOut = stock <= 0 || product.status === 'stock-out';
 	const isLowStock = !isSoldOut && stock < 10;
@@ -32,6 +34,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 		m.addEventListener('change', fn);
 		return () => m.removeEventListener('change', fn);
 	}, []);
+
+	useEffect(() => {
+		setHasReportedImageLoaded(false);
+	}, [product.id]);
+
+	useEffect(() => {
+		if (!onImageLoaded) return;
+		if (hasReportedImageLoaded) return;
+		if (hasProductImage(product.image)) return;
+		onImageLoaded(product.id);
+		setHasReportedImageLoaded(true);
+	}, [hasReportedImageLoaded, onImageLoaded, product.id, product.image]);
 
 	const handleViewClick = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -98,6 +112,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 								unoptimized={product.image.startsWith('http')}
 								className='object-contain'
 								priority
+								onLoadingComplete={() => {
+									if (!onImageLoaded) return;
+									if (hasReportedImageLoaded) return;
+									onImageLoaded(product.id);
+									setHasReportedImageLoaded(true);
+								}}
+								onError={() => {
+									if (!onImageLoaded) return;
+									if (hasReportedImageLoaded) return;
+									onImageLoaded(product.id);
+									setHasReportedImageLoaded(true);
+								}}
 							/>
 						</div>
 					) : (

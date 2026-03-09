@@ -297,7 +297,7 @@ export default function StockDashboardPage() {
 	};
 
 	const handleAddPromo = () => {
-		setPromoCodes((prev) => [...prev, { code: '', discount: 0, active: true }]);
+		setPromoCodes((prev) => [...prev, { code: '', discount: 0, freeShipping: false, active: true }]);
 		setPromoCodesDirty(true);
 	};
 
@@ -415,9 +415,7 @@ export default function StockDashboardPage() {
 									</div>
 								</div>
 								{(productsError || saveError) && (
-									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800'>
-										{productsError ?? saveError}
-									</div>
+									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800'>{productsError ?? saveError}</div>
 								)}
 								<div className='flex flex-wrap items-center justify-between gap-4'>
 									<div className='relative w-full max-w-sm'>
@@ -437,9 +435,7 @@ export default function StockDashboardPage() {
 						{activeTab === 'orders' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
 								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Recent Orders</h2>
-								{ordersError && (
-									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{ordersError}</div>
-								)}
+								{ordersError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{ordersError}</div>}
 								{ordersLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading orders...</div>
 								) : orders.length === 0 ? (
@@ -465,9 +461,16 @@ export default function StockDashboardPage() {
 													const products = cart
 														.map((item) => `${String(item.name ?? 'Item')}${Number(item.quantity ?? 1) > 1 ? ` ×${item.quantity}` : ''}`)
 														.join(', ');
-													const payment = order.paymentMethod === 'creditcard' ? 'Card' : order.paymentMethod === 'etransfer' ? 'E-Transfer' : String(order.paymentMethod ?? '-');
+													const payment =
+														order.paymentMethod === 'creditcard'
+															? 'Card'
+															: order.paymentMethod === 'etransfer'
+																? 'E-Transfer'
+																: String(order.paymentMethod ?? '-');
 													return (
-														<tr key={String(order.id)} className='border-t border-black/5'>
+														<tr
+															key={String(order.id)}
+															className='border-t border-black/5'>
 															<td className='py-4 pr-6 font-medium'>{String(order.orderNumber ?? order.id ?? '-')}</td>
 															<td className='py-4 pr-6'>{c ? `${c.firstName} ${c.lastName}` : '-'}</td>
 															<td className='py-4 pr-6 text-[#6a6a6a]'>{products || '-'}</td>
@@ -503,9 +506,7 @@ export default function StockDashboardPage() {
 									</div>
 								</div>
 								{(promoCodesError || savePromosError) && (
-									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>
-										{promoCodesError ?? savePromosError}
-									</div>
+									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{promoCodesError ?? savePromosError}</div>
 								)}
 								{promoCodesLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading promo codes...</div>
@@ -536,6 +537,14 @@ export default function StockDashboardPage() {
 												<label className='flex items-center gap-2'>
 													<input
 														type='checkbox'
+														checked={Boolean(promo.freeShipping)}
+														onChange={(e) => handlePromoChange(i, 'freeShipping', e.target.checked)}
+													/>
+													<span className='text-sm'>Free shipping</span>
+												</label>
+												<label className='flex items-center gap-2'>
+													<input
+														type='checkbox'
 														checked={promo.active}
 														onChange={(e) => handlePromoChange(i, 'active', e.target.checked)}
 													/>
@@ -556,9 +565,7 @@ export default function StockDashboardPage() {
 						{activeTab === 'clients' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
 								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Clients</h2>
-								{clientsError && (
-									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{clientsError}</div>
-								)}
+								{clientsError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{clientsError}</div>}
 								{clientsLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading clients...</div>
 								) : clients.length === 0 ? (
