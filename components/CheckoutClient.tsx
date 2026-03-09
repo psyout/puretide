@@ -811,13 +811,6 @@ export default function CheckoutClient() {
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>
 
-								{paymentMethod === 'creditcard' && (
-									<p className='mt-3 pt-3 border-t border-deep-tidal-teal/10 text-xs text-deep-tidal-teal-600 leading-relaxed text-pretty'>
-										The final amount charged may differ by approximately 2–3% due to foreign exchange (FX) conversion fees applied by your credit card issuer. These fees
-										are set by the issuer and are outside our control.
-									</p>
-								)}
-
 								{/* Notices */}
 								<div className='mt-6 pt-2 border-t border-deep-tidal-teal/10 space-y-3'>
 									<div className='pt-3'>

@@ -59,7 +59,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 			<button
 				onClick={handleViewClick}
 				disabled={isNavigating}
-				className='flex items-center justify-center gap-2 bg-soft-driftwood hover:bg-soft-driftwood-400 disabled:opacity-70 disabled:cursor-not-allowed text-deep-tidal-teal-700 font-semibold py-3 px-4 rounded transition-colors cursor-pointer'>
+				className='flex items-center justify-center gap-2 bg-soft-driftwood hover:bg-soft-driftwood-400 disabled:hover:bg-soft-driftwood disabled:cursor-not-allowed text-deep-tidal-teal-700 font-semibold py-3 px-4 rounded transition-colors cursor-pointer'>
 				{isNavigating ? (
 					<Loader2
 						size={18}
