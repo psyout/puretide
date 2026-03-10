@@ -14,6 +14,7 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 	const [stockError, setStockError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(initialItems.length === 0);
 	const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
+	const [imageGateExpired, setImageGateExpired] = useState(false);
 
 	// 1. Fetch products from API
 	useEffect(() => {
@@ -21,8 +22,13 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 
 		const load = async () => {
 			if (isMounted) setIsLoading(true);
+			const controller = new AbortController();
+			const timeoutId = window.setTimeout(() => controller.abort(), 8000);
 			try {
-				const response = await fetch('/api/stock', { cache: 'no-store' });
+				const response = await fetch('/api/stock', { cache: 'no-store', signal: controller.signal });
+				if (!response.ok) {
+					throw new Error(`Stock request failed: ${response.status}`);
+				}
 				const data = (await response.json()) as { ok: boolean; items?: Product[] };
 				if (isMounted && data.ok && data.items) {
 					const visibleItems = data.items.filter((product) => {
@@ -34,9 +40,12 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 				} else if (isMounted && !data.ok) {
 					setStockError('Couldn’t refresh stock. Showing cached data.');
 				}
-			} catch {
-				if (isMounted) setStockError('Couldn’t refresh stock. Showing cached data.');
+			} catch (error) {
+				if (!isMounted) return;
+				const isAbort = error instanceof DOMException && error.name === 'AbortError';
+				setStockError(isAbort ? 'Stock request timed out. Showing cached data.' : 'Couldn’t refresh stock. Showing cached data.');
 			} finally {
+				window.clearTimeout(timeoutId);
 				if (isMounted) setIsLoading(false);
 			}
 		};
@@ -66,7 +75,16 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 
 	useEffect(() => {
 		setLoadedImageIds(new Set());
+		setImageGateExpired(false);
 	}, [expectedImageIdsKey]);
+
+	useEffect(() => {
+		if (expectedImageIds.length === 0) return;
+		const timeout = window.setTimeout(() => {
+			setImageGateExpired(true);
+		}, 2500);
+		return () => window.clearTimeout(timeout);
+	}, [expectedImageIdsKey, expectedImageIds.length]);
 
 	const handleImageLoaded = useCallback((productId: string) => {
 		setLoadedImageIds((prev) => {
@@ -82,7 +100,7 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 		return expectedImageIds.every((id) => loadedImageIds.has(id));
 	}, [expectedImageIds, loadedImageIds]);
 
-	const showSkeleton = isLoading || (visibleProducts.length > 0 && !allImagesLoaded);
+	const showSkeleton = isLoading || (visibleProducts.length > 0 && !imageGateExpired && !allImagesLoaded);
 	const skeletonCount = useMemo(() => {
 		if (visibleProducts.length > 0) return visibleProducts.length;
 		if (initialItems.length > 0) return initialItems.length;
