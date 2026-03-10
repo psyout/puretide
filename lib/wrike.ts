@@ -28,7 +28,7 @@ async function createTask(folderId: string, title: string, description: string, 
 	}
 	const superTaskId = options?.superTaskId;
 	if (superTaskId) {
-		body.superTaskId = superTaskId;
+		body.superTasks = [superTaskId];
 	}
 	const response = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
 		method: 'POST',
