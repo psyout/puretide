@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Header from '@/components/Header';
 import { OrderConfirmationCartClear } from '@/components/OrderConfirmationCartClear';
-import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
+import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 
 // Force dynamic rendering - don't cache this page
@@ -68,11 +68,19 @@ async function getOrderByNumber(orderNumber: string | null): Promise<Order | nul
 	return (await getOrderByOrderNumberFromDb(orderNumber.trim())) as Order | null;
 }
 
-export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string; token?: string }> }) {
-	const { orderNumber: queryOrderNumber, token } = await searchParams;
+function normalizeProviderStatus(value: unknown): string {
+	return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function isApprovedProviderStatus(statusRaw: string): boolean {
+	return statusRaw === 'approved' || statusRaw === 'success' || statusRaw === 'completed';
+}
+
+export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string; token?: string; status?: string; result?: string }> }) {
+	const { orderNumber: queryOrderNumber, token, status, result } = await searchParams;
 	const orderNumberParam = queryOrderNumber?.trim();
 	const isAllowed = orderNumberParam ? verifyOrderConfirmationToken(orderNumberParam, token?.trim()) : false;
-	const order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
+	let order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
 
 	if (!order) {
 		return (
@@ -93,7 +101,56 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		);
 	}
 
+	const paymentProvider = (order as unknown as Record<string, unknown>).paymentProvider;
+	const isDigipayOrder = paymentProvider === 'digipay' || order.paymentMethod === 'creditcard';
+	const providerStatusRaw = normalizeProviderStatus(status) || normalizeProviderStatus(result);
+	const hasExplicitProviderStatus = Boolean(providerStatusRaw);
+
+	// If the customer returns from DigiPay with an explicit non-approved status, persist failure so we don't show "processing".
+	if (order.paymentStatus === 'pending' && isDigipayOrder && hasExplicitProviderStatus && !isApprovedProviderStatus(providerStatusRaw)) {
+		await upsertOrderInDb({
+			...(order as unknown as Record<string, unknown>),
+			paymentStatus: 'failed',
+			paymentFailure: {
+				reason: 'return_not_approved',
+				providerStatus: providerStatusRaw,
+				updatedAt: new Date().toISOString(),
+			},
+		} as Record<string, unknown>);
+		order = { ...(order as Order), paymentStatus: 'failed' };
+	}
+
 	if (order.paymentStatus === 'pending') {
+		const createdAtMs = Date.parse(order.createdAt);
+		const isStale = Number.isFinite(createdAtMs) ? Date.now() - createdAtMs > 15 * 60 * 1000 : false;
+		if (isDigipayOrder && isStale) {
+			return (
+				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+					<Header />
+					<div className='max-w-7xl mx-auto px-6 py-24'>
+						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment not confirmed</h1>
+							<p className='text-deep-tidal-teal-800 mb-6'>
+								Your order was received, but we could not confirm your card payment. This can happen if the payment was declined or canceled. Please try again.
+							</p>
+							<div className='flex flex-col sm:flex-row gap-3'>
+								<Link
+									href='/checkout'
+									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block text-center'>
+									Try again
+								</Link>
+								<Link
+									href='/'
+									className='bg-transparent hover:bg-deep-tidal-teal/5 text-deep-tidal-teal font-semibold py-3 px-6 rounded transition-colors inline-block text-center border border-deep-tidal-teal/20'>
+									Return to shop
+								</Link>
+							</div>
+						</div>
+					</div>
+				</div>
+			);
+		}
+
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
@@ -142,27 +199,29 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		);
 	}
 
-	const orderNumber = order.orderNumber ?? order.createdAt.replace(/\D/g, '').slice(-6);
-	const orderDate = new Date(order.createdAt).toLocaleDateString('en-CA', {
+	const confirmedOrder = order;
+
+	const orderNumber = confirmedOrder.orderNumber ?? confirmedOrder.createdAt.replace(/\D/g, '').slice(-6);
+	const orderDate = new Date(confirmedOrder.createdAt).toLocaleDateString('en-CA', {
 		year: 'numeric',
 		month: 'long',
 		day: 'numeric',
 	});
-	const paymentMethod = order.paymentMethod;
+	const paymentMethod = confirmedOrder.paymentMethod;
 	const isCreditCardOrder = paymentMethod === 'creditcard';
 	const securityAnswer = `${paymentDetails.securityAnswerPrefix}${orderNumber}`;
-	const shippingLabel = order.shippingMethod === 'express' ? 'Express Shipping' : '';
+	const shippingLabel = confirmedOrder.shippingMethod === 'express' ? 'Express Shipping' : '';
 	const billingAddressLines = [
-		`${order.customer.firstName} ${order.customer.lastName}`,
-		order.customer.address,
-		order.customer.addressLine2,
-		`${order.customer.city} ${order.customer.province} ${order.customer.zipCode}`,
-		order.customer.country,
-		order.customer.email,
+		`${confirmedOrder.customer.firstName} ${confirmedOrder.customer.lastName}`,
+		confirmedOrder.customer.address,
+		confirmedOrder.customer.addressLine2,
+		`${confirmedOrder.customer.city} ${confirmedOrder.customer.province} ${confirmedOrder.customer.zipCode}`,
+		confirmedOrder.customer.country,
+		confirmedOrder.customer.email,
 	].filter(Boolean);
-	const shippingAddressSource = order.shipToDifferentAddress && order.shippingAddress ? order.shippingAddress : order.customer;
+	const shippingAddressSource = confirmedOrder.shipToDifferentAddress && confirmedOrder.shippingAddress ? confirmedOrder.shippingAddress : confirmedOrder.customer;
 	const shippingAddressLines = [
-		`${order.customer.firstName} ${order.customer.lastName}`,
+		`${confirmedOrder.customer.firstName} ${confirmedOrder.customer.lastName}`,
 		shippingAddressSource.address,
 		shippingAddressSource.addressLine2,
 		`${shippingAddressSource.city} ${shippingAddressSource.province} ${shippingAddressSource.zipCode}`,
@@ -172,7 +231,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<OrderConfirmationCartClear
 				orderNumber={orderNumber}
-				paymentStatus={order.paymentStatus ?? undefined}
+				paymentStatus={confirmedOrder.paymentStatus ?? undefined}
 			/>
 			<Header />
 			<div className='max-w-7xl mx-auto pt-40 pb-6 py-24'>
@@ -193,7 +252,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						</div>
 						<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
 							<div className='text-sm text-deep-tidal-teal-600 mb-1'>Total</div>
-							<div className='text-deep-tidal-teal-800 font-semibold'>{formatMoney(order.total)}</div>
+							<div className='text-deep-tidal-teal-800 font-semibold'>{formatMoney(confirmedOrder.total)}</div>
 						</div>
 						<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
 							<div className='text-sm text-deep-tidal-teal-600 mb-1'>Payment method</div>
@@ -247,10 +306,10 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						<div className='lg:col-span-2'>
 							<h2 className='text-2xl font-bold text-deep-tidal-teal-800 mb-4 pb-4 border-b border-deep-tidal-teal/10'>Order details</h2>
 							<div className='space-y-4'>
-								{order.cartItems.map((item, index) => (
+								{confirmedOrder.cartItems.map((item, index) => (
 									<div
 										key={item.id}
-										className={`flex justify-between items-center text-deep-tidal-teal-800 ${index < order.cartItems.length - 1 ? 'pb-4 mb-4 border-b border-deep-tidal-teal/10' : ''}`}>
+										className={`flex justify-between items-center text-deep-tidal-teal-800 ${index < confirmedOrder.cartItems.length - 1 ? 'pb-4 mb-4 border-b border-deep-tidal-teal/10' : ''}`}>
 										<span className='font-medium'>
 											{item.name} × {item.quantity}
 										</span>
@@ -261,23 +320,23 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							<div className='border-t border-deep-tidal-teal/10 pt-4 mt-4 space-y-2 text-sm'>
 								<div className='flex justify-between text-deep-tidal-teal-700'>
 									<span>Subtotal</span>
-									<span className='text-deep-tidal-teal-800 font-semibold'>{formatMoney(order.subtotal)}</span>
+									<span className='text-deep-tidal-teal-800 font-semibold'>{formatMoney(confirmedOrder.subtotal)}</span>
 								</div>
-								{order.discountAmount != null && order.discountAmount > 0 && (
+								{confirmedOrder.discountAmount != null && confirmedOrder.discountAmount > 0 && (
 									<div className='flex justify-between text-deep-tidal-teal-700'>
-										<span>Discount{order.promoCode ? ` (${order.promoCode})` : ''}</span>
-										<span className='text-deep-tidal-teal-800 font-semibold'>-{formatMoney(order.discountAmount)}</span>
+										<span>Discount{confirmedOrder.promoCode ? ` (${confirmedOrder.promoCode})` : ''}</span>
+										<span className='text-deep-tidal-teal-800 font-semibold'>-{formatMoney(confirmedOrder.discountAmount)}</span>
 									</div>
 								)}
 								<div className='flex justify-between text-deep-tidal-teal-700'>
 									<span>Shipping</span>
 									<span className='text-deep-tidal-teal-800 font-semibold'>
-										{formatMoney(order.shippingCost)} via {shippingLabel}
+										{formatMoney(confirmedOrder.shippingCost)} via {shippingLabel}
 									</span>
 								</div>
 								<div className='flex justify-between text-xl font-bold pt-3 border-t border-deep-tidal-teal/10'>
 									<span className='text-deep-tidal-teal-800'>Total</span>
-									<span className='text-deep-tidal-teal'>{formatMoney(order.total)}</span>
+									<span className='text-deep-tidal-teal'>{formatMoney(confirmedOrder.total)}</span>
 								</div>
 							</div>
 						</div>
