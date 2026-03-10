@@ -26,7 +26,8 @@ const subtasksMode = process.argv.includes('--subtasks');
 async function createTask(folderId, title, description, options = {}) {
 	const body = { title, description, status: 'Active' };
 	if (options.superTaskId) body.superTasks = [options.superTaskId];
-	const res = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
+	const url = options.superTaskId ? `${WRIKE_API_BASE}/tasks` : `${WRIKE_API_BASE}/folders/${folderId}/tasks`;
+	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${apiToken}`,
