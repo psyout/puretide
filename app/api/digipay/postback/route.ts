@@ -19,11 +19,27 @@ function getAllowedIps(): string[] {
 }
 
 function extractClientIp(request: Request): string {
+	const normalize = (value: string) => value.split(':')[0].trim();
+	const isLoopback = (ip: string) => ip === '127.0.0.1' || ip === '::1';
+
+	const cf = request.headers.get('cf-connecting-ip');
+	if (cf) return normalize(cf);
+
+	const trueClientIp = request.headers.get('true-client-ip');
+	if (trueClientIp) return normalize(trueClientIp);
+
 	const forwarded = request.headers.get('x-forwarded-for');
-	if (forwarded) return forwarded.split(',')[0].trim();
+	if (forwarded) {
+		const parts = forwarded
+			.split(',')
+			.map((p) => normalize(p))
+			.filter(Boolean);
+		const firstNonLoopback = parts.find((p) => !isLoopback(p));
+		return firstNonLoopback ?? parts[0] ?? '';
+	}
 
 	const realIp = request.headers.get('x-real-ip');
-	if (realIp) return realIp.trim();
+	if (realIp) return normalize(realIp);
 
 	return '';
 }
