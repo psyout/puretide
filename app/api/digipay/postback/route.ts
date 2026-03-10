@@ -81,6 +81,17 @@ function parsePostbackBody(rawBody: string): Record<string, unknown> {
 
 	const params = new URLSearchParams(rawBody);
 
+	// DigiPay may send a JSON string in the POST key (documented format)
+	for (const [key] of Array.from(params.entries())) {
+		const trimmedKey = key.trim();
+		if (!trimmedKey.startsWith('{')) continue;
+		try {
+			return JSON.parse(trimmedKey) as Record<string, unknown>;
+		} catch {
+			// try next
+		}
+	}
+
 	// DigiPay may send a JSON string in a form value
 	for (const [, value] of Array.from(params.entries())) {
 		if (!value.startsWith('{')) continue;
@@ -170,7 +181,8 @@ export async function POST(request: Request) {
 
 		const approvedStatuses = ['approved', 'success', 'completed'];
 
-		if (!approvedStatuses.includes(statusRaw)) {
+		// DigiPay's documented postback may omit status/result; only reject when explicitly present and not approved
+		if (statusRaw && !approvedStatuses.includes(statusRaw)) {
 			console.warn(JSON.stringify({ label: 'digipay:postback:not_approved', session, status: statusRaw }));
 			return xmlResponse('fail', 105, 'Payment not approved');
 		}
