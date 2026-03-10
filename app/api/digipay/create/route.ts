@@ -13,6 +13,9 @@ import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface OrderPayload {
 	customer: {
 		firstName: string;
@@ -52,6 +55,20 @@ interface OrderPayload {
 	}>;
 }
 
+const NO_STORE_HEADERS = {
+	'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+	Pragma: 'no-cache',
+	Expires: '0',
+} as const;
+
+function json(body: unknown, init: ResponseInit = {}) {
+	const headers = new Headers(init.headers);
+	for (const [key, value] of Object.entries(NO_STORE_HEADERS)) {
+		headers.set(key, value);
+	}
+	return NextResponse.json(body, { ...init, headers });
+}
+
 export async function POST(request: Request) {
 	const siteId = process.env.DIGIPAY_SITE_ID;
 	const encryptionKey = process.env.DIGIPAY_ENCRYPTION_KEY;
@@ -59,7 +76,7 @@ export async function POST(request: Request) {
 	const tcompleteBase = process.env.DIGIPAY_TCOMPLETE_BASE;
 
 	if (!siteId || !encryptionKey || !pburl || !tcompleteBase) {
-		return NextResponse.json({ ok: false, error: 'DigiPay not configured (missing DIGIPAY_* env vars)' }, { status: 500 });
+		return json({ ok: false, error: 'DigiPay not configured (missing DIGIPAY_* env vars)' }, { status: 500 });
 	}
 
 	const CHECKOUT_RATE_LIMIT = 10;
@@ -68,19 +85,19 @@ export async function POST(request: Request) {
 	try {
 		const { allowed } = checkRateLimit(request, 'checkout', CHECKOUT_RATE_LIMIT, CHECKOUT_WINDOW_MS);
 		if (!allowed) {
-			return NextResponse.json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
+			return json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
 		}
 
 		const rawPayload = (await request.json()) as OrderPayload & { company?: string; idempotencyKey?: string };
 		if (typeof rawPayload.company === 'string' && rawPayload.company.trim() !== '') {
-			return NextResponse.json({ ok: false, error: 'Invalid request.' }, { status: 400 });
+			return json({ ok: false, error: 'Invalid request.' }, { status: 400 });
 		}
 
 		const idemKey = getIdempotencyKey(request, rawPayload);
 		if (idemKey) {
 			const cached = getCachedDigipay(idemKey);
 			if (cached) {
-				return NextResponse.json({ ok: true, redirectUrl: cached.redirectUrl, orderNumber: cached.orderNumber });
+				return json({ ok: true, redirectUrl: cached.redirectUrl, orderNumber: cached.orderNumber });
 			}
 		}
 
@@ -88,41 +105,41 @@ export async function POST(request: Request) {
 
 		// This route is for credit card only; e-transfer uses POST /api/orders
 		if (orderPayload.paymentMethod !== 'creditcard') {
-			return NextResponse.json({ ok: false, error: 'Invalid payment method for this endpoint.' }, { status: 400 });
+			return json({ ok: false, error: 'Invalid payment method for this endpoint.' }, { status: 400 });
 		}
 		if (process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD === 'false') {
-			return NextResponse.json({ ok: false, error: 'Credit card payments are temporarily disabled. Please use e-transfer.' }, { status: 503 });
+			return json({ ok: false, error: 'Credit card payments are temporarily disabled. Please use e-transfer.' }, { status: 503 });
 		}
 
 		// Validate cart
 		if (!Array.isArray(orderPayload.cartItems) || orderPayload.cartItems.length === 0) {
-			return NextResponse.json({ ok: false, error: 'Invalid cart' }, { status: 400 });
+			return json({ ok: false, error: 'Invalid cart' }, { status: 400 });
 		}
 
 		const postalError = validateOrderPostalCodes(orderPayload);
 		if (postalError) {
-			return NextResponse.json({ ok: false, error: postalError }, { status: 400 });
+			return json({ ok: false, error: postalError }, { status: 400 });
 		}
 		if (orderPayload.shipToDifferentAddress) {
 			const shippingError = validateShippingAddress(orderPayload.shippingAddress);
 			if (shippingError) {
-				return NextResponse.json({ ok: false, error: shippingError }, { status: 400 });
+				return json({ ok: false, error: shippingError }, { status: 400 });
 			}
 		}
 
 		const customerError = validateCustomer(orderPayload.customer);
 		if (customerError) {
-			return NextResponse.json({ ok: false, error: customerError }, { status: 400 });
+			return json({ ok: false, error: customerError }, { status: 400 });
 		}
 
 		const stockError = await validateStockAvailability(orderPayload.cartItems, readSheetProducts);
 		if (stockError) {
-			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
+			return json({ ok: false, error: stockError }, { status: 400 });
 		}
 		const products = await readSheetProducts();
 		const trustedCart = normalizeCartItemsWithTrustedPrices(orderPayload.cartItems, products);
 		if (!trustedCart.ok) {
-			return NextResponse.json({ ok: false, error: trustedCart.error }, { status: 400 });
+			return json({ ok: false, error: trustedCart.error }, { status: 400 });
 		}
 		const trustedCartItems = trustedCart.items;
 
@@ -163,7 +180,7 @@ export async function POST(request: Request) {
 
 		// Reject tampered totals
 		if (Math.abs(total - orderPayload.total) > 0.01) {
-			return NextResponse.json({ ok: false, error: 'Order total mismatch. Please refresh and try again.' }, { status: 400 });
+			return json({ ok: false, error: 'Order total mismatch. Please refresh and try again.' }, { status: 400 });
 		}
 
 		const payload: OrderPayload = {
@@ -243,7 +260,7 @@ export async function POST(request: Request) {
 		);
 
 		if (idemKey) setCachedDigipay(idemKey, orderNumber, redirectUrl);
-		return NextResponse.json({
+		return json({
 			ok: true,
 			redirectUrl,
 			orderNumber,
@@ -251,6 +268,6 @@ export async function POST(request: Request) {
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'digipay:create' });
 		console.error(JSON.stringify({ label: 'digipay:create:error', errorId: safe.errorId }));
-		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
+		return json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

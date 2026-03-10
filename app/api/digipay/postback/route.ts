@@ -3,6 +3,9 @@ import crypto from 'crypto';
 import { getOrderBySessionFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const DIGIPAY_ALLOWED_IP_DEFAULT = '185.240.29.227';
 let hasWarnedMissingHmacSecret = false;
 
@@ -54,7 +57,12 @@ function xmlResponse(stat: 'ok' | 'fail', code: number, message: string, receipt
 
 	return new NextResponse(body, {
 		status: 200,
-		headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+		headers: {
+			'Content-Type': 'application/xml; charset=utf-8',
+			'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+			Pragma: 'no-cache',
+			Expires: '0',
+		},
 	});
 }
 
