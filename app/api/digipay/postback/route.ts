@@ -176,17 +176,6 @@ export async function POST(request: Request) {
 			return xmlResponse('fail', 102, "Invalid session variable: 'empty'");
 		}
 
-		/* ---------- Payment Status Validation ---------- */
-		const statusRaw = typeof data.status === 'string' ? data.status.trim().toLowerCase() : typeof data.result === 'string' ? data.result.trim().toLowerCase() : '';
-
-		const approvedStatuses = ['approved', 'success', 'completed'];
-
-		// DigiPay's documented postback may omit status/result; only reject when explicitly present and not approved
-		if (statusRaw && !approvedStatuses.includes(statusRaw)) {
-			console.warn(JSON.stringify({ label: 'digipay:postback:not_approved', session, status: statusRaw }));
-			return xmlResponse('fail', 105, 'Payment not approved');
-		}
-
 		/* ---------- Load Order ---------- */
 		const order = await getOrderBySessionFromDb(session);
 
@@ -197,6 +186,26 @@ export async function POST(request: Request) {
 
 		if (order.paymentStatus === 'paid') return xmlResponse('ok', 100, 'Order already processed', session);
 
+		/* ---------- Payment Status Validation ---------- */
+		const statusRaw = typeof data.status === 'string' ? data.status.trim().toLowerCase() : typeof data.result === 'string' ? data.result.trim().toLowerCase() : '';
+
+		const approvedStatuses = ['approved', 'success', 'completed'];
+
+		// DigiPay's documented postback may omit status/result; only reject when explicitly present and not approved
+		if (statusRaw && !approvedStatuses.includes(statusRaw)) {
+			console.warn(JSON.stringify({ label: 'digipay:postback:not_approved', session, status: statusRaw }));
+			await upsertOrderInDb({
+				...order,
+				paymentStatus: 'failed',
+				paymentFailure: {
+					reason: 'not_approved',
+					providerStatus: statusRaw,
+					updatedAt: new Date().toISOString(),
+				},
+			} as Record<string, unknown>);
+			return xmlResponse('fail', 105, 'Payment not approved');
+		}
+
 		/* ---------- Amount Validation ---------- */
 		const amountVal = data.amount;
 		const rawAmount = typeof amountVal === 'number' ? String(amountVal) : typeof amountVal === 'string' ? amountVal.trim() : '';
@@ -206,6 +215,15 @@ export async function POST(request: Request) {
 
 		if (!rawAmount || Number.isNaN(paidAmount)) {
 			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_amount', session, rawAmount }));
+			await upsertOrderInDb({
+				...order,
+				paymentStatus: 'failed',
+				paymentFailure: {
+					reason: 'invalid_amount',
+					rawAmount,
+					updatedAt: new Date().toISOString(),
+				},
+			} as Record<string, unknown>);
 			return xmlResponse('fail', 102, 'Invalid amount format');
 		}
 
@@ -219,6 +237,17 @@ export async function POST(request: Request) {
 					rawAmount,
 				}),
 			);
+			await upsertOrderInDb({
+				...order,
+				paymentStatus: 'failed',
+				paymentFailure: {
+					reason: 'amount_mismatch',
+					expectedAmount,
+					paidAmount,
+					rawAmount,
+					updatedAt: new Date().toISOString(),
+				},
+			} as Record<string, unknown>);
 			return xmlResponse('fail', 104, `Amount mismatch. Expected ${expectedAmount}, received ${paidAmount}`);
 		}
 
