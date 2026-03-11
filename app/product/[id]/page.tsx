@@ -98,7 +98,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</div>
 						)}
 						{/* Mobile Image Container */}
-						<div className='bg-white/60 backdrop-blur-sm rounded-lg ui-border p-4 flex items-center justify-center shadow-sm mb-4 md:hidden'>
+						<div className=' p-4 flex items-center justify-center mb-4 md:hidden'>
 							<ProductImage product={product} />
 						</div>
 						{/* Icons - Pill style (desktop only) */}
