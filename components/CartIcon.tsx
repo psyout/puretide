@@ -31,7 +31,7 @@ export default function CartIcon() {
 			href='/cart'
 			className='relative inline-flex items-center justify-center transition-colors duration-300'>
 			<svg
-				className={`w-8 h-7 transition-colors duration-300 ${isAnimate ? 'text-eucalyptus-500' : 'text-current'}`}
+				className={`w-6 h-6 transition-colors duration-300 ${isAnimate ? 'text-eucalyptus-500' : 'text-current'}`}
 				fill='none'
 				stroke='currentColor'
 				viewBox='0 0 24 24'>
@@ -45,7 +45,7 @@ export default function CartIcon() {
 			{mounted && itemCount > 0 && (
 				<span
 					key={itemCount}
-					className={`absolute top-0 right-0 bg-mineral-white text-deep-tidal-teal text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm z-10 translate-x-1/2 -translate-y-1/2 transition-colors duration-300 ${
+					className={`absolute top-0 right-0 bg-mineral-white text-deep-tidal-teal text-[11px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm z-10 translate-x-1/2 -translate-y-1/2 transition-colors duration-300 ${
 						isAnimate ? 'bg-eucalyptus-500 text-mineral-white' : ''
 					}`}>
 					{itemCount}
