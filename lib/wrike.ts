@@ -197,14 +197,14 @@ export async function createOrderTask(order: OrderData) {
 </p>
 <h4>Billing Address</h4>
 <p>
-${order.customer.address}<br>
-${order.customer.addressLine2 ? order.customer.addressLine2 + '<br>' : ''}${order.customer.city}, ${order.customer.province} ${order.customer.zipCode}<br>
+${formatAddressLine(order.customer.address, order.customer.addressLine2).join('<br>')}<br>
+${order.customer.city}, ${order.customer.province} ${order.customer.zipCode}<br>
 ${order.customer.country}
 </p>
 <h4>Shipping Address</h4>
 <p>
-${shippingAddr.address}<br>
-${shippingAddr.addressLine2 ? shippingAddr.addressLine2 + '<br>' : ''}${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
+${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}<br>
+${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
 </p>
 <hr>
 <h4>Order Items</h4>
@@ -393,10 +393,39 @@ function stripHtml(input: string): string {
 }
 
 function normalizeLines(text: string): string[] {
-	return text
+	const lines = text
 		.split('\n')
 		.map((l) => l.trim())
 		.filter((l) => l.length > 0);
+	const result: string[] = [];
+	for (const line of lines) {
+		// Canadian/US postal code patterns
+		const match = line.match(/(.+?)\s*([A-Z]\d[A-Z]\s?\d[A-Z]\d|\d{5}(?:-\d{4})?)\s*$/);
+		if (match) {
+			result.push(match[1].trim());
+			result.push(match[2].trim());
+		} else {
+			result.push(line);
+		}
+	}
+	return result;
+}
+
+function formatAddressLine(address: string, addressLine2: string): string[] {
+	const unitPattern = /^(unit|apt|apartment|suite|ste|#\s*)\s*([^\s]+(?:\s+[^\s]+)*)/i;
+	const addressLine = addressLine2 ? `${addressLine2}-${address}` : address;
+	const match = addressLine.match(unitPattern);
+	if (match) {
+		const unit = match[1];
+		const number = match[2];
+		const street = address.slice(match[0].length).trim();
+		return [`${unit}-${number} ${street}`];
+	}
+	// If no unit pattern but there's addressLine2, prepend with dash
+	if (addressLine2) {
+		return [`${addressLine2}-${address}`];
+	}
+	return [addressLine];
 }
 
 function parseLabelFromOrderDescription(html: string): { name: string; lines: string[] } | null {
@@ -409,10 +438,48 @@ function parseLabelFromOrderDescription(html: string): { name: string; lines: st
 	const match = shippingMatch || billingMatch;
 	if (!match) return null;
 	const text = stripHtml(match[1]);
+
+	// Extract address and addressLine2 if present
 	const lines = normalizeLines(text);
 	if (lines.length === 0) return null;
 
-	return { name: name || 'Recipient', lines };
+	const unitPattern = /^(unit|apt|apartment|suite|ste|#\s*)\s*([^\s]+(?:\s+[^\s]+)*)/i;
+	const addressLines: string[] = [];
+	let i = 0;
+	while (i < lines.length) {
+		const line = lines[i];
+
+		// Check if this is already a combined address with dash (e.g., "204-2092 2nd Ave W")
+		const combinedPattern = /^([^\s]+(?:\s+[^\s]+)*)-(.+)$/;
+		const combinedMatch = line.match(combinedPattern);
+		if (combinedMatch) {
+			// Already properly formatted, just use as-is
+			addressLines.push(line);
+			i += 1;
+			continue;
+		}
+
+		const unitMatch = line.match(unitPattern);
+		if (unitMatch && i + 1 < lines.length) {
+			// This line is a unit and the next line is the street address
+			const number = unitMatch[2];
+			const street = lines[i + 1];
+			addressLines.push(`${number}-${street}`);
+			i += 2; // skip both lines
+		} else if (unitMatch && lines.length === 1) {
+			// Unit and street are on the same line
+			const number = unitMatch[2];
+			const street = line.slice(unitMatch[0].length).trim();
+			addressLines.push(`${number}-${street}`);
+			i += 1;
+		} else {
+			// Regular address line
+			addressLines.push(line);
+			i += 1;
+		}
+	}
+
+	return { name: name || 'Recipient', lines: addressLines };
 }
 
 async function generateSingleLabelPdf(label: { name: string; lines: string[] }, outputPath: string): Promise<void> {
@@ -442,6 +509,9 @@ async function generateSingleLabelPdf(label: { name: string; lines: string[] }, 
 	const nameSize = 14;
 	const logoMargin = 12;
 	const textLeft = logoImage ? margin + logoWidth + logoMargin : margin;
+
+	// Limit label content height to 2 inches
+	const maxY = pageHeight - margin - 2 * 72;
 
 	const page = pdfDoc.addPage([pageWidth, pageHeight]);
 	let y = pageHeight - margin;
@@ -489,10 +559,10 @@ async function generateSingleLabelPdf(label: { name: string; lines: string[] }, 
 		const wrapped = wrapText(font, addrLine, lineSize, maxWidth);
 		for (const wLine of wrapped) {
 			y -= leading;
+			if (y < maxY) break; // Stop at 2-inch limit
 			page.drawText(wLine, { x: textLeft, y, size: lineSize, font, color: rgb(0, 0, 0) });
-			if (y < margin) break;
 		}
-		if (y < margin) break;
+		if (y < maxY) break; // Stop at 2-inch limit
 	}
 
 	const bytes = await pdfDoc.save();

@@ -13,6 +13,10 @@ import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD } from '@/
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 
+function capitalizeWords(str: string): string {
+	return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+}
+
 function isTrustedPaymentRedirect(urlRaw: string): boolean {
 	try {
 		const url = new URL(urlRaw);
@@ -145,29 +149,51 @@ export default function CheckoutClient() {
 		}
 	};
 
-	const buildPayload = () => ({
-		customer: formData,
-		shipToDifferentAddress,
-		shippingAddress: shipToDifferentAddress ? shippingAddress : undefined,
-		shippingMethod,
-		paymentMethod: useCreditCard ? 'creditcard' : 'etransfer',
-		cardFee: useCreditCard ? cardFee : 0,
-		promoCode: promoApplied ? promoCode : undefined,
-		discountAmount: discountAmount || undefined,
-		subtotal,
-		shippingCost,
-		total,
-		company: honeypotCompany,
-		idempotencyKey: getOrCreateIdempotencyKey(),
-		cartItems: cartItems.map((item) => ({
-			id: typeof item.id === 'string' ? parseInt(item.id, 10) || 0 : item.id,
-			name: item.name,
-			price: item.price,
-			quantity: item.quantity,
-			image: item.image ?? '',
-			description: item.description ?? '',
-		})),
-	});
+	const buildPayload = () => {
+		// Capitalize name and address fields
+		const capitalizedCustomer = {
+			...formData,
+			firstName: capitalizeWords(formData.firstName),
+			lastName: capitalizeWords(formData.lastName),
+			address: capitalizeWords(formData.address),
+			addressLine2: formData.addressLine2 ? capitalizeWords(formData.addressLine2) : '',
+			city: capitalizeWords(formData.city),
+			province: capitalizeWords(formData.province),
+		};
+		const capitalizedShippingAddress = shipToDifferentAddress
+			? {
+					...shippingAddress,
+					address: capitalizeWords(shippingAddress.address),
+					addressLine2: shippingAddress.addressLine2 ? capitalizeWords(shippingAddress.addressLine2) : '',
+					city: capitalizeWords(shippingAddress.city),
+					province: capitalizeWords(shippingAddress.province),
+				}
+			: undefined;
+
+		return {
+			customer: capitalizedCustomer,
+			shipToDifferentAddress,
+			shippingAddress: capitalizedShippingAddress,
+			shippingMethod,
+			paymentMethod: useCreditCard ? 'creditcard' : 'etransfer',
+			cardFee: useCreditCard ? cardFee : 0,
+			promoCode: promoApplied ? promoCode : undefined,
+			discountAmount: discountAmount || undefined,
+			subtotal,
+			shippingCost,
+			total,
+			company: honeypotCompany,
+			idempotencyKey: getOrCreateIdempotencyKey(),
+			cartItems: cartItems.map((item) => ({
+				id: typeof item.id === 'string' ? parseInt(item.id, 10) || 0 : item.id,
+				name: item.name,
+				price: item.price,
+				quantity: item.quantity,
+				image: item.image ?? '',
+				description: item.description ?? '',
+			})),
+		};
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -298,6 +324,12 @@ export default function CheckoutClient() {
 											setFormData({ ...formData, firstName: e.target.value });
 											if (checkoutError?.includes('First name')) setCheckoutError(null);
 										}}
+										onBlur={(e) => {
+											const capitalized = capitalizeWords(e.target.value);
+											if (capitalized !== e.target.value) {
+												setFormData((prev) => ({ ...prev, firstName: capitalized }));
+											}
+										}}
 										autoComplete='given-name'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
@@ -312,6 +344,12 @@ export default function CheckoutClient() {
 										onChange={(e) => {
 											setFormData({ ...formData, lastName: e.target.value });
 											if (checkoutError?.includes('Last name')) setCheckoutError(null);
+										}}
+										onBlur={(e) => {
+											const capitalized = capitalizeWords(e.target.value);
+											if (capitalized !== e.target.value) {
+												setFormData((prev) => ({ ...prev, lastName: capitalized }));
+											}
 										}}
 										autoComplete='family-name'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
@@ -336,6 +374,12 @@ export default function CheckoutClient() {
 										type='text'
 										value={formData.address}
 										onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+										onBlur={(e) => {
+											const capitalized = capitalizeWords(e.target.value);
+											if (capitalized !== e.target.value) {
+												setFormData((prev) => ({ ...prev, address: capitalized }));
+											}
+										}}
 										placeholder='House number and street name'
 										autoComplete='address-line1'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
@@ -348,6 +392,12 @@ export default function CheckoutClient() {
 										type='text'
 										value={formData.addressLine2}
 										onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+										onBlur={(e) => {
+											const capitalized = capitalizeWords(e.target.value);
+											if (capitalized !== e.target.value) {
+												setFormData((prev) => ({ ...prev, addressLine2: capitalized }));
+											}
+										}}
 										placeholder='Apartment, suite, unit, etc. (optional)'
 										autoComplete='address-line2'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
@@ -359,6 +409,12 @@ export default function CheckoutClient() {
 										type='text'
 										value={formData.city}
 										onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+										onBlur={(e) => {
+											const capitalized = capitalizeWords(e.target.value);
+											if (capitalized !== e.target.value) {
+												setFormData((prev) => ({ ...prev, city: capitalized }));
+											}
+										}}
 										autoComplete='address-level2'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 										required
@@ -392,6 +448,15 @@ export default function CheckoutClient() {
 										type='text'
 										value={formData.zipCode}
 										onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+										onBlur={(e) => {
+											let v = e.target.value.toUpperCase().replace(/\s/g, '');
+											if (v.length >= 4 && !v.includes(' ')) {
+												v = v.slice(0, 3) + ' ' + v.slice(3);
+											}
+											if (v !== e.target.value) {
+												setFormData((prev) => ({ ...prev, zipCode: v }));
+											}
+										}}
 										autoComplete='postal-code'
 										placeholder=''
 										maxLength={7}
@@ -450,6 +515,12 @@ export default function CheckoutClient() {
 												type='text'
 												value={shippingAddress.address}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
+												onBlur={(e) => {
+													const capitalized = capitalizeWords(e.target.value);
+													if (capitalized !== e.target.value) {
+														setShippingAddress((prev) => ({ ...prev, address: capitalized }));
+													}
+												}}
 												placeholder='House number and street name'
 												autoComplete='shipping address-line1'
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
@@ -462,6 +533,12 @@ export default function CheckoutClient() {
 												type='text'
 												value={shippingAddress.addressLine2}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
+												onBlur={(e) => {
+													const capitalized = capitalizeWords(e.target.value);
+													if (capitalized !== e.target.value) {
+														setShippingAddress((prev) => ({ ...prev, addressLine2: capitalized }));
+													}
+												}}
 												placeholder='Apartment, suite, unit, etc. (optional)'
 												autoComplete='shipping address-line2'
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
@@ -473,6 +550,12 @@ export default function CheckoutClient() {
 												type='text'
 												value={shippingAddress.city}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+												onBlur={(e) => {
+													const capitalized = capitalizeWords(e.target.value);
+													if (capitalized !== e.target.value) {
+														setShippingAddress((prev) => ({ ...prev, city: capitalized }));
+													}
+												}}
 												autoComplete='shipping address-level2'
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
@@ -506,6 +589,15 @@ export default function CheckoutClient() {
 												type='text'
 												value={shippingAddress.zipCode}
 												onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+												onBlur={(e) => {
+													let v = e.target.value.toUpperCase().replace(/\s/g, '');
+													if (v.length >= 4 && !v.includes(' ')) {
+														v = v.slice(0, 3) + ' ' + v.slice(3);
+													}
+													if (v !== e.target.value) {
+														setShippingAddress((prev) => ({ ...prev, zipCode: v }));
+													}
+												}}
 												autoComplete='shipping postal-code'
 												placeholder='A1A 1A1'
 												maxLength={7}

@@ -112,7 +112,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 								unoptimized={product.image.startsWith('http')}
 								className='object-contain'
 								priority
-								onLoadingComplete={() => {
+								onLoad={() => {
 									if (!onImageLoaded) return;
 									if (hasReportedImageLoaded) return;
 									onImageLoaded(product.id);
