@@ -10,16 +10,20 @@
 		"test": "tsx --test tests/**/*.test.ts",
 		"test:wrike": "node scripts/test-wrike.mjs",
 		"test:wrike:list": "node scripts/test-wrike.mjs --list",
-		"test:wrike:list-fields": "node scripts/test-wrike.mjs --list-fields"
+		"test:wrike:list-fields": "node scripts/test-wrike.mjs --list-fields",
+		"wrike:labels": "node scripts/wrike-print-labels.mjs"
 	},
 	"dependencies": {
+		"axios": "^1.8.0",
+		"form-data": "^4.0.0",
 		"googleapis": "^170.1.0",
 		"lucide-react": "^0.562.0",
 		"next": "^14.2.0",
 		"nodemailer": "^7.0.12",
+		"pdf-lib": "^1.17.1",
 		"react": "^18.3.0",
 		"react-dom": "^18.3.0",
-		"sharp": "^0.33.0",
+		"sharp": "^0.33.5",
 		"sql.js": "^1.11.0",
 		"styled-jsx": "^5.1.7"
 	},

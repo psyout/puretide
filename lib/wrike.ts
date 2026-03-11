@@ -1,3 +1,10 @@
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fs from 'node:fs';
+import path from 'node:path';
+import FormData from 'form-data';
+import axios from 'axios';
+import sharp from 'sharp';
+
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
 type WrikeConfig = {
@@ -51,7 +58,7 @@ async function createTask(folderId: string, title: string, description: string, 
 }
 
 async function createOrderSubtasks(parentTaskId: string, folderId: string, apiToken: string) {
-	const subitems = ['Create shipping labels', 'Pick product', 'Package products', 'Ship out', 'Send customer ship notification with tracking'];
+	const subitems = ['Pick product', 'Package products', 'Ship out', 'Send customer ship notification with tracking'];
 	const created: Array<unknown> = [];
 	for (const title of subitems) {
 		try {
@@ -223,6 +230,8 @@ ${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.order
 		if (task) {
 			console.log('Wrike order task created:', task.id);
 			await createOrderSubtasks(task.id, config.ordersFolderId, config.apiToken);
+			// Attach label PDF to the "Create shipping labels" subtask immediately
+			await attachLabelPdfToOrder(task.id, description, config.apiToken);
 		}
 		return task;
 	} catch (error) {
@@ -346,5 +355,224 @@ export async function createClientTask(client: ClientData) {
 	} catch (error) {
 		console.error('Failed to create Wrike client task:', error);
 		return null;
+	}
+}
+
+// === Label PDF helpers ===
+
+async function ensureLogoPng(): Promise<string | null> {
+	const svgPath = path.resolve(process.cwd(), 'public', 'logo.svg');
+	const pngPath = path.resolve(process.cwd(), 'public', 'logo.png');
+	if (fs.existsSync(pngPath)) return pngPath;
+	if (!fs.existsSync(svgPath)) return null;
+	try {
+		await sharp(svgPath)
+			.resize(72, 72) // 1x1 inch at 72 DPI
+			.png()
+			.toFile(pngPath);
+		console.log('[Wrike] Generated logo.png from logo.svg');
+		return pngPath;
+	} catch (e) {
+		console.warn('[Wrike] Failed to convert logo.svg to PNG:', e);
+		return null;
+	}
+}
+
+function stripHtml(input: string): string {
+	if (!input) return '';
+	return String(input)
+		.replace(/<br\s*\/?\s*>/gi, '\n')
+		.replace(/<\/p>/gi, '\n')
+		.replace(/<\/h\d>/gi, '\n')
+		.replace(/<[^>]*>/g, '')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/\r\n/g, '\n');
+}
+
+function normalizeLines(text: string): string[] {
+	return text
+		.split('\n')
+		.map((l) => l.trim())
+		.filter((l) => l.length > 0);
+}
+
+function parseLabelFromOrderDescription(html: string): { name: string; lines: string[] } | null {
+	const nameMatch = String(html).match(/<b>\s*Name:\s*<\/b>\s*([^<]+?)\s*<br\s*\/?\s*>/i);
+	const name = nameMatch ? stripHtml(nameMatch[1]).trim() : '';
+
+	// Prefer Shipping Address if present; otherwise fall back to Billing Address
+	const shippingMatch = String(html).match(/<h4>\s*Shipping Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
+	const billingMatch = String(html).match(/<h4>\s*Billing Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
+	const match = shippingMatch || billingMatch;
+	if (!match) return null;
+	const text = stripHtml(match[1]);
+	const lines = normalizeLines(text);
+	if (lines.length === 0) return null;
+
+	return { name: name || 'Recipient', lines };
+}
+
+async function generateSingleLabelPdf(label: { name: string; lines: string[] }, outputPath: string): Promise<void> {
+	const pdfDoc = await PDFDocument.create();
+	const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+	const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+	// Ensure logo PNG exists and embed it
+	const logoPngPath = await ensureLogoPng();
+	let logoImage = null;
+	let logoWidth = 0;
+	let logoHeight = 0;
+	if (logoPngPath) {
+		const logoBytes = fs.readFileSync(logoPngPath);
+		logoImage = await pdfDoc.embedPng(logoBytes);
+		// Preserve aspect ratio: cap height at 36pt
+		const { width, height } = await pdfDoc.embedPng(logoBytes);
+		const maxLogoHeight = 30;
+		logoHeight = maxLogoHeight;
+		logoWidth = (width / height) * maxLogoHeight;
+	}
+
+	// 4x6 inches
+	const pageWidth = 4 * 72;
+	const pageHeight = 6 * 72;
+	const margin = 18;
+	const nameSize = 14;
+	const logoMargin = 12;
+	const textLeft = logoImage ? margin + logoWidth + logoMargin : margin;
+
+	const page = pdfDoc.addPage([pageWidth, pageHeight]);
+	let y = pageHeight - margin;
+	const maxWidth = pageWidth - margin * 2;
+
+	// Draw logo at top-left if available
+	if (logoImage) {
+		page.drawImage(logoImage, {
+			x: margin,
+			y: pageHeight - margin - logoHeight,
+			width: logoWidth,
+			height: logoHeight,
+		});
+	}
+
+	const lineSize = 12;
+	const leading = 14;
+
+	const wrapText = (font: any, text: string, size: number, maxWidth: number): string[] => {
+		const words = String(text).split(/\s+/).filter(Boolean);
+		const lines: string[] = [];
+		let current = '';
+		for (const w of words) {
+			const candidate = current ? `${current} ${w}` : w;
+			const width = font.widthOfTextAtSize(candidate, size);
+			if (width <= maxWidth) {
+				current = candidate;
+				continue;
+			}
+			if (current) lines.push(current);
+			current = w;
+		}
+		if (current) lines.push(current);
+		return lines;
+	};
+
+	const nameLines = wrapText(fontBold, `To: ${label.name}`, nameSize, maxWidth);
+	for (const line of nameLines) {
+		y -= nameSize;
+		page.drawText(line, { x: textLeft, y, size: nameSize, font: fontBold, color: rgb(0, 0, 0) });
+	}
+
+	// No extra space between name and address
+	for (const addrLine of label.lines) {
+		const wrapped = wrapText(font, addrLine, lineSize, maxWidth);
+		for (const wLine of wrapped) {
+			y -= leading;
+			page.drawText(wLine, { x: textLeft, y, size: lineSize, font, color: rgb(0, 0, 0) });
+			if (y < margin) break;
+		}
+		if (y < margin) break;
+	}
+
+	const bytes = await pdfDoc.save();
+	fs.writeFileSync(outputPath, bytes);
+}
+
+async function uploadAttachmentToTask(taskId: string, filePath: string, apiToken: string): Promise<any> {
+	const form = new FormData();
+	form.append('file', fs.createReadStream(filePath));
+
+	const res = await axios.post(`${WRIKE_API_BASE}/tasks/${taskId}/attachments`, form, {
+		headers: {
+			Authorization: `Bearer ${apiToken}`,
+			...form.getHeaders(),
+		},
+		maxBodyLength: Infinity,
+		validateStatus: () => true,
+	});
+
+	if (res.status < 200 || res.status >= 300) {
+		throw new Error(`Wrike attachment upload failed ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`);
+	}
+	return res.data?.data?.[0] || null;
+}
+
+async function findSubtaskByTitle(parentTaskId: string, title: string, apiToken: string): Promise<any> {
+	const res = await axios.get(`${WRIKE_API_BASE}/folders/${process.env.WRIKE_ORDERS_FOLDER_ID}/tasks`, {
+		headers: { Authorization: `Bearer ${apiToken}` },
+		params: { fields: JSON.stringify(['superTaskIds', 'createdDate']) },
+		validateStatus: () => true,
+	});
+	if (res.status < 200 || res.status >= 300) return null;
+	const all = Array.isArray(res.data?.data) ? res.data.data : [];
+	const subtasks = all
+		.filter((t: any) => Array.isArray(t.superTaskIds) && t.superTaskIds.includes(parentTaskId))
+		.sort((a: any, b: any) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+	return subtasks.find((st: any) => st.title?.trim() === title.trim()) || null;
+}
+
+async function createSubtask(parentTaskId: string, title: string, description: string, apiToken: string): Promise<any> {
+	const body = { title, description, status: 'Active', superTasks: [parentTaskId] };
+	const res = await axios.post(`${WRIKE_API_BASE}/tasks`, body, {
+		headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+		validateStatus: () => true,
+	});
+	if (res.status < 200 || res.status >= 300) return null;
+	return res.data?.data?.[0] || null;
+}
+
+export async function attachLabelPdfToOrder(orderTaskId: string, orderDescription: string, apiToken: string): Promise<void> {
+	console.log('[Wrike] Order description preview (first 400 chars):', orderDescription.slice(0, 400));
+	const parsed = parseLabelFromOrderDescription(orderDescription);
+	if (!parsed || !parsed.name || !parsed.lines.length) {
+		console.warn('[Wrike] Could not parse label from order description; skipping PDF attachment.');
+		return;
+	}
+
+	const tempPdf = path.resolve(process.cwd(), `label-${orderTaskId}.pdf`);
+	await generateSingleLabelPdf(parsed, tempPdf);
+
+	let subtask = await findSubtaskByTitle(orderTaskId, 'Create shipping labels', apiToken);
+	if (!subtask) {
+		subtask = await createSubtask(orderTaskId, 'Create shipping labels', '', apiToken);
+		if (!subtask) {
+			console.warn('[Wrike] Failed to create "Create shipping labels" subtask; skipping PDF attachment.');
+			fs.unlinkSync(tempPdf);
+			return;
+		}
+	}
+
+	const uploaded = await uploadAttachmentToTask(subtask.id, tempPdf, apiToken);
+	if (uploaded) {
+		console.log('[Wrike] Label PDF attached to subtask:', { subtaskId: subtask.id, attachmentId: uploaded.id });
+	} else {
+		console.warn('[Wrike] Failed to upload label PDF to subtask.');
+	}
+
+	try {
+		fs.unlinkSync(tempPdf);
+	} catch {
+		// ignore cleanup failure
 	}
 }
