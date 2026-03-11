@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { readSheetPromoCodes, readSheetProducts } from '@/lib/stockSheet';
 import { getDiscountedPrice } from '@/lib/pricing';
-import { getEffectiveShippingCost } from '@/lib/constants';
+import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { buildDigipayPaymentUrl } from '@/lib/digipay';
 import { upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
 		const trustedCartItems = trustedCart.items;
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
-		let shippingCost = getEffectiveShippingCost();
+		let shippingCost = getEffectiveShippingCost(orderPayload.customer.zipCode);
 		let cartItems: typeof orderPayload.cartItems;
 		let discountAmount = 0;
 
@@ -172,6 +172,12 @@ export async function POST(request: Request) {
 		}
 
 		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+		// Apply free shipping if subtotal after discounts exceeds threshold
+		const subtotalAfterDiscounts = subtotal - discountAmount;
+		if (subtotalAfterDiscounts > FREE_SHIPPING_THRESHOLD) {
+			shippingCost = 0;
+		}
 
 		// Safe card fee handling
 		const cardFee = orderPayload.paymentMethod === 'creditcard' && Number.isFinite(Number(orderPayload.cardFee)) ? Number(orderPayload.cardFee) : 0;

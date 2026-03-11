@@ -9,7 +9,7 @@ import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { CreditCard, Truck, Plus, Minus, Trash2 } from 'lucide-react';
 import TermsContent from './TermsContent';
-import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD } from '@/lib/constants';
+import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 
@@ -83,8 +83,10 @@ export default function CheckoutClient() {
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
 	const promoApplied = appliedDiscount > 0 || appliedFreeShipping;
 	const subtotal = promoApplied ? subtotalRaw : subtotalWithVolume;
-	const shippingCost = appliedFreeShipping ? 0 : getEffectiveShippingCost();
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
+	const subtotalAfterDiscounts = Number((subtotal - discountAmount).toFixed(2));
+	const qualifiesFreeShipping = subtotalAfterDiscounts > FREE_SHIPPING_THRESHOLD;
+	const shippingCost = appliedFreeShipping || qualifiesFreeShipping ? 0 : getEffectiveShippingCost(formData.zipCode);
 	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
@@ -398,7 +400,7 @@ export default function CheckoutClient() {
 												setFormData((prev) => ({ ...prev, addressLine2: capitalized }));
 											}
 										}}
-										placeholder='Apartment, suite, unit, etc. (optional)'
+										placeholder='Apartment, suite, unit'
 										autoComplete='address-line2'
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
@@ -838,11 +840,21 @@ export default function CheckoutClient() {
 										<span className='text-lg'>-${discountAmount.toFixed(2)}</span>
 									</div>
 								)}
-								<div className='space-y-2'>
+								<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2'>
 									<h4 className='text-sm font-semibold text-deep-tidal-teal-700 flex items-center gap-2'>
 										<Truck className='w-4 h-4' />
 										Shipping
 									</h4>
+									<div className='text-xs text-deep-tidal-teal-600 mb-2'>
+										{(() => {
+											const zip = formData.zipCode.trim().toUpperCase();
+											const firstLetter = zip.charAt(0);
+											const isWestern = ['V', 'R', 'S', 'T'].includes(firstLetter);
+											if (!zip) return 'Enter your postal code to see shipping cost.';
+											if (shippingCost === 0) return 'Free shipping on orders over $400.';
+											return isWestern ? 'Western Canada (BC, AB, SK, MB)' : 'Eastern Canada (ON, QC, NB, NS, PE, NL)';
+										})()}
+									</div>
 									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
 										<span className='flex items-center gap-2'>
 											<input
@@ -854,7 +866,7 @@ export default function CheckoutClient() {
 											/>
 											Express Shipping
 										</span>
-										<span className='text-md text-deep-tidal-teal-500'>{shippingCost === 0 ? 'Free' : `$${SHIPPING_COSTS.express.toFixed(2)}`}</span>
+										<span className='text-md text-deep-tidal-teal-500'>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
 									</label>
 								</div>
 
