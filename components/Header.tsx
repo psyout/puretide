@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CartIcon from './CartIcon';
 import Logo from './Logo';
@@ -11,10 +11,27 @@ export default function Header() {
 	const router = useRouter();
 	const pathname = usePathname();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const headerRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		setIsMenuOpen(false);
 	}, [pathname]);
+
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+				setIsMenuOpen(false);
+			}
+		};
+
+		if (isMenuOpen) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [isMenuOpen]);
 
 	const scrollToSection = (targetId: string) => {
 		setIsMenuOpen(false);
@@ -30,7 +47,9 @@ export default function Header() {
 	};
 
 	return (
-		<header className='bg-deep-tidal-teal-600/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[100]'>
+		<header
+			ref={headerRef}
+			className='bg-deep-tidal-teal-600/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[100]'>
 			<div className='max-w-7xl mx-auto px-6 sm:px-6 py-4 flex items-center'>
 				<Link
 					href='/'
@@ -38,7 +57,7 @@ export default function Header() {
 					<Logo className='h-8 sm:h-10 w-auto' />
 				</Link>
 
-				<div className='ml-auto flex items-center gap-3 sm:gap-4'>
+				<div className='ml-auto flex items-center gap-1 sm:gap-4'>
 					<nav className='hidden md:flex items-center gap-6'>
 						<button
 							type='button'
@@ -69,7 +88,7 @@ export default function Header() {
 						type='button'
 						aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
 						onClick={() => setIsMenuOpen((v) => !v)}
-						className={`md:hidden relative w-6 h-[26px] bg-transparent border-0 cursor-pointer appearance-none focus:outline-none ml-2 ${isMenuOpen ? 'active' : ''}`}
+						className={`md:hidden relative w-6 h-[26px] bg-transparent mt-[0.1rem] border-0 cursor-pointer appearance-none focus:outline-none ml-2 ${isMenuOpen ? 'active' : ''}`}
 						id='menu04'>
 						<span
 							className={`absolute left-0 w-full h-0.5 bg-white rounded-[2px] ${isMenuOpen ? 'top-[11px] -rotate-45 transition-[top,transform] duration-300 ease-[cubic-bezier(.36,-.42,.68,-.56)] [transition-delay:0s,300ms]' : 'top-0 transition-top duration-300'}`}
@@ -91,7 +110,7 @@ export default function Header() {
 						animate='open'
 						exit='closed'
 						variants={wrapperVariants}
-						className='md:hidden absolute top-full left-0 right-0 bg-deep-tidal-teal-600/80 backdrop-blur-md shadow-xl overflow-hidden'
+						className='md:hidden absolute top-full left-0 right-0 bg-deep-tidal-teal-600/80 backdrop-blur-lg shadow-xl overflow-hidden'
 						style={{ originY: 'top' }}>
 						<nav className='max-w-7xl mx-auto px-4 sm:px-6 py-4'>
 							<motion.div
