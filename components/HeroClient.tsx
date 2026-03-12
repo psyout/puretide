@@ -15,6 +15,7 @@ type HeroClientProps = {
 
 export default function HeroClient({ slides }: HeroClientProps) {
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [isMobile, setIsMobile] = useState(false);
 
 	useEffect(() => {
 		const interval = setInterval(() => {
@@ -23,6 +24,14 @@ export default function HeroClient({ slides }: HeroClientProps) {
 
 		return () => clearInterval(interval);
 	}, [slides.length]);
+
+	useEffect(() => {
+		const m = window.matchMedia('(max-width: 639px)');
+		setIsMobile(m.matches);
+		const fn = () => setIsMobile(m.matches);
+		m.addEventListener('change', fn);
+		return () => m.removeEventListener('change', fn);
+	}, []);
 
 	const goToSlide = (index: number) => {
 		setCurrentIndex(index);
@@ -52,6 +61,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 								alt=''
 								fill
 								sizes='(min-width: 640px) 0vw, 100vw'
+								priority={isMobile && index === 0}
 								className='object-cover'
 							/>
 						</div>
@@ -59,7 +69,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 							src={slide.backgroundImage}
 							alt={`Hero background ${index + 1}`}
 							fill
-							priority={index === 0}
+							priority={!isMobile && index === 0}
 							sizes='(max-width: 639px) 0vw, 100vw'
 							className='object-cover hidden sm:block'
 						/>

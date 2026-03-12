@@ -26,11 +26,11 @@ const ProductImage = ({ product, priority = false }: { product: Product; priorit
 				height={400}
 				unoptimized={product.image.startsWith('http')}
 				priority={priority}
-				className='w-full h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl transition-all duration-300'
+				className='w-auto h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl transition-all duration-300'
 			/>
 		);
 	}
-	return <ProductImagePlaceholder className='w-full h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain' />;
+	return <ProductImagePlaceholder className='w-auto h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain' />;
 };
 
 export default async function ProductPage({ params }: ProductPageProps) {

@@ -110,7 +110,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 								fill
 								sizes='(max-width: 768px) 144px, 208px'
 								unoptimized={product.image.startsWith('http')}
-								className='object-contain'
+								className='object-contain w-auto h-auto'
 								priority
 								onLoad={() => {
 									if (!onImageLoaded) return;

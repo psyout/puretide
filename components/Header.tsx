@@ -54,34 +54,34 @@ export default function Header() {
 				<Link
 					href='/'
 					className='flex items-center transition-opacity hover:opacity-80'>
-					<Logo className='h-8 sm:h-10 w-auto' />
+					<Logo className='h-8 sm:h-9 w-auto' />
 				</Link>
 
-				<div className='ml-auto flex items-center gap-1 sm:gap-4'>
-					<nav className='hidden md:flex items-center gap-6'>
+				<div className='ml-auto flex items-center gap-2 sm:gap-4'>
+					<nav className='hidden md:flex items-center gap-4'>
 						<button
 							type='button'
 							onClick={() => scrollToSection('products')}
-							className='hover:text-muted-sage-200 text-white transition-colors uppercase font-medium'>
+							className='hover:text-muted-sage-200 text-white transition-colors font-medium text-md'>
 							Products
 						</button>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<button
 							type='button'
 							onClick={() => scrollToSection('about')}
-							className='hover:text-muted-sage-200 text-white transition-colors uppercase font-medium'>
+							className='hover:text-muted-sage-200 text-white transition-colors font-medium'>
 							About us
 						</button>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<button
 							type='button'
 							onClick={() => scrollToSection('contact')}
-							className='hover:text-muted-sage-200 text-white transition-colors uppercase font-medium'>
+							className='hover:text-muted-sage-200 text-white transition-colors font-medium'>
 							Contact
 						</button>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 					</nav>
-					<div className='text-mineral-white hover:text-muted-sage-200 transition-colors mt-2 md:mt-1'>
+					<div className='text-mineral-white hover:text-muted-sage-200 transition-colors mt-1 md:mt-1'>
 						<CartIcon />
 					</div>
 					<button
@@ -121,7 +121,7 @@ export default function Header() {
 										key={item}
 										variants={itemVariants}
 										onClick={() => scrollToSection(item)}
-										className='text-left hover:text-muted-sage-200 text-white transition-colors uppercase font-medium py-1 px-2 cursor-pointer'>
+										className='text-left hover:text-muted-sage-200 text-white transition-colors font-medium py-1 px-2 cursor-pointer'>
 										{item === 'products' && 'Products'}
 										{item === 'about' && 'About us'}
 										{item === 'contact' && 'Contact'}
