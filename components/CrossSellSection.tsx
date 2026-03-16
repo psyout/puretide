@@ -16,10 +16,18 @@ interface CrossSellSectionProps {
 }
 
 export default function CrossSellSection({ className = '' }: CrossSellSectionProps) {
-	const { addToCart } = useCart();
+	const { addToCart, cartItems } = useCart();
 	const [addingProductId, setAddingProductId] = useState<string | null>(null);
 	const [isVisible, setIsVisible] = useState(false); // Start hidden
 	const [shouldHide, setShouldHide] = useState(false);
+
+	// Check if Bacteriostatic Water is already in cart
+	const bacteriostaticWaterInCart = cartItems.some((item) => item.slug === 'bacteriostatic-water');
+
+	// Don't show if water is already in cart
+	if (bacteriostaticWaterInCart || shouldHide) {
+		return null;
+	}
 
 	// Show popup after page load
 	useEffect(() => {
@@ -29,10 +37,6 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 
 		return () => clearTimeout(timer);
 	}, []);
-
-	if (shouldHide) {
-		return null;
-	}
 
 	const handleAddToCart = async (product: CrossSellProduct) => {
 		setAddingProductId(product.id);

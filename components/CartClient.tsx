@@ -100,7 +100,7 @@ export default function CartClient() {
 												)}
 											</div>
 										</div>
-										<p className='mt-2 text-[clamp(0.84rem,2.9vw,0.9rem)] leading-[clamp(1.28rem,4.2vw,1.45rem)] text-deep-tidal-teal-700 text-wrap break-words hyphens-auto'>
+										<p className='mt-2 text-[clamp(0.85rem,2.9vw,0.9rem)] leading-[clamp(1.28rem,4.2vw,1.45rem)] text-deep-tidal-teal-700 text-wrap break-words hyphens-auto'>
 											{item.description}
 										</p>
 										<div className='mt-3 flex w-full items-center justify-flex-start flex-wrap gap-4 lg:hidden'>
