@@ -21,14 +21,6 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 	const [isVisible, setIsVisible] = useState(false); // Start hidden
 	const [shouldHide, setShouldHide] = useState(false);
 
-	// Check if Bacteriostatic Water is already in cart
-	const bacteriostaticWaterInCart = cartItems.some((item) => item.slug === 'bacteriostatic-water');
-
-	// Don't show if water is already in cart
-	if (bacteriostaticWaterInCart || shouldHide) {
-		return null;
-	}
-
 	// Show popup after page load
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -37,6 +29,14 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 
 		return () => clearTimeout(timer);
 	}, []);
+
+	// Check if Bacteriostatic Water is already in cart
+	const bacteriostaticWaterInCart = cartItems.some((item) => item.slug === 'bacteriostatic-water');
+
+	// Don't show if water is already in cart
+	if (bacteriostaticWaterInCart || shouldHide) {
+		return null;
+	}
 
 	const handleAddToCart = async (product: CrossSellProduct) => {
 		setAddingProductId(product.id);

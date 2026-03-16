@@ -6,6 +6,8 @@ const nextConfig = {
 	poweredByHeader: false,
 	// Smaller deployment footprint and faster startups
 	output: 'standalone',
+	// Disable source maps in production to prevent 404 errors and improve security
+	productionBrowserSourceMaps: false,
 	// Reduce client bundle size for icon library
 	experimental: {
 		optimizePackageImports: ['lucide-react'],
