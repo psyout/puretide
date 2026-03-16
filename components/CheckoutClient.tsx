@@ -389,7 +389,7 @@ export default function CheckoutClient() {
 									/>
 								</div>
 								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc. (optional)</label>
+									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
 									<input
 										type='text'
 										value={formData.addressLine2}
@@ -530,7 +530,7 @@ export default function CheckoutClient() {
 											/>
 										</div>
 										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc. (optional)</label>
+											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
 											<input
 												type='text'
 												value={shippingAddress.addressLine2}

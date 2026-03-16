@@ -9,6 +9,7 @@ import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Trash2, CreditCard } from 'lucide-react';
 import { ENABLE_CREDIT_CARD } from '@/lib/constants';
+import CrossSellSection from './CrossSellSection';
 
 export default function CartClient() {
 	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice, paymentMethod, setPaymentMethod } = useCart();
@@ -153,7 +154,7 @@ export default function CartClient() {
 					<div className='lg:col-span-1'>
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md'>
 							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
-							<div className='space-y-2 mb-6'>
+							<div className='space-y-2 mb-2'>
 								{cartItems.map((item) => (
 									<div
 										key={item.id}
@@ -204,13 +205,15 @@ export default function CartClient() {
 									<span>${(total * 0.05).toFixed(2)}</span>
 								</div>
 							)}
-							<div className='ui-border-t pt-4 mb-6'>
+							<div className='border-b border-deep-tidal-teal/10 pb-3 mb-3 space-y-2'>
 								<div className='flex justify-between text-xl font-bold'>
 									<span className='text-deep-tidal-teal-800'>{paymentMethod === 'creditcard' ? 'Est. total' : 'Total'}</span>
 									<span className='text-deep-tidal-teal'>${(paymentMethod === 'creditcard' ? total * 1.05 : total).toFixed(2)}</span>
 								</div>
 								{paymentMethod === 'creditcard' && <p className='text-xs text-deep-tidal-teal-600 mt-2'>Shipping and final total confirmed at checkout.</p>}
 							</div>
+							{/* Cross-sell section */}
+							<CrossSellSection />
 							<button
 								onClick={() => router.push('/checkout')}
 								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded transition-colors mb-4'>
