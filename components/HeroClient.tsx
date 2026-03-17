@@ -48,7 +48,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 	const currentSlide = slides[currentIndex];
 
 	return (
-		<section className='relative w-full h-[100svh] sm:h-screen overflow-hidden'>
+		<section className='relative w-full h-[100svh] sm:h-screen [@media(min-aspect-ratio:4/3)]:max-h-none [@media(max-aspect-ratio:4/3)]:max-h-[900px] overflow-hidden'>
 			{/* Background image slider */}
 			<div className='absolute inset-0 w-full h-full'>
 				{slides.map((slide, index) => (

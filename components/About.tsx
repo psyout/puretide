@@ -79,10 +79,10 @@ export default function About() {
 			</div>
 
 			<div className='w-full bg-[#f5f5f7]/50 overflow-hidden'>
-				<div className='grid grid-cols-1 lg:grid-cols-2 items-stretch min-h-[600px]'>
+				<div className='grid grid-cols-1 lg:grid-cols-2 items-stretch min-h-[350px]'>
 					<div className='order-1 lg:order-1 flex lg:justify-end items-center'>
-						<div className='w-full lg:max-w-[640px] px-6 lg:pr-16 py-20 lg:py-32'>
-							<h2 className='text-3xl lg:text-5xl font-bold text-deep-tidal-teal-800 mb-12 tracking-tight'>Precision Wellness, Refined.</h2>
+						<div className='w-full lg:max-w-[640px] px-8 lg:pr-16 py-12'>
+							<h2 className='text-xl lg:text-3xl font-bold text-deep-tidal-teal-800 mb-6 tracking-tight'>Precision Wellness, Refined.</h2>
 							<AboutAccordion
 								items={accordionItems}
 								defaultOpenIndex={0}
@@ -91,13 +91,13 @@ export default function About() {
 					</div>
 
 					{/* Image Side - Edge to Edge */}
-					<div className='order-2 lg:order-2 relative min-h-[400px] lg:min-h-full w-full overflow-hidden'>
+					<div className='order-2 lg:order-2 relative min-h-[350px] w-full overflow-hidden'>
 						<Image
 							src='/background/skin.webp'
 							alt='Pure Tide wellness'
 							fill
 							sizes='(min-width: 1024px) 50vw, 100vw'
-							className='object-cover'
+							className='object-cover object-top'
 							priority
 						/>
 					</div>
