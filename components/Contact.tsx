@@ -2,7 +2,9 @@ import ContactForm from './ContactForm';
 
 export default function Contact() {
 	return (
-		<section id='contact' className='py-20 bg-white'>
+		<section
+			id='contact'
+			className='py-20 bg-white'>
 			<div className='mx-auto max-w-7xl px-6'>
 				<div className='text-center mb-12'>
 					<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Get in Touch</h2>
@@ -17,10 +19,10 @@ export default function Contact() {
 
 					{/* Contact Information */}
 					<div className='flex flex-col md:flex-row lg:flex-col gap-6'>
-						<div className='flex-1 bg-muted-sage/20 backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
+						<div className='flex-1 bg-mineral-white  backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
 							<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-2'>Contact Information</h3>
 							<div className='space-y-6'>
-								<div className='flex items-start gap-4'>
+								<div className='flex items-center gap-4'>
 									<div className='mt-1'>
 										<svg
 											className='w-6 h-6 text-deep-tidal-teal'
@@ -35,8 +37,7 @@ export default function Contact() {
 											/>
 										</svg>
 									</div>
-									<div>
-										<h4 className='font-semibold text-deep-tidal-teal-800 mb-1'>Email</h4>
+									<div className='mt-1'>
 										<a
 											href='mailto:info@puretide.ca'
 											className='text-deep-tidal-teal-700 hover:text-deep-tidal-teal'>
@@ -48,7 +49,7 @@ export default function Contact() {
 						</div>
 
 						{/* Additional Info */}
-						<div className='flex-1 bg-muted-sage/20 backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
+						<div className='flex-1 bg-mineral-white  backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
 							<div className='flex items-center gap-2 mb-3'>
 								<svg
 									className='w-5 h-5 text-deep-tidal-teal'

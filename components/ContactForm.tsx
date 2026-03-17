@@ -70,10 +70,7 @@ export default function ContactForm() {
 			}
 
 			if (!response.ok || data?.ok === false) {
-				const message =
-					response.status === 429
-						? 'Too many requests. Please try again later.'
-						: (data?.error ?? 'Something went wrong. Please try again.');
+				const message = response.status === 429 ? 'Too many requests. Please try again later.' : (data?.error ?? 'Something went wrong. Please try again.');
 				setFormStatus({ type: 'error', message });
 				return;
 			}
@@ -88,12 +85,14 @@ export default function ContactForm() {
 	};
 
 	return (
-		<div className='bg-muted-sage/20 backdrop-blur-md rounded-xl p-6 shadow-sm ui-border'>
+		<div className='bg-mineral-white  backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
 			<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Send us a Message</h3>
 			<form
 				onSubmit={handleSubmit}
 				className='space-y-6'>
-				<div className='absolute -left-[9999px] w-1 h-1 overflow-hidden' aria-hidden>
+				<div
+					className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
+					aria-hidden>
 					<label htmlFor='contact-website'>Website</label>
 					<input
 						type='text'
