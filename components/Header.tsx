@@ -62,22 +62,22 @@ export default function Header() {
 						<button
 							type='button'
 							onClick={() => scrollToSection('products')}
-							className='hover:text-muted-sage-200 text-white transition-colors font-medium text-md'>
-							Products
+							className='hover:text-muted-sage-200 text-white transition-colors font-medium text-md uppercase'>
+							PRODUCTS
 						</button>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<button
 							type='button'
 							onClick={() => scrollToSection('about')}
-							className='hover:text-muted-sage-200 text-white transition-colors font-medium'>
-							About us
+							className='hover:text-muted-sage-200 text-white transition-colors font-medium uppercase'>
+							ABOUT US
 						</button>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<button
 							type='button'
 							onClick={() => scrollToSection('contact')}
-							className='hover:text-muted-sage-200 text-white transition-colors font-medium'>
-							Contact
+							className='hover:text-muted-sage-200 text-white transition-colors font-medium uppercase'>
+							CONTACT
 						</button>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 					</nav>
@@ -121,10 +121,10 @@ export default function Header() {
 										key={item}
 										variants={itemVariants}
 										onClick={() => scrollToSection(item)}
-										className='text-left hover:text-muted-sage-200 text-white transition-colors font-medium py-1 px-2 cursor-pointer'>
-										{item === 'products' && 'Products'}
-										{item === 'about' && 'About us'}
-										{item === 'contact' && 'Contact'}
+										className='text-left hover:text-muted-sage-200 text-white transition-colors font-medium py-1 px-2 cursor-pointer uppercase'>
+										{item === 'products' && 'PRODUCTS'}
+										{item === 'about' && 'ABOUT US'}
+										{item === 'contact' && 'CONTACT'}
 									</motion.button>
 								))}
 							</motion.div>

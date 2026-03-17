@@ -83,6 +83,43 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	const isAllowed = orderNumberParam ? verifyOrderConfirmationToken(orderNumberParam, token?.trim()) : false;
 	let order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
 
+	// Additional security: If token is valid and order exists, mark it as accessed
+	// This prevents the same token from being used multiple times
+	if (isAllowed && order && token) {
+		// Check if this token was already used
+		if ((order as unknown as Record<string, unknown>).tokenAccessedAt) {
+			// Token was already used, show security message
+			return (
+				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+					<Header />
+					<div className='max-w-7xl mx-auto px-6 py-24'>
+						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Link already used</h1>
+							<p className='text-deep-tidal-teal-800 mb-6'>
+								This order confirmation link has already been accessed. For security reasons, confirmation links can only be used once.
+							</p>
+							<p className='text-deep-tidal-teal-600 mb-6 text-sm'>
+								If you need to view your order details again, please check your email for the order confirmation or contact support.
+							</p>
+							<Link
+								href='/'
+								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+								Return to shop
+							</Link>
+						</div>
+					</div>
+				</div>
+			);
+		}
+
+		// Store that this token has been used by adding a timestamp to the order
+		const orderWithTokenAccess = {
+			...(order as unknown as Record<string, unknown>),
+			tokenAccessedAt: new Date().toISOString(),
+		};
+		await upsertOrderInDb(orderWithTokenAccess);
+	}
+
 	if (!order) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>

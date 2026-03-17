@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const DEFAULT_TTL_MS = 15 * 60 * 1000; // 15 minutes instead of 7 days
 
 function getSecret(): string {
 	const secret = process.env.ORDER_CONFIRMATION_SECRET;
@@ -58,5 +58,32 @@ export function verifyOrderConfirmationToken(orderNumber: string, token: string 
 	}
 
 	const expected = sign(`${orderNumber}.${expiresAtRaw}`, secret);
+	return safeEqualHex(signature, expected);
+}
+
+export function createOrderConfirmationTokenWithUsage(orderNumber: string, nowMs: number = Date.now(), ttlMs: number = DEFAULT_TTL_MS): string | null {
+	const secret = getSecret();
+	if (!secret) return null;
+	const expiresAt = String(nowMs + ttlMs);
+	const usageKey = crypto.randomBytes(16).toString('hex'); // Add random component for single-use
+	const payload = `${orderNumber}.${expiresAt}.${usageKey}`;
+	const signature = sign(payload, secret);
+	return `${expiresAt}.${usageKey}.${signature}`;
+}
+
+export function verifySingleUseConfirmationToken(orderNumber: string, token: string | null | undefined, nowMs: number = Date.now()): boolean {
+	const secret = getSecret();
+	if (!secret || !token) return false;
+
+	const parts = token.split('.');
+	if (parts.length !== 3) return false;
+
+	const [expiresAtRaw, usageKey, signature] = parts;
+	const expiresAt = Number(expiresAtRaw);
+	if (!expiresAtRaw || !usageKey || !signature || !Number.isFinite(expiresAt) || expiresAt < nowMs) {
+		return false;
+	}
+
+	const expected = sign(`${orderNumber}.${expiresAtRaw}.${usageKey}`, secret);
 	return safeEqualHex(signature, expected);
 }

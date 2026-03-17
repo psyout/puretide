@@ -271,6 +271,19 @@ export default function CheckoutClient() {
 		return null;
 	}
 
+	// Show full-page loader for e-transfer processing
+	if (isProcessing && !useCreditCard) {
+		return (
+			<div className='fixed inset-0 bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50 z-50 flex items-center justify-center'>
+				<div className='text-center'>
+					<div className='w-16 h-16 border-4 border-deep-tidal-teal-200 border-t-deep-tidal-teal rounded-full animate-spin mx-auto mb-6'></div>
+					<h2 className='text-2xl font-bold text-deep-tidal-teal-800 mb-3'>Processing your order</h2>
+					<p className='text-deep-tidal-teal-600 max-w-md'>Please wait while we create your order and generate e-transfer instructions...</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<div className='max-w-7xl mx-auto px-6 py-24'>
