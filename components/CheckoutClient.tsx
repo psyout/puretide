@@ -271,8 +271,8 @@ export default function CheckoutClient() {
 		return null;
 	}
 
-	// Show full-page loader for e-transfer processing
-	if (isProcessing && !useCreditCard) {
+	// Show full-page loader for all payment processing
+	if (isProcessing) {
 		return (
 			<div className='fixed inset-0 bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50 z-50 flex items-center justify-center'>
 				<div className='text-center'>
