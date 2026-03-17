@@ -71,7 +71,20 @@ function json(body: unknown, init: ResponseInit = {}) {
 	return NextResponse.json(body, { ...init, headers });
 }
 
+import { validateEnv } from '@/lib/env';
+
 export async function POST(request: Request) {
+	try {
+		// Validate environment - will throw in production if required vars missing
+		validateEnv();
+	} catch (error) {
+		console.error('Environment validation failed:', error);
+		// In development, continue with warning
+		if (process.env.NODE_ENV === 'production') {
+			const safe = buildSafeApiError({ defaultMessage: 'Server configuration error.', error, logLabel: 'digipay:create:env' });
+			return json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
+		}
+	}
 	const siteId = process.env.DIGIPAY_SITE_ID;
 	const encryptionKey = process.env.DIGIPAY_ENCRYPTION_KEY;
 	const pburl = process.env.DIGIPAY_POSTBACK_URL;

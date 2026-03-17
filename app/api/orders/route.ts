@@ -189,8 +189,17 @@ const CHECKOUT_RATE_LIMIT = 10;
 const CHECKOUT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 export async function POST(request: Request) {
-	// TODO: Re-enable environment validation after fixing missing env vars
-	// validateEnv();
+	try {
+		// Validate environment - will throw in production if required vars missing
+		validateEnv();
+	} catch (error) {
+		console.error('Environment validation failed:', error);
+		// In development, continue with warning
+		if (process.env.NODE_ENV === 'production') {
+			const safe = buildSafeApiError({ defaultMessage: 'Server configuration error.', error, logLabel: 'orders:env' });
+			return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
+		}
+	}
 	try {
 		const { allowed } = checkRateLimit(request, 'checkout', CHECKOUT_RATE_LIMIT, CHECKOUT_WINDOW_MS);
 		if (!allowed) {
