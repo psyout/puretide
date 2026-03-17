@@ -1,15 +1,6 @@
+import { getIdempotencyEntry, setIdempotencyEntry, deleteExpiredIdempotencyEntries } from './ordersDb';
+
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-type Entry = { orderNumber: string; orderId?: string; redirectUrl?: string; createdAt: number };
-
-const store = new Map<string, Entry>();
-
-function prune() {
-	const now = Date.now();
-	Array.from(store.entries()).forEach(([key, entry]) => {
-		if (now - entry.createdAt > TTL_MS) store.delete(key);
-	});
-}
 
 export function getIdempotencyKey(request: Request, body?: { idempotencyKey?: string }): string | null {
 	const header = request.headers.get('idempotency-key')?.trim();
@@ -19,34 +10,38 @@ export function getIdempotencyKey(request: Request, body?: { idempotencyKey?: st
 	return null;
 }
 
-export function getCachedOrder(key: string): { orderNumber: string; orderId: string } | null {
-	prune();
-	const entry = store.get(key);
+export async function getCachedOrder(key: string): Promise<{ orderNumber: string; orderId: string } | null> {
+	await deleteExpiredIdempotencyEntries();
+	const entry = await getIdempotencyEntry(key, 'orders');
 	if (!entry || !entry.orderId) return null;
-	if (Date.now() - entry.createdAt > TTL_MS) {
-		store.delete(key);
-		return null;
-	}
 	return { orderNumber: entry.orderNumber, orderId: entry.orderId };
 }
 
-export function getCachedDigipay(key: string): { orderNumber: string; redirectUrl: string } | null {
-	prune();
-	const entry = store.get(key);
+export async function getCachedDigipay(key: string): Promise<{ orderNumber: string; redirectUrl: string } | null> {
+	await deleteExpiredIdempotencyEntries();
+	const entry = await getIdempotencyEntry(key, 'digipay:create');
 	if (!entry || !entry.redirectUrl) return null;
-	if (Date.now() - entry.createdAt > TTL_MS) {
-		store.delete(key);
-		return null;
-	}
 	return { orderNumber: entry.orderNumber, redirectUrl: entry.redirectUrl };
 }
 
-export function setCachedOrder(key: string, orderNumber: string, orderId: string): void {
-	prune();
-	store.set(key, { orderNumber, orderId, createdAt: Date.now() });
+export async function setCachedOrder(key: string, orderNumber: string, orderId: string): Promise<void> {
+	const expiresAt = new Date(Date.now() + TTL_MS).toISOString();
+	await setIdempotencyEntry({
+		key,
+		route: 'orders',
+		orderNumber,
+		orderId,
+		expiresAt,
+	});
 }
 
-export function setCachedDigipay(key: string, orderNumber: string, redirectUrl: string): void {
-	prune();
-	store.set(key, { orderNumber, redirectUrl, createdAt: Date.now() });
+export async function setCachedDigipay(key: string, orderNumber: string, redirectUrl: string): Promise<void> {
+	const expiresAt = new Date(Date.now() + TTL_MS).toISOString();
+	await setIdempotencyEntry({
+		key,
+		route: 'digipay:create',
+		orderNumber,
+		redirectUrl,
+		expiresAt,
+	});
 }

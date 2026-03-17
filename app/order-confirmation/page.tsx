@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Header from '@/components/Header';
 import { OrderConfirmationCartClear } from '@/components/OrderConfirmationCartClear';
+import { AutoRefresh } from '@/components/AutoRefresh';
 import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 
@@ -182,26 +183,62 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		}
 
 		return (
+			<AutoRefresh
+				interval={5000}
+				maxRefreshes={24}>
+				{(refreshCount) => (
+					<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+						<Header />
+						<div className='max-w-7xl mx-auto px-6 py-24'>
+							<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+								<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Processing your payment</h1>
+								<p className='text-deep-tidal-teal-800 mb-4'>
+									Your order was received. Payment is being processed. This page will update when payment is confirmed, or you can check back shortly.
+								</p>
+								{refreshCount > 1 && <p className='text-deep-tidal-teal-600 text-sm mb-4'>Checking for payment update... (refresh {refreshCount}/24)</p>}
+								<Link
+									href='/'
+									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+									Return to shop
+								</Link>
+							</div>
+						</div>
+					</div>
+				)}
+			</AutoRefresh>
+		);
+	}
+
+	if (order.paymentStatus === 'failed') {
+		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
 				<div className='max-w-7xl mx-auto px-6 py-24'>
 					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
-						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Processing your payment</h1>
+						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment not completed</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>
-							Your order was received. Payment is being processed. This page will update when payment is confirmed, or you can check back shortly.
+							Your order was received, but the payment was not completed. No charge was captured. Please try again or contact support if you need help.
 						</p>
-						<Link
-							href='/'
-							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
-							Return to shop
-						</Link>
+						<div className='flex flex-col sm:flex-row gap-3'>
+							<Link
+								href='/checkout'
+								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block text-center'>
+								Try again
+							</Link>
+							<Link
+								href='/'
+								className='bg-transparent hover:bg-deep-tidal-teal/5 text-deep-tidal-teal font-semibold py-3 px-6 rounded transition-colors inline-block text-center border border-deep-tidal-teal/20'>
+								Return to shop
+							</Link>
+						</div>
 					</div>
 				</div>
 			</div>
 		);
 	}
 
-	if (order.paymentStatus === 'failed') {
+	// Only show success confirmation for paid orders
+	if (order.paymentStatus !== 'paid') {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />

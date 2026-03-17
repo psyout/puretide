@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { readSheetPromoCodes, readSheetProducts } from '@/lib/stockSheet';
+import { readSheetProducts } from '@/lib/stockSheet';
+import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
+import type { PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { buildDigipayPaymentUrl } from '@/lib/digipay';
@@ -95,7 +97,7 @@ export async function POST(request: Request) {
 
 		const idemKey = getIdempotencyKey(request, rawPayload);
 		if (idemKey) {
-			const cached = getCachedDigipay(idemKey);
+			const cached = await getCachedDigipay(idemKey);
 			if (cached) {
 				return json({ ok: true, redirectUrl: cached.redirectUrl, orderNumber: cached.orderNumber });
 			}
@@ -149,8 +151,8 @@ export async function POST(request: Request) {
 		let discountAmount = 0;
 
 		if (orderPayload.promoCode) {
-			const promoCodes = await readSheetPromoCodes();
-			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
+			const promoCodes = await getCachedSheetPromoCodes();
+			const promo = promoCodes.find((p: PromoCode) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
 				if (promo.freeShipping) {
 					shippingCost = 0;
@@ -265,7 +267,7 @@ export async function POST(request: Request) {
 			}),
 		);
 
-		if (idemKey) setCachedDigipay(idemKey, orderNumber, redirectUrl);
+		if (idemKey) await setCachedDigipay(idemKey, orderNumber, redirectUrl);
 		return json({
 			ok: true,
 			redirectUrl,

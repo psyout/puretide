@@ -17,6 +17,16 @@ export type RetryJob = {
 	status: RetryJobStatus;
 };
 
+export type IdempotencyEntry = {
+	key: string;
+	route: 'orders' | 'digipay:create';
+	orderNumber: string;
+	orderId?: string;
+	redirectUrl?: string;
+	createdAt: string;
+	expiresAt: string;
+};
+
 const DB_PATH = path.join(process.cwd(), 'data', 'orders.sqlite');
 const LEGACY_ORDERS_JSON_PATH = path.join(process.cwd(), 'data', 'orders.json');
 
@@ -93,6 +103,20 @@ async function getDb(): Promise<SqlJsDatabase> {
 		`);
 		db.run('CREATE INDEX IF NOT EXISTS idx_retry_jobs_status_next_run ON retry_jobs(status, next_run_at)');
 
+		db.run(`
+			CREATE TABLE IF NOT EXISTS idempotency (
+				key TEXT NOT NULL,
+				route TEXT NOT NULL,
+				order_number TEXT NOT NULL,
+				order_id TEXT,
+				redirect_url TEXT,
+				created_at TEXT NOT NULL,
+				expires_at TEXT NOT NULL,
+				PRIMARY KEY (key, route)
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_idempotency_expires_at ON idempotency(expires_at)');
+
 		await migrateLegacyOrdersJson(db);
 		persistDb(db);
 
@@ -120,14 +144,7 @@ async function migrateLegacyOrdersJson(db: SqlJsDatabase): Promise<void> {
 			db.run(
 				`INSERT OR REPLACE INTO orders (id, order_number, created_at, payment_status, order_json, updated_at)
 				 VALUES (?, ?, ?, ?, ?, ?)`,
-				[
-					String(normalized.id),
-					String(normalized.orderNumber),
-					String(normalized.createdAt),
-					String(normalized.paymentStatus),
-					JSON.stringify(normalized),
-					now,
-				]
+				[String(normalized.id), String(normalized.orderNumber), String(normalized.createdAt), String(normalized.paymentStatus), JSON.stringify(normalized), now],
 			);
 		}
 	} catch (error) {
@@ -167,9 +184,7 @@ export async function getOrderByOrderNumberFromDb(orderNumber: string): Promise<
 
 export async function getOrderBySessionFromDb(session: string): Promise<StoredOrder | null> {
 	const db = await getDb();
-	const stmt = db.prepare(
-		'SELECT order_json FROM orders WHERE order_number = ? OR id = ? LIMIT 1'
-	);
+	const stmt = db.prepare('SELECT order_json FROM orders WHERE order_number = ? OR id = ? LIMIT 1');
 	stmt.bind([session, session]);
 	if (!stmt.step()) {
 		stmt.free();
@@ -193,14 +208,7 @@ export async function upsertOrderInDb(order: StoredOrder): Promise<StoredOrder> 
 			payment_status = excluded.payment_status,
 			order_json = excluded.order_json,
 			updated_at = excluded.updated_at`,
-		[
-			String(normalized.id),
-			String(normalized.orderNumber),
-			String(normalized.createdAt),
-			String(normalized.paymentStatus),
-			JSON.stringify(normalized),
-			now,
-		]
+		[String(normalized.id), String(normalized.orderNumber), String(normalized.createdAt), String(normalized.paymentStatus), JSON.stringify(normalized), now],
 	);
 	persistDb(db);
 	return normalized;
@@ -230,9 +238,7 @@ export async function getRetryJobBySessionFromDb(session: string): Promise<Retry
 
 export async function listDuePendingRetryJobsFromDb(nowIso: string): Promise<RetryJob[]> {
 	const db = await getDb();
-	const stmt = db.prepare(
-		'SELECT * FROM retry_jobs WHERE status = ? AND next_run_at <= ? ORDER BY next_run_at ASC'
-	);
+	const stmt = db.prepare('SELECT * FROM retry_jobs WHERE status = ? AND next_run_at <= ? ORDER BY next_run_at ASC');
 	stmt.bind(['pending', nowIso]);
 	const rows: RetryJob[] = [];
 	while (stmt.step()) {
@@ -269,17 +275,70 @@ export async function upsertRetryJobInDb(job: RetryJob): Promise<RetryJob> {
 			updated_at = excluded.updated_at,
 			last_error = excluded.last_error,
 			status = excluded.status`,
-		[
-			normalized.id,
-			normalized.session,
-			normalized.attempts,
-			normalized.nextRunAt,
-			normalized.createdAt,
-			normalized.updatedAt,
-			normalized.lastError ?? null,
-			normalized.status,
-		]
+		[normalized.id, normalized.session, normalized.attempts, normalized.nextRunAt, normalized.createdAt, normalized.updatedAt, normalized.lastError ?? null, normalized.status],
 	);
 	persistDb(db);
 	return normalized;
+}
+
+export async function getIdempotencyEntry(key: string, route: 'orders' | 'digipay:create'): Promise<IdempotencyEntry | null> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM idempotency WHERE key = ? AND route = ? AND expires_at > ? LIMIT 1');
+	const now = new Date().toISOString();
+	stmt.bind([key, route, now]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as Record<string, unknown>;
+	stmt.free();
+	return {
+		key: String(row.key),
+		route: row.route as 'orders' | 'digipay:create',
+		orderNumber: String(row.order_number),
+		orderId: row.order_id ? String(row.order_id) : undefined,
+		redirectUrl: row.redirect_url ? String(row.redirect_url) : undefined,
+		createdAt: String(row.created_at),
+		expiresAt: String(row.expires_at),
+	};
+}
+
+export async function setIdempotencyEntry(entry: Omit<IdempotencyEntry, 'createdAt'>): Promise<void> {
+	const db = await getDb();
+	const now = new Date().toISOString();
+	db.run(
+		`INSERT OR REPLACE INTO idempotency (key, route, order_number, order_id, redirect_url, created_at, expires_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		[entry.key, entry.route, entry.orderNumber, entry.orderId ?? null, entry.redirectUrl ?? null, now, entry.expiresAt],
+	);
+	persistDb(db);
+}
+
+export async function deleteExpiredIdempotencyEntries(): Promise<void> {
+	const db = await getDb();
+	const now = new Date().toISOString();
+	db.run('DELETE FROM idempotency WHERE expires_at <= ?', [now]);
+	persistDb(db);
+}
+
+export async function getPendingRetryJobs(): Promise<RetryJob[]> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM retry_jobs WHERE status = ? AND next_run_at <= ? ORDER BY next_run_at ASC');
+	stmt.bind(['pending', new Date().toISOString()]);
+	const jobs: RetryJob[] = [];
+	while (stmt.step()) {
+		const row = stmt.getAsObject() as Record<string, unknown>;
+		jobs.push({
+			id: String(row.id),
+			session: String(row.session),
+			attempts: Number(row.attempts),
+			nextRunAt: String(row.next_run_at),
+			createdAt: String(row.created_at),
+			updatedAt: String(row.updated_at),
+			lastError: row.last_error ? String(row.last_error) : undefined,
+			status: row.status as RetryJobStatus,
+		});
+	}
+	stmt.free();
+	return jobs;
 }

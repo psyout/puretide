@@ -8,6 +8,15 @@ const nextConfig = {
 	output: 'standalone',
 	// Disable source maps in production to prevent 404 errors and improve security
 	productionBrowserSourceMaps: false,
+	// Optimize remote images (product bottles from CDN)
+	images: {
+		remotePatterns: [
+			{
+				protocol: 'https',
+				hostname: 'cdn.shopify.com',
+			},
+		],
+	},
 	// Reduce client bundle size for icon library
 	experimental: {
 		optimizePackageImports: ['lucide-react'],
@@ -16,6 +25,7 @@ const nextConfig = {
 	},
 	// Security & privacy: block indexing (keep under the radar) + harden headers
 	async headers() {
+		const isDev = process.env.NODE_ENV !== 'production';
 		return [
 			{
 				source: '/:path*',
@@ -28,6 +38,34 @@ const nextConfig = {
 					{ key: 'X-Frame-Options', value: 'DENY' },
 					{ key: 'X-Content-Type-Options', value: 'nosniff' },
 					{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+					// Content Security Policy
+					{
+						key: 'Content-Security-Policy',
+						value: [
+							"default-src 'self'",
+							"script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval/inline in dev
+							"style-src 'self' 'unsafe-inline'", // For Tailwind CSS
+							"img-src 'self' data: blob:",
+							"font-src 'self' data:",
+							"connect-src 'self'",
+							"frame-ancestors 'none'",
+							"form-action 'self'",
+						].join('; '),
+					},
+					// Permissions Policy
+					{
+						key: 'Permissions-Policy',
+						value: ['camera=()', 'microphone=()', 'geolocation=()', 'payment=()', 'usb=()', 'magnetometer=()', 'gyroscope=()', 'accelerometer=()'].join(', '),
+					},
+					// HSTS (HTTPS only)
+					...(isDev
+						? []
+						: [
+								{
+									key: 'Strict-Transport-Security',
+									value: 'max-age=31536000; includeSubDomains; preload',
+								},
+							]),
 				],
 			},
 		];

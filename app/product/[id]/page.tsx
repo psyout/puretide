@@ -24,6 +24,7 @@ const ProductImage = ({ product, priority = false }: { product: Product; priorit
 				alt={product.name}
 				width={400}
 				height={400}
+				style={{ width: 'auto', height: 'auto' }}
 				unoptimized={product.image.startsWith('http')}
 				priority={priority}
 				className='w-auto h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl transition-all duration-300'

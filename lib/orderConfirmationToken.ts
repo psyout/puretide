@@ -2,8 +2,21 @@ import crypto from 'crypto';
 
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-function getSecret(): string | undefined {
-	return process.env.ORDER_CONFIRMATION_SECRET ?? process.env.DASHBOARD_SECRET;
+function getSecret(): string {
+	const secret = process.env.ORDER_CONFIRMATION_SECRET;
+	if (!secret) {
+		if (process.env.NODE_ENV === 'production') {
+			throw new Error('ORDER_CONFIRMATION_SECRET environment variable is required in production');
+		}
+		// Fallback to DASHBOARD_SECRET only in development for backward compatibility
+		const fallback = process.env.DASHBOARD_SECRET;
+		if (!fallback) {
+			throw new Error('ORDER_CONFIRMATION_SECRET or DASHBOARD_SECRET environment variable is required');
+		}
+		console.warn('Using DASHBOARD_SECRET as fallback for ORDER_CONFIRMATION_SECRET. Please set ORDER_CONFIRMATION_SECRET.');
+		return fallback;
+	}
+	return secret;
 }
 
 function sign(payload: string, secret: string): string {

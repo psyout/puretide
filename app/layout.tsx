@@ -13,40 +13,19 @@ export const metadata: Metadata = {
 
 const matimo = localFont({
 	src: [
-		{
-			path: '../public/fonts/matimo-regular-webfont.woff2',
-			weight: '400',
-			style: 'normal',
-		},
-		{
-			path: '../public/fonts/matimo-medium-webfont.woff2',
-			weight: '500',
-			style: 'normal',
-		},
-		{
-			path: '../public/fonts/matimo-semibold-webfont.woff2',
-			weight: '600',
-			style: 'normal',
-		},
-		{
-			path: '../public/fonts/matimo-bold-webfont.woff2',
-			weight: '700',
-			style: 'normal',
-		},
+		{ path: '../public/fonts/matimo-regular-webfont.woff2', weight: '400', style: 'normal' },
+		{ path: '../public/fonts/matimo-medium-webfont.woff2', weight: '500', style: 'normal' },
+		{ path: '../public/fonts/matimo-semibold-webfont.woff2', weight: '600', style: 'normal' },
+		{ path: '../public/fonts/matimo-bold-webfont.woff2', weight: '700', style: 'normal' },
 	],
 	variable: '--font-matimo',
 	display: 'swap',
 });
 
-export default function RootLayout({
-	children,
-}: Readonly<{
-	children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang='en'>
 			<head>
-				{/* Privacy-focused: No external tracking scripts */}
 				<meta
 					name='viewport'
 					content='width=device-width, initial-scale=1'
@@ -55,12 +34,10 @@ export default function RootLayout({
 					httpEquiv='X-UA-Compatible'
 					content='IE=edge'
 				/>
-				{/* Prevent tracking */}
 				<meta
 					name='referrer'
 					content='no-referrer'
 				/>
-				{/* Block all search engines */}
 				<meta
 					name='robots'
 					content='noindex, nofollow, noarchive, nosnippet, noimageindex'
@@ -69,7 +46,7 @@ export default function RootLayout({
 					name='googlebot'
 					content='noindex, nofollow, noarchive, nosnippet, noimageindex'
 				/>
-				{/* Meta Pixel Base Script */}
+
 				<Script
 					id='meta-pixel'
 					strategy='afterInteractive'>
@@ -87,17 +64,6 @@ export default function RootLayout({
 				</Script>
 			</head>
 			<body className={`${matimo.variable} antialiased`}>
-				{/* Meta Pixel noscript fallback */}
-				<noscript>
-					{/* eslint-disable-next-line @next/next/no-img-element */}
-					<img
-						height='1'
-						width='1'
-						style={{ display: 'none' }}
-						src='https://www.facebook.com/tr?id=1594510405130894&ev=PageView&noscript=1'
-						alt=''
-					/>
-				</noscript>
 				<Suspense fallback={null}>
 					<MetaPixelPageView />
 				</Suspense>

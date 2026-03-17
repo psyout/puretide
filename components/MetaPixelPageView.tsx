@@ -1,22 +1,28 @@
-"use client";
+'use client';
 
-import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 declare global {
-  interface Window {
-    fbq?: (...args: any[]) => void;
-  }
+	interface Window {
+		fbq?: (...args: any[]) => void;
+	}
 }
 
 export default function MetaPixelPageView() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+	const pathname = usePathname();
+	const searchParams = useSearchParams();
 
-  useEffect(() => {
-    if (!window.fbq) return;
-    window.fbq("track", "PageView");
-  }, [pathname, searchParams]);
+	useEffect(() => {
+		try {
+			if (!window.fbq) return;
+			window.fbq('track', 'PageView');
+		} catch (e) {
+			// Facebook Pixel tracking failed
+			const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+			console.log('Facebook Pixel PageView tracking failed:', errorMessage);
+		}
+	}, [pathname, searchParams]);
 
-  return null;
+	return null;
 }

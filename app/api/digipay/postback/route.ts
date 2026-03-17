@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getOrderBySessionFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
+import { createRetryJobForOrder } from '@/lib/retryJobs';
+import { validateOrderStateTransition, type OrderPaymentStatus } from '@/lib/orderComputation';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -112,10 +114,15 @@ function parsePostbackBody(rawBody: string): Record<string, unknown> {
 
 function verifyHmacSignature(rawBody: string, request: Request): { ok: true } | { ok: false; message: string } {
 	const secret = process.env.DIGIPAY_POSTBACK_HMAC_SECRET;
+	const isProduction = process.env.NODE_ENV === 'production';
 
 	if (!secret) {
+		if (isProduction) {
+			console.error('DIGIPAY_POSTBACK_HMAC_SECRET not configured in production. Rejecting webhook.');
+			return { ok: false, message: 'Server configuration error' };
+		}
 		if (!hasWarnedMissingHmacSecret) {
-			console.warn('DIGIPAY_POSTBACK_HMAC_SECRET not configured. Skipping HMAC verification.');
+			console.warn('DIGIPAY_POSTBACK_HMAC_SECRET not configured. Skipping HMAC verification in development.');
 			hasWarnedMissingHmacSecret = true;
 		}
 		return { ok: true };
@@ -194,6 +201,10 @@ export async function POST(request: Request) {
 		// DigiPay's documented postback may omit status/result; only reject when explicitly present and not approved
 		if (statusRaw && !approvedStatuses.includes(statusRaw)) {
 			console.warn(JSON.stringify({ label: 'digipay:postback:not_approved', session, status: statusRaw }));
+			if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
+				console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'failed' }));
+				return xmlResponse('ok', 100, 'Order already processed', session);
+			}
 			await upsertOrderInDb({
 				...order,
 				paymentStatus: 'failed',
@@ -215,6 +226,10 @@ export async function POST(request: Request) {
 
 		if (!rawAmount || Number.isNaN(paidAmount)) {
 			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_amount', session, rawAmount }));
+			if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
+				console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'failed' }));
+				return xmlResponse('ok', 100, 'Order already processed', session);
+			}
 			await upsertOrderInDb({
 				...order,
 				paymentStatus: 'failed',
@@ -237,6 +252,10 @@ export async function POST(request: Request) {
 					rawAmount,
 				}),
 			);
+			if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
+				console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'failed' }));
+				return xmlResponse('ok', 100, 'Order already processed', session);
+			}
 			await upsertOrderInDb({
 				...order,
 				paymentStatus: 'failed',
@@ -258,6 +277,7 @@ export async function POST(request: Request) {
 		/* ---------- Run Fulfillment first; mark paid only after success ---------- */
 		let emailStatus: { sent: boolean; skipped: boolean; error?: string };
 		let adminEmailStatus: { sent: boolean; skipped: boolean; error?: string };
+		let fulfillmentFailed = false;
 		try {
 			const result = await runFulfillment(order as FulfillmentOrder);
 			emailStatus = result.emailStatus;
@@ -265,7 +285,17 @@ export async function POST(request: Request) {
 		} catch (fulfillError) {
 			console.error(JSON.stringify({ label: 'digipay:postback:fulfillment_failed', session }));
 			console.error(fulfillError);
-			return xmlResponse('fail', 104, 'Unable to process purchase');
+			fulfillmentFailed = true;
+			// Create retry job for later fulfillment
+			try {
+				await createRetryJobForOrder(session);
+				console.log(`[digipay:postback] Created retry job for session ${session}`);
+			} catch (retryError) {
+				console.error(`[digipay:postback] Failed to create retry job for session ${session}`, retryError);
+			}
+			// Set default email status for failed fulfillment
+			emailStatus = { sent: false, skipped: false, error: 'Fulfillment failed' };
+			adminEmailStatus = { sent: false, skipped: false, error: 'Fulfillment failed' };
 		}
 
 		if (!emailStatus.sent) {
@@ -275,15 +305,28 @@ export async function POST(request: Request) {
 			console.warn(`[DigiPay postback] Order ${session} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : (adminEmailStatus.error ?? 'unknown')}`);
 		}
 
+		// Validate state transition before marking as paid
+		if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'paid')) {
+			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'paid' }));
+			return xmlResponse('ok', 100, 'Order already processed', session);
+		}
+
 		await upsertOrderInDb({
 			...order,
 			paymentStatus: 'paid',
 			paidAt,
-			fulfillmentStatus: {
-				stockUpdated: true,
-				emailsSent: true,
-				clientSynced: (order.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
-			},
+			fulfillmentStatus: fulfillmentFailed
+				? {
+						stockUpdated: false,
+						emailsSent: false,
+						clientSynced: false,
+						failedAt: paidAt,
+					}
+				: {
+						stockUpdated: true,
+						emailsSent: true,
+						clientSynced: (order.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
+					},
 			emailStatus,
 			adminEmailStatus,
 		} as Record<string, unknown>);

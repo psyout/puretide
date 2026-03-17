@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { buildOrderEmails } from '@/lib/orderEmail';
 import nodemailer from 'nodemailer';
-import { readSheetProducts, writeSheetProducts, readSheetPromoCodes, upsertSheetClient } from '@/lib/stockSheet';
+import { readSheetProducts, writeSheetProducts, upsertSheetClient } from '@/lib/stockSheet';
+import { getCachedSheetPromoCodes, getCachedSheetClients } from '@/lib/sheetCache';
+import type { PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, getEffectiveShippingCost, DEFAULT_ORDER_NOTIFICATION_EMAIL, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
@@ -13,6 +15,7 @@ import { validateOrderPostalCodes } from '@/lib/postalValidation';
 import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
 import { getIdempotencyKey, getCachedOrder, setCachedOrder } from '@/lib/idempotency';
 import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
+import { validateEnv } from '@/lib/env';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
 
@@ -186,6 +189,8 @@ const CHECKOUT_RATE_LIMIT = 10;
 const CHECKOUT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 export async function POST(request: Request) {
+	// Validate environment on first API call
+	validateEnv();
 	try {
 		const { allowed } = checkRateLimit(request, 'checkout', CHECKOUT_RATE_LIMIT, CHECKOUT_WINDOW_MS);
 		if (!allowed) {
@@ -199,10 +204,15 @@ export async function POST(request: Request) {
 
 		const idemKey = getIdempotencyKey(request, rawPayload);
 		if (idemKey) {
-			const cached = getCachedOrder(idemKey);
+			const cached = await getCachedOrder(idemKey);
 			if (cached) {
-				const confirmationToken = createOrderConfirmationToken(cached.orderNumber);
-				return NextResponse.json({ ok: true, orderId: cached.orderId, orderNumber: cached.orderNumber, confirmationToken });
+				const token = createOrderConfirmationToken(cached.orderNumber);
+				return NextResponse.json({
+					ok: true,
+					orderNumber: cached.orderNumber,
+					orderId: cached.orderId,
+					token,
+				});
 			}
 		}
 
@@ -246,8 +256,8 @@ export async function POST(request: Request) {
 		let shippingCost = getEffectiveShippingCost(orderPayload.customer.zipCode);
 
 		if (orderPayload.promoCode) {
-			const promoCodes = await readSheetPromoCodes();
-			const promo = promoCodes.find((p) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
+			const promoCodes = await getCachedSheetPromoCodes();
+			const promo = promoCodes.find((p: PromoCode) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
 				if (promo.freeShipping) {
 					shippingCost = 0;
@@ -372,7 +382,7 @@ export async function POST(request: Request) {
 		await upsertSheetClient(clientPayload);
 		await createClientTask(clientPayload);
 
-		if (idemKey) setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
+		if (idemKey) await setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
 		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);
 		return NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber, confirmationToken });
 	} catch (error) {
