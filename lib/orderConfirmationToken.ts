@@ -11,9 +11,9 @@ function getSecret(): string {
 		// Fallback to DASHBOARD_SECRET only in development for backward compatibility
 		const fallback = process.env.DASHBOARD_SECRET;
 		if (!fallback) {
-			// In development, use a default secret if neither is set
-			console.warn('Neither ORDER_CONFIRMATION_SECRET nor DASHBOARD_SECRET set. Using default secret for development.');
-			return 'dev-secret-do-not-use-in-production';
+			// Temporary fallback for development - please set DASHBOARD_SECRET in .env
+			console.warn('Neither ORDER_CONFIRMATION_SECRET nor DASHBOARD_SECRET set. Using temporary fallback.');
+			return 'temporary-secret-for-development-only';
 		}
 		console.warn('Using DASHBOARD_SECRET as fallback for ORDER_CONFIRMATION_SECRET. Please set ORDER_CONFIRMATION_SECRET.');
 		return fallback;
