@@ -11,10 +11,10 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
 	return (
 		<html lang='en'>
-			<body className='m-0 font-sans bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50 min-h-screen'>
+			<body className='m-0 font-sans min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
-				<div className='min-h-[calc(100vh-80px)] flex items-center justify-center'>
-					<div className='max-w-lg mx-6 bg-mineral-white backdrop-blur-sm rounded-lg ui-border shadow-lg p-8 text-center'>
+				<div className='max-w-7xl mx-auto px-6 py-24 pt-28'>
+					<div className='max-w-2xl mx-auto bg-mineral-white/80 backdrop-blur-sm rounded-lg ui-border p-8 shadow-lg text-center'>
 						<h1 className='text-4xl font-bold mb-3 text-deep-tidal-teal-700'>Something went wrong</h1>
 						<p className='text-deep-tidal-teal-800 mb-8'>We couldn&apos;t load this page. You can try again or return to the shop.</p>
 						<div className='flex flex-col sm:flex-row gap-4 justify-center'>

@@ -278,7 +278,7 @@ export default function CheckoutClient() {
 				<div className='text-center'>
 					<div className='w-16 h-16 border-4 border-deep-tidal-teal-200 border-t-deep-tidal-teal rounded-full animate-spin mx-auto mb-6'></div>
 					<h2 className='text-2xl font-bold text-deep-tidal-teal-800 mb-3'>Processing your order</h2>
-					<p className='text-deep-tidal-teal-600 max-w-md'>Please wait while we create your order and generate e-transfer instructions...</p>
+					<p className='text-deep-tidal-teal-600 max-w-md'>Please wait while we create your order...</p>
 				</div>
 			</div>
 		);
