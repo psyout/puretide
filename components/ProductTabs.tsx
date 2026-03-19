@@ -23,7 +23,7 @@ export default function ProductTabs({ description, details }: ProductInfoProps) 
 					<ChevronDown className={`w-4 h-4 text-deep-tidal-teal-600 transition-transform duration-200 ${descriptionOpen ? 'rotate-180' : ''}`} />
 				</button>
 				<div className={`overflow-hidden transition-all duration-200 min-h-0 ${descriptionOpen ? 'max-h-96' : 'max-h-0'} bg-mineral-white`}>
-					<p className='px-4 py-3 text-[clamp(0.9rem,3.8vw,1rem)] leading-[clamp(1.45rem,5.2vw,1.65rem)] text-deep-tidal-teal-700 tracking-normal text-pretty break-normal hyphens-none text-left lg:[text-align:justify] lg:hyphens-auto lg:[hyphenate-character:""] [word-break:normal] [overflow-wrap:normal]'>
+					<p className='px-4 py-3 text-[clamp(0.9rem,3.8vw,0.95rem)] leading-[clamp(1rem,5.2vw,1.4rem)] text-deep-tidal-teal-700 tracking-normal text-pretty break-normal hyphens-none text-left lg:[text-align:justify] lg:hyphens-auto lg:[hyphenate-character:""] [word-break:normal] [overflow-wrap:normal]'>
 						{description}
 					</p>
 				</div>
@@ -39,7 +39,7 @@ export default function ProductTabs({ description, details }: ProductInfoProps) 
 						<ChevronDown className={`w-4 h-4 text-deep-tidal-teal-600 transition-transform duration-200 ${detailsOpen ? 'rotate-180' : ''}`} />
 					</button>
 					<div className={`overflow-hidden transition-all duration-200 min-h-0 ${detailsOpen ? 'max-h-96' : 'max-h-0'} bg-mineral-white`}>
-						<p className='px-4 py-3 text-[clamp(0.9rem,3.8vw,1rem)] leading-[clamp(1.45rem,5.2vw,1.65rem)] text-deep-tidal-teal-700 text-pretty break-normal hyphens-none text-left lg:[text-align:justify] lg:hyphens-auto lg:[hyphenate-character:""] [word-break:normal] [overflow-wrap:normal]'>
+						<p className='px-4 py-3 text-[clamp(0.9rem,3.8vw,0.95rem)] leading-[clamp(1rem,5.2vw,1.4rem)] text-deep-tidal-teal-700 text-pretty break-normal hyphens-none text-left lg:[text-align:justify] lg:hyphens-auto lg:[hyphenate-character:""] [word-break:normal] [overflow-wrap:normal]'>
 							{details}
 						</p>
 					</div>
