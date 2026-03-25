@@ -9,8 +9,10 @@ import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
 import Header from '@/components/Header';
-import { CreditCard, FlaskConical, Truck } from 'lucide-react';
+import { CreditCard, FlaskConical, Truck, FileText } from 'lucide-react';
 import { iconMap } from '@/lib/productIcons';
+import fs from 'fs';
+import path from 'path';
 
 type ProductPageProps = {
 	params: { id: string };
@@ -49,6 +51,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
 		notFound();
 	}
 
+	// Check if COA PDF exists for this product (match first 3 letters)
+	const coaDir = path.join(process.cwd(), 'public', 'coa');
+	const coaFiles = fs.readdirSync(coaDir).filter((file) => file.endsWith('.pdf'));
+	const matchingCoaFile = coaFiles.find((file) => {
+		const fileSlug = file.replace('puretide-coa-', '').replace('.pdf', '');
+		return fileSlug.startsWith(product.slug.slice(0, 3));
+	});
+	const hasCoaFile = !!matchingCoaFile;
+
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<Header />
@@ -68,7 +79,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</div>
 						)}
 						{/* Product name and mg */}
-						<div>
+						{hasCoaFile && (
+							<div className='mb-3'>
+								<span className='inline-flex items-center gap-1.5 bg-slate-200 text-eucalyptus-800 text-xs font-semibold px-2 py-1 rounded-full'>Testides Lab</span>
+							</div>
+						)}
+						<div className='mt-6'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-700 leading-tight'>
 								{product.name}
 								{product.mg && !product.name.toLowerCase().includes('stack') && (
@@ -77,7 +93,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</h1>
 						</div>
 						{product.subtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{product.subtitle}</p>}
-						{!product.subtitle && <div className='mb-2' />}
+						{!product.subtitle && <div className='mb-1' />}
 
 						{/* Icons */}
 						{product.icons && product.icons.length > 0 && (
@@ -138,14 +154,23 @@ export default async function ProductPage({ params }: ProductPageProps) {
 								</span>
 							</div>
 						</div>
+
+						{/* Details & Description (accordion) */}
+						<div className='mb-6'>
+							<ProductTabs
+								description={product.description}
+								details={product.details}
+							/>
+						</div>
+
 						{/* Discount Table */}
 						{product.slug !== 'bacteriostatic-water' && (
-							<div className='mb-6 max-w-md overflow-hidden rounded-lg border border-deep-tidal-teal/10 bg-mineral-white shadow-sm'>
+							<div className='mb-6 mt-10 max-w overflow-hidden rounded-lg  border-deep-tidal-teal/10 bg-mineral-white shadow-sm'>
 								<div className='bg-deep-tidal-teal/5 px-4 py-2 border-b border-deep-tidal-teal/10'>
 									<h3 className='text-sm font-bold text-deep-tidal-teal-700 tracking-wider'>Discount per quantity</h3>
 								</div>
 								<div className='overflow-x-auto'>
-									<table className='w-full text-[15px] text-left'>
+									<table className='w-full text-[14px] text-left'>
 										<thead>
 											<tr className='border-b border-deep-tidal-teal/5'>
 												<th className='px-4 py-2 font-semibold text-deep-tidal-teal-700'>Quantity</th>
@@ -175,13 +200,27 @@ export default async function ProductPage({ params }: ProductPageProps) {
 								</div>
 							</div>
 						)}
-						{/* Details & Description (accordion) */}
-						<div className='mb-6'>
-							<ProductTabs
-								description={product.description}
-								details={product.details}
-							/>
-						</div>
+
+						{/* COA */}
+						{hasCoaFile && (
+							<div className='mb-6'>
+								<div className='flex overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible gap-0.5'>
+									<FileText className='w-5 h-5 text-deep-tidal-teal-700' />
+									<div className='flex-shrink-0 inline-flex items-center'>
+										<Link
+											href={`/coa/${matchingCoaFile}`}
+											target='_blank'
+											rel='noopener noreferrer'
+											className='text-deep-tidal-teal-700 text-sm transition-colors duration-200 relative group hover:text-deep-tidal-teal-800 z-10 pl-0.5 pr-1'>
+											<span className='relative z-10 text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal-800'>View COA</span>
+											{/* Underline - always visible on mobile/tablet, animated on desktop */}
+											<span className='absolute bottom-0 left-0 h-0.5 bg-deep-tidal-teal-700 transition-all duration-300 w-full md:w-0 md:group-hover:w-full md:origin-left'></span>
+										</Link>
+									</div>
+								</div>
+							</div>
+						)}
+
 						{/* 
 						{product.slug !== 'bacteriostatic-water' && (
 							<div className='mb-6'>
@@ -223,7 +262,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 					{/* Desktop Image Container */}
 					<div className='hidden md:flex md:col-start-1 md:row-start-1 md:justify-center lg:sticky lg:top-24 h-fit'>
-						<div className='w-full max-w-sm rounded-2xl  p-4 '>
+						<div className='w-full max-w-sm rounded-2xl p-4 flex justify-center items-center'>
 							<ProductImage
 								product={product}
 								priority
