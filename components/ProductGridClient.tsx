@@ -170,19 +170,21 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 				<div>
 					<div className='relative mt-8'>
 						{showSkeleton && (
-							<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10'>
+							<div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10'>
 								{Array.from({ length: skeletonCount }).map((_, index) => (
 									<div
 										key={index}
-										className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg animate-pulse'>
-										<div className='flex items-start gap-5'>
-											<div className='h-28 w-28 flex-shrink-0 rounded-lg bg-deep-tidal-teal/10' />
-											<div className='flex-1 space-y-3'>
-												<div className='h-6 bg-deep-tidal-teal/15 rounded w-3/4' />
-												<div className='h-4 bg-deep-tidal-teal/10 rounded w-full' />
-												<div className='h-4 bg-deep-tidal-teal/10 rounded w-4/5' />
-												<div className='h-10 bg-deep-tidal-teal/10 rounded w-32 mt-2' />
-											</div>
+										className='bg-mineral-white-100 rounded-xl ui-border shadow-md animate-pulse relative flex flex-col overflow-hidden'>
+										{/* Image placeholder */}
+										<div className='m-4 md:m-5 rounded-lg bg-eucalyptus-50/60 min-h-[10rem] md:min-h-[12rem] flex justify-center items-center'>
+											<div className='w-56 h-56 md:w-52 md:h-52 rounded-lg bg-deep-tidal-teal/10' />
+										</div>
+
+										{/* Content placeholder */}
+										<div className='px-4 mt-2 pb-3 md:px-6 md:pb-4 min-h-[90px]'>
+											<div className='h-6 bg-deep-tidal-teal/15 rounded w-3/4 mb-2' />
+											<div className='h-4 bg-deep-tidal-teal/10 rounded w-1/2 mb-2' />
+											<div className='h-6 bg-deep-tidal-teal/15 rounded w-20' />
 										</div>
 									</div>
 								))}
@@ -190,7 +192,7 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 						)}
 						{visibleProducts.length > 0 ? (
 							<div
-								className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 transition-opacity duration-300 ${
+								className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 transition-opacity duration-300 ${
 									showSkeleton ? 'opacity-0 pointer-events-none select-none' : 'opacity-100'
 								}`}
 								aria-hidden={showSkeleton}>

@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ALERT_EMAIL } from './constants';
+
+// Initialize Resend client if API key is available
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export type SmtpConfig = {
 	host: string;
@@ -18,7 +22,7 @@ export type SmtpConfig = {
  */
 export function getSmtpConfig(prefix?: string): SmtpConfig | null {
 	const envPrefix = prefix ? `${prefix}_` : '';
-	
+
 	const host = process.env[`${envPrefix}SMTP_HOST`] ?? process.env.SMTP_HOST;
 	const portStr = process.env[`${envPrefix}SMTP_PORT`] ?? process.env.SMTP_PORT;
 	const port = portStr ? Number(portStr) : undefined;
@@ -55,12 +59,9 @@ export function createTransporter(config: SmtpConfig) {
 /**
  * Send a low stock alert email
  */
-export async function sendLowStockAlert(
-	items: Array<{ name: string; slug: string; stock: number }>,
-	smtpConfig?: SmtpConfig | null
-) {
+export async function sendLowStockAlert(items: Array<{ name: string; slug: string; stock: number }>, smtpConfig?: SmtpConfig | null) {
 	if (items.length === 0) return;
-	
+
 	const config = smtpConfig ?? getSmtpConfig('ORDER');
 	if (!config) return;
 
@@ -91,12 +92,33 @@ export type SendMailOptions = {
 };
 
 /**
- * Send a single email (e.g. order confirmation). Uses ORDER SMTP config if available.
+ * Send a single email (e.g. order confirmation). Uses Resend if available, falls back to ORDER SMTP config.
  */
 export async function sendMail(options: SendMailOptions): Promise<{ sent: boolean; error?: string }> {
+	// Try Resend first if available
+	if (resend) {
+		try {
+			await resend.emails.send({
+				from: options.from || 'info@puretide.ca',
+				to: [options.to],
+				subject: options.subject,
+				text: options.text,
+				html: options.html,
+				replyTo: options.replyTo,
+			});
+			console.log(`Email sent via Resend to ${options.to}`);
+			return { sent: true };
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Unknown error';
+			console.error('Resend failed, falling back to SMTP:', message);
+			// Continue to SMTP fallback
+		}
+	}
+
+	// Fallback to SMTP
 	const config = getSmtpConfig('ORDER');
 	if (!config) {
-		return { sent: false, error: 'SMTP not configured' };
+		return { sent: false, error: 'SMTP not configured and Resend unavailable' };
 	}
 	const transporter = createTransporter(config);
 	const from = options.from ?? config.from;
@@ -110,9 +132,11 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			replyTo: options.replyTo ?? config.replyTo ?? config.from,
 			bcc: options.bcc ?? config.bcc,
 		});
+		console.log(`Email sent via SMTP to ${options.to}`);
 		return { sent: true };
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Unknown error';
+		console.error(`SMTP delivery failed to ${options.to}:`, message);
 		return { sent: false, error: message };
 	}
 }

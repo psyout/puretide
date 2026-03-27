@@ -59,14 +59,14 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 			<button
 				onClick={handleViewClick}
 				disabled={isNavigating}
-				className='flex items-center justify-center gap-2 bg-soft-driftwood hover:bg-soft-driftwood-400 disabled:hover:bg-soft-driftwood disabled:cursor-not-allowed text-deep-tidal-teal-700 font-semibold py-3 px-4 rounded transition-colors cursor-pointer'>
+				className='flex items-center justify-center gap-2 bg-soft-driftwood hover:bg-soft-driftwood-400 disabled:hover:bg-soft-driftwood disabled:cursor-not-allowed text-deep-tidal-teal-700 font-semibold py-2 px-3 rounded transition-colors cursor-pointer text-sm'>
 				{isNavigating ? (
 					<Loader2
-						size={18}
+						size={12}
 						className='animate-spin'
 					/>
 				) : (
-					<Eye size={18} />
+					<Eye size={12} />
 				)}
 				{isNavigating ? 'Loading...' : 'View'}
 			</button>
@@ -76,8 +76,8 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 						e.preventDefault();
 						addToCart(product);
 					}}
-					className='flex items-center justify-center gap-2 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors cursor-pointer'>
-					<ShoppingCart size={18} />
+					className='flex items-center justify-center gap-1 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-2 px-4 rounded transition-colors cursor-pointer text-sm'>
+					<ShoppingCart size={16} />
 					Add to cart
 				</button>
 			)}
@@ -85,7 +85,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 	);
 
 	return (
-		<div className='group bg-mineral-white rounded-xl ui-border shadow-sm relative flex flex-col hover:shadow-lg hover:shadow-deep-tidal-teal-500/10 transition-all duration-300 overflow-hidden'>
+		<div className='group bg-mineral-white-100 rounded-xl ui-border shadow-md relative flex flex-col hover:shadow-lg hover:shadow-deep-tidal-teal-500/10 transition-all duration-300 overflow-hidden'>
 			{isSoldOut && <span className='absolute top-3 right-3 z-10 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-md'>Sold out</span>}
 			{isLowStock && !isSoldOut && (
 				<span className='absolute top-3 right-3 z-10 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal-200 text-mineral-white px-2 py-1 rounded-md'>Low stock</span>
@@ -103,7 +103,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 				{/* Image – framed area with even padding */}
 				<div className='m-4 md:m-5 rounded-lg bg-eucalyptus-50/60 flex justify-center items-center min-h-[10rem] md:min-h-[12rem]'>
 					{hasProductImage(product.image) ? (
-						<div className='relative w-36 h-36 md:w-52 md:h-52'>
+						<div className='relative w-56 h-56 md:w-52 md:h-52'>
 							<Image
 								src={product.image}
 								alt={product.name}
@@ -127,56 +127,74 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 							/>
 						</div>
 					) : (
-						<ProductImagePlaceholder className='w-36 h-36 md:w-52 md:h-52' />
+						<ProductImagePlaceholder className='w-56 h-56 md:w-52 md:h-52' />
 					)}
 				</div>
-				{/* Content – title, description, icons, price */}
-				<div className='px-4 pb-3 md:px-6 md:pb-4'>
-					<h3 className='text-[clamp(1.3rem,4.8vw,1.45rem)] md:text-[clamp(1.3rem,2.3vw,1.25rem)] leading-[clamp(1.7rem,5.6vw,1.95rem)] md:leading-[clamp(1.6rem,2.8vw,1.8rem)] font-bold text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2 text-wrap break-words hyphens-auto'>
+
+				{/* Categories with icons - like product page */}
+				{product.icons && product.icons.length > 0 && (
+					<div className='flex flex-wrap gap-2 px-4 mt-2 md:hidden'>
+						{product.icons.slice(0, 1).map((iconName: string) => {
+							const Icon = iconMap[iconName];
+							if (!Icon) {
+								return null;
+							}
+							return (
+								<div
+									key={iconName}
+									className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-eucalyptus-100'>
+									<Icon className='w-4 h-4 text-deep-tidal-teal-700' />
+									<span className='text-xs font-medium text-deep-tidal-teal-700'>{iconName}</span>
+								</div>
+							);
+						})}
+					</div>
+				)}
+
+				{/* Desktop icons - original style */}
+				{product.icons && product.icons.length > 0 && (
+					<div className='flex-wrap gap-[clamp(0.3rem,1.6vw,0.45rem)] ml-4 mt-2 hidden md:flex'>
+						{product.icons.slice(0, 4).map((iconName: string) => {
+							const Icon = iconMap[iconName];
+							if (!Icon) return null;
+							return (
+								<span
+									key={iconName}
+									className='inline-flex items-center justify-center w-[clamp(2.1rem,8.4vw,2.25rem)] h-[clamp(2.1rem,8.4vw,2.25rem)] rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'
+									title={iconName}>
+									<Icon className='w-[1rem] h-[1rem] md:w-[1.1rem] md:h-[1.1rem]' />
+								</span>
+							);
+						})}
+					</div>
+				)}
+
+				<div className='px-4 mt-2 pb-3 md:px-6 md:pb-4 min-h-[90px]'>
+					<h3 className='text-[clamp(1.1rem,4.8vw,0.9rem)] md:text-[clamp(1.1rem,2.3vw,1rem)] leading-[clamp(1.7rem,5.6vw,1.95rem)] md:leading-[clamp(1.6rem,2.8vw,1.8rem)] font-regular text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2 text-wrap break-words hyphens-auto'>
 						{product.name}
 					</h3>
 					{product.subtitle && <p className='text-xs text-deep-tidal-teal-600 mt-0.5 line-clamp-1'>({product.subtitle})</p>}
-					{product.description && (
-						<p className='mt-2 line-clamp-2 text-[clamp(0.9rem,2.9vw,1rem)] leading-[clamp(1.35rem,4.4vw,1.55rem)] text-deep-tidal-teal-600 text-wrap break-words hyphens-auto'>
-							{product.description}
-						</p>
-					)}
-					{product.icons && product.icons.length > 0 && (
-						<div className='flex flex-wrap gap-[clamp(0.3rem,1.6vw,0.45rem)] mt-2'>
-							{product.icons.slice(0, 4).map((iconName: string) => {
-								const Icon = iconMap[iconName];
-								if (!Icon) return null;
-								return (
-									<span
-										key={iconName}
-										className='inline-flex items-center justify-center w-[clamp(2.1rem,8.4vw,2.25rem)] h-[clamp(2.1rem,8.4vw,2.25rem)] rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'
-										title={iconName}>
-										<Icon className='w-[1.2rem] h-[1.2rem] md:w-[1rem] md:h-[1rem]' />
-									</span>
-								);
-							})}
-						</div>
-					)}
-					<div className='mt-3'>
-						<span className='text-3xl md:text-2xl font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>
-					</div>
+					<span className='text-lg md:text-lg font-semibold text-deep-tidal-teal mt-1 inline-block'>
+						<span className='text-md'>CAD$</span>
+						{product.price.toFixed(2)}
+					</span>
 				</div>
 			</Link>
 
 			{/* Mobile: buttons only on tap (same as desktop hover) */}
 			<div
-				className={`absolute inset-0 md:hidden flex items-center justify-center gap-3 bg-white/40 transition-opacity duration-300 ${showActions ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'}`}
+				className={`absolute inset-0 md:hidden flex items-center justify-center gap-1 bg-white/40 transition-opacity duration-300 ${showActions ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'}`}
 				onClick={() => setShowActions(false)}>
 				<div
 					onClick={(e) => e.stopPropagation()}
-					className='flex items-center gap-2'>
+					className='flex items-center gap-1'>
 					{actionButtons}
 				</div>
 			</div>
 
 			{/* Desktop: buttons only on hover (overlay) */}
 			<div className='absolute inset-0 bg-white/40 opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 hidden md:block' />
-			<div className='absolute inset-0 hidden md:flex items-center justify-center gap-3 opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 [&>*]:pointer-events-auto'>
+			<div className='absolute inset-0 hidden md:flex items-center justify-center gap-2 opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 [&>*]:pointer-events-auto'>
 				{actionButtons}
 			</div>
 		</div>

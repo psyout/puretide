@@ -7,7 +7,7 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-const HEADERS = ['id', 'slug', 'name', 'subtitle', 'description', 'details', 'price', 'stock', 'category', 'mg', 'image', 'icons', 'status'] as const;
+const HEADERS = ['id', 'slug', 'name', 'subtitle', 'description', 'details', 'price', 'stock', 'category', 'mg', 'purity', 'image', 'icons', 'status'] as const;
 type HeaderKey = (typeof HEADERS)[number];
 const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description', 'details', 'price', 'stock', 'category'];
 
@@ -99,7 +99,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 	try {
 		const sheets = getSheetsClient();
 		const title = await getSheetTitle(sheets);
-		const range = `${title}!A1:M`;
+		const range = `${title}!A1:N`;
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
@@ -132,6 +132,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 				image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
 				category: row.category,
 				mg: row.mg || undefined,
+				purity: row.purity || undefined,
 				icons: row.icons
 					? row.icons
 							.split(',')
@@ -259,7 +260,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 	try {
 		const sheets = getSheetsClient();
 		const title = await getSheetTitle(sheets);
-		const range = `${title}!A1:M`;
+		const range = `${title}!A1:N`;
 
 		const values = [
 			[...HEADERS],
@@ -274,6 +275,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 				String(product.stock),
 				product.category,
 				product.mg ?? '',
+				product.purity ?? '',
 				product.image,
 				(product.icons ?? []).join(', '),
 				product.status ?? 'published',

@@ -11,6 +11,7 @@ export interface Product {
 	image: string;
 	category: string;
 	mg?: string;
+	purity?: string;
 	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
 }
 
