@@ -95,9 +95,14 @@ export type SendMailOptions = {
  * Send a single email (e.g. order confirmation). Uses Resend if available, falls back to ORDER SMTP config.
  */
 export async function sendMail(options: SendMailOptions): Promise<{ sent: boolean; error?: string }> {
+	// Debug: Check if Resend is available
+	console.log('DEBUG: RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
+	console.log('DEBUG: Resend client initialized:', !!resend);
+
 	// Try Resend first if available
 	if (resend) {
 		try {
+			console.log('DEBUG: Attempting to send via Resend...');
 			await resend.emails.send({
 				from: options.from || 'info@puretide.ca',
 				to: [options.to],
@@ -113,6 +118,8 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			console.error('Resend failed, falling back to SMTP:', message);
 			// Continue to SMTP fallback
 		}
+	} else {
+		console.log('DEBUG: Resend not available, using SMTP fallback');
 	}
 
 	// Fallback to SMTP
