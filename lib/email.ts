@@ -141,7 +141,7 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			text: options.text,
 			html: options.html,
 			replyTo: options.replyTo ?? config.replyTo ?? config.from,
-			bcc: options.bcc ?? config.bcc,
+			bcc: options.bcc, // Only use explicit BCC, not automatic config.bcc
 		});
 		console.log(`Email sent via SMTP to ${options.to}`);
 		return { sent: true };
