@@ -98,13 +98,11 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	console.log('DEBUG: RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
 	console.log('DEBUG: Resend client initialized:', !!resend);
 
-	// Try Resend first if available
-	// DISABLED - Resend saying "sent" but not actually delivering emails
-	// Using reliable SMTP for guaranteed delivery
-	/*
+	// Use Resend exclusively while we fix DNS properly
+	// This bypasses Proofpoint blocking completely
 	if (resend) {
 		try {
-			console.log('DEBUG: Attempting to send via Resend...');
+			console.log('DEBUG: Using Resend exclusively (bypasses Proofpoint)...');
 			await resend.emails.send({
 				from: options.from || 'info@puretide.ca',
 				to: [options.to],
@@ -117,16 +115,14 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			return { sent: true };
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unknown error';
-			console.error('Resend failed, falling back to SMTP:', message);
-			// Continue to SMTP fallback
+			console.error('Resend failed:', message);
+			return { sent: false, error: message };
 		}
 	} else {
 		console.log('DEBUG: Resend not available, using SMTP fallback');
 	}
-	*/
-	console.log('DEBUG: Using SMTP only (Resend not actually delivering)');
 
-	// Fallback to SMTP
+	// SMTP fallback
 	const config = getSmtpConfig('ORDER');
 	if (!config) {
 		return { sent: false, error: 'SMTP not configured and Resend unavailable' };
