@@ -62,23 +62,22 @@ export function createTransporter(config: SmtpConfig) {
 export async function sendLowStockAlert(items: Array<{ name: string; slug: string; stock: number }>, smtpConfig?: SmtpConfig | null) {
 	if (items.length === 0) return;
 
-	const config = smtpConfig ?? getSmtpConfig('ORDER');
-	if (!config) return;
-
-	const transporter = createTransporter(config);
 	const alertEmail = process.env.LOW_STOCK_EMAIL ?? DEFAULT_ALERT_EMAIL;
 
 	const lines = items.map((item) => `- ${item.name} (${item.slug}): ${item.stock}`);
 	const text = `Low stock alert (<= ${LOW_STOCK_THRESHOLD})\n\n${lines.join('\n')}`;
+	const html = `<p><strong>Low stock alert (<= ${LOW_STOCK_THRESHOLD})</strong></p><ul>${lines.map((line) => `<li>${line}</li>`).join('')}</ul>`;
 
-	await transporter.sendMail({
-		from: config.from,
+	const result = await sendMail({
 		to: alertEmail,
 		subject: 'Low stock alert',
 		text,
-		replyTo: config.replyTo ?? config.from,
-		bcc: config.bcc,
+		html,
 	});
+
+	if (!result.sent) {
+		throw new Error(`Low stock alert failed: ${result.error}`);
+	}
 }
 
 export type SendMailOptions = {
@@ -100,6 +99,9 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	console.log('DEBUG: Resend client initialized:', !!resend);
 
 	// Try Resend first if available
+	// DISABLED - Resend saying "sent" but not actually delivering emails
+	// Using reliable SMTP for guaranteed delivery
+	/*
 	if (resend) {
 		try {
 			console.log('DEBUG: Attempting to send via Resend...');
@@ -121,6 +123,8 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	} else {
 		console.log('DEBUG: Resend not available, using SMTP fallback');
 	}
+	*/
+	console.log('DEBUG: Using SMTP only (Resend not actually delivering)');
 
 	// Fallback to SMTP
 	const config = getSmtpConfig('ORDER');
