@@ -153,14 +153,14 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 
 				{/* Desktop icons - original style */}
 				{product.icons && product.icons.length > 0 && (
-					<div className='flex-wrap gap-[clamp(0.3rem,1.6vw,0.45rem)] ml-4 mt-2 hidden md:flex'>
+					<div className='flex-wrap gap-[clamp(0.3rem,1.6vw,0.45rem)] ml-4 mt-2 hidden md:flex mb-1'>
 						{product.icons.slice(0, 4).map((iconName: string) => {
 							const Icon = iconMap[iconName];
 							if (!Icon) return null;
 							return (
 								<span
 									key={iconName}
-									className='inline-flex items-center justify-center w-[clamp(2.1rem,8.4vw,2.25rem)] h-[clamp(2.1rem,8.4vw,2.25rem)] rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'
+									className='inline-flex items-center justify-center w-[clamp(2.1rem,8.4vw,2rem)] h-[clamp(2.1rem,8.4vw,2rem)] rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'
 									title={iconName}>
 									<Icon className='w-[1rem] h-[1rem] md:w-[1.1rem] md:h-[1.1rem]' />
 								</span>
@@ -168,13 +168,13 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 						})}
 					</div>
 				)}
-
+				{/* Mobile title and price */}
 				<div className='px-4 mt-2 pb-3 md:px-6 md:pb-4 min-h-[90px]'>
-					<h3 className='text-[clamp(1.1rem,4.8vw,0.9rem)] md:text-[clamp(1.1rem,2.3vw,1rem)] leading-[clamp(1.7rem,5.6vw,1.95rem)] md:leading-[clamp(1.6rem,2.8vw,1.8rem)] font-regular text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2 text-wrap break-words hyphens-auto'>
+					<h3 className='text-[clamp(1.1rem,4.8vw,0.9rem)] md:text-[clamp(1rem,2.3vw,1rem)] leading-[clamp(1.7rem,5.6vw,1.95rem)] md:leading-[clamp(1.6rem,2.8vw,1.8rem)] font-regular text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal transition-colors line-clamp-2 text-wrap break-words hyphens-auto'>
 						{product.name}
 					</h3>
 					{product.subtitle && <p className='text-xs text-deep-tidal-teal-600 mt-0.5 line-clamp-1'>({product.subtitle})</p>}
-					<span className='text-lg md:text-lg font-semibold text-deep-tidal-teal mt-1 inline-block'>
+					<span className='text-lg md:text-lg font-semibold text-deep-tidal-teal inline-block'>
 						<span className='text-md'>CAD$</span>
 						{product.price.toFixed(2)}
 					</span>

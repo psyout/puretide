@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { buildOrderEmails } from '@/lib/orderEmail';
-import nodemailer from 'nodemailer';
+import { sendMail } from '@/lib/email';
 import { readSheetProducts, writeSheetProducts, upsertSheetClient } from '@/lib/stockSheet';
 import { getCachedSheetPromoCodes, getCachedSheetClients } from '@/lib/sheetCache';
 import type { PromoCode } from '@/types/product';
@@ -94,66 +94,9 @@ type EmailStatus = {
 	error?: string;
 };
 
-function getSmtpConfigLocal() {
-	const host = process.env.ORDER_SMTP_HOST ?? process.env.SMTP_HOST;
-	const port = process.env.ORDER_SMTP_PORT ? Number(process.env.ORDER_SMTP_PORT) : process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
-	const user = process.env.ORDER_SMTP_USER ?? process.env.SMTP_USER;
-	const pass = process.env.ORDER_SMTP_PASS ?? process.env.SMTP_PASS;
-	const from = process.env.ORDER_FROM ?? process.env.SMTP_FROM;
-	const replyTo = process.env.SMTP_REPLY_TO;
-	const bcc = process.env.SMTP_BCC;
-	const secure = process.env.ORDER_SMTP_SECURE === 'true' || (process.env.ORDER_SMTP_SECURE == null && process.env.SMTP_SECURE === 'true');
-
-	if (!host || !port || !user || !pass || !from) {
-		return null;
-	}
-
-	return { host, port, user, pass, from, replyTo, bcc, secure };
-}
-
 function getOrderNotificationRecipient() {
 	return process.env.ORDER_NOTIFICATION_EMAIL ?? DEFAULT_ORDER_NOTIFICATION_EMAIL;
 }
-
-async function sendOrderEmail(to: string, subject: string, text: string, html: string, replyTo?: string, bccOverride?: string, fromOverride?: string): Promise<EmailStatus> {
-	const smtpConfig = getSmtpConfigLocal();
-	if (!smtpConfig) {
-		return { sent: false, skipped: true, error: 'SMTP not configured' };
-	}
-
-	const from = fromOverride ?? smtpConfig.from;
-	const transporter = nodemailer.createTransport({
-		host: smtpConfig.host,
-		port: smtpConfig.port,
-		secure: smtpConfig.secure,
-		auth: {
-			user: smtpConfig.user,
-			pass: smtpConfig.pass,
-		},
-	});
-
-	try {
-		await transporter.sendMail({
-			from,
-			to,
-			subject,
-			text,
-			html,
-			replyTo: replyTo ?? smtpConfig.replyTo ?? smtpConfig.from,
-			bcc: bccOverride ?? smtpConfig.bcc,
-		});
-		return { sent: true, skipped: false };
-	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Unknown email error';
-		return { sent: false, skipped: false, error: message };
-	}
-}
-
-const formatOrderFrom = (value: string, label = 'Puretide Order Confirmation') => {
-	const match = value.match(/<([^>]+)>/);
-	const address = match ? match[1] : value;
-	return `${label} <${address}>`;
-};
 
 async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array<{ name: string; stock: number }>> {
 	try {
@@ -316,16 +259,31 @@ export async function POST(request: Request) {
 		const adminRecipient = getOrderNotificationRecipient();
 		const customerEmail = payload.customer.email;
 		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
-		const smtpConfig = getSmtpConfigLocal();
-		const orderFrom = smtpConfig ? formatOrderFrom(smtpConfig.from) : undefined;
-		const emailStatus = await sendOrderEmail(customerEmail, emailData.customer.subject, emailData.customer.text, emailData.customer.html, undefined, '', orderFrom);
-		const adminEmailStatus = await sendOrderEmail(adminRecipient, emailData.admin.subject, emailData.admin.text, emailData.admin.html, customerReplyTo, '', orderFrom);
+
+		const emailResult = await sendMail({
+			to: customerEmail,
+			subject: emailData.customer.subject,
+			text: emailData.customer.text,
+			html: emailData.customer.html,
+		});
+
+		const adminEmailResult = await sendMail({
+			to: adminRecipient,
+			subject: emailData.admin.subject,
+			text: emailData.admin.text,
+			html: emailData.admin.html,
+			replyTo: customerReplyTo,
+		});
+
+		const emailStatus: EmailStatus = emailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: emailResult.error };
+
+		const adminEmailStatus: EmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
 
 		if (!emailStatus.sent) {
-			console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : (emailStatus.error ?? 'unknown')}`);
+			console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.error ?? 'unknown'}`);
 		}
 		if (!adminEmailStatus.sent) {
-			console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : (adminEmailStatus.error ?? 'unknown')}`);
+			console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.error ?? 'unknown'}`);
 		}
 
 		// Update order with email preview and status (order already saved above)
