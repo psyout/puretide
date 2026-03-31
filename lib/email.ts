@@ -98,25 +98,32 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	console.log('DEBUG: RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
 	console.log('DEBUG: Resend client initialized:', !!resend);
 
-	// Use Resend exclusively while we fix DNS properly
-	// This bypasses Proofpoint blocking completely
+	// Hybrid approach: Resend for external customers, SMTP for internal admin emails
+	// This avoids Resend suppression issues for your own domain
 	if (resend) {
-		try {
-			console.log('DEBUG: Using Resend exclusively (bypasses Proofpoint)...');
-			await resend.emails.send({
-				from: options.from || 'info@puretide.ca',
-				to: [options.to],
-				subject: options.subject,
-				text: options.text,
-				html: options.html,
-				replyTo: options.replyTo,
-			});
-			console.log(`Email sent via Resend to ${options.to}`);
-			return { sent: true };
-		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Unknown error';
-			console.error('Resend failed:', message);
-			return { sent: false, error: message };
+		// Use Resend only for external customers (bypasses Proofpoint)
+		const isInternal = options.to.includes('puretide.ca');
+
+		if (!isInternal) {
+			try {
+				console.log('DEBUG: Using Resend for external email to bypass Proofpoint...');
+				await resend.emails.send({
+					from: options.from || 'info@puretide.ca',
+					to: [options.to],
+					subject: options.subject,
+					text: options.text,
+					html: options.html,
+					replyTo: options.replyTo,
+				});
+				console.log(`Email sent via Resend to ${options.to} (external)`);
+				return { sent: true };
+			} catch (err) {
+				const message = err instanceof Error ? err.message : 'Unknown error';
+				console.error('Resend failed for external email, falling back to SMTP:', message);
+				// Continue to SMTP fallback
+			}
+		} else {
+			console.log('DEBUG: Using SMTP for internal email to avoid Resend suppression');
 		}
 	} else {
 		console.log('DEBUG: Resend not available, using SMTP fallback');
