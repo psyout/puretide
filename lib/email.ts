@@ -59,7 +59,7 @@ export function createTransporter(config: SmtpConfig) {
 /**
  * Send a low stock alert email
  */
-export async function sendLowStockAlert(items: Array<{ name: string; slug: string; stock: number }>, smtpConfig?: SmtpConfig | null) {
+export async function sendLowStockAlert(items: Array<{ name: string; slug: string; stock: number }>) {
 	if (items.length === 0) return;
 
 	const alertEmail = process.env.LOW_STOCK_EMAIL ?? DEFAULT_ALERT_EMAIL;
@@ -98,10 +98,6 @@ export type SendMailOptions = {
  * Send a single email (e.g. order confirmation). Uses Resend if available, falls back to ORDER SMTP config.
  */
 export async function sendMail(options: SendMailOptions): Promise<{ sent: boolean; error?: string }> {
-	// Debug: Check if Resend is available
-	console.log('DEBUG: RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
-	console.log('DEBUG: Resend client initialized:', !!resend);
-
 	const smtpPrefix = options.smtpPrefix ?? 'ORDER';
 	const config = getSmtpConfig(smtpPrefix);
 	const defaultFrom = options.from ?? config?.from;
@@ -114,7 +110,6 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 
 		if (!isInternal) {
 			try {
-				console.log('DEBUG: Using Resend for external email to bypass Proofpoint...');
 				await resend.emails.send({
 					from: defaultFrom ?? 'info@puretide.ca',
 					to: [options.to],
@@ -130,11 +125,7 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 				console.error('Resend failed for external email, falling back to SMTP:', message);
 				// Continue to SMTP fallback
 			}
-		} else {
-			console.log('DEBUG: Using SMTP for internal email to avoid Resend suppression');
 		}
-	} else {
-		console.log('DEBUG: Resend not available, using SMTP fallback');
 	}
 
 	// SMTP fallback
