@@ -250,6 +250,12 @@ export async function POST(request: Request) {
 		// Save order to DB first so it's always stored even if email fails
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
+		// Generate confirmation token and return immediately to avoid request timeouts.
+		// Slow downstream side-effects (emails, sheets, Wrike) run asynchronously below.
+		if (idemKey) await setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
+		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);
+		const response = NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber, confirmationToken });
+
 		const emailData = buildOrderEmails({
 			...payload,
 			orderNumber,
@@ -260,87 +266,101 @@ export async function POST(request: Request) {
 		const customerEmail = payload.customer.email;
 		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
 
-		const emailResult = await sendMail({
-			to: customerEmail,
-			subject: emailData.customer.subject,
-			text: emailData.customer.text,
-			html: emailData.customer.html,
-		});
+		void (async () => {
+			try {
+				const emailResult = await sendMail({
+					to: customerEmail,
+					subject: emailData.customer.subject,
+					text: emailData.customer.text,
+					html: emailData.customer.html,
+				});
 
-		const adminEmailResult = await sendMail({
-			to: adminRecipient,
-			subject: emailData.admin.subject,
-			text: emailData.admin.text,
-			html: emailData.admin.html,
-			replyTo: customerReplyTo,
-		});
+				const adminEmailResult = await sendMail({
+					to: adminRecipient,
+					subject: emailData.admin.subject,
+					text: emailData.admin.text,
+					html: emailData.admin.html,
+					replyTo: customerReplyTo,
+				});
 
-		const emailStatus: EmailStatus = emailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: emailResult.error };
+				const emailStatus: EmailStatus = emailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: emailResult.error };
+				const adminEmailStatus: EmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
 
-		const adminEmailStatus: EmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
+				if (!emailStatus.sent) {
+					console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.error ?? 'unknown'}`);
+				}
+				if (!adminEmailStatus.sent) {
+					console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.error ?? 'unknown'}`);
+				}
 
-		if (!emailStatus.sent) {
-			console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.error ?? 'unknown'}`);
-		}
-		if (!adminEmailStatus.sent) {
-			console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.error ?? 'unknown'}`);
-		}
+				await upsertOrderInDb({
+					...orderRecord,
+					emailPreview: {
+						subject: emailData.customer.subject,
+						text: emailData.customer.text,
+					},
+					adminEmailPreview: {
+						subject: emailData.admin.subject,
+						text: emailData.admin.text,
+					},
+					emailStatus,
+					adminEmailStatus,
+				} as Record<string, unknown>);
+			} catch (error) {
+				console.error('[Orders] Failed to send emails / update email status', error);
+			}
 
-		// Update order with email preview and status (order already saved above)
-		await upsertOrderInDb({
-			...orderRecord,
-			emailPreview: {
-				subject: emailData.customer.subject,
-				text: emailData.customer.text,
-			},
-			adminEmailPreview: {
-				subject: emailData.admin.subject,
-				text: emailData.admin.text,
-			},
-			emailStatus,
-			adminEmailStatus,
-		} as Record<string, unknown>);
-		const updatedStock = await updateSheetStock(payload.cartItems);
+			let updatedStock: Array<{ name: string; stock: number }> = [];
+			try {
+				updatedStock = await updateSheetStock(payload.cartItems);
+			} catch (error) {
+				console.error('[Orders] Failed to update stock sheet', error);
+			}
 
-		// Create Wrike task for the order
-		await createOrderTask({
-			orderNumber,
-			createdAt,
-			customer: payload.customer,
-			shipToDifferentAddress: payload.shipToDifferentAddress,
-			shippingAddress: payload.shippingAddress,
-			shippingMethod: payload.shippingMethod,
-			paymentMethod: payload.paymentMethod,
-			cardFee: payload.cardFee,
-			subtotal: payload.subtotal,
-			shippingCost: payload.shippingCost,
-			discountAmount: payload.discountAmount,
-			promoCode: payload.promoCode,
-			total: payload.total,
-			cartItems: payload.cartItems,
-			stockLevels: updatedStock,
-		});
+			try {
+				await createOrderTask({
+					orderNumber,
+					createdAt,
+					customer: payload.customer,
+					shipToDifferentAddress: payload.shipToDifferentAddress,
+					shippingAddress: payload.shippingAddress,
+					shippingMethod: payload.shippingMethod,
+					paymentMethod: payload.paymentMethod,
+					cardFee: payload.cardFee,
+					subtotal: payload.subtotal,
+					shippingCost: payload.shippingCost,
+					discountAmount: payload.discountAmount,
+					promoCode: payload.promoCode,
+					total: payload.total,
+					cartItems: payload.cartItems,
+					stockLevels: updatedStock,
+				});
+			} catch (error) {
+				console.error('[Orders] Failed to create Wrike order task', error);
+			}
 
-		// Save client to Google Sheets for marketing
-		const clientPayload = {
-			email: payload.customer.email,
-			firstName: payload.customer.firstName,
-			lastName: payload.customer.lastName,
-			address: payload.customer.address,
-			city: payload.customer.city,
-			province: payload.customer.province,
-			zipCode: payload.customer.zipCode,
-			country: payload.customer.country,
-			orderTotal: payload.total,
-			lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-			productsPurchased: payload.cartItems.map((item) => item.name),
-		};
-		await upsertSheetClient(clientPayload);
-		await createClientTask(clientPayload);
+			try {
+				const clientPayload = {
+					email: payload.customer.email,
+					firstName: payload.customer.firstName,
+					lastName: payload.customer.lastName,
+					address: payload.customer.address,
+					city: payload.customer.city,
+					province: payload.customer.province,
+					zipCode: payload.customer.zipCode,
+					country: payload.customer.country,
+					orderTotal: payload.total,
+					lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+					productsPurchased: payload.cartItems.map((item) => item.name),
+				};
+				await upsertSheetClient(clientPayload);
+				await createClientTask(clientPayload);
+			} catch (error) {
+				console.error('[Orders] Failed to upsert client / create client task', error);
+			}
+		})();
 
-		if (idemKey) await setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
-		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);
-		return NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber, confirmationToken });
+		return response;
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to store order.', error, logLabel: 'orders:post' });
 		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
