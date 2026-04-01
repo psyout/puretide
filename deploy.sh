@@ -34,6 +34,9 @@ rsync -avz .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
 rsync -avz public/ "${SSH_TARGET}:${VPS_PATH}/public/"
 rsync -avz package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
 
+echo "Syncing static assets into standalone runtime..."
+ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; rm -rf .next/standalone/.next/static; mkdir -p .next/standalone/.next; cp -R .next/static .next/standalone/.next/static; rm -rf .next/standalone/public; cp -R public .next/standalone/public"
+
 echo "Installing deps on VPS (standalone node_modules are symlinks; replace with real deps)..."
 ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm install --omit=dev"
 
@@ -44,6 +47,6 @@ echo "Ensuring data directory exists on VPS..."
 ssh "${SSH_TARGET}" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
 echo "Restarting pm2 app (${PM2_APP}) on VPS..."
 # HOSTNAME=0.0.0.0 is the key fix for the 502 error
-ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && HOSTNAME=0.0.0.0 pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 pm2 start server.js --name \"${PM2_APP}\" --max-memory-restart 700M"
+ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && HOSTNAME=0.0.0.0 pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --max-memory-restart 700M"
 
 echo "Done. Website should be live at https://puretide.ca"
