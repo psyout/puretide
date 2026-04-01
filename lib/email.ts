@@ -63,6 +63,7 @@ export async function sendLowStockAlert(items: Array<{ name: string; slug: strin
 	if (items.length === 0) return;
 
 	const alertEmail = process.env.LOW_STOCK_EMAIL ?? DEFAULT_ALERT_EMAIL;
+	const from = process.env.LOW_STOCK_FROM;
 
 	const lines = items.map((item) => `- ${item.name} (${item.slug}): ${item.stock}`);
 	const text = `Low stock alert (<= ${LOW_STOCK_THRESHOLD})\n\n${lines.join('\n')}`;
@@ -70,6 +71,8 @@ export async function sendLowStockAlert(items: Array<{ name: string; slug: strin
 
 	const result = await sendMail({
 		to: alertEmail,
+		from,
+		smtpPrefix: 'LOW_STOCK',
 		subject: 'Low stock alert',
 		text,
 		html,
@@ -88,6 +91,7 @@ export type SendMailOptions = {
 	replyTo?: string;
 	bcc?: string;
 	from?: string;
+	smtpPrefix?: string;
 };
 
 /**
@@ -98,7 +102,8 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	console.log('DEBUG: RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
 	console.log('DEBUG: Resend client initialized:', !!resend);
 
-	const config = getSmtpConfig('ORDER');
+	const smtpPrefix = options.smtpPrefix ?? 'ORDER';
+	const config = getSmtpConfig(smtpPrefix);
 	const defaultFrom = options.from ?? config?.from;
 
 	// Hybrid approach: Resend for external customers, SMTP for internal admin emails

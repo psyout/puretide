@@ -58,6 +58,8 @@ export async function POST(request: Request) {
 
 		const result = await sendMail({
 			to: 'info@puretide.ca',
+			from: process.env.CONTACT_FROM ?? 'info@puretide.ca',
+			smtpPrefix: 'CONTACT',
 			subject,
 			text,
 			html,
