@@ -95,42 +95,40 @@ export type SendMailOptions = {
 };
 
 /**
- * Send a single email (e.g. order confirmation). Uses Resend if available, falls back to ORDER SMTP config.
+ * Send a single email (e.g. order confirmation). Uses Resend for ALL emails (domain verified), falls back to SMTP only on error.
  */
 export async function sendMail(options: SendMailOptions): Promise<{ sent: boolean; error?: string }> {
 	const smtpPrefix = options.smtpPrefix ?? 'ORDER';
 	const config = getSmtpConfig(smtpPrefix);
-	const defaultFrom = options.from ?? config?.from;
+	const defaultFrom = options.from ?? config?.from ?? 'info@puretide.ca';
 
-	// Hybrid approach: Resend for external customers, SMTP for internal admin emails
-	// This avoids Resend suppression issues for your own domain
+	// Primary: Use Resend for ALL emails (domain verified, no suppression issues)
 	if (resend) {
-		// Use Resend only for external customers (bypasses Proofpoint)
-		const isInternal = options.to.includes('puretide.ca');
-		if (!isInternal) {
-			try {
-				await resend.emails.send({
-					from: defaultFrom ?? 'info@puretide.ca',
-					to: [options.to],
-					subject: options.subject,
-					text: options.text,
-					html: options.html,
-					replyTo: options.replyTo,
-				});
-				console.log(`Email sent via Resend to ${options.to} (external)`);
-				return { sent: true };
-			} catch (err) {
-				const message = err instanceof Error ? err.message : 'Unknown error';
-				console.error('Resend failed for external email, falling back to SMTP:', message);
-				// Continue to SMTP fallback
-			}
+		try {
+			await resend.emails.send({
+				from: defaultFrom,
+				to: [options.to],
+				subject: options.subject,
+				text: options.text,
+				html: options.html,
+				replyTo: options.replyTo,
+			});
+			console.log(`✅ Email sent via Resend to ${options.to}`);
+			return { sent: true };
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Unknown error';
+			console.error(`⚠️ Resend failed for ${options.to}, falling back to SMTP:`, message);
+			// Continue to SMTP fallback
 		}
 	}
 
-	// SMTP fallback
+	// Emergency fallback: SMTP (only if Resend fails or not configured)
 	if (!config) {
-		return { sent: false, error: 'SMTP not configured and Resend unavailable' };
+		const error = resend ? 'Resend failed and SMTP not configured' : 'Neither Resend nor SMTP configured';
+		console.error(`❌ Email delivery failed to ${options.to}: ${error}`);
+		return { sent: false, error };
 	}
+
 	const transporter = createTransporter(config);
 	const from = options.from ?? config.from;
 	try {
@@ -141,13 +139,13 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			text: options.text,
 			html: options.html,
 			replyTo: options.replyTo ?? config.replyTo ?? config.from,
-			bcc: options.bcc, // Only use explicit BCC, not automatic config.bcc
+			bcc: options.bcc,
 		});
-		console.log(`Email sent via SMTP to ${options.to}`);
+		console.log(`✅ Email sent via SMTP fallback to ${options.to}`);
 		return { sent: true };
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Unknown error';
-		console.error(`SMTP delivery failed to ${options.to}:`, message);
+		console.error(`❌ SMTP delivery failed to ${options.to}:`, message);
 		return { sent: false, error: message };
 	}
 }

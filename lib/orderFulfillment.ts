@@ -115,6 +115,7 @@ export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfil
 
 	const emailResult = await sendMail({
 		to: order.customer.email,
+		from: process.env.ORDER_FROM ?? 'info@puretide.ca',
 		subject: emailData.customer.subject,
 		text: emailData.customer.text,
 		html: emailData.customer.html,
@@ -123,6 +124,7 @@ export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfil
 
 	const adminEmailResult = await sendMail({
 		to: adminRecipient,
+		from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
 		subject: emailData.admin.subject,
 		text: emailData.admin.text,
 		html: emailData.admin.html,

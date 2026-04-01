@@ -8,6 +8,7 @@
 		"start": "next start",
 		"lint": "next lint",
 		"test": "tsx --test tests/**/*.test.ts",
+		"test:email": "tsx scripts/test-all-emails.ts",
 		"test:wrike": "node scripts/test-wrike.mjs",
 		"test:wrike:list": "node scripts/test-wrike.mjs --list",
 		"test:wrike:list-fields": "node scripts/test-wrike.mjs --list-fields",
