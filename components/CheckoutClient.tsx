@@ -844,7 +844,7 @@ export default function CheckoutClient() {
 
 							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm'>
 								<div className='flex justify-between'>
-									<span className='text-deep-tidal-teal-700 text-lg'>Subtotal</span>
+									<span className='text-deep-tidal-teal-700 text-[15px]'>Subtotal</span>
 									<span className='text-deep-tidal-teal-500 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
