@@ -98,6 +98,9 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	console.log('DEBUG: RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
 	console.log('DEBUG: Resend client initialized:', !!resend);
 
+	const config = getSmtpConfig('ORDER');
+	const defaultFrom = options.from ?? config?.from;
+
 	// Hybrid approach: Resend for external customers, SMTP for internal admin emails
 	// This avoids Resend suppression issues for your own domain
 	if (resend) {
@@ -108,7 +111,7 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			try {
 				console.log('DEBUG: Using Resend for external email to bypass Proofpoint...');
 				await resend.emails.send({
-					from: options.from || 'info@puretide.ca',
+					from: defaultFrom ?? 'info@puretide.ca',
 					to: [options.to],
 					subject: options.subject,
 					text: options.text,
@@ -130,7 +133,6 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	}
 
 	// SMTP fallback
-	const config = getSmtpConfig('ORDER');
 	if (!config) {
 		return { sent: false, error: 'SMTP not configured and Resend unavailable' };
 	}
