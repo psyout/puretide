@@ -17,9 +17,36 @@ const envSchema = z.object({
 	// Email (SMTP)
 	SMTP_HOST: z.string().optional(),
 	SMTP_PORT: z.coerce.number().optional(),
+	SMTP_SECURE: z.coerce.boolean().optional(),
 	SMTP_USER: z.string().optional(),
 	SMTP_PASS: z.string().optional(),
-	DEFAULT_ORDER_NOTIFICATION_EMAIL: z.string().optional(),
+	SMTP_FROM: z.string().optional(),
+	SMTP_REPLY_TO: z.string().optional(),
+	SMTP_BCC: z.string().optional(),
+	ORDER_NOTIFICATION_EMAIL: z.string().optional(),
+
+	// Email (SMTP) - prefixed overrides
+	ORDER_SMTP_HOST: z.string().optional(),
+	ORDER_SMTP_PORT: z.coerce.number().optional(),
+	ORDER_SMTP_SECURE: z.coerce.boolean().optional(),
+	ORDER_SMTP_USER: z.string().optional(),
+	ORDER_SMTP_PASS: z.string().optional(),
+	ORDER_FROM: z.string().optional(),
+
+	CONTACT_SMTP_HOST: z.string().optional(),
+	CONTACT_SMTP_PORT: z.coerce.number().optional(),
+	CONTACT_SMTP_SECURE: z.coerce.boolean().optional(),
+	CONTACT_SMTP_USER: z.string().optional(),
+	CONTACT_SMTP_PASS: z.string().optional(),
+	CONTACT_FROM: z.string().optional(),
+
+	LOW_STOCK_SMTP_HOST: z.string().optional(),
+	LOW_STOCK_SMTP_PORT: z.coerce.number().optional(),
+	LOW_STOCK_SMTP_SECURE: z.coerce.boolean().optional(),
+	LOW_STOCK_SMTP_USER: z.string().optional(),
+	LOW_STOCK_SMTP_PASS: z.string().optional(),
+	LOW_STOCK_FROM: z.string().optional(),
+	LOW_STOCK_EMAIL: z.string().optional(),
 
 	// Resend Email Service
 	RESEND_API_KEY: z.string().optional(),
