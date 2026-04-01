@@ -36,6 +36,8 @@ yarn-error.log*
 /data/orders.sqlite-wal
 /data/low-stock.json
 
+/docs/*
+
 # vercel
 .vercel
 
@@ -50,3 +52,9 @@ invoice-website.md
 docs/security-hardening-smoke-checklist.md
 
 .env.example
+
+NEXT_STEPS.md
+docs/MAIL_SERVER_FIX_GUIDE.md
+docs/RESEND_SETUP_STEPS.md
+scripts/diagnose-mail-server.sh
+scripts/fix-mail-server.sh

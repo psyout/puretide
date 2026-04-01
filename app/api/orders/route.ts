@@ -270,7 +270,7 @@ export async function POST(request: Request) {
 			try {
 				const emailResult = await sendMail({
 					to: customerEmail,
-					from: process.env.ORDER_FROM ?? 'info@puretide.ca',
+					from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
 					subject: emailData.customer.subject,
 					text: emailData.customer.text,
 					html: emailData.customer.html,
