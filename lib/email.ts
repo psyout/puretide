@@ -105,10 +105,11 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	// Hybrid approach: Resend for external customers, SMTP for internal admin emails
 	// This avoids Resend suppression issues for your own domain
 	if (resend) {
-		// Use Resend only for external customers (bypasses Proofpoint)
+		// TEMPORARY: Force Resend for all emails to bypass SMTP connection issues
 		const isInternal = options.to.includes('puretide.ca');
+		const forceResend = true; // Set to false to revert to original behavior
 
-		if (!isInternal) {
+		if (!isInternal || forceResend) {
 			try {
 				await resend.emails.send({
 					from: defaultFrom ?? 'info@puretide.ca',
