@@ -29,7 +29,7 @@ ssh "${SSH_TARGET}" "pm2 stop \"${PM2_APP}\" || true && cd \"${VPS_PATH}\" && rm
 
 echo "Syncing build artifacts to ${SSH_TARGET}:${VPS_PATH}..."
 # Do NOT sync standalone's node_modules (symlinks cause rsync "No such file or directory"). Server populates node_modules via npm install below.
-rsync -avz --exclude='node_modules' .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/"
+rsync -avz --exclude='node_modules' .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/.next/standalone/"
 rsync -avz .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
 rsync -avz public/ "${SSH_TARGET}:${VPS_PATH}/public/"
 rsync -avz package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
@@ -37,9 +37,8 @@ rsync -avz package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
 echo "Installing deps on VPS (standalone node_modules are symlinks; replace with real deps)..."
 ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm install --omit=dev"
 
-echo "Ensuring sql.js dist exists and syncing WASM (standalone omits .wasm)..."
-ssh "${SSH_TARGET}" "mkdir -p \"${VPS_PATH}/node_modules/sql.js/dist\""
-rsync -avz node_modules/sql.js/dist/sql-wasm.wasm "${SSH_TARGET}:${VPS_PATH}/node_modules/sql.js/dist/"
+echo "Ensuring sql.js WASM exists inside standalone runtime..."
+ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; mkdir -p .next/standalone/node_modules/sql.js/dist; cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/standalone/node_modules/sql.js/dist/sql-wasm.wasm"
 
 echo "Ensuring data directory exists on VPS..."
 ssh "${SSH_TARGET}" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
