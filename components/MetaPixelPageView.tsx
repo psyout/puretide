@@ -21,6 +21,11 @@ export default function MetaPixelPageView() {
 			// Facebook Pixel tracking failed
 			const errorMessage = e instanceof Error ? e.message : 'Unknown error';
 			console.log('Facebook Pixel PageView tracking failed:', errorMessage);
+
+			// Check if blocked by browser extension
+			if (errorMessage.includes('BLOCKED_BY_CLIENT') || !window.fbq) {
+				console.warn('Meta Pixel blocked by browser extension or ad blocker');
+			}
 		}
 	}, [pathname, searchParams]);
 

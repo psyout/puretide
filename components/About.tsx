@@ -6,11 +6,11 @@ export default function About() {
 	const accordionItems = [
 		{
 			title: 'Precision Wellness, Refined.',
-			body: 'Pure Tide blends clinical precision with everyday vitality. Each protocol is built to feel effortless while staying rooted in research and real-world performance.',
+			body: 'Pure Tide blends scientific precision with everyday vitality. Each protocol is built to feel effortless while staying rooted in research and real-world performance.',
 		},
 		{
 			title: 'Nature-Inspired. Science-Refined.',
-			body: 'Powered by peptides and guided by clinical insight, our formulations prioritize purity, stability, and evidence-based application.',
+			body: 'Powered by peptides and guided by scientific research, our formulations prioritize purity, stability, and evidence-based application.',
 		},
 		{
 			title: 'Clean. Calm. Confident.',
@@ -21,8 +21,8 @@ export default function About() {
 	const highlights = [
 		{
 			title: 'A company built on',
-			highlight: 'clinical trust.',
-			body: 'We are a team of researchers and enthusiasts dedicated to bridging the gap between clinical science and your daily ritual.',
+			highlight: 'scientific integrity.',
+			body: 'We are a team of researchers and enthusiasts dedicated to bridging the gap between advanced peptide research and your daily routine.',
 			icon: Leaf,
 			colorClass: 'text-deep-tidal-teal',
 		},

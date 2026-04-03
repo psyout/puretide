@@ -3,16 +3,16 @@ import HeroClient from './HeroClient';
 const slides = [
 	{
 		backgroundImage: '/hero/hero-1.webp',
-		description: 'Peptide-powered health designed to support vitality, performance, and balance. Clean formulations, precise protocols, and advanced research.',
+		description:
+			'Unlock your potential with GMP grade purity. Our commitment to quality ensures every compound is third-party tested in Canada and held to the highest standards of stability and integrity',
 	},
 	{
 		backgroundImage: '/hero/hero-2.webp',
-		description: 'Science-powered wellness, refined. Thoughtfully crafted peptides that elevate recovery, clarity, and longevity with quiet confidence.',
+		description: 'Peptide-powered formulations designed to support vitality, performance, and balance. Clean compounds, precise protocols, and rigorous third-party testing in Canada',
 	},
 	{
 		backgroundImage: '/hero/hero-3.webp',
-		description:
-			'Unlock your potential with pharmaceutical-grade purity. Our commitment to excellence ensures every compound meets the highest standards of safety and efficacy for your journey.',
+		description: 'Science-informed wellness, refined. Thoughtfully sourced peptides studied for recovery, clarity, and longevity.',
 	},
 ];
 

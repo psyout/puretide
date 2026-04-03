@@ -13,6 +13,11 @@ export interface Product {
 	mg?: string;
 	purity?: string;
 	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
+	cost?: number;
+	supplier?: string;
+	supplierSku?: string;
+	reorderPoint?: number;
+	reorderQuantity?: number;
 }
 
 export interface PromoCode {

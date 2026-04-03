@@ -43,11 +43,11 @@ const nextConfig = {
 						key: 'Content-Security-Policy',
 						value: [
 							"default-src 'self'",
-							"script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval/inline in dev
+							"script-src 'self' 'unsafe-eval' 'unsafe-inline' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com", // Next.js requires unsafe-eval/inline in dev + Meta Pixel
 							"style-src 'self' 'unsafe-inline'", // For Tailwind CSS
-							"img-src 'self' data: blob:",
+							"img-src 'self' data: blob: www.facebook.com connect.facebook.net https://www.facebook.com https://connect.facebook.net", // Meta Pixel tracking
 							"font-src 'self' data:",
-							"connect-src 'self'",
+							"connect-src 'self' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com", // Meta Pixel API calls
 							"frame-ancestors 'none'",
 							"form-action 'self'",
 						].join('; '),

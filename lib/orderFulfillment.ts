@@ -1,8 +1,8 @@
 import { buildOrderEmails } from '@/lib/orderEmail';
-import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
 import { sendLowStockAlert, sendMail } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 import { createOrderTask, createClientTask } from '@/lib/wrike';
+import { decrementStock, getProductInventory, getProductsBelowReorderPoint } from '@/lib/wrikeProducts';
 
 export type FulfillmentOrder = {
 	orderNumber: string;
@@ -53,31 +53,38 @@ function getOrderNotificationRecipient() {
 	return process.env.ORDER_NOTIFICATION_EMAIL ?? DEFAULT_ORDER_NOTIFICATION_EMAIL;
 }
 
-export async function updateSheetStock(items: FulfillmentOrder['cartItems']): Promise<Array<{ name: string; stock: number }>> {
+export async function updateWrikeStock(items: FulfillmentOrder['cartItems']): Promise<Array<{ name: string; stock: number; cost: number }>> {
 	try {
-		const current = await readSheetProducts();
-		const updated = current.map((product) => {
-			const match = items.find((item) => String(item.id) === product.id || String(item.id) === product.slug);
-			if (!match) {
-				return product;
+		const stockLevels: Array<{ name: string; stock: number; cost: number }> = [];
+
+		for (const item of items) {
+			const success = await decrementStock(String(item.id), item.quantity);
+			if (success) {
+				const inventory = await getProductInventory(String(item.id));
+				stockLevels.push({
+					name: item.name,
+					stock: inventory?.stock ?? 0,
+					cost: inventory?.cost ?? 0,
+				});
+			} else {
+				console.warn('[orderFulfillment] Failed to decrement stock for:', item.id);
+				stockLevels.push({ name: item.name, stock: 0, cost: 0 });
 			}
-			const nextStock = Math.max(0, product.stock - match.quantity);
-			return { ...product, stock: nextStock };
-		});
+		}
 
-		const lowStock = updated.filter((product) => product.stock <= LOW_STOCK_THRESHOLD);
+		const lowStockProducts = await getProductsBelowReorderPoint();
+		if (lowStockProducts.length > 0) {
+			const lowStockForAlert = lowStockProducts.map((inv) => ({
+				name: inv.productId,
+				slug: inv.productId,
+				stock: inv.stock,
+			}));
+			await sendLowStockAlert(lowStockForAlert);
+		}
 
-		await writeSheetProducts(updated);
-		await sendLowStockAlert(lowStock);
-
-		const orderedItemsStock = items.map((item) => {
-			const product = updated.find((p) => p.id === String(item.id) || p.slug === String(item.id));
-			return { name: item.name, stock: product?.stock ?? 0 };
-		});
-
-		return orderedItemsStock;
+		return stockLevels;
 	} catch (error) {
-		console.error('[orderFulfillment] Failed to update stock sheet', error);
+		console.error('[orderFulfillment] Failed to update Wrike stock', error);
 		return [];
 	}
 }
@@ -135,7 +142,12 @@ export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfil
 
 	const adminEmailStatus: EmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
 
-	const stockLevels = await updateSheetStock(order.cartItems);
+	const stockLevels = await updateWrikeStock(order.cartItems);
+
+	const totalCost = stockLevels.reduce((sum, item) => {
+		const cartItem = order.cartItems.find((ci) => ci.name === item.name);
+		return sum + item.cost * (cartItem?.quantity ?? 0);
+	}, 0);
 
 	const orderForWrike = order as FulfillmentOrder & { paymentMethod?: 'etransfer' | 'creditcard'; cardFee?: number };
 	await createOrderTask({
@@ -154,6 +166,7 @@ export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfil
 		total: order.total,
 		cartItems: order.cartItems,
 		stockLevels,
+		totalCost,
 	});
 
 	await createClientTask({

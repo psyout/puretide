@@ -63,10 +63,28 @@ const envSchema = z.object({
 	DIGIPAY_POSTBACK_ALLOWED_IP: z.string().optional(),
 
 	// Wrike integration
-	WRIKE_CLIENT_ID: z.string().optional(),
-	WRIKE_CLIENT_SECRET: z.string().optional(),
-	WRIKE_REFRESH_TOKEN: z.string().optional(),
-	WRIKE_FOLDER_ID: z.string().optional(),
+	WRIKE_API_TOKEN: z.string().optional(),
+	WRIKE_API_BASE: z.string().optional(),
+	WRIKE_ORDERS_FOLDER_ID: z.string().optional(),
+	WRIKE_CLIENTS_FOLDER_ID: z.string().optional(),
+	WRIKE_PRODUCTS_FOLDER_ID: z.string().optional(),
+	WRIKE_CLIENT_EMAIL_FIELD_ID: z.string().optional(),
+	WRIKE_ORDER_TOTAL_FIELD_ID: z.string().optional(),
+
+	// Wrike Products custom fields
+	WRIKE_PRODUCT_ID_FIELD_ID: z.string().optional(),
+	WRIKE_STOCK_FIELD_ID: z.string().optional(),
+	WRIKE_COST_FIELD_ID: z.string().optional(),
+	WRIKE_SUPPLIER_FIELD_ID: z.string().optional(),
+	WRIKE_SUPPLIER_SKU_FIELD_ID: z.string().optional(),
+	WRIKE_REORDER_POINT_FIELD_ID: z.string().optional(),
+	WRIKE_REORDER_QTY_FIELD_ID: z.string().optional(),
+
+	// Wrike Order custom fields (for financial tracking)
+	WRIKE_ORDER_REVENUE_FIELD_ID: z.string().optional(),
+	WRIKE_ORDER_COGS_FIELD_ID: z.string().optional(),
+	WRIKE_ORDER_PROFIT_FIELD_ID: z.string().optional(),
+	WRIKE_ORDER_MARGIN_FIELD_ID: z.string().optional(),
 
 	// Feature flags
 	ENABLE_WRIKE_INTEGRATION: z.coerce.boolean().default(false),
@@ -189,14 +207,15 @@ export function getDigipayConfig() {
 
 export function getWrikeConfig() {
 	const env = getEnv();
-	if (!env.WRIKE_CLIENT_ID || !env.WRIKE_CLIENT_SECRET || !env.WRIKE_REFRESH_TOKEN) {
+	if (!env.WRIKE_API_TOKEN) {
 		return null;
 	}
 
 	return {
-		clientId: env.WRIKE_CLIENT_ID,
-		clientSecret: env.WRIKE_CLIENT_SECRET,
-		refreshToken: env.WRIKE_REFRESH_TOKEN,
-		folderId: env.WRIKE_FOLDER_ID,
+		apiToken: env.WRIKE_API_TOKEN,
+		apiBase: env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4',
+		ordersFolderId: env.WRIKE_ORDERS_FOLDER_ID,
+		clientsFolderId: env.WRIKE_CLIENTS_FOLDER_ID,
+		productsFolderId: env.WRIKE_PRODUCTS_FOLDER_ID,
 	};
 }

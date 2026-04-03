@@ -156,7 +156,9 @@ type OrderData = {
 	stockLevels?: Array<{
 		name: string;
 		stock: number;
+		cost?: number;
 	}>;
+	totalCost?: number;
 };
 
 export async function createOrderTask(order: OrderData) {
@@ -181,10 +183,29 @@ export async function createOrderTask(order: OrderData) {
 		? order.stockLevels
 				.map((item) => {
 					const isLow = item.stock <= 5;
-					return `<li>${item.name}: <b style="${isLow ? 'color:red' : ''}">${item.stock} units</b>${isLow ? ' ⚠️ LOW' : ''}</li>`;
+					const costInfo = item.cost ? ` (Cost: $${item.cost.toFixed(2)})` : '';
+					return `<li>${item.name}: <b style="${isLow ? 'color:red' : ''}">${item.stock} units</b>${isLow ? ' ⚠️ LOW' : ''}${costInfo}</li>`;
 				})
 				.join('')
 		: '';
+
+	const totalCost = order.totalCost ?? 0;
+	const grossProfit = order.subtotal - totalCost;
+	const profitMargin = order.subtotal > 0 ? (grossProfit / order.subtotal) * 100 : 0;
+
+	const financialSection =
+		totalCost > 0
+			? `
+<hr>
+<h4>Financial Summary</h4>
+<p>
+<b>Revenue:</b> $${order.subtotal.toFixed(2)}<br>
+<b>COGS (Cost of Goods Sold):</b> $${totalCost.toFixed(2)}<br>
+<b>Gross Profit:</b> <span style="color:${grossProfit >= 0 ? 'green' : 'red'}">$${grossProfit.toFixed(2)}</span><br>
+<b>Profit Margin:</b> ${profitMargin.toFixed(1)}%
+</p>
+	`.trim()
+			: '';
 
 	const description = `
 <h3>Order #${order.orderNumber}</h3>
@@ -219,6 +240,7 @@ Subtotal: $${order.subtotal.toFixed(2)}<br>
 Shipping (${order.shippingMethod}): $${order.shippingCost.toFixed(2)}<br>
 ${order.cardFee ? `Card Fee (5%): $${order.cardFee.toFixed(2)}<br>` : ''}${order.discountAmount ? `Discount${order.promoCode ? ` (${order.promoCode})` : ''}: -$${order.discountAmount.toFixed(2)}<br>` : ''}<b>Total: $${order.total.toFixed(2)}</b>
 </p>
+${financialSection}
 ${stockList ? `<hr><h4>Stock Remaining</h4><ul>${stockList}</ul>` : ''}
 ${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.orderNotes}</p>` : ''}
 <hr>
