@@ -82,11 +82,11 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-6 text-center text-pretty'>
 				<div className='mb-3 lg:mb-6'>
 					<LogoHorizontal
-						className='h-32 lg:h-40 w-auto mx-auto drop-shadow-2xl'
+						className='h-28 sm:h-32 md:h-36 lg:h-40 w-auto mx-auto drop-shadow-2xl [@media(max-height:800px)]:h-28'
 						fillColor='fill-deep-tidal-teal-600 drop-shadow-xl/50'
 					/>
 				</div>
-				<p className='text-deep-tidal-teal-600 text-lg sm:text-xl lg:text-2xl max-w-[80%] min-h-[150px] sm:min-h-[180px] lg:min-h-[200px] sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] font-matimo'>
+				<p className='text-deep-tidal-teal-600 text-lg sm:text-xl md:text-2xl lg:text-1xl max-w-[90%] sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] font-matimo min-h-[110px] sm:min-h-[130px] lg:min-h-[200px] [@media(max-height:800px)]:text-lg [@media(max-height:800px)]:min-h-[90px]'>
 					{currentSlide.description}
 				</p>
 			</div>
