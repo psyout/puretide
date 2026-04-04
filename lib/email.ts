@@ -126,6 +126,8 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	if (!config) {
 		const error = resend ? 'Resend failed and SMTP not configured' : 'Neither Resend nor SMTP configured';
 		console.error(`❌ Email delivery failed to ${options.to}: ${error}`);
+		console.error(`   Subject: ${options.subject}`);
+		console.error(`   ⚠️  CRITICAL: Configure SMTP fallback to ensure email reliability`);
 		return { sent: false, error };
 	}
 
@@ -146,6 +148,13 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Unknown error';
 		console.error(`❌ SMTP delivery failed to ${options.to}:`, message);
+		console.error(`   Subject: ${options.subject}`);
+		console.error(`   SMTP Host: ${config.host}:${config.port}`);
+		console.error(`   SMTP User: ${config.user}`);
+		if (message.includes('authentication')) {
+			console.error(`   ⚠️  Authentication failed - verify SMTP credentials`);
+			console.error(`   💡 Run: node test-smtp-detailed.mjs to diagnose`);
+		}
 		return { sent: false, error: message };
 	}
 }
