@@ -4,21 +4,21 @@ A privacy-focused e-commerce platform built with Next.js, designed to be hosted 
 
 ## Features
 
--    🔒 **Privacy First**: No tracking scripts, no external analytics, no data collection
--    🛒 **Full E-Commerce**: Product catalog, shopping cart, and checkout flow
--    🎨 **Modern UI**: Beautiful, responsive design with dark theme
--    ⚡ **Fast**: Built with Next.js 14 and React 18
--    🔐 **Anonymous**: Designed for untraceable transactions
+- 🔒 **Privacy First**: No tracking scripts, no external analytics, no data collection
+- 🛒 **Full E-Commerce**: Product catalog, shopping cart, and checkout flow
+- 🎨 **Modern UI**: Beautiful, responsive design with dark theme
+- ⚡ **Fast**: Built with Next.js 14 and React 18
+- 🔐 **Anonymous**: Designed for untraceable transactions
 
 ## Privacy Features
 
--    No external tracking scripts
--    No Google Analytics or similar services
--    No third-party cookies
--    Referrer policy set to "no-referrer"
--    Robots meta tags set to prevent indexing
--    All data stored locally (client-side only)
--    No telemetry collection
+- No external tracking scripts
+- No Google Analytics or similar services
+- No third-party cookies
+- Referrer policy set to "no-referrer"
+- Robots meta tags set to prevent indexing
+- All data stored locally (client-side only)
+- No telemetry collection
 
 ## Getting Started
 
@@ -68,10 +68,55 @@ privacy-shop/
 
 ## Technologies
 
--    **Next.js 14** - React framework
--    **TypeScript** - Type safety
--    **Tailwind CSS** - Styling
--    **React Context** - State management
+- **Next.js 14** - React framework
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **React Context** - State management
+- **Zoho Mail** - Email service (SMTP)
+
+## Email Configuration
+
+This application uses **Zoho Mail** for all email functionality:
+
+- Order confirmations
+- Contact form submissions
+- Low stock alerts
+
+### Setup Email
+
+1. **Create Zoho Mail account** - See [ZOHO-MAIL-SETUP.md](ZOHO-MAIL-SETUP.md)
+2. **Configure DNS records** - MX, SPF, DKIM, DMARC
+3. **Update .env file** with Zoho SMTP credentials:
+
+```bash
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=orders@puretide.ca
+SMTP_PASS=your_zoho_password
+SMTP_FROM=orders@puretide.ca
+```
+
+4. **Test email system:**
+
+```bash
+node scripts/test-zoho-smtp.mjs
+node scripts/test-zoho-complete.mjs
+```
+
+### Email Documentation
+
+- **[ZOHO-MAIL-SETUP.md](ZOHO-MAIL-SETUP.md)** - Complete Zoho Mail setup guide
+- **[MAC-MAIL-ZOHO-CONFIG.md](MAC-MAIL-ZOHO-CONFIG.md)** - Mac Mail configuration
+- **[MIGRATION-TO-ZOHO.md](MIGRATION-TO-ZOHO.md)** - Migration details
+
+### Benefits
+
+- ✅ Professional business email
+- ✅ No blacklist issues (clean IP reputation)
+- ✅ High deliverability (99%+)
+- ✅ Send AND receive emails
+- ✅ IMAP/SMTP access for Mac Mail
 
 ## License
 

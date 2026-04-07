@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ALERT_EMAIL } from './constants';
+
+// Initialize Resend client if API key is available
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export type SmtpConfig = {
 	host: string;
@@ -91,23 +95,42 @@ export type SendMailOptions = {
 };
 
 /**
- * Send a single email (e.g. order confirmation). Uses Zoho Mail SMTP for all emails.
+ * Send a single email (e.g. order confirmation). Uses Resend for ALL emails (domain verified), falls back to SMTP only on error.
  */
 export async function sendMail(options: SendMailOptions): Promise<{ sent: boolean; error?: string }> {
 	const smtpPrefix = options.smtpPrefix ?? 'ORDER';
 	const config = getSmtpConfig(smtpPrefix);
 	const defaultFrom = options.from ?? config?.from ?? 'info@puretide.ca';
 
-	// Check SMTP configuration
+	// Primary: Use Resend for ALL emails (domain verified, no suppression issues)
+	if (resend) {
+		try {
+			await resend.emails.send({
+				from: defaultFrom,
+				to: [options.to],
+				subject: options.subject,
+				text: options.text,
+				html: options.html,
+				replyTo: options.replyTo,
+			});
+			console.log(`✅ Email sent via Resend to ${options.to}`);
+			return { sent: true };
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Unknown error';
+			console.error(`⚠️ Resend failed for ${options.to}, falling back to SMTP:`, message);
+			// Continue to SMTP fallback
+		}
+	}
+
+	// Emergency fallback: SMTP (only if Resend fails or not configured)
 	if (!config) {
-		const error = 'SMTP not configured - check environment variables';
+		const error = resend ? 'Resend failed and SMTP not configured' : 'Neither Resend nor SMTP configured';
 		console.error(`❌ Email delivery failed to ${options.to}: ${error}`);
 		console.error(`   Subject: ${options.subject}`);
-		console.error(`   ⚠️  CRITICAL: Configure SMTP settings (Zoho Mail) to enable email delivery`);
+		console.error(`   ⚠️  CRITICAL: Configure SMTP fallback to ensure email reliability`);
 		return { sent: false, error };
 	}
 
-	// Send via Zoho Mail SMTP
 	const transporter = createTransporter(config);
 	const from = options.from ?? config.from;
 	try {
@@ -120,17 +143,17 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			replyTo: options.replyTo ?? config.replyTo ?? config.from,
 			bcc: options.bcc,
 		});
-		console.log(`✅ Email sent via Zoho Mail SMTP to ${options.to}`);
+		console.log(`✅ Email sent via SMTP fallback to ${options.to}`);
 		return { sent: true };
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Unknown error';
-		console.error(`❌ Zoho Mail SMTP delivery failed to ${options.to}:`, message);
+		console.error(`❌ SMTP delivery failed to ${options.to}:`, message);
 		console.error(`   Subject: ${options.subject}`);
 		console.error(`   SMTP Host: ${config.host}:${config.port}`);
 		console.error(`   SMTP User: ${config.user}`);
 		if (message.includes('authentication')) {
-			console.error(`   ⚠️  Authentication failed - verify Zoho Mail credentials`);
-			console.error(`   💡 Check SMTP_USER and SMTP_PASS in .env file`);
+			console.error(`   ⚠️  Authentication failed - verify SMTP credentials`);
+			console.error(`   💡 Run: node test-smtp-detailed.mjs to diagnose`);
 		}
 		return { sent: false, error: message };
 	}

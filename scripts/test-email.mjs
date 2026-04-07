@@ -1,13 +1,20 @@
 #!/usr/bin/env node
 /**
+ * DEPRECATED: Use test-zoho-smtp.mjs or test-zoho-complete.mjs instead
+ *
  * Email Diagnostic Test Script
  * Tests orders@puretide.ca email functionality
- * 
- * Usage: node test-email.mjs
+ *
+ * Usage: node scripts/test-zoho-smtp.mjs (recommended)
  */
 
+console.log('⚠️  DEPRECATED SCRIPT');
+console.log('Please use the new Zoho Mail test scripts instead:\n');
+console.log('  node scripts/test-zoho-smtp.mjs');
+console.log('  node scripts/test-zoho-complete.mjs\n');
+process.exit(0);
+
 import { config } from 'dotenv';
-import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
 // Load environment variables
@@ -17,20 +24,20 @@ const TEST_EMAIL = 'orders@puretide.ca';
 const FROM_EMAIL = process.env.ORDER_FROM || 'orders@puretide.ca';
 
 console.log('🔍 Email System Diagnostic Test\n');
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 
 // Test 1: Check environment variables
 console.log('\n📋 Test 1: Environment Variables');
 console.log('-'.repeat(60));
 
 const envVars = {
-	'RESEND_API_KEY': process.env.RESEND_API_KEY ? '✅ Set (hidden)' : '❌ Not set',
-	'ORDER_FROM': process.env.ORDER_FROM || '⚠️  Using default: orders@puretide.ca',
-	'ORDER_NOTIFICATION_EMAIL': process.env.ORDER_NOTIFICATION_EMAIL || '⚠️  Using default: orders@puretide.ca',
-	'ORDER_SMTP_HOST': process.env.ORDER_SMTP_HOST || '❌ Not set',
-	'ORDER_SMTP_PORT': process.env.ORDER_SMTP_PORT || '❌ Not set',
-	'ORDER_SMTP_USER': process.env.ORDER_SMTP_USER || '❌ Not set',
-	'ORDER_SMTP_PASS': process.env.ORDER_SMTP_PASS ? '✅ Set (hidden)' : '❌ Not set',
+	RESEND_API_KEY: process.env.RESEND_API_KEY ? '✅ Set (hidden)' : '❌ Not set',
+	ORDER_FROM: process.env.ORDER_FROM || '⚠️  Using default: orders@puretide.ca',
+	ORDER_NOTIFICATION_EMAIL: process.env.ORDER_NOTIFICATION_EMAIL || '⚠️  Using default: orders@puretide.ca',
+	ORDER_SMTP_HOST: process.env.ORDER_SMTP_HOST || '❌ Not set',
+	ORDER_SMTP_PORT: process.env.ORDER_SMTP_PORT || '❌ Not set',
+	ORDER_SMTP_USER: process.env.ORDER_SMTP_USER || '❌ Not set',
+	ORDER_SMTP_PASS: process.env.ORDER_SMTP_PASS ? '✅ Set (hidden)' : '❌ Not set',
 };
 
 for (const [key, value] of Object.entries(envVars)) {
@@ -46,7 +53,7 @@ if (!process.env.RESEND_API_KEY) {
 } else {
 	try {
 		const resend = new Resend(process.env.RESEND_API_KEY);
-		
+
 		console.log('Attempting to send test email via Resend...');
 		const result = await resend.emails.send({
 			from: FROM_EMAIL,
@@ -57,7 +64,7 @@ if (!process.env.RESEND_API_KEY) {
 <p>If you receive this, Resend is working correctly.</p>
 <p>Sent from: ${FROM_EMAIL}</p>`,
 		});
-		
+
 		console.log('✅ Resend API test successful!');
 		console.log(`   Email ID: ${result.data?.id || 'N/A'}`);
 		console.log(`   From: ${FROM_EMAIL}`);
@@ -65,14 +72,14 @@ if (!process.env.RESEND_API_KEY) {
 	} catch (error) {
 		console.log('❌ Resend API test failed!');
 		console.log(`   Error: ${error.message}`);
-		
+
 		if (error.message.includes('domain')) {
 			console.log('\n⚠️  Domain Verification Issue Detected:');
 			console.log('   - Check if puretide.ca is verified in Resend dashboard');
 			console.log('   - Verify DNS records (SPF, DKIM, DMARC) are configured');
 			console.log('   - Visit: https://resend.com/domains');
 		}
-		
+
 		if (error.message.includes('API key')) {
 			console.log('\n⚠️  API Key Issue Detected:');
 			console.log('   - Verify RESEND_API_KEY is correct');
@@ -103,7 +110,7 @@ if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
 	try {
 		console.log('Attempting to send test email via SMTP...');
 		console.log(`   Host: ${smtpHost}:${smtpPort} (secure: ${smtpSecure})`);
-		
+
 		const transporter = nodemailer.createTransport({
 			host: smtpHost,
 			port: parseInt(smtpPort),
@@ -113,11 +120,11 @@ if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
 				pass: smtpPass,
 			},
 		});
-		
+
 		// Verify connection
 		await transporter.verify();
 		console.log('✅ SMTP connection verified');
-		
+
 		// Send test email
 		await transporter.sendMail({
 			from: FROM_EMAIL,
@@ -128,19 +135,19 @@ if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
 <p>If you receive this, SMTP fallback is working correctly.</p>
 <p>Sent from: ${FROM_EMAIL}</p>`,
 		});
-		
+
 		console.log('✅ SMTP test email sent successfully!');
 		console.log(`   From: ${FROM_EMAIL}`);
 		console.log(`   To: ${TEST_EMAIL}`);
 	} catch (error) {
 		console.log('❌ SMTP test failed!');
 		console.log(`   Error: ${error.message}`);
-		
+
 		if (error.message.includes('authentication')) {
 			console.log('\n⚠️  Authentication Issue:');
 			console.log('   - Verify SMTP username and password are correct');
 		}
-		
+
 		if (error.message.includes('ECONNREFUSED') || error.message.includes('timeout')) {
 			console.log('\n⚠️  Connection Issue:');
 			console.log('   - Check SMTP host and port are correct');

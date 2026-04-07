@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 /**
- * Test info@puretide.ca sending and receiving via Resend
+ * DEPRECATED: Use test-zoho-complete.mjs instead
+ *
+ * Test info@puretide.ca sending and receiving
  */
 
+console.log('⚠️  DEPRECATED SCRIPT');
+console.log('Please use the new Zoho Mail test scripts instead:\n');
+console.log('  node scripts/test-zoho-smtp.mjs');
+console.log('  node scripts/test-zoho-complete.mjs\n');
+process.exit(0);
+
 import { config } from 'dotenv';
-import { Resend } from 'resend';
 
 config();
 
 console.log('🔍 Testing info@puretide.ca Email System\n');
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -43,7 +50,6 @@ Sent at: ${new Date().toISOString()}`,
 	console.log('   From: info@puretide.ca');
 	console.log('   To: info@puretide.ca');
 	console.log('   Via: Resend API (not blacklisted server)');
-
 } catch (error) {
 	console.log('❌ Failed to send from info@puretide.ca');
 	console.log(`   Error: ${error.message}`);
@@ -75,7 +81,6 @@ Sent at: ${new Date().toISOString()}`,
 	console.log('   From: orders@puretide.ca');
 	console.log('   To: info@puretide.ca');
 	console.log('   Via: Resend API (not blacklisted server)');
-
 } catch (error) {
 	console.log('❌ Failed to send to info@puretide.ca');
 	console.log(`   Error: ${error.message}`);
@@ -107,7 +112,6 @@ Sent at: ${new Date().toISOString()}`,
 	console.log('   From: info@puretide.ca');
 	console.log('   To: orders@puretide.ca');
 	console.log('   Via: Resend API (bypassing blacklist)');
-
 } catch (error) {
 	console.log('❌ Failed to send to external address');
 	console.log(`   Error: ${error.message}`);
