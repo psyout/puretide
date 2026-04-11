@@ -27,8 +27,8 @@ export type IdempotencyEntry = {
 	expiresAt: string;
 };
 
-const DB_PATH = path.join(process.cwd(), 'data', 'orders.sqlite');
-const LEGACY_ORDERS_JSON_PATH = path.join(process.cwd(), 'data', 'orders.json');
+const DB_PATH = process.env.ORDERS_DB_PATH ? path.resolve(process.env.ORDERS_DB_PATH) : path.join(process.cwd(), 'data', 'orders.sqlite');
+const LEGACY_ORDERS_JSON_PATH = process.env.LEGACY_ORDERS_JSON_PATH ? path.resolve(process.env.LEGACY_ORDERS_JSON_PATH) : path.join(process.cwd(), 'data', 'orders.json');
 
 type SqlJsDatabase = import('sql.js').SqlJsDatabase;
 

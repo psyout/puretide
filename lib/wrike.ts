@@ -274,6 +274,7 @@ type ClientData = {
 	orderTotal: number;
 	lastOrderDate: string;
 	productsPurchased: string[];
+	howDidYouHear?: string;
 };
 
 function buildOrderBlock(client: ClientData): string {
@@ -289,6 +290,7 @@ ${productsList}
 
 function buildFullClientDescription(client: ClientData): string {
 	const productsList = client.productsPurchased.length ? `<ul>${client.productsPurchased.map((p) => `<li>${p}</li>`).join('')}</ul>` : '<p>None</p>';
+	const surveyInfo = client.howDidYouHear ? `<hr><h4>How Did You Hear</h4><p>${client.howDidYouHear}</p>` : '';
 	return `
 <h3>Client Record</h3>
 <h4>Contact</h4>
@@ -302,6 +304,7 @@ ${client.address}<br>
 ${client.city}, ${client.province} ${client.zipCode}<br>
 ${client.country}
 </p>
+${surveyInfo}
 <hr>
 <h4>Order – ${client.lastOrderDate}</h4>
 <p><b>Total: $${client.orderTotal.toFixed(2)}</b></p>

@@ -39,8 +39,6 @@ type OrderEmailInput = {
 const paymentDetails = {
 	recipientName: 'Pure Tide Payments',
 	recipientEmail: 'orders@puretide.ca',
-	securityQuestion: 'Order number',
-	securityAnswerPrefix: '',
 	supportEmail: 'info@puretide.ca',
 };
 
@@ -69,19 +67,13 @@ type OrderEmailResult = {
 };
 
 function escapeHtml(value: string): string {
-	return value
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#39;');
+	return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const isCreditCard = input.paymentMethod === 'creditcard';
 	const orderDate = formatDate(input.createdAt);
 	const orderName = `${input.customer.firstName} ${input.customer.lastName}`.trim();
-	const securityAnswer = `${paymentDetails.securityAnswerPrefix}${input.orderNumber}`;
 	const shippingLabel = input.shippingMethod === 'express' ? 'Express Shipping' : 'Regular Shipping';
 	const paymentMethodLabel = isCreditCard ? 'Credit card' : 'Interac e-Transfer';
 	const billingLines = [
@@ -104,7 +96,6 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const customerFirstNameHtml = escapeHtml(input.customer.firstName);
 	const orderDateHtml = escapeHtml(orderDate);
 	const orderNumberHtml = escapeHtml(input.orderNumber);
-	const securityAnswerHtml = escapeHtml(securityAnswer);
 	const paymentMethodLabelHtml = escapeHtml(paymentMethodLabel);
 	const shippingLabelHtml = escapeHtml(shippingLabel);
 	const billingLinesHtml = billingLines.map((line) => escapeHtml(line));
@@ -129,18 +120,16 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 
 	const eTransferInstructionsText = [
 		'',
-		'Interac e-Transfer Instructions',
+		'Interac e-Transfer Payment',
 		'',
-		'After placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.',
+		'After placing your order, please send an Interac e-Transfer to complete your payment. We use auto-deposit, so funds will be deposited directly into our bank account without requiring a security question.',
 		'',
 		`Recipient Name: ${paymentDetails.recipientName}`,
 		`Recipient Email: ${paymentDetails.recipientEmail}`,
-		`Security Question: ${paymentDetails.securityQuestion}`,
-		`Password/Answer: ${securityAnswer}`,
+		`Memo/Message: ${input.orderNumber}`,
 		'',
+		'Important: Include your order number in the memo/message field for proper tracking.',
 		'We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.',
-		'',
-		'If your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.',
 		'',
 		'Email notice: If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.',
 		'',
@@ -182,16 +171,15 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const eTransferBlockHtml = isCreditCard
 		? ''
 		: `
-      <h4 style="margin: 24px 0 8px;">Interac e-Transfer Instructions</h4>
-      <p>After placing your order, please send an Interac e-Transfer following the instructions below. Enter everything exactly as shown so your payment is automatically accepted.</p>
+      <h4 style="margin: 24px 0 8px;">Interac e-Transfer Payment</h4>
+      <p>After placing your order, please send an Interac e-Transfer to complete your payment. We use auto-deposit, so funds will be deposited directly into our bank account without requiring a security question.</p>
       <ul>
         <li><strong>Recipient Name:</strong> ${paymentDetails.recipientName}</li>
         <li><strong>Recipient Email:</strong> ${paymentDetails.recipientEmail}</li>
-        <li><strong>Security Question:</strong> ${paymentDetails.securityQuestion}</li>
-        <li><strong>Password/Answer:</strong> ${securityAnswerHtml}</li>
+        <li><strong>Memo/Message:</strong> ${input.orderNumber}</li>
       </ul>
+      <p><strong>Important:</strong> Include your order number in the memo/message field for proper tracking.</p>
       <p>We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.</p>
-      <p>If your payment is not accepted, please go to your banking app, cancel and re-send with correct instructions above.</p>
       <p><strong>Email notice:</strong> If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.</p>
       <p>Should you encounter any payment related issues, please contact our support at: <strong>${paymentDetails.supportEmail}</strong></p>
   `;
@@ -233,7 +221,14 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     </div>
   `;
 
-	const adminETransferBlock = ['', 'Interac e-Transfer details', `Recipient Name: ${paymentDetails.recipientName}`, `Recipient Email: ${paymentDetails.recipientEmail}`];
+	const adminETransferBlock = [
+		'',
+		'Interac e-Transfer details',
+		'Note: Auto-deposit enabled - no security question required',
+		`Recipient Name: ${paymentDetails.recipientName}`,
+		`Recipient Email: ${paymentDetails.recipientEmail}`,
+		`Expected Memo: ${input.orderNumber}`,
+	];
 
 	const adminText = [
 		'New order received',
@@ -295,9 +290,11 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 				? ''
 				: `
       <h4 style="margin: 24px 0 8px;">Interac e-Transfer details</h4>
+      <p><strong>Note:</strong> Auto-deposit enabled - no security question required</p>
       <ul>
         <li><strong>Recipient Name:</strong> ${paymentDetails.recipientName}</li>
         <li><strong>Recipient Email:</strong> ${paymentDetails.recipientEmail}</li>
+        <li><strong>Expected Memo:</strong> ${orderNumberHtml}</li>
       </ul>
       `
 		}
@@ -305,7 +302,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     </div>
   `;
 
-	const customerSubject = isCreditCard ? `Order #${input.orderNumber} - Order confirmation` : `Order #${input.orderNumber} - Interac e-Transfer instructions`;
+	const customerSubject = isCreditCard ? `Order #${input.orderNumber} - Order confirmation` : `Order #${input.orderNumber} - Payment pending`;
 
 	return {
 		customer: {

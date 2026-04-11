@@ -230,7 +230,7 @@ export const readSheetClients = async (): Promise<ClientRecord[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'Clients!A:L',
+			range: 'Clients!A:M',
 		});
 		const rows = response.data.values ?? [];
 		if (rows.length <= 1) return [];
@@ -249,6 +249,7 @@ export const readSheetClients = async (): Promise<ClientRecord[]> => {
 			totalSpent: parseNumber(row[9] ?? '0'),
 			lastOrderDate: (row[10] ?? '').trim(),
 			products: (row[11] ?? '').split(', ').filter(Boolean),
+			howDidYouHear: (row[12] ?? '').trim(),
 		}));
 	} catch (error) {
 		reportSheetsError('Error reading clients from sheet', error);
@@ -294,7 +295,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 };
 
 // Client tracking
-const CLIENT_HEADERS = ['Email', 'First Name', 'Last Name', 'Address', 'City', 'Province', 'Zip', 'Country', 'Orders', 'Total Spent', 'Last Order', 'Products'] as const;
+const CLIENT_HEADERS = ['Email', 'First Name', 'Last Name', 'Address', 'City', 'Province', 'Zip', 'Country', 'Orders', 'Total Spent', 'Last Order', 'Products', 'How Did You Hear'] as const;
 
 type ClientRecord = {
 	email: string;
@@ -309,9 +310,10 @@ type ClientRecord = {
 	totalSpent: number;
 	lastOrderDate: string;
 	products: string[];
+	howDidYouHear?: string;
 };
 
-export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount' | 'totalSpent' | 'products'> & { orderTotal: number; productsPurchased: string[] }) => {
+export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount' | 'totalSpent' | 'products'> & { orderTotal: number; productsPurchased: string[]; howDidYouHear?: string }) => {
 	if (!SHEET_ID) return;
 
 	try {
@@ -331,7 +333,7 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 			});
 			await sheets.spreadsheets.values.update({
 				spreadsheetId: SHEET_ID,
-				range: 'Clients!A1:L1',
+				range: 'Clients!A1:M1',
 				valueInputOption: 'RAW',
 				requestBody: { values: [[...CLIENT_HEADERS]] },
 			});
@@ -340,7 +342,7 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 		// Read existing clients
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'Clients!A:L',
+			range: 'Clients!A:M',
 		});
 
 		const rows = response.data.values ?? [];
@@ -352,6 +354,7 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 			const prevOrders = parseNumber(existingRow[8] ?? '0');
 			const prevTotal = parseNumber(existingRow[9] ?? '0');
 			const prevProducts = (existingRow[11] ?? '').split(', ').filter(Boolean);
+			const prevHowDidYouHear = (existingRow[12] ?? '').trim();
 			const allProducts = Array.from(new Set([...prevProducts, ...client.productsPurchased]));
 
 			const updatedRow = [
@@ -367,11 +370,12 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 				(prevTotal + client.orderTotal).toFixed(2),
 				client.lastOrderDate,
 				allProducts.join(', '),
+				client.howDidYouHear || prevHowDidYouHear,
 			];
 
 			await sheets.spreadsheets.values.update({
 				spreadsheetId: SHEET_ID,
-				range: `Clients!A${existingIndex + 1}:L${existingIndex + 1}`,
+				range: `Clients!A${existingIndex + 1}:M${existingIndex + 1}`,
 				valueInputOption: 'RAW',
 				requestBody: { values: [updatedRow] },
 			});
@@ -390,11 +394,12 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 				client.orderTotal.toFixed(2),
 				client.lastOrderDate,
 				client.productsPurchased.join(', '),
+				client.howDidYouHear ?? '',
 			];
 
 			await sheets.spreadsheets.values.append({
 				spreadsheetId: SHEET_ID,
-				range: 'Clients!A:L',
+				range: 'Clients!A:M',
 				valueInputOption: 'RAW',
 				insertDataOption: 'INSERT_ROWS',
 				requestBody: { values: [newRow] },

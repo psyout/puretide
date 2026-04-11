@@ -7,6 +7,8 @@ const envSchema = z.object({
 
 	// Database
 	DATABASE_URL: z.string().optional(), // Not used with SQLite but kept for compatibility
+	ORDERS_DB_PATH: z.string().optional(),
+	LEGACY_ORDERS_JSON_PATH: z.string().optional(),
 
 	// Google Sheets integration
 	GOOGLE_SHEET_ID: z.string().optional(),
@@ -104,6 +106,11 @@ export function validateEnv(): EnvSchema {
 			// In production, ORDER_CONFIRMATION_SECRET is required
 			if (!validatedEnv.ORDER_CONFIRMATION_SECRET) {
 				throw new Error('ORDER_CONFIRMATION_SECRET is required in production');
+			}
+
+			// In production with standalone output, ORDERS_DB_PATH should be explicitly set
+			if (!validatedEnv.ORDERS_DB_PATH) {
+				console.warn('ORDERS_DB_PATH not configured - using relative path may cause issues in standalone deployments');
 			}
 
 			// In production, DigiPay HMAC secret is required if DigiPay is used

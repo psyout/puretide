@@ -633,6 +633,7 @@ export default function CheckoutClient() {
 										className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
+
 								<div className='pb-4 pt-0 border-b border-deep-tidal-teal/10'>
 									<div className='flex items-center gap-2 mb-2'>
 										<svg

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { OrderConfirmationCartClear } from '@/components/OrderConfirmationCartClear';
 import { AutoRefresh } from '@/components/AutoRefresh';
+import OrderConfirmationSurvey from '@/components/OrderConfirmationSurvey';
 import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 
@@ -366,10 +367,10 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 
 					{!isCreditCardOrder && (
 						<div className='mb-8 pt-8 border-t border-deep-tidal-teal/10'>
-							<h2 className='text-2xl font-bold text-deep-tidal-teal-800 mb-4 pb-4 border-b border-deep-tidal-teal/10'>Interac e&ndash;Transfer Instructions</h2>
+							<h2 className='text-2xl font-bold text-deep-tidal-teal-800 mb-4 pb-4 border-b border-deep-tidal-teal/10'>Interac e&ndash;Transfer Payment</h2>
 							<p className='text-sm text-deep-tidal-teal-800 mb-4'>
-								After placing your order, please send an Interac e&ndash;Transfer following the instructions below. Enter everything exactly as shown so your payment is
-								automatically accepted.
+								After placing your order, please send an Interac e&ndash;Transfer to complete your payment. We use auto-deposit, so funds will be deposited directly into our
+								bank account without requiring a security question.
 							</p>
 							<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 								<div>
@@ -381,24 +382,13 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 									<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.recipientEmail}</div>
 								</div>
 								<div>
-									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Security Question</div>
-									<div className='text-deep-tidal-teal-800 font-semibold'>{paymentDetails.securityQuestion}</div>
-								</div>
-								<div>
-									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Security Answer</div>
-									<div className='text-deep-tidal-teal-800 font-semibold'>{securityAnswer}</div>
-								</div>
-
-								<div>
 									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Memo / Message</div>
 									<div className='text-deep-tidal-teal-800 font-semibold'>{orderNumber}</div>
 								</div>
 							</div>
 							<div className='text-xs text-deep-tidal-teal-600 mt-4 pt-4 border-t border-deep-tidal-teal/10 space-y-2'>
-								<p>Important: Use the exact Security Question and Answer above. Any changes can delay payment acceptance or have your payment refused.</p>
-								<p>If your bank does not allow a memo, you can leave it empty.</p>
+								<p>Important: Include your order number in the memo/message field for proper tracking.</p>
 								<p>We only accept e&ndash;Transfers sent to the email listed above. Do not send payments to any other email address.</p>
-								<p>If your payment is not accepted, please go to your banking app, cancel and re&ndash;send with the correct instructions above.</p>
 								<p>
 									Should you encounter any payment&ndash;related issues, please contact our support at: <span className='font-semibold'>{paymentDetails.supportEmail}</span>
 								</p>
@@ -463,6 +453,11 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							</div>
 						</div>
 					</div>
+
+					<OrderConfirmationSurvey
+						orderNumber={orderNumber}
+						customerEmail={confirmedOrder.customer.email}
+					/>
 
 					<div className='mt-8 pt-6 border-t border-deep-tidal-teal/10 text-xs text-deep-tidal-teal-600 space-y-2'>
 						<p>Your personal data will be used to process your order, support your experience on this website, and for other purposes described in our privacy policy.</p>

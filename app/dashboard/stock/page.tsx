@@ -55,6 +55,13 @@ export default function StockDashboardPage() {
 	const [clients, setClients] = useState<Array<Record<string, unknown>>>([]);
 	const [clientsLoading, setClientsLoading] = useState(false);
 	const [clientsError, setClientsError] = useState<string | null>(null);
+	const [surveyAnalytics, setSurveyAnalytics] = useState<{
+		totalClients: number;
+		withSurveyData: number;
+		withoutSurveyData: number;
+		sources: Record<string, number>;
+		sourcePercentages: Record<string, number>;
+	} | null>(null);
 
 	const [productsError, setProductsError] = useState<string | null>(null);
 	const [saveError, setSaveError] = useState<string | null>(null);
@@ -140,10 +147,24 @@ export default function StockDashboardPage() {
 		(async () => {
 			try {
 				const response = await fetch('/api/dashboard/clients', { credentials: 'include' });
-				const data = (await response.json()) as { ok?: boolean; clients?: Array<Record<string, unknown>>; error?: string };
+				const data = (await response.json()) as {
+					ok?: boolean;
+					clients?: Array<Record<string, unknown>>;
+					surveyAnalytics?: {
+						totalClients: number;
+						withSurveyData: number;
+						withoutSurveyData: number;
+						sources: Record<string, number>;
+						sourcePercentages: Record<string, number>;
+					};
+					error?: string;
+				};
 				if (cancelled) return;
 				if (response.ok && data.ok && data.clients) {
 					setClients(data.clients);
+					if (data.surveyAnalytics) {
+						setSurveyAnalytics(data.surveyAnalytics);
+					}
 				} else {
 					setClientsError(data.error ?? 'Failed to load clients.');
 				}
@@ -565,6 +586,41 @@ export default function StockDashboardPage() {
 						{activeTab === 'clients' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
 								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Clients</h2>
+
+								{/* Survey Analytics Section */}
+								{surveyAnalytics && (
+									<div className='rounded-lg bg-blue-50 border border-blue-200 p-4 mb-6'>
+										<h3 className='text-lg font-semibold text-blue-900 mb-3'>How Did You Hear About Us? Analytics</h3>
+										<div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-4'>
+											<div className='bg-white rounded-lg p-3 border border-blue-100'>
+												<div className='text-sm text-blue-600'>Total Clients</div>
+												<div className='text-2xl font-bold text-blue-900'>{surveyAnalytics.totalClients}</div>
+											</div>
+											<div className='bg-white rounded-lg p-3 border border-blue-100'>
+												<div className='text-sm text-blue-600'>With Survey Data</div>
+												<div className='text-2xl font-bold text-blue-900'>
+													{surveyAnalytics.withSurveyData} ({Math.round((surveyAnalytics.withSurveyData / surveyAnalytics.totalClients) * 100)}%)
+												</div>
+											</div>
+										</div>
+										<div className='space-y-2'>
+											<div className='text-sm font-medium text-blue-800'>Acquisition Sources:</div>
+											{Object.entries(surveyAnalytics.sources)
+												.sort(([, a], [, b]) => b - a)
+												.map(([source, count]) => (
+													<div
+														key={source}
+														className='flex items-center justify-between bg-white rounded px-3 py-2 border border-blue-100'>
+														<span className='text-sm text-blue-800'>{source}</span>
+														<span className='text-sm font-semibold text-blue-900'>
+															{count} ({surveyAnalytics.sourcePercentages[source]}%)
+														</span>
+													</div>
+												))}
+										</div>
+									</div>
+								)}
+
 								{clientsError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{clientsError}</div>}
 								{clientsLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading clients...</div>
@@ -572,22 +628,24 @@ export default function StockDashboardPage() {
 									<div className='text-[#6a6a6a] py-8'>No clients yet.</div>
 								) : (
 									<div className='divide-y divide-black/5 overflow-x-auto'>
-										<div className='grid grid-cols-[1.5fr_1fr_1fr_auto_auto] gap-4 pb-3 text-xs uppercase tracking-wide text-[#9b9b9b]'>
+										<div className='grid grid-cols-[1.5fr_1fr_1fr_auto_auto_1fr] gap-4 pb-3 text-xs uppercase tracking-wide text-[#9b9b9b]'>
 											<span>Email</span>
 											<span>Name</span>
 											<span>Orders</span>
 											<span>Total</span>
 											<span>Last Order</span>
+											<span>How Did You Hear</span>
 										</div>
 										{clients.map((client, i) => (
 											<div
 												key={String(client.email ?? i)}
-												className='grid grid-cols-[1.5fr_1fr_1fr_auto_auto] gap-4 py-4 text-sm text-[#2f2f2f]'>
+												className='grid grid-cols-[1.5fr_1fr_1fr_auto_auto_1fr] gap-4 py-4 text-sm text-[#2f2f2f]'>
 												<span className='font-medium'>{String(client.email ?? '-')}</span>
 												<span>{[String(client.firstName ?? ''), String(client.lastName ?? '')].filter(Boolean).join(' ') || '-'}</span>
 												<span>{Number(client.ordersCount ?? 0)}</span>
 												<span>${Number(client.totalSpent ?? 0).toFixed(2)}</span>
 												<span>{String(client.lastOrderDate ?? '-')}</span>
+												<span className='text-xs'>{String(client.howDidYouHear ?? '-')}</span>
 											</div>
 										))}
 									</div>
