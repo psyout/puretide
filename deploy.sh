@@ -47,6 +47,7 @@ echo "Ensuring data directory exists on VPS..."
 ssh "${SSH_TARGET}" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
 echo "Restarting pm2 app (${PM2_APP}) on VPS..."
 # HOSTNAME=0.0.0.0 is the key fix for the 502 error
-ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; [ -f .env ] && . ./.env; set +a; HOSTNAME=0.0.0.0 pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
+# ORDERS_DB_PATH ensures SQLite uses absolute path in standalone mode
+ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; [ -f .env ] && . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
 
 echo "Done. Website should be live at https://puretide.ca"
