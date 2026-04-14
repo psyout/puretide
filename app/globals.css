@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -96,6 +98,38 @@ p {
 	.scrollbar-hide::-webkit-scrollbar {
 		display: none;
 	}
+
+	@keyframes fadeUp {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.fade-up {
+		opacity: 0;
+		animation: fadeUp 0.75s ease forwards;
+	}
+
+	.d1 {
+		animation-delay: 0.1s;
+	}
+
+	.d2 {
+		animation-delay: 0.25s;
+	}
+
+	.d3 {
+		animation-delay: 0.4s;
+	}
+
+	.d4 {
+		animation-delay: 0.55s;
+	}
 }
 
 @layer components {
@@ -105,5 +139,17 @@ p {
 
 	.ui-border-t {
 		border-top: var(--ui-border-width) solid var(--ui-border-color);
+	}
+
+	/* Custom select styling with right margin for arrow */
+	select {
+		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+		background-position: right 0.25rem center;
+		background-repeat: no-repeat;
+		background-size: 1.5em 1.5em;
+		padding-right: 2.5rem;
+		-moz-appearance: none;
+		-webkit-appearance: none;
+		appearance: none;
 	}
 }

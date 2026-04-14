@@ -9,7 +9,7 @@ interface OrderConfirmationSurveyProps {
 }
 
 const surveyOptions = [
-	{ value: 'search' as const, label: 'Search' },
+	{ value: 'search' as const, label: 'Search Search' },
 	{ value: 'social' as const, label: 'Social Media' },
 	{ value: 'friends' as const, label: 'Friends' },
 	{ value: 'ai' as const, label: 'AI Chat' },

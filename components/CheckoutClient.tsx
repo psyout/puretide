@@ -199,7 +199,12 @@ export default function CheckoutClient() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		setHasSubmitted(true);
 		setCheckoutError(null);
+
+		if (!agreedToTerms) {
+			return;
+		}
 		if (hasInvalidPostalCodeFormat) {
 			setCheckoutError('Please enter a valid Canadian postal code (e.g. A1A 1A1).');
 			return;
@@ -209,7 +214,6 @@ export default function CheckoutClient() {
 			return;
 		}
 		setIsProcessing(true);
-		setHasSubmitted(true);
 
 		try {
 			if (useCreditCard) {
@@ -330,49 +334,53 @@ export default function CheckoutClient() {
 										onChange={(e) => setHoneypotCompany(e.target.value)}
 									/>
 								</div>
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
-									<input
-										type='text'
-										value={formData.firstName}
-										onChange={(e) => {
-											setFormData({ ...formData, firstName: e.target.value });
-											if (checkoutError?.includes('First name')) setCheckoutError(null);
-										}}
-										onBlur={(e) => {
-											const capitalized = capitalizeWords(e.target.value);
-											if (capitalized !== e.target.value) {
-												setFormData((prev) => ({ ...prev, firstName: capitalized }));
-											}
-										}}
-										autoComplete='given-name'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										required
-									/>
-									{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
+
+								<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
+										<input
+											type='text'
+											value={formData.firstName}
+											onChange={(e) => {
+												setFormData({ ...formData, firstName: e.target.value });
+												if (checkoutError?.includes('First name')) setCheckoutError(null);
+											}}
+											onBlur={(e) => {
+												const capitalized = capitalizeWords(e.target.value);
+												if (capitalized !== e.target.value) {
+													setFormData((prev) => ({ ...prev, firstName: capitalized }));
+												}
+											}}
+											autoComplete='given-name'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required
+										/>
+										{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
+									</div>
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
+										<input
+											type='text'
+											value={formData.lastName}
+											onChange={(e) => {
+												setFormData({ ...formData, lastName: e.target.value });
+												if (checkoutError?.includes('Last name')) setCheckoutError(null);
+											}}
+											onBlur={(e) => {
+												const capitalized = capitalizeWords(e.target.value);
+												if (capitalized !== e.target.value) {
+													setFormData((prev) => ({ ...prev, lastName: capitalized }));
+												}
+											}}
+											autoComplete='family-name'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required
+										/>
+										{checkoutError && checkoutError.includes('Last name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
+									</div>
 								</div>
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
-									<input
-										type='text'
-										value={formData.lastName}
-										onChange={(e) => {
-											setFormData({ ...formData, lastName: e.target.value });
-											if (checkoutError?.includes('Last name')) setCheckoutError(null);
-										}}
-										onBlur={(e) => {
-											const capitalized = capitalizeWords(e.target.value);
-											if (capitalized !== e.target.value) {
-												setFormData((prev) => ({ ...prev, lastName: capitalized }));
-											}
-										}}
-										autoComplete='family-name'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										required
-									/>
-									{checkoutError && checkoutError.includes('Last name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
-								</div>
-								<div>
+
+								<div className='max-w-[200px]'>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>
 									<select
 										value={formData.country}
@@ -418,46 +426,49 @@ export default function CheckoutClient() {
 										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 									/>
 								</div>
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
-									<input
-										type='text'
-										value={formData.city}
-										onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-										onBlur={(e) => {
-											const capitalized = capitalizeWords(e.target.value);
-											if (capitalized !== e.target.value) {
-												setFormData((prev) => ({ ...prev, city: capitalized }));
-											}
-										}}
-										autoComplete='address-level2'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										required
-									/>
+								<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
+										<input
+											type='text'
+											value={formData.city}
+											onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+											onBlur={(e) => {
+												const capitalized = capitalizeWords(e.target.value);
+												if (capitalized !== e.target.value) {
+													setFormData((prev) => ({ ...prev, city: capitalized }));
+												}
+											}}
+											autoComplete='address-level2'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required
+										/>
+									</div>
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
+										<select
+											value={formData.province}
+											onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+											autoComplete='address-level1'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required>
+											<option value='British Columbia'>British Columbia</option>
+											<option value='Alberta'>Alberta</option>
+											<option value='Manitoba'>Manitoba</option>
+											<option value='New Brunswick'>New Brunswick</option>
+											<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
+											<option value='Nova Scotia'>Nova Scotia</option>
+											<option value='Ontario'>Ontario</option>
+											<option value='Prince Edward Island'>Prince Edward Island</option>
+											<option value='Saskatchewan'>Saskatchewan</option>
+											<option value='Northwest Territories'>Northwest Territories</option>
+											<option value='Nunavut'>Nunavut</option>
+											<option value='Yukon'>Yukon</option>
+										</select>
+									</div>
 								</div>
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
-									<select
-										value={formData.province}
-										onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-										autoComplete='address-level1'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										required>
-										<option value='British Columbia'>British Columbia</option>
-										<option value='Alberta'>Alberta</option>
-										<option value='Manitoba'>Manitoba</option>
-										<option value='New Brunswick'>New Brunswick</option>
-										<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
-										<option value='Nova Scotia'>Nova Scotia</option>
-										<option value='Ontario'>Ontario</option>
-										<option value='Prince Edward Island'>Prince Edward Island</option>
-										<option value='Saskatchewan'>Saskatchewan</option>
-										<option value='Northwest Territories'>Northwest Territories</option>
-										<option value='Nunavut'>Nunavut</option>
-										<option value='Yukon'>Yukon</option>
-									</select>
-								</div>
-								<div>
+
+								<div className='max-w-[200px]'>
 									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
 									<input
 										type='text'
@@ -663,39 +674,60 @@ export default function CheckoutClient() {
 										</p>
 									</div>
 								)}
-								<div
-									className='py-1'
-									id='checkout-terms-note'>
-									{!agreedToTerms && <p className='text-xs text-deep-tidal-teal-600 mb-2'>You must agree to the terms to place your order.</p>}
+								<div className='py-1'>
 									<label
 										htmlFor='checkout-terms'
-										className='flex items-center gap-3 cursor-pointer'>
+										className='flex items-start gap-3 cursor-pointer group'>
 										<input
 											id='checkout-terms'
 											type='checkbox'
 											checked={agreedToTerms}
 											onChange={(e) => setAgreedToTerms(e.target.checked)}
-											className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal'
+											className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5 transition-colors'
 											required
 										/>
-										<span className='text-sm text-deep-tidal-teal-800'>
+										<span className='text-sm text-deep-tidal-teal-800 flex-1'>
 											I have read and agree to the{' '}
 											<button
 												type='button'
 												onClick={() => setShowTermsModal(true)}
-												className='text-deep-tidal-teal hover:text-deep-tidal-teal-600 underline font-medium'>
+												className='text-deep-tidal-teal hover:text-eucalyptus underline font-medium transition-colors'>
 												Terms & Conditions
 											</button>
 										</span>
 									</label>
+									{!agreedToTerms && hasSubmitted && (
+										<p className='text-xs text-red-600 mt-2 ml-7 flex items-start gap-1.5'>
+											<svg
+												className='w-3.5 h-3.5 mt-0.5 flex-shrink-0'
+												fill='none'
+												stroke='currentColor'
+												viewBox='0 0 24 24'>
+												<path
+													strokeLinecap='round'
+													strokeLinejoin='round'
+													strokeWidth={2}
+													d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+												/>
+											</svg>
+											<span>You must agree to the terms and conditions to place your order</span>
+										</p>
+									)}
 								</div>
-								<button
-									type='submit'
-									disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
-									aria-describedby={!agreedToTerms ? 'checkout-terms-note' : undefined}
-									className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
-									{isProcessing ? 'Processing...' : 'Place Order'}
-								</button>
+								<div className='relative group'>
+									<button
+										type='submit'
+										disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
+										className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
+										{isProcessing ? 'Processing...' : 'Place Order'}
+									</button>
+									{!agreedToTerms && !isProcessing && (
+										<div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-deep-tidal-teal-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap'>
+											Please agree to the Terms & Conditions
+											<div className='absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-deep-tidal-teal-800'></div>
+										</div>
+									)}
+								</div>
 							</form>
 						</div>
 					</div>

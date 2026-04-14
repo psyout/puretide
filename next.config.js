@@ -44,9 +44,9 @@ const nextConfig = {
 						value: [
 							"default-src 'self'",
 							"script-src 'self' 'unsafe-eval' 'unsafe-inline' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com", // Next.js requires unsafe-eval/inline in dev + Meta Pixel
-							"style-src 'self' 'unsafe-inline'", // For Tailwind CSS
+							"style-src 'self' 'unsafe-inline' fonts.googleapis.com", // For Tailwind CSS + Google Fonts
 							"img-src 'self' data: blob: www.facebook.com connect.facebook.net https://www.facebook.com https://connect.facebook.net", // Meta Pixel tracking
-							"font-src 'self' data:",
+							"font-src 'self' data: fonts.gstatic.com",
 							"connect-src 'self' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com", // Meta Pixel API calls
 							"frame-ancestors 'none'",
 							"form-action 'self'",
