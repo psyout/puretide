@@ -74,6 +74,43 @@ privacy-shop/
 - **React Context** - State management
 - **Zoho Mail** - Email service (SMTP)
 
+## Architecture Overview
+
+### Frontend
+
+- **Routing/layout**: Next.js App Router (`app/`)
+- **Components**: React Server Components by default, with client components used for interactive areas like cart/checkout
+- **UI**:
+     - Tailwind CSS for styling
+     - `lucide-react` for icons
+     - `framer-motion` for animations
+
+### Cart & Checkout
+
+- **Cart state**: client-side (`context/CartContext.tsx`) persisted in `localStorage`
+- **Checkout UI/logic**: `components/CheckoutClient.tsx`
+     - Calculates shipping, discounts, and fees
+     - Uses an idempotency key to reduce duplicate submits
+     - Supports e-transfer and credit card flows
+
+### Backend (API routes)
+
+- **Orders**: `POST /api/orders` stores orders and triggers side-effects (emails, stock sync, notifications)
+- **Payments (credit card)**: `POST /api/digipay/create` generates a DigiPay redirect URL and persists the order
+- **Operational concerns**: rate limiting, idempotency caching, and environment validation are enforced server-side
+
+### Data & Integrations
+
+- **Order persistence**: SQLite-backed storage via `sql.js` (see `lib/ordersDb.ts`)
+- **Inventory/promo source of truth**: Google Sheets via `googleapis` (see `lib/stockSheet.ts` and `lib/sheetCache.ts`)
+- **Work management**: optional Wrike integration for creating order/client tasks
+
+### Security & Deployment
+
+- **Security headers**: CSP, HSTS (prod), `X-Robots-Tag: noindex` configured in `next.config.js`
+- **Dashboard auth**: middleware-enforced cookie-based session (`middleware.ts`)
+- **Deployment output**: `output: 'standalone'` in `next.config.js` for smaller deploy footprint
+
 ## Email Configuration
 
 This application uses **Zoho Mail** for all email functionality:
@@ -84,7 +121,7 @@ This application uses **Zoho Mail** for all email functionality:
 
 ### Setup Email
 
-1. **Create Zoho Mail account** - See [ZOHO-MAIL-SETUP.md](ZOHO-MAIL-SETUP.md)
+1. **Create Zoho Mail account** - See [docs/MIGRATION-TO-ZOHO.md](docs/MIGRATION-TO-ZOHO.md)
 2. **Configure DNS records** - MX, SPF, DKIM, DMARC
 3. **Update .env file** with Zoho SMTP credentials:
 
@@ -106,9 +143,9 @@ node scripts/test-zoho-complete.mjs
 
 ### Email Documentation
 
-- **[ZOHO-MAIL-SETUP.md](ZOHO-MAIL-SETUP.md)** - Complete Zoho Mail setup guide
-- **[MAC-MAIL-ZOHO-CONFIG.md](MAC-MAIL-ZOHO-CONFIG.md)** - Mac Mail configuration
-- **[MIGRATION-TO-ZOHO.md](MIGRATION-TO-ZOHO.md)** - Migration details
+- **[docs/MIGRATION-TO-ZOHO.md](docs/MIGRATION-TO-ZOHO.md)** - Migration details and Zoho setup context
+- **[docs/MAC-MAIL-ZOHO-CONFIG.md](docs/MAC-MAIL-ZOHO-CONFIG.md)** - Mac Mail configuration
+- **[docs/EMAIL-MIGRATION-GUIDE.md](docs/EMAIL-MIGRATION-GUIDE.md)** - Email system notes
 
 ### Benefits
 
