@@ -4,7 +4,7 @@ import path from 'node:path';
 import FormData from 'form-data';
 import axios from 'axios';
 import sharp from 'sharp';
-import { AlignmentType, Document, HeightRule, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
+import { AlignmentType, Document, HeightRule, ImageRun, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -598,6 +598,9 @@ async function generateSingleLabelPdf(label: { name: string; lines: string[] }, 
 async function generateAvery5162Docx(label: { name: string; lines: string[] }, outputPath: string, options?: { fillAll?: boolean }): Promise<void> {
 	const fillAll = options?.fillAll ?? true;
 
+	const logoPngPath = await ensureLogoPng();
+	const logoBytes = logoPngPath && fs.existsSync(logoPngPath) ? fs.readFileSync(logoPngPath) : null;
+
 	// Measurements in twips (1 inch = 1440 twips)
 	const pageWidth = 8.5 * 1440;
 	const pageHeight = 11 * 1440;
@@ -613,6 +616,20 @@ async function generateAvery5162Docx(label: { name: string; lines: string[] }, o
 
 	const makeLabelParagraphs = () => {
 		const paras: Paragraph[] = [];
+		if (logoBytes) {
+			paras.push(
+				new Paragraph({
+					alignment: AlignmentType.LEFT,
+					children: [
+						new ImageRun({
+							data: logoBytes,
+							type: 'png',
+							transformation: { width: 48, height: 48 },
+						}),
+					],
+				}),
+			);
+		}
 		paras.push(
 			new Paragraph({
 				alignment: AlignmentType.LEFT,
@@ -742,7 +759,7 @@ export async function attachLabelPdfToOrder(orderTaskId: string, orderDescriptio
 	const tempPdf = path.resolve(process.cwd(), `label-${orderTaskId}.pdf`);
 	const tempDocx = path.resolve(process.cwd(), `label-${orderTaskId}-avery-5162.docx`);
 	await generateSingleLabelPdf(parsed, tempPdf);
-	await generateAvery5162Docx(parsed, tempDocx, { fillAll: true });
+	await generateAvery5162Docx(parsed, tempDocx, { fillAll: false });
 
 	let subtask = await findSubtaskByTitle(orderTaskId, 'Create shipping labels', apiToken);
 	if (!subtask) {

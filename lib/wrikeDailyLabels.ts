@@ -14,6 +14,18 @@ type WrikeTask = {
 	createdDate?: string;
 };
 
+function startOfLocalDay(d: Date): Date {
+	const x = new Date(d);
+	x.setHours(0, 0, 0, 0);
+	return x;
+}
+
+function endOfLocalDay(d: Date): Date {
+	const x = new Date(d);
+	x.setHours(23, 59, 59, 999);
+	return x;
+}
+
 function stripHtml(input: string): string {
 	if (!input) return '';
 	return String(input)
@@ -234,16 +246,8 @@ async function uploadAttachmentToTask(taskId: string, filePath: string, apiToken
 	return res.data?.data?.[0] || null;
 }
 
-function startOfLocalDay(d: Date): Date {
-	const x = new Date(d);
-	x.setHours(0, 0, 0, 0);
-	return x;
-}
-
-function endOfLocalDay(d: Date): Date {
-	const x = new Date(d);
-	x.setHours(23, 59, 59, 999);
-	return x;
+function formatIsoDateOnlyLocal(d: Date): string {
+	return d.toISOString().slice(0, 10);
 }
 
 export type DailyLabelsResult =
@@ -263,11 +267,30 @@ export type DailyLabelsResult =
 			labelsParsed?: number;
 	  };
 
+export type RangeLabelsResult =
+	| {
+			ok: true;
+			startDate: string;
+			endDate: string;
+			ordersConsidered: number;
+			labelsParsed: number;
+			taskId: string;
+			attachmentId: string;
+	  }
+	| {
+			ok: false;
+			startDate: string;
+			endDate: string;
+			reason: string;
+			ordersConsidered?: number;
+			labelsParsed?: number;
+	  };
+
 export async function generateAndAttachDailyLabels(params: { apiToken: string; ordersFolderId: string; labelsFolderId: string; date: Date }): Promise<DailyLabelsResult> {
 	const date = params.date;
 	const start = startOfLocalDay(date);
 	const end = endOfLocalDay(date);
-	const isoDate = start.toISOString().slice(0, 10);
+	const isoDate = formatIsoDateOnlyLocal(start);
 
 	const tasks = await fetchAllTasksInFolder(params.ordersFolderId, params.apiToken);
 	const inDay = tasks.filter((t) => {
@@ -305,6 +328,70 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 			ordersConsidered: inDay.length,
 			labelsParsed: labels.length,
 			dailyTaskId: dailyTask.id,
+			attachmentId: uploaded.id,
+		};
+	} finally {
+		try {
+			fs.unlinkSync(outPath);
+		} catch {
+			// ignore cleanup failure
+		}
+	}
+}
+
+export async function generateAndAttachLabelsForRange(params: {
+	apiToken: string;
+	ordersFolderId: string;
+	labelsFolderId: string;
+	startDate: Date;
+	endDate: Date;
+	title?: string;
+	description?: string;
+}): Promise<RangeLabelsResult> {
+	const start = startOfLocalDay(params.startDate);
+	const end = endOfLocalDay(params.endDate);
+	const startIso = formatIsoDateOnlyLocal(start);
+	const endIso = formatIsoDateOnlyLocal(end);
+
+	const tasks = await fetchAllTasksInFolder(params.ordersFolderId, params.apiToken);
+	const inRange = tasks.filter((t) => {
+		const created = t?.createdDate ? new Date(t.createdDate) : null;
+		if (!created) return false;
+		return created >= start && created <= end;
+	});
+
+	const labels: Label[] = [];
+	for (const task of inRange) {
+		const parsed = parseLabelFromOrderDescription(task?.description ?? '');
+		if (!parsed || !parsed.name || parsed.lines.length === 0) continue;
+		labels.push(parsed);
+	}
+
+	if (labels.length === 0) {
+		return { ok: false, startDate: startIso, endDate: endIso, reason: 'no-labels', ordersConsidered: inRange.length, labelsParsed: 0 };
+	}
+
+	const outPath = path.resolve(process.cwd(), `labels-${startIso}-to-${endIso}-avery-5162.docx`);
+	await generateAvery5162DocxSheets(labels, outPath);
+
+	try {
+		const title = params.title ?? `Weekly Labels ${startIso} to ${endIso}`;
+		const description = params.description ?? `Avery 5162 label sheets for ${startIso} to ${endIso}`;
+		const task = await createTaskInFolder(params.labelsFolderId, title, description, params.apiToken);
+		if (!task) {
+			return { ok: false, startDate: startIso, endDate: endIso, reason: 'wrike-create-task-failed', ordersConsidered: inRange.length, labelsParsed: labels.length };
+		}
+		const uploaded = await uploadAttachmentToTask(task.id, outPath, params.apiToken);
+		if (!uploaded) {
+			return { ok: false, startDate: startIso, endDate: endIso, reason: 'wrike-upload-failed', ordersConsidered: inRange.length, labelsParsed: labels.length };
+		}
+		return {
+			ok: true,
+			startDate: startIso,
+			endDate: endIso,
+			ordersConsidered: inRange.length,
+			labelsParsed: labels.length,
+			taskId: task.id,
 			attachmentId: uploaded.id,
 		};
 	} finally {
