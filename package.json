@@ -12,10 +12,12 @@
 		"test:wrike": "node scripts/test-wrike.mjs",
 		"test:wrike:list": "node scripts/test-wrike.mjs --list",
 		"test:wrike:list-fields": "node scripts/test-wrike.mjs --list-fields",
-		"wrike:labels": "node scripts/wrike-print-labels.mjs"
+		"wrike:labels": "node scripts/wrike-print-labels.mjs",
+		"wrike:labels:daily": "node scripts/wrike-daily-labels.mjs"
 	},
 	"dependencies": {
 		"axios": "^1.8.0",
+		"docx": "^9.6.1",
 		"form-data": "^4.0.0",
 		"framer-motion": "^12.37.0",
 		"googleapis": "^170.1.0",

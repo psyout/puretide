@@ -39,7 +39,7 @@ export default function StockDashboardPage() {
 	const [rows, setRows] = useState<Product[]>(fallbackProducts);
 	const [isDirty, setIsDirty] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
-	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'clients'>('products');
+	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'clients' | 'labels'>('products');
 	const [searchValue, setSearchValue] = useState('');
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -51,6 +51,10 @@ export default function StockDashboardPage() {
 	const [promoCodesLoading, setPromoCodesLoading] = useState(false);
 	const [promoCodesDirty, setPromoCodesDirty] = useState(false);
 	const [promoCodesError, setPromoCodesError] = useState<string | null>(null);
+
+	const [labelsLoading, setLabelsLoading] = useState(false);
+	const [labelsError, setLabelsError] = useState<string | null>(null);
+	const [labelsOkMessage, setLabelsOkMessage] = useState<string | null>(null);
 
 	const [clients, setClients] = useState<Array<Record<string, unknown>>>([]);
 	const [clientsLoading, setClientsLoading] = useState(false);
@@ -66,6 +70,32 @@ export default function StockDashboardPage() {
 	const [productsError, setProductsError] = useState<string | null>(null);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [savePromosError, setSavePromosError] = useState<string | null>(null);
+
+	const handleGenerateDailyLabels = async () => {
+		setLabelsLoading(true);
+		setLabelsError(null);
+		setLabelsOkMessage(null);
+		try {
+			const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+			const iso = yesterday.toISOString().slice(0, 10);
+			const response = await fetch('/api/dashboard/labels', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ date: iso }),
+			});
+			const data = (await response.json()) as { ok?: boolean; error?: string; reason?: string; date?: string };
+			if (!response.ok || !data.ok) {
+				setLabelsError(data.error ?? data.reason ?? 'Failed to generate daily labels.');
+				return;
+			}
+			setLabelsOkMessage(`Daily labels generated and attached in Wrike for ${data.date ?? iso}.`);
+		} catch (e) {
+			setLabelsError(e instanceof Error ? e.message : 'Failed to generate daily labels.');
+		} finally {
+			setLabelsLoading(false);
+		}
+	};
 
 	useEffect(() => {
 		const load = async () => {
@@ -399,6 +429,13 @@ export default function StockDashboardPage() {
 								Promo Codes
 							</button>
 							<button
+								onClick={() => setActiveTab('labels')}
+								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+									activeTab === 'labels' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+								}`}>
+								Labels
+							</button>
+							<button
 								onClick={() => setActiveTab('clients')}
 								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
 									activeTab === 'clients' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
@@ -450,6 +487,21 @@ export default function StockDashboardPage() {
 									</div>
 									{isDirty && <span className='text-xs text-[#7a7a7a]'>Unsaved changes</span>}
 								</div>
+							</div>
+						)}
+
+						{activeTab === 'labels' && (
+							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
+								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-2'>Daily Labels</h2>
+								<p className='text-sm text-[#7a7a7a] mb-4'>Generate and attach yesterday’s Avery 5162 sheet to Wrike, ready to download and print.</p>
+								{labelsError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{labelsError}</div>}
+								{labelsOkMessage && <div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{labelsOkMessage}</div>}
+								<button
+									onClick={handleGenerateDailyLabels}
+									disabled={labelsLoading}
+									className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:bg-[#bdbdbd]'>
+									{labelsLoading ? 'Generating...' : 'Generate yesterday labels (attach to Wrike)'}
+								</button>
 							</div>
 						)}
 

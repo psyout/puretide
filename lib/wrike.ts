@@ -4,6 +4,7 @@ import path from 'node:path';
 import FormData from 'form-data';
 import axios from 'axios';
 import sharp from 'sharp';
+import { AlignmentType, Document, HeightRule, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -594,6 +595,99 @@ async function generateSingleLabelPdf(label: { name: string; lines: string[] }, 
 	fs.writeFileSync(outputPath, bytes);
 }
 
+async function generateAvery5162Docx(label: { name: string; lines: string[] }, outputPath: string, options?: { fillAll?: boolean }): Promise<void> {
+	const fillAll = options?.fillAll ?? true;
+
+	// Measurements in twips (1 inch = 1440 twips)
+	const pageWidth = 8.5 * 1440;
+	const pageHeight = 11 * 1440;
+	const labelWidth = 4 * 1440;
+	// Avery 5162: label height is 1-1/3"; vertical pitch is typically 1.5"
+	const rowPitch = 1.5 * 1440;
+	const topMargin = 0.5 * 1440;
+	const bottomMargin = 0.5 * 1440;
+	const leftMargin = 0.15625 * 1440;
+	const rightMargin = 0.15625 * 1440;
+
+	const cellPadding = 0.08 * 1440;
+
+	const makeLabelParagraphs = () => {
+		const paras: Paragraph[] = [];
+		paras.push(
+			new Paragraph({
+				alignment: AlignmentType.LEFT,
+				children: [new TextRun({ text: `To: ${label.name}`, bold: true, size: 22 })],
+			}),
+		);
+		for (const line of label.lines) {
+			paras.push(
+				new Paragraph({
+					alignment: AlignmentType.LEFT,
+					children: [new TextRun({ text: line, size: 20 })],
+				}),
+			);
+		}
+		return paras;
+	};
+
+	const makeEmptyCell = () =>
+		new TableCell({
+			width: { size: labelWidth, type: WidthType.DXA },
+			margins: { top: cellPadding, bottom: cellPadding, left: cellPadding, right: cellPadding },
+			children: [new Paragraph('')],
+		});
+
+	const makeLabelCell = () =>
+		new TableCell({
+			width: { size: labelWidth, type: WidthType.DXA },
+			margins: { top: cellPadding, bottom: cellPadding, left: cellPadding, right: cellPadding },
+			children: makeLabelParagraphs(),
+		});
+
+	const rows: TableRow[] = [];
+	for (let r = 0; r < 7; r += 1) {
+		const cells: TableCell[] = [];
+		for (let c = 0; c < 2; c += 1) {
+			if (fillAll) {
+				cells.push(makeLabelCell());
+				continue;
+			}
+			// If not filling all, place in first position only
+			if (r === 0 && c === 0) cells.push(makeLabelCell());
+			else cells.push(makeEmptyCell());
+		}
+		rows.push(
+			new TableRow({
+				height: { value: rowPitch, rule: HeightRule.EXACT },
+				children: cells,
+			}),
+		);
+	}
+
+	const table = new Table({
+		width: { size: 100, type: WidthType.PERCENTAGE },
+		columnWidths: [labelWidth, labelWidth],
+		rows,
+	});
+
+	const doc = new Document({
+		sections: [
+			{
+				properties: {
+					page: {
+						size: { width: pageWidth, height: pageHeight },
+						margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin },
+					},
+				},
+				children: [table],
+			},
+		],
+	});
+
+	const buf = await Packer.toBuffer(doc);
+	fs.writeFileSync(outputPath, buf);
+}
+
 async function uploadAttachmentToTask(taskId: string, filePath: string, apiToken: string): Promise<any> {
 	const form = new FormData();
 	form.append('file', fs.createReadStream(filePath));
@@ -646,7 +740,9 @@ export async function attachLabelPdfToOrder(orderTaskId: string, orderDescriptio
 	}
 
 	const tempPdf = path.resolve(process.cwd(), `label-${orderTaskId}.pdf`);
+	const tempDocx = path.resolve(process.cwd(), `label-${orderTaskId}-avery-5162.docx`);
 	await generateSingleLabelPdf(parsed, tempPdf);
+	await generateAvery5162Docx(parsed, tempDocx, { fillAll: true });
 
 	let subtask = await findSubtaskByTitle(orderTaskId, 'Create shipping labels', apiToken);
 	if (!subtask) {
@@ -654,19 +750,28 @@ export async function attachLabelPdfToOrder(orderTaskId: string, orderDescriptio
 		if (!subtask) {
 			console.warn('[Wrike] Failed to create "Create shipping labels" subtask; skipping PDF attachment.');
 			fs.unlinkSync(tempPdf);
+			fs.unlinkSync(tempDocx);
 			return;
 		}
 	}
 
-	const uploaded = await uploadAttachmentToTask(subtask.id, tempPdf, apiToken);
-	if (uploaded) {
-		console.log('[Wrike] Label PDF attached to subtask:', { subtaskId: subtask.id, attachmentId: uploaded.id });
+	const uploadedPdf = await uploadAttachmentToTask(subtask.id, tempPdf, apiToken);
+	if (uploadedPdf) {
+		console.log('[Wrike] Label PDF attached to subtask:', { subtaskId: subtask.id, attachmentId: uploadedPdf.id });
 	} else {
 		console.warn('[Wrike] Failed to upload label PDF to subtask.');
 	}
 
+	const uploadedDocx = await uploadAttachmentToTask(subtask.id, tempDocx, apiToken);
+	if (uploadedDocx) {
+		console.log('[Wrike] Avery 5162 Word label attached to subtask:', { subtaskId: subtask.id, attachmentId: uploadedDocx.id });
+	} else {
+		console.warn('[Wrike] Failed to upload Avery 5162 Word label to subtask.');
+	}
+
 	try {
 		fs.unlinkSync(tempPdf);
+		fs.unlinkSync(tempDocx);
 	} catch {
 		// ignore cleanup failure
 	}

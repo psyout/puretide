@@ -155,6 +155,48 @@ node scripts/test-zoho-complete.mjs
 - ✅ Send AND receive emails
 - ✅ IMAP/SMTP access for Mac Mail
 
+## Daily Avery 5162 Shipping Labels (Wrike)
+
+This project can generate a daily Avery 5162 (.docx) label sheet for yesterday’s orders and attach it to Wrike for printing.
+
+### Configuration
+
+Set these environment variables:
+
+```bash
+WRIKE_API_TOKEN=...
+WRIKE_ORDERS_FOLDER_ID=...
+WRIKE_LABELS_FOLDER_ID=MQAAAAEIm8GW
+CRON_SECRET=...
+```
+
+### Generate/attach manually (Dashboard)
+
+- Go to `/dashboard/login` and sign in with `DASHBOARD_SECRET`
+- Open the **Labels** tab
+- Click **Generate yesterday labels (attach to Wrike)**
+
+### Automated every morning (Self-hosted cron)
+
+Use your server crontab to call the cron endpoint daily.
+
+Endpoint:
+
+- `POST /api/cron/daily-labels`
+- Secured with `CRON_SECRET` (send as `x-cron-secret` header or `Authorization: Bearer ...`)
+
+Example crontab (runs at 06:05 server local time):
+
+```cron
+5 6 * * * curl -fsS -X POST "https://YOUR_DOMAIN/api/cron/daily-labels" -H "x-cron-secret: $CRON_SECRET" >/dev/null
+```
+
+If you need to backfill a specific day:
+
+```bash
+curl -fsS -X POST "https://YOUR_DOMAIN/api/cron/daily-labels?date=2026-04-19" -H "x-cron-secret: $CRON_SECRET"
+```
+
 ## License
 
 Private - For use on Orange Website Island hosting only.

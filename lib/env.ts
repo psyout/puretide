@@ -54,6 +54,7 @@ const envSchema = z.object({
 	DASHBOARD_SECRET: z.string().min(1, 'DASHBOARD_SECRET is required'),
 	ORDER_CONFIRMATION_SECRET: z.string().optional(), // Will fallback to DASHBOARD_SECRET in dev
 	DIGIPAY_POSTBACK_HMAC_SECRET: z.string().optional(),
+	CRON_SECRET: z.string().optional(),
 	RETRY_JOB_SECRET: z.string().optional(),
 
 	// DigiPay payment
@@ -65,6 +66,7 @@ const envSchema = z.object({
 	WRIKE_API_TOKEN: z.string().optional(),
 	WRIKE_API_BASE: z.string().optional(),
 	WRIKE_ORDERS_FOLDER_ID: z.string().optional(),
+	WRIKE_LABELS_FOLDER_ID: z.string().optional(),
 	WRIKE_CLIENTS_FOLDER_ID: z.string().optional(),
 	WRIKE_PRODUCTS_FOLDER_ID: z.string().optional(),
 	WRIKE_CLIENT_EMAIL_FIELD_ID: z.string().optional(),
@@ -219,6 +221,7 @@ export function getWrikeConfig() {
 		apiToken: env.WRIKE_API_TOKEN,
 		apiBase: env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4',
 		ordersFolderId: env.WRIKE_ORDERS_FOLDER_ID,
+		labelsFolderId: env.WRIKE_LABELS_FOLDER_ID,
 		clientsFolderId: env.WRIKE_CLIENTS_FOLDER_ID,
 		productsFolderId: env.WRIKE_PRODUCTS_FOLDER_ID,
 	};
