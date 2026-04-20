@@ -48,18 +48,27 @@ export async function POST(request: Request) {
 		};
 
 		await upsertSheetClient(clientPayload);
+		const customerName = `${existingClient.firstName} ${existingClient.lastName}`.trim();
 		const adminEmail = 'orders@puretide.ca';
-		const text = [`How did you hear about us (survey submission)`, '', `Order: ${orderNumber}`, `Customer email: ${customerEmail}`, `Response: ${formattedSurveyData}`].join('\n');
+		const text = [
+			`How did you hear about us (survey submission)`,
+			'',
+			`Order: ${orderNumber}`,
+			`Customer name: ${customerName || '(unknown)'}`,
+			`Customer email: ${customerEmail}`,
+			`Response: ${formattedSurveyData}`,
+		].join('\n');
 		const html = [
 			`<p><strong>How did you hear about us (survey submission)</strong></p>`,
 			`<p><strong>Order:</strong> ${orderNumber}</p>`,
+			`<p><strong>Customer name:</strong> ${customerName || '(unknown)'}</p>`,
 			`<p><strong>Customer email:</strong> ${customerEmail}</p>`,
 			`<p><strong>Response:</strong> ${formattedSurveyData}</p>`,
 		].join('');
 
 		const emailResult = await sendMail({
 			to: adminEmail,
-			subject: `Survey response - ${orderNumber}`,
+			subject: `Survey response - ${orderNumber}${customerName ? ` - ${customerName}` : ''}`,
 			text,
 			html,
 			smtpPrefix: 'ORDER',
