@@ -1,8 +1,9 @@
-import { AlignmentType, Document, HeightRule, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
+import { AlignmentType, Document, HeightRule, ImageRun, Packer, Paragraph, TabStopType, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import fs from 'node:fs';
 import path from 'node:path';
 import FormData from 'form-data';
 import axios from 'axios';
+import sharp from 'sharp';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -66,10 +67,41 @@ export function parseLabelFromOrderDescription(html: string): Label | null {
 	const shippingMatch = String(html).match(/<h4>\s*Shipping Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
 	const billingMatch = String(html).match(/<h4>\s*Billing Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
 	const match = shippingMatch || billingMatch;
-	if (!match) return null;
-	const text = stripHtml(match[1]);
-	const lines = normalizeLines(text);
-	if (lines.length === 0) return null;
+
+	let lines: string[] = [];
+	if (match) {
+		const text = stripHtml(match[1]);
+		lines = normalizeLines(text);
+	}
+
+	if (lines.length === 0) {
+		const text = stripHtml(html);
+		const all = normalizeLines(text);
+
+		let inferredName = name;
+		if (!inferredName) {
+			const n1 = text.match(/\bName:\s*(.+)$/im);
+			if (n1) inferredName = n1[1].trim();
+		}
+
+		const stopRe = /^(order items|payment method|order summary|financial summary|stock remaining|order notes|status:)/i;
+		const findBlock = (header: RegExp): string[] => {
+			const idx = all.findIndex((l) => header.test(l));
+			if (idx < 0) return [];
+			const out: string[] = [];
+			for (let i = idx + 1; i < all.length; i += 1) {
+				const l = all[i];
+				if (stopRe.test(l)) break;
+				out.push(l);
+			}
+			return out;
+		};
+
+		lines = findBlock(/^shipping address$/i);
+		if (lines.length === 0) lines = findBlock(/^billing address$/i);
+		if (!inferredName || lines.length === 0) return null;
+		return { name: inferredName || 'Recipient', lines };
+	}
 
 	const unitPattern = /^(unit|apt|apartment|suite|ste|#\s*)\s*([^\s]+(?:\s+[^\s]+)*)/i;
 	const addressLines: string[] = [];
@@ -105,10 +137,27 @@ export function parseLabelFromOrderDescription(html: string): Label | null {
 }
 
 export async function generateAvery5162DocxSheets(labels: Label[], outputPath: string): Promise<void> {
+	const logoPath = path.resolve(process.cwd(), 'public', 'logo.png');
+	const logoBytes = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : null;
+	const textIndentTwips = logoBytes ? 1200 : 0;
+	let logoTransform: { width: number; height: number } | null = null;
+	if (logoBytes) {
+		try {
+			const meta = await sharp(logoBytes).metadata();
+			const w = meta.width ?? 0;
+			const h = meta.height ?? 0;
+			const targetH = 30;
+			const targetW = w > 0 && h > 0 ? Math.round((w / h) * targetH) : targetH;
+			logoTransform = { width: targetW, height: targetH };
+		} catch {
+			logoTransform = { width: 30, height: 30 };
+		}
+	}
+
 	const pageWidth = 8.5 * 1440;
 	const pageHeight = 11 * 1440;
 	const labelWidth = 4 * 1440;
-	const rowPitch = 1.5 * 1440;
+	const rowPitch = (4 / 3) * 1440;
 	const topMargin = 0.5 * 1440;
 	const bottomMargin = 0.5 * 1440;
 	const leftMargin = 0.15625 * 1440;
@@ -118,17 +167,42 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 	const makeLabelParagraphs = (label: Label | null) => {
 		if (!label) return [new Paragraph('')];
 		const paras: Paragraph[] = [];
-		paras.push(
-			new Paragraph({
-				alignment: AlignmentType.LEFT,
-				children: [new TextRun({ text: `To: ${label.name}`, bold: true, size: 22 })],
-			}),
-		);
+		const basePara = {
+			alignment: AlignmentType.LEFT,
+			spacing: { before: 0, after: 0 },
+		} as const;
+
+		if (logoBytes) {
+			paras.push(
+				new Paragraph({
+					...basePara,
+					tabStops: [{ type: TabStopType.LEFT, position: textIndentTwips }],
+					children: [
+						new ImageRun({
+							data: logoBytes,
+							type: 'png',
+							transformation: logoTransform ?? { width: 30, height: 30 },
+						}),
+						new TextRun({ text: '\t' }),
+						new TextRun({ text: `To: ${label.name}`, bold: true, font: 'Helvetica', size: 28 }),
+					],
+				}),
+			);
+		} else {
+			paras.push(
+				new Paragraph({
+					...basePara,
+					children: [new TextRun({ text: `To: ${label.name}`, bold: true, font: 'Helvetica', size: 28 })],
+				}),
+			);
+		}
+
 		for (const line of label.lines || []) {
 			paras.push(
 				new Paragraph({
-					alignment: AlignmentType.LEFT,
-					children: [new TextRun({ text: line, size: 20 })],
+					...basePara,
+					indent: textIndentTwips ? { left: textIndentTwips } : undefined,
+					children: [new TextRun({ text: line, font: 'Helvetica', size: 24 })],
 				}),
 			);
 		}
@@ -155,8 +229,9 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 			);
 		}
 		return new Table({
-			width: { size: 100, type: WidthType.PERCENTAGE },
+			width: { size: pageWidth - leftMargin - rightMargin, type: WidthType.DXA },
 			columnWidths: [labelWidth, labelWidth],
+			layout: TableLayoutType.FIXED,
 			rows,
 		});
 	};
@@ -174,7 +249,7 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 				properties: {
 					page: {
 						size: { width: pageWidth, height: pageHeight },
-						margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin },
+						margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin, header: 0, footer: 0 },
 					},
 				},
 				children,

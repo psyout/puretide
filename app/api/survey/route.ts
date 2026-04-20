@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { readSheetClients, upsertSheetClient } from '@/lib/stockSheet';
-import { createClientTask } from '@/lib/wrike';
+import { sendMail } from '@/lib/email';
 
 interface SurveyRequest {
 	orderNumber: string;
@@ -17,29 +17,19 @@ export async function POST(request: Request) {
 		const { orderNumber, customerEmail, surveyData } = body;
 
 		if (!customerEmail || !surveyData) {
-			return NextResponse.json(
-				{ ok: false, error: 'Missing required fields' },
-				{ status: 400 }
-			);
+			return NextResponse.json({ ok: false, error: 'Missing required fields' }, { status: 400 });
 		}
 
 		// Find existing client by email
 		const clients = await readSheetClients();
-		const existingClient = clients.find(
-			(client) => client.email.toLowerCase() === customerEmail.toLowerCase()
-		);
+		const existingClient = clients.find((client) => client.email.toLowerCase() === customerEmail.toLowerCase());
 
 		if (!existingClient) {
-			return NextResponse.json(
-				{ ok: false, error: 'Client not found' },
-				{ status: 404 }
-			);
+			return NextResponse.json({ ok: false, error: 'Client not found' }, { status: 404 });
 		}
 
 		// Format survey data
-		const formattedSurveyData = surveyData.choice === 'other' && surveyData.otherText
-			? `Other: ${surveyData.otherText}`
-			: surveyData.choice;
+		const formattedSurveyData = surveyData.choice === 'other' && surveyData.otherText ? `Other: ${surveyData.otherText}` : surveyData.choice;
 
 		// Update client with survey data
 		const clientPayload = {
@@ -58,7 +48,25 @@ export async function POST(request: Request) {
 		};
 
 		await upsertSheetClient(clientPayload);
-		await createClientTask(clientPayload);
+		const adminEmail = 'orders@puretide.ca';
+		const text = [`How did you hear about us (survey submission)`, '', `Order: ${orderNumber}`, `Customer email: ${customerEmail}`, `Response: ${formattedSurveyData}`].join('\n');
+		const html = [
+			`<p><strong>How did you hear about us (survey submission)</strong></p>`,
+			`<p><strong>Order:</strong> ${orderNumber}</p>`,
+			`<p><strong>Customer email:</strong> ${customerEmail}</p>`,
+			`<p><strong>Response:</strong> ${formattedSurveyData}</p>`,
+		].join('');
+
+		const emailResult = await sendMail({
+			to: adminEmail,
+			subject: `Survey response - ${orderNumber}`,
+			text,
+			html,
+			smtpPrefix: 'ORDER',
+		});
+		if (!emailResult.sent) {
+			console.error('[Survey] Failed to send admin survey notification email:', emailResult.error);
+		}
 
 		console.log(`[Survey] Survey data updated for client ${customerEmail} from order ${orderNumber}`);
 
