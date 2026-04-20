@@ -117,7 +117,7 @@ export function validateEnv(): EnvSchema {
 
 			// In production, DigiPay HMAC secret is required if DigiPay is used
 			if (validatedEnv.DIGIPAY_SITE_ID && !validatedEnv.DIGIPAY_POSTBACK_HMAC_SECRET) {
-				throw new Error('DIGIPAY_POSTBACK_HMAC_SECRET is required in production when using DigiPay');
+				console.warn('DIGIPAY_POSTBACK_HMAC_SECRET not configured - DigiPay postbacks will be rejected');
 			}
 
 			// In production, email should be configured for order notifications
