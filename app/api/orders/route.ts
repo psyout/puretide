@@ -119,7 +119,7 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 		// Return stock levels for ordered items
 		const orderedItemsStock = items.map((item) => {
 			const product = updated.find((p) => p.id === String(item.id) || p.slug === String(item.id));
-			return { id: String(item.id), name: item.name, stock: product?.stock ?? 0 };
+			return { id: product?.id ?? String(item.id), name: item.name, stock: product?.stock ?? 0 };
 		});
 
 		return orderedItemsStock;
