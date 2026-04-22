@@ -29,7 +29,7 @@ function Nav() {
 				href='https://puretide.ca'
 				className='flex items-center gap-3 no-underline'>
 				<svg
-					className='w-9 h-9'
+					className='w-8 h-8 sm:w-11 sm:h-11'
 					viewBox='0 0 559.81 430.1'
 					xmlns='http://www.w3.org/2000/svg'>
 					<path
@@ -48,7 +48,7 @@ function Nav() {
 					/>
 				</svg>
 				<div className='flex flex-col gap-[1px]'>
-					<span className='text-base font-bold tracking-[0.12em] text-[#1C4855] leading-none uppercase'>Pure Tide</span>
+					<span className='font-bold text-base sm:text-[1.6rem] tracking-[0.1em] text-[#1C4855] leading-none uppercase'>Pure Tide</span>
 					<span className='text-[0.55rem] font-normal tracking-[0.18em] text-[#6EB4CC] uppercase leading-none'>Advanced Peptide Wellness</span>
 				</div>
 			</Link>
@@ -63,7 +63,7 @@ function Nav() {
 
 function Hero() {
 	return (
-		<section className='min-h-screen flex flex-col justify-end px-14 pb-[88px] relative overflow-hidden bg-[#1C4855]'>
+		<section className='min-h-screen flex flex-col justify-end px-8 pb-[88px] relative overflow-hidden bg-[#1C4855]'>
 			<div className='absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_30%,#2a7a96_0%,transparent_60%),radial-gradient(ellipse_60%_80%_at_80%_70%,#163d4a_0%,transparent_50%),radial-gradient(ellipse_50%_50%_at_10%_80%,#1a5266_0%,transparent_50%),linear-gradient(180deg,#1a4f62_0%,#0f3040_100%)]' />
 
 			<svg

@@ -9,6 +9,7 @@ import { getDiscountedPrice } from '@/lib/pricing';
 import { sendLowStockAlert } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, getEffectiveShippingCost, DEFAULT_ORDER_NOTIFICATION_EMAIL, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { createOrderTask, createClientTask } from '@/lib/wrike';
+import { updateProductStock } from '@/lib/wrikeProducts';
 import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
@@ -98,7 +99,7 @@ function getOrderNotificationRecipient() {
 	return process.env.ORDER_NOTIFICATION_EMAIL ?? DEFAULT_ORDER_NOTIFICATION_EMAIL;
 }
 
-async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array<{ name: string; stock: number }>> {
+async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array<{ id: string; name: string; stock: number }>> {
 	try {
 		const current = await readSheetProducts();
 		const updated = current.map((product) => {
@@ -118,7 +119,7 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 		// Return stock levels for ordered items
 		const orderedItemsStock = items.map((item) => {
 			const product = updated.find((p) => p.id === String(item.id) || p.slug === String(item.id));
-			return { name: item.name, stock: product?.stock ?? 0 };
+			return { id: String(item.id), name: item.name, stock: product?.stock ?? 0 };
 		});
 
 		return orderedItemsStock;
@@ -312,11 +313,19 @@ export async function POST(request: Request) {
 				console.error('[Orders] Failed to send emails / update email status', error);
 			}
 
-			let updatedStock: Array<{ name: string; stock: number }> = [];
+			let updatedStock: Array<{ id: string; name: string; stock: number }> = [];
 			try {
 				updatedStock = await updateSheetStock(payload.cartItems);
 			} catch (error) {
 				console.error('[Orders] Failed to update stock sheet', error);
+			}
+
+			try {
+				for (const s of updatedStock) {
+					await updateProductStock(s.id, s.stock);
+				}
+			} catch (error) {
+				console.error('[Orders] Failed to sync stock to Wrike products', error);
 			}
 
 			try {
@@ -335,7 +344,7 @@ export async function POST(request: Request) {
 					promoCode: payload.promoCode,
 					total: payload.total,
 					cartItems: payload.cartItems,
-					stockLevels: updatedStock,
+					stockLevels: updatedStock.map((s) => ({ name: s.name, stock: s.stock })),
 				});
 			} catch (error) {
 				console.error('[Orders] Failed to create Wrike order task', error);
