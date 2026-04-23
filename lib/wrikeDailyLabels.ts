@@ -272,7 +272,7 @@ async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string,
 			params: {
 				descendants: true,
 				fields: JSON.stringify(['description']),
-				createdDate: JSON.stringify({ start: createdDateStart, end: createdDateEnd }),
+				createdDate: `{"start":"${createdDateStart}","end":"${createdDateEnd}"}`,
 				nextPageToken,
 			},
 			validateStatus: () => true,
