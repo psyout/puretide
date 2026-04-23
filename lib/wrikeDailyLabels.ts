@@ -262,19 +262,19 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 }
 
 async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string, start: Date, end: Date): Promise<WrikeTask[]> {
-	const tasks: WrikeTask[] = [];
+	const allTasks: WrikeTask[] = [];
 	let nextPageToken: string | undefined = undefined;
-	const createdDateStart = start.toISOString();
-	const createdDateEnd = end.toISOString();
 	while (true) {
+		const params: any = {
+			descendants: true,
+			fields: JSON.stringify(['description']),
+		};
+		if (nextPageToken) {
+			params.nextPageToken = nextPageToken;
+		}
 		const res: { status: number; data: any } = await axios.get(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
 			headers: { Authorization: `Bearer ${apiToken}` },
-			params: {
-				descendants: true,
-				fields: JSON.stringify(['description']),
-				createdDate: `{"start":"${createdDateStart}","end":"${createdDateEnd}"}`,
-				nextPageToken,
-			},
+			params,
 			validateStatus: () => true,
 		});
 
@@ -283,11 +283,16 @@ async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string,
 		}
 		const data: any = res.data || {};
 		const batch = Array.isArray(data.data) ? data.data : [];
-		tasks.push(...batch);
+		allTasks.push(...batch);
 		nextPageToken = data.nextPageToken;
 		if (!nextPageToken) break;
 	}
-	return tasks;
+	const filtered = allTasks.filter((t) => {
+		const created = t?.createdDate ? new Date(t.createdDate) : null;
+		if (!created) return false;
+		return created >= start && created <= end;
+	});
+	return filtered;
 }
 
 async function createTaskInFolder(folderId: string, title: string, description: string, apiToken: string): Promise<{ id: string } | null> {
