@@ -269,7 +269,7 @@ async function fetchAllTasksInFolder(folderId: string, apiToken: string): Promis
 			headers: { Authorization: `Bearer ${apiToken}` },
 			params: {
 				descendants: true,
-				fields: JSON.stringify(['description']),
+				fields: JSON.stringify(['description', 'createdDate']),
 				nextPageToken,
 			},
 			validateStatus: () => true,

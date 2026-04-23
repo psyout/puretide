@@ -131,9 +131,6 @@ export function validateEnv(): EnvSchema {
 			if (!validatedEnv.ORDER_CONFIRMATION_SECRET) {
 				console.warn('ORDER_CONFIRMATION_SECRET not configured, using DASHBOARD_SECRET as fallback');
 			}
-			if (!validatedEnv.DIGIPAY_POSTBACK_HMAC_SECRET) {
-				console.warn('DIGIPAY_POSTBACK_HMAC_SECRET not configured - webhook HMAC verification will be skipped');
-			}
 			if (!validatedEnv.SMTP_HOST) {
 				console.warn('SMTP_HOST not configured - email delivery will be disabled');
 			}

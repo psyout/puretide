@@ -110,7 +110,7 @@ async function fetchAllTasksInFolder(folderId, apiToken) {
 			headers: { Authorization: `Bearer ${apiToken}` },
 			params: {
 				descendants: true,
-				fields: JSON.stringify(['description']),
+				fields: JSON.stringify(['description', 'createdDate']),
 				nextPageToken,
 			},
 			validateStatus: () => true,
