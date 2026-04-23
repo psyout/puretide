@@ -261,15 +261,18 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 	fs.writeFileSync(outputPath, buf);
 }
 
-async function fetchAllTasksInFolder(folderId: string, apiToken: string): Promise<WrikeTask[]> {
+async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string, start: Date, end: Date): Promise<WrikeTask[]> {
 	const tasks: WrikeTask[] = [];
 	let nextPageToken: string | undefined = undefined;
+	const createdDateStart = start.toISOString();
+	const createdDateEnd = end.toISOString();
 	while (true) {
 		const res: { status: number; data: any } = await axios.get(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
 			headers: { Authorization: `Bearer ${apiToken}` },
 			params: {
 				descendants: true,
-				fields: JSON.stringify(['description', 'createdDate']),
+				fields: JSON.stringify(['description']),
+				createdDate: JSON.stringify({ start: createdDateStart, end: createdDateEnd }),
 				nextPageToken,
 			},
 			validateStatus: () => true,
@@ -367,12 +370,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 	const end = endOfLocalDay(date);
 	const isoDate = formatIsoDateOnlyLocal(start);
 
-	const tasks = await fetchAllTasksInFolder(params.ordersFolderId, params.apiToken);
-	const inDay = tasks.filter((t) => {
-		const created = t?.createdDate ? new Date(t.createdDate) : null;
-		if (!created) return false;
-		return created >= start && created <= end;
-	});
+	const inDay = await fetchTasksInFolderByDateRange(params.ordersFolderId, params.apiToken, start, end);
 
 	const labels: Label[] = [];
 	for (const task of inDay) {
@@ -428,12 +426,7 @@ export async function generateAndAttachLabelsForRange(params: {
 	const startIso = formatIsoDateOnlyLocal(start);
 	const endIso = formatIsoDateOnlyLocal(end);
 
-	const tasks = await fetchAllTasksInFolder(params.ordersFolderId, params.apiToken);
-	const inRange = tasks.filter((t) => {
-		const created = t?.createdDate ? new Date(t.createdDate) : null;
-		if (!created) return false;
-		return created >= start && created <= end;
-	});
+	const inRange = await fetchTasksInFolderByDateRange(params.ordersFolderId, params.apiToken, start, end);
 
 	const labels: Label[] = [];
 	for (const task of inRange) {
