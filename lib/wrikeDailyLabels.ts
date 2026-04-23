@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import FormData from 'form-data';
 import axios from 'axios';
-import sharp from 'sharp';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -143,6 +142,7 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 	let logoTransform: { width: number; height: number } | null = null;
 	if (logoBytes) {
 		try {
+			const { default: sharp } = await import('sharp');
 			const meta = await sharp(logoBytes).metadata();
 			const w = meta.width ?? 0;
 			const h = meta.height ?? 0;
