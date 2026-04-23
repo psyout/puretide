@@ -22,7 +22,7 @@ export default function About() {
 		{
 			title: 'A company built on',
 			highlight: 'scientific integrity.',
-			body: 'We are a team of researchers and enthusiasts dedicated to bridging the gap between advanced peptide research and your daily routine.',
+			body: 'We are a team of researchers and enthusiasts dedicated to bridging the gap between advanced peptide research and your daily routine',
 			icon: Leaf,
 			colorClass: 'text-deep-tidal-teal',
 		},
