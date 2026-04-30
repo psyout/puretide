@@ -90,6 +90,9 @@ export default function CheckoutClient() {
 	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
+	const CREDIT_CARD_LIMIT = 500;
+	const isCreditCardOverLimit = paymentMethod === 'creditcard' && total > CREDIT_CARD_LIMIT;
+	const isCreditCardDisabled = total > CREDIT_CARD_LIMIT;
 
 	const getDisplayPrice = (item: (typeof cartItems)[0]) => (appliedDiscount > 0 ? item.price : getItemPrice(item));
 
@@ -211,6 +214,10 @@ export default function CheckoutClient() {
 		}
 		if (hasBlockedPostalCode) {
 			setCheckoutError('We do not ship to Quebec. Please contact us if you have questions.');
+			return;
+		}
+		if (paymentMethod === 'creditcard' && total > CREDIT_CARD_LIMIT) {
+			setCheckoutError('Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.');
 			return;
 		}
 		setIsProcessing(true);
@@ -934,18 +941,27 @@ export default function CheckoutClient() {
 										</span>
 										<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
 									</label>
-									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 cursor-pointer'>
+									<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
 										<span className='flex items-center gap-2'>
 											<input
 												type='radio'
 												name='payment'
 												checked={paymentMethod === 'creditcard'}
 												onChange={() => setPaymentMethod('creditcard')}
+												disabled={isCreditCardDisabled}
+												className={isCreditCardDisabled ? 'opacity-50' : ''}
 											/>
-											Credit Card
+											<span className='text-deep-tidal-teal-800'>Credit Card</span>
 										</span>
 										<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
 									</label>
+									{isCreditCardOverLimit && (
+										<div className='bg-red-50 border border-red-200 rounded-lg p-3'>
+											<p className='text-sm text-red-700 leading-relaxed'>
+												Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.
+											</p>
+										</div>
+									)}
 								</div>
 
 								{/* Card Fee */}

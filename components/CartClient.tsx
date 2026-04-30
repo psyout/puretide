@@ -17,6 +17,11 @@ export default function CartClient() {
 	const [showClearConfirm, setShowClearConfirm] = useState(false);
 	const total = getTotal();
 
+	// Credit card payment limit
+	const CREDIT_CARD_LIMIT = 500;
+	const creditCardChargeTotal = total * 1.05;
+	const isCreditCardDisabled = creditCardChargeTotal > CREDIT_CARD_LIMIT;
+
 	if (cartItems.length === 0) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
@@ -183,20 +188,28 @@ export default function CartClient() {
 									</span>
 									<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
 								</label>
-								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 cursor-pointer'>
+								<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
 									<span className='flex items-center gap-2'>
 										<input
 											type='radio'
 											name='cart-payment'
 											checked={paymentMethod === 'creditcard'}
 											onChange={() => setPaymentMethod('creditcard')}
-											className='rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal'
+											disabled={isCreditCardDisabled}
+											className={`rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal ${isCreditCardDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
 										/>
-										Credit Card
+										<span className='text-deep-tidal-teal-800'>Credit Card</span>
 									</span>
 									<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
 								</label>
 							</div>
+							{paymentMethod === 'creditcard' && isCreditCardDisabled && (
+								<div className='bg-red-50 border border-red-200 rounded-lg p-3 mb-2'>
+									<p className='text-sm text-red-700 leading-relaxed'>
+										Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.
+									</p>
+								</div>
+							)}
 							{paymentMethod === 'creditcard' && (
 								<div className='flex justify-between text-sm text-deep-tidal-teal-600 mb-2'>
 									<span>Est. card fee (5%)</span>
@@ -213,7 +226,13 @@ export default function CartClient() {
 							{/* Cross-sell section */}
 							<CrossSellSection />
 							<button
-								onClick={() => router.push('/checkout')}
+								onClick={() => {
+									if (paymentMethod === 'creditcard' && creditCardChargeTotal > 500) {
+										alert('Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.');
+										return;
+									}
+									router.push('/checkout');
+								}}
 								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded transition-colors mb-4'>
 								Proceed to Checkout
 							</button>

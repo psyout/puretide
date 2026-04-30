@@ -185,6 +185,17 @@ export async function POST(request: Request) {
 		if (stockError) {
 			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
 		}
+
+		// Validate credit card limit
+		if (orderPayload.paymentMethod === 'creditcard' && orderPayload.total > 500) {
+			return NextResponse.json(
+				{
+					ok: false,
+					error: 'Credit card payments are limited to $500 per transaction. Please select another payment method.',
+				},
+				{ status: 400 },
+			);
+		}
 		const products = await readSheetProducts();
 		const trustedCart = normalizeCartItemsWithTrustedPrices(orderPayload.cartItems, products);
 		if (!trustedCart.ok) {

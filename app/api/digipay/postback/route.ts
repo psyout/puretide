@@ -115,20 +115,24 @@ function parsePostbackBody(rawBody: string): Record<string, unknown> {
 function verifyHmacSignature(rawBody: string, request: Request): { ok: true } | { ok: false; message: string } {
 	const secret = process.env.DIGIPAY_POSTBACK_HMAC_SECRET;
 	const isProduction = process.env.NODE_ENV === 'production';
+	const provided = request.headers.get('x-digipay-signature') ?? request.headers.get('x-signature') ?? request.headers.get('digipay-signature') ?? '';
 
 	if (!secret) {
-		if (isProduction) {
-			console.error('DIGIPAY_POSTBACK_HMAC_SECRET not configured in production. Rejecting webhook.');
-			return { ok: false, message: 'Server configuration error' };
-		}
 		if (!hasWarnedMissingHmacSecret) {
-			console.warn('DIGIPAY_POSTBACK_HMAC_SECRET not configured. Skipping HMAC verification in development.');
+			console.warn(
+				isProduction
+					? 'DIGIPAY_POSTBACK_HMAC_SECRET not configured in production. Skipping HMAC verification (IP allowlist still enforced).'
+					: 'DIGIPAY_POSTBACK_HMAC_SECRET not configured. Skipping HMAC verification in development.',
+			);
 			hasWarnedMissingHmacSecret = true;
 		}
+
+		// If DigiPay isn't configured to send signatures, we accept based on IP allowlist alone.
+		// However, if a signature header IS provided, reject to avoid accepting spoofed signed requests.
+		if (provided) return { ok: false, message: 'HMAC secret not configured but signature header was provided' };
+
 		return { ok: true };
 	}
-
-	const provided = request.headers.get('x-digipay-signature') ?? request.headers.get('x-signature') ?? request.headers.get('digipay-signature') ?? '';
 
 	if (!provided) return { ok: false, message: 'Missing signature header' };
 
