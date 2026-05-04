@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
 
 		// Handle Wrike handshake verification FIRST (before signature check)
 		const hookSecret = request.headers.get('X-Hook-Secret');
+		console.log('[wrikeWebhook] Headers:', {
+			hookSecret,
+			signature: request.headers.get('X-Hook-Signature'),
+		});
+		console.log('[wrikeWebhook] Body:', JSON.stringify(parsed).substring(0, 200));
+
 		const isHandshake = hookSecret || (parsed && typeof parsed === 'object' && (parsed as { requestType?: string }).requestType === 'WebHook secret verification');
 
 		if (isHandshake) {
