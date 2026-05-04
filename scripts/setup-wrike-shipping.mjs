@@ -4,6 +4,7 @@
  */
 
 import { config as dotenvConfig } from 'dotenv';
+import crypto from 'node:crypto';
 dotenvConfig();
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
@@ -59,18 +60,21 @@ async function createWebhook() {
 
 	try {
 		const secret = process.env.WRIKE_WEBHOOK_SECRET;
+		const body = {
+			hookUrl: webhookUrl,
+			events: ['TaskStatusChanged'],
+			recursive: true,
+		};
+		if (secret) {
+			body.secret = secret;
+		}
 		const response = await fetch(`${WRIKE_API_BASE}/folders/${ordersFolderId}/webhooks`, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${apiToken}`,
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({
-				hookUrl: webhookUrl,
-				secret: secret || undefined,
-				events: ['TaskStatusChanged'],
-				recursive: true,
-			}),
+			body: JSON.stringify(body),
 		});
 
 		if (!response.ok) {
@@ -89,7 +93,6 @@ async function createWebhook() {
 
 			if (!secret) {
 				// Generate webhook secret (optional)
-				const crypto = require('crypto');
 				const webhookSecret = crypto.randomBytes(32).toString('hex');
 
 				console.log(`\n🔐 Optional (recommended): enable secure webhooks by setting:`);
