@@ -73,12 +73,14 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
-		// Verify signature for regular webhook events
+		// Verify signature for regular webhook events (if secret is configured)
 		if (webhookSecret) {
 			const signature = request.headers.get('X-Hook-Signature');
 			if (!signature) {
-				console.error('[wrikeWebhook] Missing X-Hook-Signature header');
-				return NextResponse.json({ error: 'Missing webhook signature' }, { status: 401 });
+				// No signature - could be Wrike's initial URL accessibility check
+				// Return 200 to pass the check
+				console.log('[wrikeWebhook] No signature - treating as URL accessibility check');
+				return NextResponse.json({ ok: true, message: 'Webhook endpoint ready' });
 			}
 			const expected = computeHmacSha256Hex(webhookSecret, rawBody);
 			if (signature !== expected) {
