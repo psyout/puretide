@@ -48,14 +48,24 @@ export async function POST(request: NextRequest) {
 
 		// Secure webhook handshake: respond with X-Hook-Secret signature
 		const hookSecret = request.headers.get('X-Hook-Secret');
-		if (hookSecret && webhookSecret) {
-			const responseHookSecret = computeHmacSha256Hex(webhookSecret, hookSecret);
-			return new NextResponse(null, {
-				status: 200,
-				headers: {
-					'X-Hook-Secret': responseHookSecret,
-				},
-			});
+		if (hookSecret) {
+			if (webhookSecret) {
+				const responseHookSecret = computeHmacSha256Hex(webhookSecret, hookSecret);
+				return new NextResponse(null, {
+					status: 200,
+					headers: {
+						'X-Hook-Secret': responseHookSecret,
+					},
+				});
+			} else {
+				// No secret configured, just echo back the hookSecret to complete handshake
+				return new NextResponse(null, {
+					status: 200,
+					headers: {
+						'X-Hook-Secret': hookSecret,
+					},
+				});
+			}
 		}
 
 		const events: WrikeWebhookEvent[] = Array.isArray(parsed) ? (parsed as WrikeWebhookEvent[]) : [parsed as WrikeWebhookEvent];
