@@ -87,6 +87,10 @@ const envSchema = z.object({
 	WRIKE_ORDER_PROFIT_FIELD_ID: z.string().optional(),
 	WRIKE_ORDER_MARGIN_FIELD_ID: z.string().optional(),
 
+	// Wrike Order custom fields (for shipping)
+	WRIKE_TRACKING_NUMBER_FIELD_ID: z.string().optional(),
+	WRIKE_WEBHOOK_SECRET: z.string().optional(),
+
 	// Feature flags
 	ENABLE_WRIKE_INTEGRATION: z.coerce.boolean().default(false),
 	ENABLE_EMAIL_NOTIFICATIONS: z.coerce.boolean().default(true),
