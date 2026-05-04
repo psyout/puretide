@@ -110,6 +110,90 @@ async function createWebhook() {
 	}
 }
 
+async function activateWebhook(webhookId) {
+	try {
+		const response = await fetch(`${WRIKE_API_BASE}/webhooks/${webhookId}`, {
+			method: 'PUT',
+			headers: {
+				Authorization: `Bearer ${apiToken}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				isActive: true,
+			}),
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			console.error('Error activating webhook:', response.status, error);
+			return false;
+		}
+
+		const data = await response.json();
+		const webhook = data.data?.[0];
+
+		if (webhook?.isActive) {
+			console.log(`\n✅ Webhook activated successfully!`);
+			console.log(`   Webhook ID: ${webhook.id}`);
+			console.log(`   Status: Active`);
+			return true;
+		}
+
+		return false;
+	} catch (error) {
+		console.error('Error activating webhook:', error.message);
+		return false;
+	}
+}
+
+async function deleteAllWebhooks() {
+	try {
+		const ordersFolderId = process.env.WRIKE_ORDERS_FOLDER_ID;
+		if (!ordersFolderId) {
+			console.error('Missing WRIKE_ORDERS_FOLDER_ID');
+			return false;
+		}
+
+		const response = await fetch(`${WRIKE_API_BASE}/folders/${ordersFolderId}/webhooks`, {
+			headers: { Authorization: `Bearer ${apiToken}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			console.error('Error fetching webhooks:', response.status, error);
+			return false;
+		}
+
+		const data = await response.json();
+		const webhooks = data.data ?? [];
+
+		if (webhooks.length === 0) {
+			console.log('No webhooks found');
+			return true;
+		}
+
+		console.log(`Found ${webhooks.length} webhooks, deleting...`);
+
+		for (const webhook of webhooks) {
+			const deleteResponse = await fetch(`${WRIKE_API_BASE}/webhooks/${webhook.id}`, {
+				method: 'DELETE',
+				headers: { Authorization: `Bearer ${apiToken}` },
+			});
+
+			if (deleteResponse.ok) {
+				console.log(`✅ Deleted webhook ${webhook.id}`);
+			} else {
+				console.log(`❌ Failed to delete webhook ${webhook.id}`);
+			}
+		}
+
+		return true;
+	} catch (error) {
+		console.error('Error deleting webhooks:', error.message);
+		return false;
+	}
+}
+
 async function validateConfiguration() {
 	console.log('=== Wrike Shipping Configuration ===\n');
 
@@ -202,6 +286,20 @@ async function main() {
 
 		case '--webhook':
 			await createWebhook();
+			break;
+
+		case '--activate':
+			const webhookId = args[1];
+			if (!webhookId) {
+				console.error('Usage: node scripts/setup-wrike-shipping.mjs --activate <webhook-id>');
+				console.log('Example: node scripts/setup-wrike-shipping.mjs --activate IEAGXKGCJAACCOVY');
+				process.exit(1);
+			}
+			await activateWebhook(webhookId);
+			break;
+
+		case '--delete-webhooks':
+			await deleteAllWebhooks();
 			break;
 
 		case '--test':

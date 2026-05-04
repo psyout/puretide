@@ -18,10 +18,40 @@ dotenvConfig();
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 const apiToken = process.env.WRIKE_API_TOKEN;
 const ordersFolderId = process.env.WRIKE_ORDERS_FOLDER_ID;
+
+async function getTaskByOrderNumber(orderNumber) {
+	try {
+		const response = await fetch(`${WRIKE_API_BASE}/folders/${ordersFolderId}/tasks`, {
+			headers: { Authorization: `Bearer ${apiToken}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			console.error('Error fetching tasks:', response.status, error);
+			return null;
+		}
+
+		const data = await response.json();
+		const tasks = data.data ?? [];
+
+		const task = tasks.find((t) => t.title.includes(orderNumber));
+		if (!task) {
+			console.log(`Task for order #${orderNumber} not found`);
+			return null;
+		}
+
+		return task;
+	} catch (error) {
+		console.error('Error fetching task:', error.message);
+		return null;
+	}
+}
+
 const clientsFolderId = process.env.WRIKE_CLIENTS_FOLDER_ID;
 const listMode = process.argv.includes('--list');
 const listFieldsMode = process.argv.includes('--list-fields');
 const subtasksMode = process.argv.includes('--subtasks');
+const showTaskMode = process.argv.includes('--show-task');
 
 async function createTask(folderId, title, description, options = {}) {
 	const body = { title, description, status: 'Active' };
@@ -109,6 +139,24 @@ async function run() {
 			console.error('Error:', err.message);
 			console.log('\nIf you use EU data center, try: WRIKE_API_BASE=https://app-eu.wrike.com/api/v4 node scripts/test-wrike.mjs --list');
 			process.exit(1);
+		}
+		return;
+	}
+
+	if (showTaskMode) {
+		const orderNumber = process.argv[3];
+		if (!orderNumber) {
+			console.error('Usage: node scripts/test-wrike.mjs --show-task <order-number>');
+			console.error('Example: node scripts/test-wrike.mjs --show-task 77cd26ae93');
+			process.exit(1);
+		}
+		const task = await getTaskByOrderNumber(orderNumber);
+		if (task) {
+			console.log('\n=== Task Details ===');
+			console.log('ID:', task.id);
+			console.log('Title:', task.title);
+			console.log('Description:', task.description?.substring(0, 500));
+			console.log('Custom Fields:', JSON.stringify(task.customFields, null, 2));
 		}
 		return;
 	}
