@@ -32,19 +32,32 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
 		}
 
-		// Handle Wrike handshake verification FIRST (before signature check)
+		// Handle Wrike handshake verification
 		const hookSecret = request.headers.get('X-Hook-Secret');
-		console.log('[wrikeWebhook] Headers:', {
-			hookSecret,
-			signature: request.headers.get('X-Hook-Signature'),
-		});
-		console.log('[wrikeWebhook] Body:', JSON.stringify(parsed).substring(0, 200));
+		const hookSignature = request.headers.get('X-Hook-Signature');
 
-		const isHandshake = hookSecret || (parsed && typeof parsed === 'object' && (parsed as { requestType?: string }).requestType === 'WebHook secret verification');
+		// Check if this is a handshake request
+		const isHandshake = hookSecret && parsed && typeof parsed === 'object' && (parsed as { requestType?: string }).requestType === 'WebHook secret verification';
 
 		if (isHandshake) {
-			if (webhookSecret && hookSecret) {
+			console.log('[wrikeWebhook] Handshake request received');
+
+			if (webhookSecret) {
+				// Verify the signature of the request body
+				if (!hookSignature) {
+					console.error('[wrikeWebhook] Missing X-Hook-Signature in handshake');
+					return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+				}
+
+				const expectedSignature = computeHmacSha256Hex(webhookSecret, rawBody);
+				if (hookSignature !== expectedSignature) {
+					console.error('[wrikeWebhook] Invalid X-Hook-Signature in handshake');
+					return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+				}
+
+				// Signature is valid, now compute HMAC of the X-Hook-Secret VALUE
 				const responseHookSecret = computeHmacSha256Hex(webhookSecret, hookSecret);
+				console.log('[wrikeWebhook] Handshake successful with secret');
 				return new NextResponse(null, {
 					status: 200,
 					headers: {
@@ -52,15 +65,15 @@ export async function POST(request: NextRequest) {
 					},
 				});
 			} else {
-				// No secret configured or Wrike handshake verification request
-				// Respond with success to complete handshake
+				// No secret configured, just respond with 200
+				console.log('[wrikeWebhook] Handshake successful without secret');
 				return new NextResponse(null, {
 					status: 200,
 				});
 			}
 		}
 
-		// Secure webhooks: verify signature if configured
+		// Verify signature for regular webhook events
 		if (webhookSecret) {
 			const signature = request.headers.get('X-Hook-Signature');
 			if (!signature) {
