@@ -24,20 +24,6 @@ export async function POST(request: NextRequest) {
 		const rawBody = await request.text();
 		const webhookSecret = process.env.WRIKE_WEBHOOK_SECRET;
 
-		// Secure webhooks: verify signature if configured
-		if (webhookSecret) {
-			const signature = request.headers.get('X-Hook-Signature');
-			if (!signature) {
-				console.error('[wrikeWebhook] Missing X-Hook-Signature header');
-				return NextResponse.json({ error: 'Missing webhook signature' }, { status: 401 });
-			}
-			const expected = computeHmacSha256Hex(webhookSecret, rawBody);
-			if (signature !== expected) {
-				console.error('[wrikeWebhook] Invalid X-Hook-Signature');
-				return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
-			}
-		}
-
 		let parsed: unknown;
 		try {
 			parsed = JSON.parse(rawBody);
@@ -46,7 +32,7 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
 		}
 
-		// Secure webhook handshake: respond with X-Hook-Secret signature
+		// Handle Wrike handshake verification FIRST (before signature check)
 		const hookSecret = request.headers.get('X-Hook-Secret');
 		const isHandshake = hookSecret || (parsed && typeof parsed === 'object' && (parsed as { requestType?: string }).requestType === 'WebHook secret verification');
 
@@ -65,6 +51,20 @@ export async function POST(request: NextRequest) {
 				return new NextResponse(null, {
 					status: 200,
 				});
+			}
+		}
+
+		// Secure webhooks: verify signature if configured
+		if (webhookSecret) {
+			const signature = request.headers.get('X-Hook-Signature');
+			if (!signature) {
+				console.error('[wrikeWebhook] Missing X-Hook-Signature header');
+				return NextResponse.json({ error: 'Missing webhook signature' }, { status: 401 });
+			}
+			const expected = computeHmacSha256Hex(webhookSecret, rawBody);
+			if (signature !== expected) {
+				console.error('[wrikeWebhook] Invalid X-Hook-Signature');
+				return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
 			}
 		}
 
