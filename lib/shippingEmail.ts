@@ -29,7 +29,7 @@ Great news! Your Pure Tide order #${orderNumber} has been shipped and is on its 
 
 TRACKING INFORMATION
 ====================
-Tracking Number: ${trackingNumber}
+Tracking Number: ${trackingNumber} (Canada Post)
 Shipping Method: ${shippingLabel}
 
 You can track your package at: https://canadapost-postescanada.ca/track
@@ -65,6 +65,7 @@ The Pure Tide Team
 	<title>Order #${orderNumber} Has Shipped</title>
 	<style>
 		body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+		p { font-size: 14px; }
 		.header { background: #1C4855; color: white; padding: 20px; text-align: center; }
 		.content { padding: 20px; background: #f9f9f9; }
 		.tracking-info { background: white; padding: 15px; border-left: 4px solid #6EB4CC; margin: 20px 0; }
@@ -86,7 +87,7 @@ The Pure Tide Team
 		
 		<div class="tracking-info">
 			<h3>📦 Tracking Information</h3>
-			<p><strong>Tracking Number:</strong> <span class="tracking-number">${trackingNumber}</span></p>
+			<p><strong>Tracking Number:</strong> <span class="tracking-number">${trackingNumber}</span> (Canada Post)</p>
 			<p><strong>Shipping Method:</strong> ${shippingLabel}</p>
 			<p><a href="https://canadapost-postescanada.ca/track" class="button">Track Your Package</a></p>
 		</div>

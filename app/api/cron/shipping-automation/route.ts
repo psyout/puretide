@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Fetch all tasks from the orders folder with custom fields
-		const response = await fetch(`https://www.wrike.com/api/v4/folders/${ordersFolderId}/tasks?fields=['description','customFields','status']`, {
+		const response = await fetch(`https://www.wrike.com/api/v4/folders/${ordersFolderId}/tasks?fields=['description','customFields']`, {
 			headers: { Authorization: `Bearer ${apiToken}` },
 		});
 
