@@ -21,7 +21,7 @@ const ordersFolderId = process.env.WRIKE_ORDERS_FOLDER_ID;
 
 async function getTaskByOrderNumber(orderNumber) {
 	try {
-		const response = await fetch(`${WRIKE_API_BASE}/folders/${ordersFolderId}/tasks`, {
+		const response = await fetch(`${WRIKE_API_BASE}/folders/${ordersFolderId}/tasks?fields=['description','customFields']`, {
 			headers: { Authorization: `Bearer ${apiToken}` },
 		});
 
