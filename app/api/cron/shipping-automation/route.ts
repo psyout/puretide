@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 		if (!response.ok) {
 			const error = await response.text();
 			console.error('[shippingAutomation] Error fetching tasks:', response.status, error);
-			return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+			return NextResponse.json({ error: 'Failed to fetch tasks', details: error, status: response.status }, { status: 500 });
 		}
 
 		const data = await response.json();
