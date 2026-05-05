@@ -81,21 +81,26 @@ function extractOrderData(task: WrikeTask): ShippingConfirmationData | null {
 		return null;
 	}
 
-	const customerEmail = emailMatch[1].trim();
+	// Decode HTML entities (e.g., &#64; -> @)
+	const decodeHtmlEntities = (text: string): string => {
+		return text.replace(/&#(\d+);/g, (_match: string, dec: string) => String.fromCharCode(parseInt(dec, 10)));
+	};
+
+	const customerEmail = decodeHtmlEntities(emailMatch[1].trim());
 	const customerName = nameMatch[1].trim();
 	const shippingMethod = shippingMethodMatch?.[1]?.includes('express') ? 'express' : 'regular';
 
 	// Extract shipping address
 	const shippingAddressMatch = description.match(/<h4>Shipping Address<\/h4>\s*<p>([\s\S]*?)<\/p>/);
 	let shippingAddress;
-	
+
 	if (shippingAddressMatch) {
 		const addressText = shippingAddressMatch[1]
 			.replace(/<br>/g, '\n')
 			.replace(/<[^>]*>/g, '')
 			.trim();
-		
-		const addressLines = addressText.split('\n').filter(line => line.trim());
+
+		const addressLines = addressText.split('\n').filter((line) => line.trim());
 		if (addressLines.length >= 3) {
 			shippingAddress = {
 				address: addressLines[0],
@@ -146,21 +151,21 @@ export async function handleWrikeTaskCompletion(payload: WrikeWebhookPayload): P
 
 	// Send shipping confirmation email
 	const emailResult = await sendShippingConfirmation(orderData);
-	
+
 	if (emailResult.success) {
 		console.log(`[wrikeShipping] Shipping confirmation sent for order #${orderData.orderNumber}`);
-		
+
 		// Update task description to note that shipping confirmation was sent
 		await updateTaskWithShippingConfirmation(taskId, orderData.trackingNumber);
-		
-		return { 
-			success: true, 
-			message: `Shipping confirmation sent for order #${orderData.orderNumber}` 
+
+		return {
+			success: true,
+			message: `Shipping confirmation sent for order #${orderData.orderNumber}`,
 		};
 	} else {
-		return { 
-			success: false, 
-			error: `Failed to send shipping confirmation: ${emailResult.error}` 
+		return {
+			success: false,
+			error: `Failed to send shipping confirmation: ${emailResult.error}`,
 		};
 	}
 }
@@ -223,7 +228,7 @@ export async function triggerShippingConfirmationManually(orderNumber: string, t
 
 		// Find the task with matching order number
 		const orderTask = tasks.find((task: WrikeTask) => task.title.includes(`Order #${orderNumber}`));
-		
+
 		if (!orderTask) {
 			return { success: false, error: `Order #${orderNumber} not found in Wrike` };
 		}
@@ -262,10 +267,12 @@ async function updateTaskTrackingNumber(taskId: string, trackingNumber: string):
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
-				customFields: [{
-					id: trackingNumberFieldId,
-					value: trackingNumber,
-				}],
+				customFields: [
+					{
+						id: trackingNumberFieldId,
+						value: trackingNumber,
+					},
+				],
 			}),
 		});
 
