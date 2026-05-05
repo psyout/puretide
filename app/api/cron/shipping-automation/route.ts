@@ -143,6 +143,8 @@ export async function GET(request: NextRequest) {
 				if (updateResponse.ok) {
 					// Add to tracking set to prevent duplicates
 					sentEmails.add(orderNumber);
+					// Save tracking file immediately to prevent duplicates
+					await writeFile(trackingFilePath, JSON.stringify(Array.from(sentEmails)), 'utf-8');
 					processedCount++;
 					console.log(`[shippingAutomation] Shipping confirmation sent for order #${orderNumber}`);
 				} else {
@@ -154,9 +156,6 @@ export async function GET(request: NextRequest) {
 		}
 
 		console.log(`[shippingAutomation] Completed. Processed ${processedCount} orders.`);
-
-		// Save tracking file to persist which orders have been processed
-		await writeFile(trackingFilePath, JSON.stringify(Array.from(sentEmails)), 'utf-8');
 
 		return NextResponse.json({
 			success: true,
