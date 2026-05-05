@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendShippingConfirmation } from '@/lib/shippingEmail';
+import { readFile, writeFile } from 'fs/promises';
+import { existsSync } from 'fs';
 
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
@@ -11,6 +13,15 @@ export async function GET(request: NextRequest) {
 
 	try {
 		console.log('[shippingAutomation] Starting automated shipping confirmation check');
+
+		// Load tracking file to prevent duplicate emails
+		const trackingFilePath = './data/shipping-emails-sent.json';
+		let sentEmails = new Set<string>();
+
+		if (existsSync(trackingFilePath)) {
+			const trackingData = await readFile(trackingFilePath, 'utf-8');
+			sentEmails = new Set(JSON.parse(trackingData));
+		}
 
 		// Get Wrike API token and orders folder ID
 		const apiToken = process.env.WRIKE_API_TOKEN;
@@ -55,8 +66,16 @@ export async function GET(request: NextRequest) {
 			}
 
 			// Check if shipping email already sent (using a custom field or description marker)
-			// For now, we'll check if the description contains "Shipping email sent"
+			// Check for "Shipping email sent" marker in description
 			if (task.description?.includes('Shipping email sent')) {
+				continue;
+			}
+
+			// Also check if the task was updated recently (to avoid processing same task multiple times in quick succession)
+			const taskUpdated = task.updatedDate ? new Date(task.updatedDate) : null;
+			const now = new Date();
+			if (taskUpdated && now.getTime() - taskUpdated.getTime() < 60000) {
+				// Skip if task was updated less than 1 minute ago (avoids race conditions)
 				continue;
 			}
 
@@ -67,6 +86,12 @@ export async function GET(request: NextRequest) {
 			}
 
 			const orderNumber = titleMatch[1];
+
+			// Check if email already sent for this order
+			if (sentEmails.has(orderNumber)) {
+				console.log(`[shippingAutomation] Skipping order #${orderNumber} - email already sent`);
+				continue;
+			}
 
 			console.log(`[shippingAutomation] Processing order #${orderNumber} with tracking number ${trackingNumber}`);
 
@@ -106,7 +131,7 @@ export async function GET(request: NextRequest) {
 					: `<p><i>Shipping email sent: ${new Date().toISOString()}</i></p>`;
 
 				// Update task description via Wrike API
-				await fetch(`https://www.wrike.com/api/v4/tasks/${task.id}`, {
+				const updateResponse = await fetch(`https://www.wrike.com/api/v4/tasks/${task.id}`, {
 					method: 'PUT',
 					headers: {
 						Authorization: `Bearer ${apiToken}`,
@@ -115,14 +140,23 @@ export async function GET(request: NextRequest) {
 					body: JSON.stringify({ description: updatedDescription }),
 				});
 
-				processedCount++;
-				console.log(`[shippingAutomation] Shipping confirmation sent for order #${orderNumber}`);
+				if (updateResponse.ok) {
+					// Add to tracking set to prevent duplicates
+					sentEmails.add(orderNumber);
+					processedCount++;
+					console.log(`[shippingAutomation] Shipping confirmation sent for order #${orderNumber}`);
+				} else {
+					console.error(`[shippingAutomation] Failed to update task description for order #${orderNumber}`);
+				}
 			} else {
 				console.error(`[shippingAutomation] Failed to send shipping confirmation for order #${orderNumber}`);
 			}
 		}
 
 		console.log(`[shippingAutomation] Completed. Processed ${processedCount} orders.`);
+
+		// Save tracking file to persist which orders have been processed
+		await writeFile(trackingFilePath, JSON.stringify(Array.from(sentEmails)), 'utf-8');
 
 		return NextResponse.json({
 			success: true,
