@@ -73,7 +73,7 @@ export default function ProductDetailClient({ product, description, details, has
 				<h1 className='text-4xl font-bold text-deep-tidal-teal-700 leading-tight'>
 					{product.name}
 					{displayMg && !product.name.toLowerCase().includes('stack') && (
-						<span className='ml-2 inline-block align-top text-base text-deep-tidal-teal-600 font-bold whitespace-nowrap'>{displayMg}mg</span>
+						<span className='ml-2 inline-block align-top text-base text-deep-tidal-teal-600 font-bold whitespace-nowrap'>{displayMg}</span>
 					)}
 				</h1>
 			</div>
