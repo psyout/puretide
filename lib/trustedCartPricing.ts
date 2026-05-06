@@ -1,7 +1,7 @@
 import type { Product } from '@/types/product';
 
 type CartItemWithPrice = {
-	id: string;
+	id: string | number;
 	price: number;
 	quantity: number;
 };

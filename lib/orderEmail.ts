@@ -29,7 +29,7 @@ type OrderEmailInput = {
 	promoCode?: string;
 	total: number;
 	cartItems: Array<{
-		id: string;
+		id: string | number;
 		name: string;
 		price: number;
 		quantity: number;

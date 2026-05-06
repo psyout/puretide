@@ -17,7 +17,7 @@ interface ProductDetailClientProps {
 }
 
 export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile }: ProductDetailClientProps) {
-	const variants = product.variants || [];
+	const variants = useMemo(() => product.variants || [], [product.variants]);
 	const hasVariants = variants.length > 1;
 
 	// Default selection: first in-stock variant, else first variant

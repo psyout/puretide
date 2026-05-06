@@ -50,7 +50,7 @@ interface OrderPayload {
 	promoCode?: string;
 	total: number;
 	cartItems: Array<{
-		id: string;
+		id: number | string;
 		name: string;
 		price: number;
 		quantity: number;
@@ -181,7 +181,10 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: customerError }, { status: 400 });
 		}
 
-		const stockError = await validateStockAvailability(orderPayload.cartItems, readSheetProducts);
+		const stockError = await validateStockAvailability(
+			orderPayload.cartItems.map((item) => ({ id: String(item.id), name: item.name, quantity: item.quantity })),
+			readSheetProducts,
+		);
 		if (stockError) {
 			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
 		}
@@ -204,7 +207,7 @@ export async function POST(request: Request) {
 		const trustedCartItems = trustedCart.items;
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
-		let cartItems: typeof orderPayload.cartItems;
+		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
 		let discountAmount = 0;
 		let shippingCost = getEffectiveShippingCost(orderPayload.customer.zipCode);
 
@@ -242,7 +245,7 @@ export async function POST(request: Request) {
 
 		const payload: OrderPayload = {
 			...orderPayload,
-			cartItems,
+			cartItems: cartItems.map((item) => ({ ...item, id: Number(item.id) })),
 			subtotal,
 			shippingCost,
 			discountAmount,

@@ -134,7 +134,10 @@ export async function POST(request: Request) {
 			return json({ ok: false, error: customerError }, { status: 400 });
 		}
 
-		const stockError = await validateStockAvailability(orderPayload.cartItems, readSheetProducts);
+		const stockError = await validateStockAvailability(
+			orderPayload.cartItems.map((item) => ({ id: String(item.id), name: item.name, quantity: item.quantity })),
+			readSheetProducts,
+		);
 		if (stockError) {
 			return json({ ok: false, error: stockError }, { status: 400 });
 		}
@@ -158,7 +161,7 @@ export async function POST(request: Request) {
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		let shippingCost = getEffectiveShippingCost(orderPayload.customer.zipCode);
-		let cartItems: typeof orderPayload.cartItems;
+		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
 		let discountAmount = 0;
 
 		if (orderPayload.promoCode) {
@@ -204,7 +207,7 @@ export async function POST(request: Request) {
 
 		const payload: OrderPayload = {
 			...orderPayload,
-			cartItems,
+			cartItems: cartItems.map((item) => ({ ...item, id: Number(item.id) })),
 			subtotal,
 			shippingCost,
 			discountAmount,
