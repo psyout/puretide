@@ -193,6 +193,13 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 						: (baseProducts.find((product) => product.id === row.id)?.icons ?? []),
 					status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
 					variants: variants.length > 0 ? variants : undefined,
+					// Include raw variant columns for stock decrement
+					price_1: price1 || undefined,
+					mg_1: mg1 || undefined,
+					stock_1: stock1 || undefined,
+					price_2: price2 || undefined,
+					mg_2: mg2 || undefined,
+					stock_2: stock2 || undefined,
 				};
 			});
 
