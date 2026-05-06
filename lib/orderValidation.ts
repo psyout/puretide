@@ -87,16 +87,43 @@ export function validateShippingAddress(addr: ShippingAddressInput | null | unde
 
 export type CartItemForStock = { id: string; name?: string; quantity: number };
 
-export async function validateStockAvailability(cartItems: CartItemForStock[], getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string }>>): Promise<string | null> {
+export async function validateStockAvailability(
+	cartItems: CartItemForStock[],
+	getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> }>>,
+): Promise<string | null> {
 	const products = await getProducts();
 	for (const item of cartItems) {
-		const product = products.find((p) => String(item.id) === p.id || String(item.id) === p.slug);
-		if (!product) {
-			return `Product "${item.name ?? item.id}" is not available.`;
+		// Check if this is a variant ID (contains dash)
+		const isVariant = String(item.id).includes('-');
+		let available = 0;
+		let productName = item.name ?? item.id;
+
+		if (isVariant) {
+			// Extract base product ID (before the dash)
+			const baseId = String(item.id).split('-')[0];
+			const product = products.find((p) => p.id === baseId || p.slug === baseId);
+			if (!product) {
+				return `Product "${item.name ?? item.id}" is not available.`;
+			}
+			// Find the variant in the product's variants array
+			const variant = product.variants?.find((v) => v.key === item.id);
+			if (!variant) {
+				return `Product "${item.name ?? item.id}" is not available.`;
+			}
+			available = Number(variant.stock) || 0;
+			productName = product.name ?? product.id;
+		} else {
+			// Regular product lookup
+			const product = products.find((p) => String(item.id) === p.id || String(item.id) === p.slug);
+			if (!product) {
+				return `Product "${item.name ?? item.id}" is not available.`;
+			}
+			available = Number(product.stock) || 0;
+			productName = product.name ?? product.id;
 		}
-		const available = Number(product.stock) || 0;
+
 		if (item.quantity > available) {
-			return `Insufficient stock for "${product.name ?? product.id}". Available: ${available}, requested: ${item.quantity}.`;
+			return `Insufficient stock for "${productName}". Available: ${available}, requested: ${item.quantity}.`;
 		}
 	}
 	return null;
