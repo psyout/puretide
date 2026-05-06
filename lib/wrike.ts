@@ -249,7 +249,11 @@ ${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.order
 	`.trim();
 
 	try {
-		const task = await createTask(config.ordersFolderId, title, description, config.apiToken);
+		// Add default tracking number placeholder (PGCA) to make it easier to add actual number later
+		const trackingNumberFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
+		const customFields = trackingNumberFieldId ? [{ id: trackingNumberFieldId, value: 'PGCA' }] : undefined;
+
+		const task = await createTask(config.ordersFolderId, title, description, config.apiToken, { customFields });
 		if (task) {
 			console.log('Wrike order task created:', task.id);
 			await createOrderSubtasks(task.id, config.ordersFolderId, config.apiToken);
