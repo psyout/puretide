@@ -34,7 +34,7 @@ export type FulfillmentOrder = {
 	promoCode?: string;
 	total: number;
 	cartItems: Array<{
-		id: number;
+		id: string;
 		name: string;
 		price: number;
 		quantity: number;

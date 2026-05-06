@@ -85,7 +85,7 @@ export function validateShippingAddress(addr: ShippingAddressInput | null | unde
 	return null;
 }
 
-export type CartItemForStock = { id: number; name?: string; quantity: number };
+export type CartItemForStock = { id: string; name?: string; quantity: number };
 
 export async function validateStockAvailability(cartItems: CartItemForStock[], getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string }>>): Promise<string | null> {
 	const products = await getProducts();

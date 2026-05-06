@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import type { Product, PromoCode } from '@/types/product';
+import type { Product, ProductVariant, PromoCode } from '@/types/product';
 import { products as baseProducts } from '@/lib/products';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -7,7 +7,28 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-const HEADERS = ['id', 'slug', 'name', 'subtitle', 'description', 'details', 'price', 'stock', 'category', 'mg', 'purity', 'image', 'icons', 'status'] as const;
+const HEADERS = [
+	'id',
+	'slug',
+	'name',
+	'subtitle',
+	'description',
+	'details',
+	'price',
+	'stock',
+	'category',
+	'mg',
+	'purity',
+	'image',
+	'icons',
+	'status',
+	'price_1',
+	'mg_1',
+	'stock_1',
+	'price_2',
+	'mg_2',
+	'stock_2',
+] as const;
 type HeaderKey = (typeof HEADERS)[number];
 const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description', 'details', 'price', 'stock', 'category'];
 
@@ -99,7 +120,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 	try {
 		const sheets = getSheetsClient();
 		const title = await getSheetTitle(sheets);
-		const range = `${title}!A1:N`;
+		const range = `${title}!A1:Z`;
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
@@ -120,27 +141,60 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 		const sheetProducts = dataRows
 			.map((row) => normalizeRow(row, headerRow))
 			.filter((row) => row.id)
-			.map((row) => ({
-				id: row.id,
-				slug: row.slug,
-				name: row.name,
-				subtitle: row.subtitle || undefined,
-				description: row.description,
-				details: row.details || undefined,
-				price: parseNumber(row.price),
-				stock: parseNumber(row.stock),
-				image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
-				category: row.category,
-				mg: row.mg || undefined,
-				purity: row.purity || undefined,
-				icons: row.icons
-					? row.icons
-							.split(',')
-							.map((icon) => icon.trim())
-							.filter(Boolean)
-					: (baseProducts.find((product) => product.id === row.id)?.icons ?? []),
-				status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
-			}));
+			.map((row) => {
+				const price1 = parseNumber(row.price_1);
+				const mg1 = row.mg_1;
+				const stock1 = parseNumber(row.stock_1);
+				const price2 = parseNumber(row.price_2);
+				const mg2 = row.mg_2;
+				const stock2 = parseNumber(row.stock_2);
+
+				const variants: Product['variants'] = [];
+				if (mg1 && price1 > 0) {
+					variants.push({
+						key: `${row.id}-${mg1}`,
+						label: `${mg1}mg`,
+						price: price1,
+						stock: stock1,
+					});
+				}
+				if (mg2 && price2 > 0) {
+					variants.push({
+						key: `${row.id}-${mg2}`,
+						label: `${mg2}mg`,
+						price: price2,
+						stock: stock2,
+					});
+				}
+
+				const useVariant1 = variants.length > 0;
+				const finalPrice = useVariant1 ? price1 : parseNumber(row.price);
+				const finalStock = useVariant1 ? stock1 : parseNumber(row.stock);
+				const finalMg = useVariant1 ? `${mg1}mg` : row.mg;
+
+				return {
+					id: row.id,
+					slug: row.slug,
+					name: row.name,
+					subtitle: row.subtitle || undefined,
+					description: row.description,
+					details: row.details || undefined,
+					price: finalPrice,
+					stock: finalStock,
+					image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
+					category: row.category,
+					mg: finalMg || undefined,
+					purity: row.purity || undefined,
+					icons: row.icons
+						? row.icons
+								.split(',')
+								.map((icon) => icon.trim())
+								.filter(Boolean)
+						: (baseProducts.find((product) => product.id === row.id)?.icons ?? []),
+					status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
+					variants: variants.length > 0 ? variants : undefined,
+				};
+			});
 
 		if (sheetProducts.length === 0) {
 			return baseProducts;
@@ -261,26 +315,36 @@ export const writeSheetProducts = async (items: Product[]) => {
 	try {
 		const sheets = getSheetsClient();
 		const title = await getSheetTitle(sheets);
-		const range = `${title}!A1:N`;
+		const range = `${title}!A1:Z`;
 
 		const values = [
 			[...HEADERS],
-			...items.map((product) => [
-				product.id,
-				product.slug,
-				product.name,
-				product.subtitle ?? '',
-				product.description,
-				product.details ?? '',
-				product.price.toFixed(2),
-				String(product.stock),
-				product.category,
-				product.mg ?? '',
-				product.purity ?? '',
-				product.image,
-				(product.icons ?? []).join(', '),
-				product.status ?? 'published',
-			]),
+			...items.map((product) => {
+				const variant1 = product.variants?.[0];
+				const variant2 = product.variants?.[1];
+				return [
+					product.id,
+					product.slug,
+					product.name,
+					product.subtitle ?? '',
+					product.description,
+					product.details ?? '',
+					product.price.toFixed(2),
+					String(product.stock),
+					product.category,
+					product.mg ?? '',
+					product.purity ?? '',
+					product.image,
+					(product.icons ?? []).join(', '),
+					product.status ?? 'published',
+					variant1?.price.toFixed(2) ?? '',
+					variant1?.label.replace('mg', '') ?? '',
+					String(variant1?.stock ?? ''),
+					variant2?.price.toFixed(2) ?? '',
+					variant2?.label.replace('mg', '') ?? '',
+					String(variant2?.stock ?? ''),
+				];
+			}),
 		];
 
 		await sheets.spreadsheets.values.update({

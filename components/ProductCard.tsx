@@ -23,9 +23,33 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 	const [showActions, setShowActions] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
 	const [hasReportedImageLoaded, setHasReportedImageLoaded] = useState(false);
-	const stock = Number(product.stock) || 0;
-	const isSoldOut = stock <= 0 || product.status === 'stock-out';
-	const isLowStock = !isSoldOut && stock < 10;
+	const variants = product.variants || [];
+	const hasVariants = variants.length > 1;
+
+	// Determine price display
+	let displayPrice: string;
+	if (hasVariants) {
+		const prices = variants.map((v) => v.price);
+		const minPrice = Math.min(...prices);
+		const maxPrice = Math.max(...prices);
+		if (minPrice === maxPrice) {
+			displayPrice = minPrice.toFixed(2);
+		} else {
+			displayPrice = `${minPrice.toFixed(2)} – ${maxPrice.toFixed(2)}`;
+		}
+	} else {
+		displayPrice = product.price.toFixed(2);
+	}
+
+	// Determine sold-out status
+	const allVariantsSoldOut = hasVariants && variants.every((v) => v.stock <= 0);
+	const isSoldOut = allVariantsSoldOut || (!hasVariants && (Number(product.stock) <= 0 || product.status === 'stock-out'));
+
+	// Determine low stock status (for single-variant products)
+	const isLowStock = !isSoldOut && !hasVariants && Number(product.stock) < 10;
+
+	// Default variant for quick add
+	const defaultVariant = hasVariants ? variants.find((v) => v.stock > 0) || variants[0] : null;
 
 	useEffect(() => {
 		const m = window.matchMedia('(max-width: 767px)');
@@ -74,7 +98,17 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 				<button
 					onClick={(e) => {
 						e.preventDefault();
-						addToCart(product);
+						if (defaultVariant) {
+							addToCart({
+								...product,
+								id: defaultVariant.key,
+								price: defaultVariant.price,
+								stock: defaultVariant.stock,
+								mg: defaultVariant.label,
+							});
+						} else {
+							addToCart(product);
+						}
 					}}
 					className='flex items-center justify-center gap-1 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-2 px-4 rounded transition-colors cursor-pointer text-sm'>
 					<ShoppingCart size={16} />
@@ -176,7 +210,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 					{product.subtitle && <p className='text-xs text-deep-tidal-teal-600 mt-0.5 line-clamp-1'>({product.subtitle})</p>}
 					<span className='text-lg md:text-lg font-semibold text-deep-tidal-teal inline-block'>
 						<span className='text-md'>CAD$</span>
-						{product.price.toFixed(2)}
+						{displayPrice}
 					</span>
 				</div>
 			</Link>

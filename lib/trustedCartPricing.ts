@@ -1,14 +1,12 @@
 import type { Product } from '@/types/product';
 
 type CartItemWithPrice = {
-	id: number;
+	id: string;
 	price: number;
 	quantity: number;
 };
 
-type NormalizedResult<T> =
-	| { ok: true; items: T[] }
-	| { ok: false; error: string };
+type NormalizedResult<T> = { ok: true; items: T[] } | { ok: false; error: string };
 
 export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>(cartItems: T[], products: Product[]): NormalizedResult<T> {
 	const normalized = cartItems.map((item) => {

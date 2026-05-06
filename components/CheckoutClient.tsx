@@ -190,8 +190,8 @@ export default function CheckoutClient() {
 			company: honeypotCompany,
 			idempotencyKey: getOrCreateIdempotencyKey(),
 			cartItems: cartItems.map((item) => ({
-				id: typeof item.id === 'string' ? parseInt(item.id, 10) || 0 : item.id,
-				name: item.name,
+				id: item.id,
+				name: item.mg && !item.name.toLowerCase().includes('stack') ? `${item.name} – ${item.mg}` : item.name,
 				price: item.price,
 				quantity: item.quantity,
 				image: item.image ?? '',

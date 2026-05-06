@@ -1,3 +1,10 @@
+export interface ProductVariant {
+	key: string;
+	label: string;
+	price: number;
+	stock: number;
+}
+
 export interface Product {
 	id: string;
 	slug: string;
@@ -18,6 +25,7 @@ export interface Product {
 	supplierSku?: string;
 	reorderPoint?: number;
 	reorderQuantity?: number;
+	variants?: ProductVariant[];
 }
 
 export interface PromoCode {
