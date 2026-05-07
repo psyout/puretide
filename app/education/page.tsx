@@ -671,7 +671,7 @@ function FDASection() {
 					<div>
 						<div className='bg-[#1C4855] bg-gradient-[135deg,#162f38_0%,#1C4855_100%] rounded-2xl px-9 py-10 relative overflow-hidden'>
 							<div className='absolute top-[-40px] right-[-40px] w-[200px] h-[200px] rounded-full bg-[radial-gradient(circle,rgba(110,180,204,0.14)_0%,transparent_70%)]' />
-							<div className='text-[64px] leading-none text-[#6EB4CC] opacity-30 font-serif mb-2'>"</div>
+							<div className='text-[64px] leading-none text-[#6EB4CC] opacity-30 font-serif mb-2'>&ldquo;</div>
 							<blockquote className='text-[17px] text-white leading-[1.7] font-light mb-6 italic relative'>
 								Drug companies cannot get a patent on a peptide, just like they cannot get a patent on a supplement. They are not going to pour millions of dollars into
 								studying these things if they cannot make money on the other side. So just because something is not approved does not mean it is not safe or effective. Think of
