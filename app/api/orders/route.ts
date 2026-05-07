@@ -129,15 +129,19 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 			if (isVariant) {
 				// Extract variant mg from ID (e.g., "40" from "MOTS-C-40")
 				const variantMg = itemId.split('-')[1];
+				console.log('[updateSheetStock] Variant item:', itemId, 'variantMg:', variantMg, 'product mg_1:', product.mg_1, 'product mg_2:', product.mg_2);
 				// Determine which variant stock column to decrement
 				if (String(product.mg_1) === variantMg) {
 					const nextStock = Math.max(0, (product.stock_1 || 0) - match.quantity);
+					console.log('[updateSheetStock] Decrementing stock_1 from', product.stock_1, 'to', nextStock);
 					return { ...product, stock_1: nextStock };
 				} else if (String(product.mg_2) === variantMg) {
 					const nextStock = Math.max(0, (product.stock_2 || 0) - match.quantity);
+					console.log('[updateSheetStock] Decrementing stock_2 from', product.stock_2, 'to', nextStock);
 					return { ...product, stock_2: nextStock };
 				}
 				// Fallback: decrement base stock if variant not found
+				console.log('[updateSheetStock] No variant match, falling back to base stock');
 				const nextStock = Math.max(0, product.stock - match.quantity);
 				return { ...product, stock: nextStock };
 			} else {
