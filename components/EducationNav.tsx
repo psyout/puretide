@@ -28,13 +28,13 @@ export default function EducationNav() {
 		<header
 			ref={navRef}
 			className='sticky top-0 z-[100] bg-white/90 backdrop-blur-[12px] border-b border-[#dde8ed]'>
-			<div className='px-10 h-[70px] flex items-center justify-between'>
+			<div className='px-6 h-[70px] flex items-center justify-between'>
 				<Link
 					href='https://puretide.ca/'
-					className='flex items-center no-underline h-7'
+					className='flex items-center gap-3 no-underline'
 					aria-label='PureTide'>
 					<svg
-						className='h-7 w-auto'
+						className='w-8 h-8 sm:w-11 sm:h-11'
 						viewBox='0 0 559.81 430.1'
 						xmlns='http://www.w3.org/2000/svg'>
 						<path
@@ -52,6 +52,10 @@ export default function EducationNav() {
 							r='61.45'
 						/>
 					</svg>
+					<div className='flex flex-col gap-[1px]'>
+						<span className='font-bold text-base sm:text-[1.6rem] tracking-[0.1em] text-[#1C4855] leading-none uppercase'>Pure Tide</span>
+						<span className='text-[0.55rem] font-normal tracking-[0.18em] text-[#6EB4CC] uppercase leading-none'>Advanced Peptide Wellness</span>
+					</div>
 				</Link>
 
 				<div className='flex items-center gap-4'>
@@ -116,7 +120,6 @@ export default function EducationNav() {
 								{[
 									{ href: 'https://puretide.ca/products', label: 'Products' },
 									{ href: 'https://puretide.ca/learn', label: 'Education', active: true },
-									{ href: 'https://puretide.ca/calculator', label: 'Dosage Calculator' },
 									{ href: 'https://puretide.ca/#contact', label: 'Contact' },
 								].map((item, index) => (
 									<motion.a
