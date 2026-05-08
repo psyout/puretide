@@ -62,13 +62,13 @@ export default function EducationNav() {
 							Products
 						</a>
 						<a
-							href='https://puretide.ca/education'
+							href='https://puretide.ca/learn'
 							className='text-[11px] font-semibold tracking-[0.16em] text-[#1C4855] no-underline uppercase'>
 							Education
 						</a>
 						<a
 							href='https://puretide.ca/calculator'
-							className='text-[11px] font-semibold tracking-[0.16em] text-[#7a9aaa] no-underline uppercase transition-colors hover:text-[#1C4855]'>
+							className='text-[11px] font-semibold tracking-[0.16em] text-[#7a9aaa] no-underline uppercase transition-colors hover:text-[#1C4855] hidden'>
 							Dosage Calculator
 						</a>
 						<a
@@ -115,7 +115,7 @@ export default function EducationNav() {
 								variants={containerVariants}>
 								{[
 									{ href: 'https://puretide.ca/products', label: 'Products' },
-									{ href: 'https://puretide.ca/education', label: 'Education', active: true },
+									{ href: 'https://puretide.ca/learn', label: 'Education', active: true },
 									{ href: 'https://puretide.ca/calculator', label: 'Dosage Calculator' },
 									{ href: 'https://puretide.ca/#contact', label: 'Contact' },
 								].map((item, index) => (

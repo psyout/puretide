@@ -16,13 +16,13 @@ export default function EducationPage() {
 			<WaveDivider color='#EFEFEF' />
 			<WhatArePeptides />
 			<HowPeptidesWork />
-			<Lyophilization />
 			<RetaVsOzempic />
 			<ProductsGrid />
 			<NADCallout />
 			<Stacks />
 			<FDASection />
 			<WhyPureTide />
+			<Lyophilization />
 			<FAQ />
 			<Disclaimer />
 			<CTABanner />
@@ -226,7 +226,11 @@ function Lyophilization() {
 	return (
 		<section
 			className='px-10 py-[88px] bg-white'
-			style={{ backgroundImage: 'radial-gradient(#dde8ed 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+			style={{
+				backgroundColor: 'var(--color-primary)',
+				backgroundImage: 'linear-gradient(#dde8ed 1px, transparent 1px), linear-gradient(90deg, #dde8ed 1px, transparent 1px)',
+				backgroundSize: '32px 32px',
+			}}>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
 					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>How It Works</span>
@@ -586,7 +590,7 @@ function Stacks() {
 					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Curated Stacks</span>
 					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
 				</div>
-				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Why people choose stacks and blends</h2>
+				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Why choose stacks or blends</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-14 leading-[1.75]'>
 					Individual peptides are powerful on their own. But certain combinations have complementary mechanisms that researchers commonly study together. Our curated stacks make it
 					simple.
@@ -625,7 +629,7 @@ function FDASection() {
 					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>The Regulatory Picture</span>
 					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
 				</div>
-				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Why are peptides not FDA approved?</h2>
+				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Why are most peptides not FDA approved?</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-12 leading-[1.75]'>
 					This is one of the most common questions we get. The answer has more nuance than most people expect.
 				</p>
@@ -694,7 +698,7 @@ function FDASection() {
 
 function WhyPureTide() {
 	const trustItems = [
-		{ icon: '🇨🇦', title: 'Canadian-Based', desc: 'We are a Canadian company, operating under Canadian standards. Fast, reliable domestic shipping with no international grey areas.' },
+		{ icon: '🇨🇦', title: 'Canadian-Based', desc: 'We are a Canadian company, operating under Canadian standards with fast, reliable and domestic shipping.' },
 		{
 			icon: '🔬',
 			title: 'Tested by Testides',
@@ -707,7 +711,6 @@ function WhyPureTide() {
 		},
 		{ icon: '⚗️', title: '>99% Purity', desc: 'Our formulations are tested to a standard of greater than 99% purity on every batch. The benchmark for serious research applications.' },
 		{ icon: '👥', title: 'Thousands of Customers', desc: 'Our community continues to grow because the product delivers on what it promises: quality and consistency, every single order.' },
-		{ icon: '📦', title: 'Discreet and Private', desc: 'Anonymous transactions. No tracking. Your privacy matters to us, from checkout through delivery.' },
 	];
 
 	return (
@@ -816,13 +819,13 @@ function CTABanner() {
 			</p>
 			<div className='flex gap-3.5 justify-center flex-wrap relative'>
 				<a
-					href='https://puretide.ca/shop'
+					href='https://puretide.ca/#products'
 					className='inline-block bg-white text-[#1C4855] text-[11px] font-bold tracking-[0.16em] uppercase px-9 py-[14px] rounded no-underline transition-all hover:bg-[#d4eaf3] hover:-translate-y-px'>
 					View All Products
 				</a>
 				<a
 					href='https://puretide.ca/calculator'
-					className='inline-block border border-white/25 text-white/75 text-[11px] font-semibold tracking-[0.16em] uppercase px-8 py-[15px] rounded no-underline transition-all hover:border-white/50 hover:text-white'>
+					className='inline-block border border-white/25 text-white/75 text-[11px] font-semibold tracking-[0.16em] uppercase px-8 py-[15px] rounded no-underline transition-all hover:border-white/50 hover:text-white hidden'>
 					Dosage Calculator
 				</a>
 			</div>

@@ -73,6 +73,12 @@ export default function Header() {
 							ABOUT US
 						</button>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
+						<Link
+							href='/learn'
+							className='hover:text-muted-sage-200 text-white transition-colors font-medium uppercase'>
+							LEARN
+						</Link>
+						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<button
 							type='button'
 							onClick={() => scrollToSection('contact')}
@@ -116,17 +122,32 @@ export default function Header() {
 							<motion.div
 								className='flex flex-col gap-2'
 								variants={containerVariants}>
-								{['products', 'about', 'contact'].map((item, index) => (
-									<motion.button
-										key={item}
-										variants={itemVariants}
-										onClick={() => scrollToSection(item)}
-										className='text-left hover:text-muted-sage-200 text-white transition-colors font-medium py-1 px-2 cursor-pointer uppercase'>
-										{item === 'products' && 'PRODUCTS'}
-										{item === 'about' && 'ABOUT US'}
-										{item === 'contact' && 'CONTACT'}
-									</motion.button>
-								))}
+								{[
+									{ id: 'products', label: 'PRODUCTS', type: 'scroll' },
+									{ id: 'about', label: 'ABOUT US', type: 'scroll' },
+									{ id: 'learn', label: 'LEARN', type: 'link', href: '/learn' },
+									{ id: 'contact', label: 'CONTACT', type: 'scroll' },
+								].map((item, index) =>
+									item.type === 'link' ? (
+										<motion.div
+											key={item.id}
+											variants={itemVariants}>
+											<Link
+												href={item.href || '/'}
+												className='text-left hover:text-muted-sage-200 text-white transition-colors font-medium py-1 px-2 uppercase'>
+												{item.label}
+											</Link>
+										</motion.div>
+									) : (
+										<motion.button
+											key={item.id}
+											variants={itemVariants}
+											onClick={() => scrollToSection(item.id)}
+											className='text-left hover:text-muted-sage-200 text-white transition-colors font-medium py-1 px-2 cursor-pointer uppercase'>
+											{item.label}
+										</motion.button>
+									),
+								)}
 							</motion.div>
 						</nav>
 					</motion.div>

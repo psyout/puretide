@@ -24,7 +24,7 @@ export default function WelcomePage() {
 
 function Nav() {
 	return (
-		<nav className='fixed top-0 left-0 right-0 z-[100] flex justify-between items-center px-14 py-[22px] bg-white border-b border-[rgba(28,72,85,0.1)]'>
+		<nav className='fixed top-0 left-0 right-0 z-[100] flex justify-between items-center px-6 py-[22px] bg-white border-b border-[rgba(28,72,85,0.1)]'>
 			<Link
 				href='https://puretide.ca'
 				className='flex items-center gap-3 no-underline'>
@@ -146,7 +146,7 @@ function Hero() {
 
 function TrustBar() {
 	return (
-		<div className='bg-[#EFEFEF] border-b border-[rgba(28,72,85,0.1)] px-14 py-5 flex items-center justify-center gap-14 flex-wrap'>
+		<div className='bg-[#EFEFEF] border-b border-[rgba(28,72,85,0.1)] p-6 flex items-center justify-center gap-5 flex-wrap'>
 			<TrustItem text='GMP Grade' />
 			<div className='w-[1px] h-4 bg-[rgba(28,72,85,0.18)] hidden md:block' />
 			<TrustItem text='98.8% Purity' />
@@ -190,7 +190,7 @@ function TrustItem({ text }: { text: string }) {
 function Pillars() {
 	return (
 		<section
-			className='px-14 py-28 bg-white'
+			className='px-6 py-28 bg-white'
 			id='learn'>
 			<div className='grid grid-cols-1 md:grid-cols-2 gap-20 items-end mb-[72px]'>
 				<div>
@@ -211,26 +211,31 @@ function Pillars() {
 					number='01'
 					title='Built on Peptide Science'
 					body='Every product in the Pure Tide line is grounded in peer-reviewed research. Peptide science is one of the fastest-evolving fields in modern wellness. We translate that complexity into products that are approachable, clean, and honest.'
+					suffix='Research-Informed'
 				/>
 				<PillarCard
 					number='02'
 					title='Crafted with Intention'
 					body="The wellness industry sells quantity. Pure Tide sells specificity. Targeted compounds, studied mechanisms, traceable sources. Nothing is here by accident. Nothing is hidden in a formula you can't read."
+					suffix='Precision Over Volume'
 				/>
 				<PillarCard
 					number='03'
 					title='Balance in Every Detail'
 					body='Inspired by the restorative rhythm of water, Pure Tide brings a new sense of calm to advanced wellness. Science without complexity. Performance without compromise. This is what balance actually looks like.'
+					suffix="Nature's Rhythm"
 				/>
 			</div>
 		</section>
 	);
 }
 
-function PillarCard({ number, title, body }: { number: string; title: string; body: string }) {
+function PillarCard({ number, title, body, suffix }: { number: string; title: string; body: string; suffix: string }) {
 	return (
 		<div className='bg-white px-11 py-[52px] transition-colors duration-200 hover:bg-[#f7f7f5]'>
-			<p className='text-[0.62rem] font-bold tracking-[0.2em] text-[#6EB4CC] uppercase mb-[14px]'>{number} / Research-Informed</p>
+			<p className='text-[0.62rem] font-bold tracking-[0.2em] text-[#6EB4CC] uppercase mb-[14px]'>
+				{number} / {suffix}
+			</p>
 			<h3 className='text-xl font-bold tracking-[0.02em] text-[#1C4855] mb-[14px] uppercase'>{title}</h3>
 			<p className='text-[0.85rem] text-[#3a4a50] leading-[1.85]'>{body}</p>
 		</div>
@@ -239,8 +244,8 @@ function PillarCard({ number, title, body }: { number: string; title: string; bo
 
 function NatureScience() {
 	return (
-		<div className='px-14 pb-28 grid grid-cols-1 md:grid-cols-2 gap-[3px] bg-[rgba(28,72,85,0.1)]'>
-			<div className='px-[60px] py-[72px] bg-white'>
+		<div className='px-6 pb-28 grid grid-cols-1 md:grid-cols-2 gap-[3px] bg-[rgba(28,72,85,0.1)]'>
+			<div className='px-10 py-[72px] bg-white'>
 				<p className='text-[0.62rem] font-semibold tracking-[0.22em] uppercase text-[#6EB4CC] mb-5 flex items-center gap-3'>
 					<span className='w-7 h-[1.5px] bg-[#6EB4CC]' />
 					Nature&apos;s intelligence
@@ -260,7 +265,7 @@ function NatureScience() {
 				</a>
 			</div>
 
-			<div className='px-[60px] py-[72px] bg-[#1C4855]'>
+			<div className='px-10 py-[72px] bg-[#1C4855]'>
 				<p className='text-[0.62rem] font-semibold tracking-[0.22em] uppercase text-[#6EB4CC] mb-5 flex items-center gap-3'>
 					<span className='w-7 h-[1.5px] bg-[#6EB4CC]' />
 					Precision wellness
@@ -285,7 +290,7 @@ function NatureScience() {
 
 function Areas() {
 	return (
-		<section className='px-14 py-28 bg-[#f7f7f5]'>
+		<section className='px-10 py-28 bg-[#f7f7f5]'>
 			<div className='flex flex-col md:flex-row justify-between items-start md:items-end mb-14 gap-5'>
 				<div>
 					<p className='text-[0.62rem] font-semibold tracking-[0.22em] uppercase text-[#6EB4CC] mb-5 flex items-center gap-3'>
@@ -392,7 +397,7 @@ function StatItem({ number, label }: { number: string; label: string }) {
 
 function CTABanner() {
 	return (
-		<div className='px-14 py-[100px] bg-[#EFEFEF] border-t border-[rgba(28,72,85,0.1)] grid grid-cols-1 md:grid-cols-[1fr_auto] gap-[60px] items-center'>
+		<div className='px-10 py-[100px] bg-[#EFEFEF] border-t border-[rgba(28,72,85,0.1)] grid grid-cols-1 md:grid-cols-[1fr_auto] gap-[60px] items-center'>
 			<div>
 				<p className='text-[0.62rem] font-semibold tracking-[0.22em] uppercase text-[#6EB4CC] mb-5 flex items-center gap-3'>
 					<span className='w-7 h-[1.5px] bg-[#6EB4CC]' />
@@ -418,7 +423,7 @@ function CTABanner() {
 
 function Footer() {
 	return (
-		<footer className='bg-[#1C4855] px-14 pt-14 pb-10'>
+		<footer className='bg-[#1C4855] px-10 pt-14 pb-10'>
 			<div className='flex flex-col md:flex-row justify-between items-start pb-10 border-b border-white/10 mb-7 gap-6'>
 				<a
 					href='https://puretide.ca'
