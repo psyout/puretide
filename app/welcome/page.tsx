@@ -412,7 +412,7 @@ function CTABanner() {
 					Explore the full Pure Tide collection: GMP grade, third-party tested, and built for people who take their wellness seriously.
 				</p>
 				<a
-					href='https://puretide.ca'
+					href='/'
 					className='inline-block bg-[#1C4855] text-white text-[0.72rem] font-bold tracking-[0.16em] uppercase no-underline px-9 py-4 rounded-[2px] whitespace-nowrap transition-colors duration-200 hover:bg-[#2a5f70]'>
 					Visit Puretide
 				</a>
@@ -426,7 +426,7 @@ function Footer() {
 		<footer className='bg-[#1C4855] px-10 pt-14 pb-10'>
 			<div className='flex flex-col md:flex-row justify-between items-start pb-10 border-b border-white/10 mb-7 gap-6'>
 				<a
-					href='https://puretide.ca'
+					href='/'
 					className='flex items-center gap-[14px] no-underline'>
 					<svg
 						width='40'
@@ -454,7 +454,7 @@ function Footer() {
 					</div>
 				</a>
 				<a
-					href='https://puretide.ca'
+					href='/'
 					className='text-[0.7rem] font-semibold tracking-[0.14em] uppercase text-white/60 no-underline transition-colors duration-200 hover:text-[#6EB4CC]'>
 					puretide.ca →
 				</a>
