@@ -1,0 +1,72 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PATH: ${{ secrets.VPS_PATH }}
+      PM2_APP: ${{ secrets.PM2_APP }}
+      VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          PORT="${VPS_SSH_PORT:-22}"
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Stop app and clean old artifacts on VPS
+        run: |
+          PORT="${VPS_SSH_PORT:-22}"
+          SSH_TARGET="${VPS_USER}@${VPS_HOST}"
+          ssh -p "$PORT" "$SSH_TARGET" "pm2 stop \"${PM2_APP}\" || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone .next/static"
+
+      - name: Sync build artifacts to VPS
+        run: |
+          PORT="${VPS_SSH_PORT:-22}"
+          SSH_TARGET="${VPS_USER}@${VPS_HOST}"
+          rsync -avz -e "ssh -p ${PORT}" --exclude='node_modules' .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/.next/standalone/"
+          rsync -avz -e "ssh -p ${PORT}" .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
+          rsync -avz -e "ssh -p ${PORT}" public/ "${SSH_TARGET}:${VPS_PATH}/public/"
+          rsync -avz -e "ssh -p ${PORT}" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
+
+      - name: Finalize runtime and restart PM2
+        run: |
+          PORT="${VPS_SSH_PORT:-22}"
+          SSH_TARGET="${VPS_USER}@${VPS_HOST}"
+          ssh -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; rm -rf .next/standalone/.next/static; mkdir -p .next/standalone/.next; cp -R .next/static .next/standalone/.next/static; rm -rf .next/standalone/public; cp -R public .next/standalone/public"
+          ssh -p "$PORT" "$SSH_TARGET" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm install --omit=dev"
+          ssh -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; mkdir -p .next/standalone/node_modules/sql.js/dist; cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/standalone/node_modules/sql.js/dist/sql-wasm.wasm"
+          ssh -p "$PORT" "$SSH_TARGET" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
+          ssh -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; [ -f .env ] && . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
