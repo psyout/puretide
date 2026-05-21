@@ -88,6 +88,14 @@ jobs:
             exit 1
           fi
 
+      - name: Add VPS to known_hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT="${VPS_SSH_PORT:-22}"
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
       - name: SSH smoke test
         shell: bash
         run: |
@@ -95,12 +103,6 @@ jobs:
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$SSH_TARGET" "echo ok"
-
-      - name: Add VPS to known_hosts
-        run: |
-          PORT="${VPS_SSH_PORT:-22}"
-          mkdir -p ~/.ssh
-          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
       - name: Stop app and clean old artifacts on VPS
         run: |
