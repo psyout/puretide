@@ -82,8 +82,12 @@ jobs:
           eval "$(ssh-agent -s)"
           mkdir -p ~/.ssh
           keyfile=~/.ssh/deploy_key
-          echo "$VPS_SSH_PRIVATE_KEY_B64" | base64 -d > "$keyfile"
+          printf '%s' "$VPS_SSH_PRIVATE_KEY_B64" | base64 -d > "$keyfile"
           chmod 600 "$keyfile"
+          if ! head -n 1 "$keyfile" | grep -q "OPENSSH PRIVATE KEY"; then
+            echo "Decoded key does not look like an OpenSSH private key. Ensure VPS_SSH_PRIVATE_KEY_B64 is base64 of the PRIVATE key (not the .pub)."
+            exit 1
+          fi
           ssh-add "$keyfile"
 
       - name: Add VPS to known_hosts
