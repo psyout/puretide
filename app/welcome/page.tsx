@@ -55,7 +55,7 @@ function Nav() {
 			<a
 				href='https://puretide.ca'
 				className='text-[0.7rem] font-semibold tracking-[0.14em] uppercase text-white bg-[#1C4855] no-underline px-[26px] py-[11px] rounded-[2px] transition-colors duration-200 hover:bg-[#2a5f70]'>
-				Explore Puretide
+				Get Puretide
 			</a>
 		</nav>
 	);
