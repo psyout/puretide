@@ -55,7 +55,8 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
-          DASHBOARD_SECRET: ${{ secrets.DASHBOARD_SECRET || 'ci-placeholder-dashboard-secret' }}
+          DASHBOARD_SECRET: ci-placeholder-dashboard-secret
+          ORDER_CONFIRMATION_SECRET: ci-placeholder-order-confirmation-secret
 
       - name: Sanity check standalone output
         shell: bash
