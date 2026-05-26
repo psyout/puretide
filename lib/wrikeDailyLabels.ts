@@ -1,4 +1,4 @@
-import { AlignmentType, Document, HeightRule, ImageRun, Packer, Paragraph, TabStopType, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
+import { AlignmentType, BorderStyle, Document, HeightRule, ImageRun, Packer, Paragraph, TabStopType, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import fs from 'node:fs';
 import path from 'node:path';
 import FormData from 'form-data';
@@ -139,6 +139,14 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 	const logoPath = path.resolve(process.cwd(), 'public', 'logo.png');
 	const logoBytes = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : null;
 	const textIndentTwips = logoBytes ? 1200 : 0;
+	const noBorders = {
+		top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+		bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+		left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+		right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+		insideH: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+		insideV: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+	};
 	let logoTransform: { width: number; height: number } | null = null;
 	if (logoBytes) {
 		try {
@@ -213,6 +221,7 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 		new TableCell({
 			width: { size: labelWidth, type: WidthType.DXA },
 			margins: { top: cellPadding, bottom: cellPadding, left: cellPadding, right: cellPadding },
+			borders: noBorders,
 			children: makeLabelParagraphs(label),
 		});
 
@@ -232,6 +241,7 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 			width: { size: pageWidth - leftMargin - rightMargin, type: WidthType.DXA },
 			columnWidths: [labelWidth, labelWidth],
 			layout: TableLayoutType.FIXED,
+			borders: noBorders,
 			rows,
 		});
 	};

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export type SurveyChoice = 'search' | 'social' | 'friends' | 'ai' | 'ads' | 'other';
+export type SurveyChoice = 'search' | 'social' | 'word' | 'ai';
 
 interface SurveyOption {
 	value: SurveyChoice;
@@ -11,29 +11,24 @@ interface SurveyOption {
 
 export interface SurveyData {
 	choice: SurveyChoice;
-	otherText?: string;
 }
 
 interface HowDidYouHearSurveyProps {
 	onSubmit?: (data: SurveyData) => Promise<void> | void;
 	required?: boolean;
-	otherRequired?: boolean;
 	defaultValue?: SurveyChoice;
 	className?: string;
 }
 
 const surveyOptions: SurveyOption[] = [
-	{ value: 'search', label: 'Search' },
-	{ value: 'social', label: 'Social Media' },
-	{ value: 'friends', label: 'Friends' },
+	{ value: 'search', label: 'Google Search' },
+	{ value: 'social', label: 'Facebook Ads' },
+	{ value: 'word', label: 'Word of Mouth' },
 	{ value: 'ai', label: 'AI Chat' },
-	{ value: 'ads', label: 'Ads' },
-	{ value: 'other', label: 'Other' },
 ];
 
-export default function HowDidYouHearSurvey({ onSubmit, required = false, otherRequired = false, defaultValue, className = '' }: HowDidYouHearSurveyProps) {
+export default function HowDidYouHearSurvey({ onSubmit, required = false, defaultValue, className = '' }: HowDidYouHearSurveyProps) {
 	const [selectedChoice, setSelectedChoice] = useState<SurveyChoice | null>(defaultValue ?? null);
-	const [otherText, setOtherText] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -46,18 +41,12 @@ export default function HowDidYouHearSurvey({ onSubmit, required = false, otherR
 			return;
 		}
 
-		if (selectedChoice === 'other' && otherRequired && !otherText.trim()) {
-			setError('Please specify how you heard about us');
-			return;
-		}
-
 		if (!selectedChoice) {
 			return; // Nothing to submit
 		}
 
 		const surveyData: SurveyData = {
 			choice: selectedChoice,
-			...(selectedChoice === 'other' && { otherText: otherText.trim() }),
 		};
 
 		setIsSubmitting(true);
@@ -66,7 +55,6 @@ export default function HowDidYouHearSurvey({ onSubmit, required = false, otherR
 			await onSubmit?.(surveyData);
 			// Reset form after successful submission
 			setSelectedChoice(null);
-			setOtherText('');
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to submit survey');
 		} finally {
@@ -76,9 +64,6 @@ export default function HowDidYouHearSurvey({ onSubmit, required = false, otherR
 
 	const handleChoiceChange = (choice: SurveyChoice) => {
 		setSelectedChoice(choice);
-		if (choice !== 'other') {
-			setOtherText('');
-		}
 		setError(null);
 	};
 
@@ -107,28 +92,6 @@ export default function HowDidYouHearSurvey({ onSubmit, required = false, otherR
 						</label>
 					))}
 				</div>
-
-				{selectedChoice === 'other' && (
-					<div className='mt-6'>
-						<label
-							htmlFor='other-text'
-							className='block text-lg font-medium text-slate-700 mb-2'>
-							Please specify {otherRequired && '*'}
-						</label>
-						<input
-							id='other-text'
-							type='text'
-							value={otherText}
-							onChange={(e) => {
-								setOtherText(e.target.value);
-								setError(null);
-							}}
-							placeholder='Tell us how you heard about us'
-							className='w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
-							required={otherRequired}
-						/>
-					</div>
-				)}
 
 				{error && <div className='rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-800'>{error}</div>}
 

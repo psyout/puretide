@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
 import { buildSafeApiError } from '@/lib/apiError';
 import { getWrikeConfig } from '@/lib/env';
-import { generateAndAttachDailyLabels } from '@/lib/wrikeDailyLabels';
+import { generateAndAttachDailyLabels, generateAndAttachLabelsForRange } from '@/lib/wrikeDailyLabels';
 
 function parseIsoDateOnly(s: string | null): Date | null {
 	if (!s) return null;
@@ -20,8 +20,10 @@ export async function POST(request: Request) {
 	if (authError) return authError;
 
 	try {
-		const body = (await request.json()) as { date?: string };
+		const body = (await request.json()) as { date?: string; startDate?: string; endDate?: string };
 		const requested = parseIsoDateOnly(body?.date ?? null);
+		const requestedStart = parseIsoDateOnly(body?.startDate ?? null);
+		const requestedEnd = parseIsoDateOnly(body?.endDate ?? null);
 		const base = requested ?? new Date(Date.now() - 24 * 60 * 60 * 1000);
 
 		const wrike = getWrikeConfig();
@@ -32,13 +34,23 @@ export async function POST(request: Request) {
 		if (!labelsFolderId) {
 			return NextResponse.json({ ok: false, error: 'Missing WRIKE_LABELS_FOLDER_ID.' }, { status: 503 });
 		}
-
-		const result = await generateAndAttachDailyLabels({
-			apiToken: wrike.apiToken,
-			ordersFolderId: wrike.ordersFolderId,
-			labelsFolderId,
-			date: base,
-		});
+		const result =
+			requestedStart && requestedEnd
+				? await generateAndAttachLabelsForRange({
+						apiToken: wrike.apiToken,
+						ordersFolderId: wrike.ordersFolderId,
+						labelsFolderId,
+						startDate: requestedStart,
+						endDate: requestedEnd,
+						title: `Labels ${body.startDate} to ${body.endDate}`,
+						description: `Avery 5162/8162 label sheets for ${body.startDate} to ${body.endDate}`,
+					})
+				: await generateAndAttachDailyLabels({
+						apiToken: wrike.apiToken,
+						ordersFolderId: wrike.ordersFolderId,
+						labelsFolderId,
+						date: base,
+					});
 
 		return NextResponse.json(result, { status: 200 });
 	} catch (error) {
