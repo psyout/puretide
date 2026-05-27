@@ -242,10 +242,21 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: customerError }, { status: 400 });
 		}
 
-		const stockError = await validateStockAvailability(
-			orderPayload.cartItems.map((item) => ({ id: String(item.id), name: item.name, quantity: item.quantity })),
-			readSheetProducts,
-		);
+		let stockError: string | null;
+		try {
+			stockError = await validateStockAvailability(
+				orderPayload.cartItems.map((item) => ({ id: String(item.id), name: item.name, quantity: item.quantity })),
+				readSheetProducts,
+			);
+		} catch (error) {
+			return NextResponse.json(
+				{
+					ok: false,
+					error: 'Unable to verify product availability. Please try again later.',
+				},
+				{ status: 503 },
+			);
+		}
 		if (stockError) {
 			return NextResponse.json({ ok: false, error: stockError }, { status: 400 });
 		}

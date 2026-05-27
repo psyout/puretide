@@ -4,15 +4,23 @@ import ProductGridClient from './ProductGridClient';
 
 export default async function ProductGrid() {
 	let items = fallbackProducts;
+	let stockUnavailable = false;
 	try {
 		items = await readSheetProducts();
-	} catch {
+	} catch (error) {
+		console.warn('ProductGrid: Using fallback products due to sheet error:', error);
 		items = fallbackProducts;
+		stockUnavailable = true;
 	}
 
 	const visibleItems = items.filter((product) => {
 		const status = product.status ?? 'published';
 		return status === 'published' || status === 'stock-out';
 	});
-	return <ProductGridClient initialItems={visibleItems} />;
+	return (
+		<ProductGridClient
+			initialItems={visibleItems}
+			stockUnavailable={stockUnavailable}
+		/>
+	);
 }

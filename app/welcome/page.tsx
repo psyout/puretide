@@ -24,34 +24,7 @@ export default function WelcomePage() {
 
 function Nav() {
 	return (
-		<nav className='fixed top-0 left-0 right-0 z-[100] flex justify-between items-center px-6 py-[22px] bg-white border-b border-[rgba(28,72,85,0.1)]'>
-			<Link
-				href='https://puretide.ca'
-				className='flex items-center gap-3 no-underline'>
-				<svg
-					className='w-8 h-8 sm:w-11 sm:h-11'
-					viewBox='0 0 559.81 430.1'
-					xmlns='http://www.w3.org/2000/svg'>
-					<path
-						fill='#1C4855'
-						d='M551,279.01c-59.67,8.21-119.95-2.39-172.96-35.44l-77.85-48.54c-48.75-30.46-105.92-33.05-154.88-6.97C85.24,220.07,60.6,249.8.73,266.74l-.73-115.38C101.03,81.1,196.04,29.34,320.87,84.84c88.87,39.5,120.68,98.85,229.61,91.57l.52,102.59Z'
-					/>
-					<path
-						fill='#1C4855'
-						d='M550.59,321.73v106.23c-188.76,20.37-264.01-113.51-453.82-34.09-31.18,12.99-60.81,21.51-96.15,30.56l.21-113.09,83.57-28.79c96.04-33.16,202.38-25.88,296.76,9.67,55.61,20.9,108.2,29.1,169.43,29.52Z'
-					/>
-					<circle
-						fill='#1C4855'
-						cx='498.37'
-						cy='61.45'
-						r='61.45'
-					/>
-				</svg>
-				<div className='flex flex-col gap-[1px]'>
-					<span className='font-bold text-base sm:text-[1.6rem] tracking-[0.1em] text-[#1C4855] leading-none uppercase'>Pure Tide</span>
-					<span className='text-[0.55rem] font-normal tracking-[0.18em] text-[#6EB4CC] uppercase leading-none'>Advanced Peptide Wellness</span>
-				</div>
-			</Link>
+		<nav className='fixed top-0 left-0 right-0 z-[100] flex justify-end items-center px-6 py-[22px] bg-white border-b border-[rgba(28,72,85,0.1)]'>
 			<a
 				href='https://puretide.ca'
 				className='text-[0.7rem] font-semibold tracking-[0.14em] uppercase text-white bg-[#1C4855] no-underline px-[26px] py-[11px] rounded-[2px] transition-colors duration-200 hover:bg-[#2a5f70]'>
@@ -112,30 +85,60 @@ function Hero() {
 			<div className='absolute top-[18%] right-[12%] w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(110,180,204,0.25)_0%,transparent_70%)] pointer-events-none' />
 			<div className='absolute bottom-[25%] left-[5%] w-[180px] h-[180px] rounded-full bg-[radial-gradient(circle,rgba(181,202,174,0.12)_0%,transparent_70%)] pointer-events-none' />
 
-			<div className='relative z-[2]'>
-				<p className='inline-flex items-center gap-3 text-[0.65rem] font-semibold tracking-[0.22em] uppercase text-[#6EB4CC] mb-7 fade-up d1'>
-					<span className='block w-8 h-[1px] bg-[#6EB4CC] opacity-60' />
-					Advanced Peptide Wellness
-				</p>
-				<h1 className='text-[clamp(3rem,6.5vw,6rem)] font-extrabold leading-[1.0] tracking-[-0.02em] text-white max-w-[780px] mb-8 uppercase fade-up d2'>
-					Where <span className='text-[#6EB4CC]'>nature</span>
-					<br />
-					meets precision.
-				</h1>
-				<p className='text-base font-light text-white/65 max-w-[480px] leading-[1.85] mb-[52px] fade-up d3'>
-					Inspired by the restorative rhythm of water. Grounded in modern scientific research. Wellness, refined.
-				</p>
-				<div className='flex items-center gap-6 fade-up d4'>
-					<a
-						href='https://puretide.ca'
-						className='inline-block bg-[#6EB4CC] text-[#1C4855] text-[0.72rem] font-bold tracking-[0.16em] uppercase no-underline px-9 py-4 rounded-[2px] transition-all duration-200 hover:bg-[#88c5d6] hover:-translate-y-[1px]'>
-						Explore Puretide
-					</a>
-					<Link
-						href='#learn'
-						className='inline-block border border-white/25 text-white/75 text-[0.72rem] font-medium tracking-[0.14em] uppercase no-underline px-8 py-[15px] rounded-[2px] transition-all duration-200 hover:border-white/50 hover:text-white'>
-						Learn the science
-					</Link>
+			<div className='relative z-[2] flex flex-col items-start gap-8 lg:gap-12 px-4 sm:px-8'>
+				{/* Hero Logo */}
+				<div className='fade-up d1 flex items-center gap-3'>
+					<svg
+						className='w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 opacity-90'
+						viewBox='0 0 559.81 430.1'
+						xmlns='http://www.w3.org/2000/svg'>
+						<path
+							fill='white'
+							d='M551,279.01c-59.67,8.21-119.95-2.39-172.96-35.44l-77.85-48.54c-48.75-30.46-105.92-33.05-154.88-6.97C85.24,220.07,60.6,249.8.73,266.74l-.73-115.38C101.03,81.1,196.04,29.34,320.87,84.84c88.87,39.5,120.68,98.85,229.61,91.57l.52,102.59Z'
+						/>
+						<path
+							fill='white'
+							d='M550.59,321.73v106.23c-188.76,20.37-264.01-113.51-453.82-34.09-31.18,12.99-60.81,21.51-96.15,30.56l.21-113.09,83.57-28.79c96.04-33.16,202.38-25.88,296.76,9.67,55.61,20.9,108.2,29.1,169.43,29.52Z'
+						/>
+						<circle
+							fill='white'
+							cx='498.37'
+							cy='61.45'
+							r='61.45'
+						/>
+					</svg>
+					<div className='flex flex-col gap-[1px]'>
+						<span className='font-bold text-4xl sm:text-2xl lg:text-5xl tracking-[0.1em] text-white leading-none uppercase'>Pure Tide</span>
+						<span className='text-[0.70rem] sm:text-[0.55rem] lg:text-[0.93rem] font-normal tracking-[0.18em] text-[#6EB4CC] uppercase leading-none'>Advanced Peptide Wellness</span>
+					</div>
+				</div>
+
+				{/* Hero Content */}
+				<div className='max-w-4xl w-full'>
+					<p className='inline-flex items-center gap-3 text-[0.65rem] font-semibold tracking-[0.22em] uppercase text-[#6EB4CC] mb-7 fade-up d1'>
+						<span className='block w-8 h-[1px] bg-[#6EB4CC] opacity-60' />
+						Advanced Peptide Wellness
+					</p>
+					<h1 className='text-[clamp(2.5rem,5.5vw,5rem)] font-extrabold leading-[1.0] tracking-[-0.02em] text-white max-w-[680px] mb-8 uppercase fade-up d2'>
+						Where <span className='text-[#6EB4CC]'>nature</span>
+						<br />
+						meets precision.
+					</h1>
+					<p className='text-base font-light text-white/65 max-w-[480px] leading-[1.85] mb-[52px] fade-up d3'>
+						Inspired by the restorative rhythm of water. Grounded in modern scientific research. Wellness, refined.
+					</p>
+					<div className='flex items-center gap-6 fade-up d4'>
+						<a
+							href='https://puretide.ca'
+							className='inline-block bg-[#6EB4CC] text-[#1C4855] text-[0.72rem] font-bold tracking-[0.16em] uppercase no-underline px-6 py-4 rounded-[2px] transition-all duration-200 hover:bg-[#88c5d6] hover:-translate-y-[1px]'>
+							Shop Peptides
+						</a>
+						<Link
+							href='#learn'
+							className='inline-block border border-white/25 text-white/75 text-[0.72rem] font-medium tracking-[0.14em] uppercase no-underline px-8 py-[15px] rounded-[2px] transition-all duration-200 hover:border-white/50 hover:text-white'>
+							Learn the science
+						</Link>
+					</div>
 				</div>
 			</div>
 

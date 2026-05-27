@@ -147,6 +147,11 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 		insideH: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
 		insideV: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
 	};
+	const offsetXIn = Number(process.env.AVERY_5162_OFFSET_X_IN ?? 0);
+	const offsetYIn = Number(process.env.AVERY_5162_OFFSET_Y_IN ?? 0);
+	const offsetXTwips = Number.isFinite(offsetXIn) ? offsetXIn * 1440 : 0;
+	const offsetYTwips = Number.isFinite(offsetYIn) ? offsetYIn * 1440 : 0;
+	const cellTopPadIn = Number(process.env.AVERY_5162_CELL_TOP_PAD_IN ?? NaN);
 	let logoTransform: { width: number; height: number } | null = null;
 	if (logoBytes) {
 		try {
@@ -166,11 +171,18 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 	const pageHeight = 11 * 1440;
 	const labelWidth = 4 * 1440;
 	const rowPitch = (4 / 3) * 1440;
-	const topMargin = 0.5 * 1440;
-	const bottomMargin = 0.5 * 1440;
-	const leftMargin = 0.15625 * 1440;
-	const rightMargin = 0.15625 * 1440;
+	// Match Avery 5162 Word template defaults (twips) extracted from document.xml:
+	// top=1199, right=446, bottom=820, left=349
+	const baseTopMargin = 1199;
+	const baseBottomMargin = 820;
+	const baseLeftMargin = 349;
+	const baseRightMargin = 446;
+	const topMargin = baseTopMargin + offsetYTwips;
+	const bottomMargin = Math.max(0, baseBottomMargin - offsetYTwips);
+	const leftMargin = baseLeftMargin + offsetXTwips;
+	const rightMargin = Math.max(0, baseRightMargin - offsetXTwips);
 	const cellPadding = 0.08 * 1440;
+	const cellTopPadding = Number.isFinite(cellTopPadIn) ? cellTopPadIn * 1440 : cellPadding;
 
 	const makeLabelParagraphs = (label: Label | null) => {
 		if (!label) return [new Paragraph('')];
@@ -220,7 +232,7 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 	const makeCell = (label: Label | null) =>
 		new TableCell({
 			width: { size: labelWidth, type: WidthType.DXA },
-			margins: { top: cellPadding, bottom: cellPadding, left: cellPadding, right: cellPadding },
+			margins: { top: cellTopPadding, bottom: cellPadding, left: cellPadding, right: cellPadding },
 			borders: noBorders,
 			children: makeLabelParagraphs(label),
 		});
@@ -379,6 +391,24 @@ export type RangeLabelsResult =
 			labelsParsed?: number;
 	  };
 
+function shouldFillAvery5162Sheets(): boolean {
+	const v = String(process.env.AVERY_5162_FILL_SHEETS ?? '')
+		.trim()
+		.toLowerCase();
+	return v === '1' || v === 'true' || v === 'yes';
+}
+
+function fillLabelsToFullSheets(labels: Label[]): Label[] {
+	// Avery 5162/8162: 14 labels per sheet.
+	const perSheet = 14;
+	if (labels.length === 0) return labels;
+	const out = [...labels];
+	while (out.length % perSheet !== 0) {
+		out.push(out[out.length % labels.length]);
+	}
+	return out;
+}
+
 export async function generateAndAttachDailyLabels(params: { apiToken: string; ordersFolderId: string; labelsFolderId: string; date: Date }): Promise<DailyLabelsResult> {
 	const date = params.date;
 	const start = startOfLocalDay(date);
@@ -387,11 +417,14 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 
 	const inDay = await fetchTasksInFolderByDateRange(params.ordersFolderId, params.apiToken, start, end);
 
-	const labels: Label[] = [];
+	let labels: Label[] = [];
 	for (const task of inDay) {
 		const parsed = parseLabelFromOrderDescription(task?.description ?? '');
 		if (!parsed || !parsed.name || parsed.lines.length === 0) continue;
 		labels.push(parsed);
+	}
+	if (shouldFillAvery5162Sheets()) {
+		labels = fillLabelsToFullSheets(labels);
 	}
 
 	if (labels.length === 0) {
@@ -443,11 +476,14 @@ export async function generateAndAttachLabelsForRange(params: {
 
 	const inRange = await fetchTasksInFolderByDateRange(params.ordersFolderId, params.apiToken, start, end);
 
-	const labels: Label[] = [];
+	let labels: Label[] = [];
 	for (const task of inRange) {
 		const parsed = parseLabelFromOrderDescription(task?.description ?? '');
 		if (!parsed || !parsed.name || parsed.lines.length === 0) continue;
 		labels.push(parsed);
+	}
+	if (shouldFillAvery5162Sheets()) {
+		labels = fillLabelsToFullSheets(labels);
 	}
 
 	if (labels.length === 0) {

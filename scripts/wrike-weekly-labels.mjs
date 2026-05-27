@@ -3,7 +3,8 @@
 import { config as dotenvConfig } from 'dotenv';
 dotenvConfig();
 
-import { generateAndAttachLabelsForRange } from '../lib/wrikeDailyLabels';
+const wrikeDailyLabels = await import('../lib/wrikeDailyLabels.ts');
+const generateAndAttachLabelsForRange = wrikeDailyLabels?.generateAndAttachLabelsForRange ?? wrikeDailyLabels?.default?.generateAndAttachLabelsForRange;
 
 function parseArgs(argv) {
 	const out = { start: null, end: null, days: 7, help: false };
@@ -30,6 +31,10 @@ async function run() {
 	if (args.help) {
 		console.log('Usage: node scripts/wrike-weekly-labels.mjs [--days=7] [--start=YYYY-MM-DD --end=YYYY-MM-DD]');
 		process.exit(0);
+	}
+
+	if (typeof generateAndAttachLabelsForRange !== 'function') {
+		throw new TypeError('generateAndAttachLabelsForRange is not available from lib/wrikeDailyLabels.ts');
 	}
 
 	const apiToken = process.env.WRIKE_API_TOKEN || process.env.WRIKE_TOKEN;

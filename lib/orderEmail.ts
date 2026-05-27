@@ -264,8 +264,10 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <h4 style="margin: 24px 0 8px;">Customer</h4>
       <p>${billingLinesHtml.join('<br />')}</p>
 
-      <h4 style="margin: 16px 0 8px;">Shipping address</h4>
-      <p>${shippingLinesHtml.join('<br />')}</p>
+      <div style="margin: 24px 0; padding: 16px; border: 2px solid #ff6b35; border-radius: 8px; background-color: #fff5f0;">
+        <h3 style="margin: 0 0 12px; color: #ff6b35; font-size: 18px; font-weight: bold;">🚚 SHIPPING ADDRESS</h3>
+        <p style="margin: 0; font-size: 16px; font-weight: 500; line-height: 1.6;">${shippingLinesHtml.join('<br />')}</p>
+      </div>
 
       <h4 style="margin: 24px 0 8px;">Products</h4>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">

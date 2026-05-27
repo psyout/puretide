@@ -38,10 +38,13 @@ const ProductImage = ({ product, priority = false }: { product: Product; priorit
 
 export default async function ProductPage({ params }: ProductPageProps) {
 	let items: Product[] = fallbackProducts;
+	let stockUnavailable = false;
 	try {
 		items = await readSheetProducts();
-	} catch {
+	} catch (error) {
+		console.warn('ProductPage: Using fallback products due to sheet error:', error);
 		items = fallbackProducts;
+		stockUnavailable = true;
 	}
 
 	const slug = params.id;
@@ -91,6 +94,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							details={product.details}
 							hasCoaFile={hasCoaFile}
 							matchingCoaFile={matchingCoaFile || ''}
+							stockUnavailable={stockUnavailable}
 						/>
 					</div>
 

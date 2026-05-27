@@ -6,9 +6,10 @@ import type { Product } from '@/types/product';
 
 type ProductGridClientProps = {
 	initialItems: Product[];
+	stockUnavailable?: boolean;
 };
 
-export default function ProductGridClient({ initialItems }: ProductGridClientProps) {
+export default function ProductGridClient({ initialItems, stockUnavailable = false }: ProductGridClientProps) {
 	const [selectedCategory, setSelectedCategory] = useState('All');
 	const [items, setItems] = useState<Product[]>(initialItems);
 	const [stockError, setStockError] = useState<string | null>(null);
@@ -160,6 +161,15 @@ export default function ProductGridClient({ initialItems }: ProductGridClientPro
 					</div>
 				</div>
 
+				{stockUnavailable && (
+					<div className='bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 mx-auto max-w-2xl'>
+						<p
+							className='text-center text-sm text-amber-800'
+							role='alert'>
+							<strong>Inventory System Offline:</strong> Real-time stock data is temporarily unavailable. Please try again later or contact us for availability.
+						</p>
+					</div>
+				)}
 				{stockError && (
 					<p
 						className='text-center text-sm text-deep-tidal-teal-600/80 mb-2'

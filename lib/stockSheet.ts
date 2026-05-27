@@ -15,7 +15,7 @@ const HEADERS = [
 	'description',
 	'details',
 	'price',
-	'stock',
+	'total stock',
 	'category',
 	'mg',
 	'purity',
@@ -30,7 +30,7 @@ const HEADERS = [
 	'stock_2',
 ] as const;
 type HeaderKey = (typeof HEADERS)[number];
-const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description', 'details', 'price', 'stock', 'category'];
+const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description', 'details', 'price', 'total stock', 'category'];
 
 const getErrorCode = (error: unknown) => (error && typeof error === 'object' && 'code' in error ? String((error as { code?: string }).code ?? '') : '');
 const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -169,7 +169,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 
 				const useVariant1 = variants.length > 0;
 				const finalPrice = useVariant1 ? price1 : parseNumber(row.price);
-				const finalStock = useVariant1 ? stock1 : parseNumber(row.stock);
+				const finalStock = useVariant1 ? stock1 : parseNumber(row['total stock']);
 				const finalMg = useVariant1 ? `${mg1}mg` : row.mg;
 
 				return {
@@ -204,13 +204,13 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 			});
 
 		if (sheetProducts.length === 0) {
-			return baseProducts;
+			throw new Error('No products found in Google Sheets. Please check the sheet configuration.');
 		}
 
 		return sheetProducts;
 	} catch (error) {
 		reportSheetsError('Error reading products from sheet', error);
-		return baseProducts;
+		throw new Error('Unable to access product inventory. Please try again later.');
 	}
 };
 

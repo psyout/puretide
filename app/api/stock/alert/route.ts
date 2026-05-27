@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 	}
 	try {
 		const items = await readSheetProducts();
-		const lowStock = items.filter((item) => item.stock <= LOW_STOCK_THRESHOLD);
+		const lowStock = items.filter((item) => item.stock <= LOW_STOCK_THRESHOLD && item.status !== 'inactive');
 		if (lowStock.length === 0) {
 			return NextResponse.json({ ok: true, count: 0, skipped: true, reason: 'no-low-stock' });
 		}

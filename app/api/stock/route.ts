@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
 		await writeSheetProducts(items);
 
-		const lowStock = items.filter((item) => Number(item.stock) <= LOW_STOCK_THRESHOLD);
+		const lowStock = items.filter((item) => Number(item.stock) <= LOW_STOCK_THRESHOLD && item.status !== 'inactive');
 
 		await sendLowStockAlert(lowStock);
 

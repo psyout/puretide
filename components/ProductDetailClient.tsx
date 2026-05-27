@@ -14,9 +14,10 @@ interface ProductDetailClientProps {
 	details?: string;
 	hasCoaFile: boolean;
 	matchingCoaFile?: string;
+	stockUnavailable?: boolean;
 }
 
-export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile }: ProductDetailClientProps) {
+export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile, stockUnavailable = false }: ProductDetailClientProps) {
 	const variants = useMemo(() => product.variants || [], [product.variants]);
 	const hasVariants = variants.length > 1;
 
@@ -246,6 +247,17 @@ export default function ProductDetailClient({ product, description, details, has
 					<p className='md:text-[13px] text-xs text-deep-tidal-teal-600'>Not responsible for shipments to incorrect addresses. Please double check.</p>
 				</div>
 			</div>
+
+			{/* Stock Unavailable Warning */}
+			{stockUnavailable && (
+				<div className='bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6'>
+					<p
+						className='text-sm text-amber-800'
+						role='alert'>
+						<strong>Inventory System Offline:</strong> Real-time stock data is temporarily unavailable. Please try again later or contact us for availability before placing an order.
+					</p>
+				</div>
+			)}
 
 			{/* Actions */}
 			<ProductActions product={productForActions} />

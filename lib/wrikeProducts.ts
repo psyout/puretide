@@ -1,4 +1,5 @@
 import type { Product } from '@/types/product';
+import { readSheetProducts } from '@/lib/stockSheet';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -106,7 +107,7 @@ async function updateTask(taskId: string, updates: { title?: string; description
 
 function parseProductInventoryFromTask(task: WrikeTask): ProductInventory | null {
 	const customFields = task.customFields ?? [];
-	
+
 	const productIdField = process.env.WRIKE_PRODUCT_ID_FIELD_ID;
 	const stockField = process.env.WRIKE_STOCK_FIELD_ID;
 	const costField = process.env.WRIKE_COST_FIELD_ID;
@@ -167,7 +168,7 @@ export async function createProductTask(product: { id: string; name: string; sto
 	}
 
 	const customFields: CustomFieldInput[] = [];
-	
+
 	if (process.env.WRIKE_PRODUCT_ID_FIELD_ID) {
 		customFields.push({ id: process.env.WRIKE_PRODUCT_ID_FIELD_ID, value: product.id });
 	}
@@ -182,7 +183,7 @@ export async function createProductTask(product: { id: string; name: string; sto
 	}
 
 	const description = `<p>Product ID: ${product.id}</p><p>Inventory managed via Wrike</p>`;
-	
+
 	try {
 		const task = await createTask(config.productsFolderId, product.name, description, config.apiToken, customFields);
 		if (task) {
@@ -217,9 +218,9 @@ export async function updateProductStock(productId: string, newStock: number): P
 			{
 				customFields: [{ id: stockFieldId, value: String(newStock) }],
 			},
-			config.apiToken
+			config.apiToken,
 		);
-		
+
 		if (updated) {
 			console.log('[WrikeProducts] Updated stock for product:', productId, 'to:', newStock);
 			return true;
@@ -332,8 +333,17 @@ export async function syncNewProductsFromSheets(sheetProducts: Product[]): Promi
 
 export async function getProductsBelowReorderPoint(): Promise<ProductInventory[]> {
 	const allInventory = await getAllProductInventory();
+	const sheetProducts = await readSheetProducts();
+
+	// Create a map of product status for quick lookup
+	const productStatusMap = new Map<string, boolean>();
+	sheetProducts.forEach((product) => {
+		productStatusMap.set(product.id, product.status !== 'inactive');
+	});
+
 	return allInventory.filter((inv) => {
 		const reorderPoint = inv.reorderPoint ?? 5;
-		return inv.stock <= reorderPoint;
+		const isActive = productStatusMap.get(inv.productId) ?? true; // Default to active if not found
+		return inv.stock <= reorderPoint && isActive;
 	});
 }
