@@ -12,6 +12,7 @@ type ProductGridClientProps = {
 export default function ProductGridClient({ initialItems, stockUnavailable = false }: ProductGridClientProps) {
 	const [selectedCategory, setSelectedCategory] = useState('All');
 	const [items, setItems] = useState<Product[]>(initialItems);
+	const [isStockUnavailable, setIsStockUnavailable] = useState(stockUnavailable);
 	const [stockError, setStockError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(initialItems.length === 0);
 	const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
@@ -37,14 +38,17 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 						return status === 'published' || status === 'stock-out';
 					});
 					setItems(visibleItems);
+					setIsStockUnavailable(false);
 					setStockError(null);
 				} else if (isMounted && !data.ok) {
 					setStockError('Couldn’t refresh stock. Showing cached data.');
+					setIsStockUnavailable(true);
 				}
 			} catch (error) {
 				if (!isMounted) return;
 				const isAbort = error instanceof DOMException && error.name === 'AbortError';
 				setStockError(isAbort ? 'Stock request timed out. Showing cached data.' : 'Couldn’t refresh stock. Showing cached data.');
+				setIsStockUnavailable(true);
 			} finally {
 				window.clearTimeout(timeoutId);
 				if (isMounted) setIsLoading(false);
@@ -161,7 +165,7 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 					</div>
 				</div>
 
-				{stockUnavailable && (
+				{isStockUnavailable && (
 					<div className='bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 mx-auto max-w-2xl'>
 						<p
 							className='text-center text-sm text-amber-800'
