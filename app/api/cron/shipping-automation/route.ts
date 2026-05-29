@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendShippingConfirmation } from '@/lib/shippingEmail';
+import { isValidTrackingValue } from '@/lib/wrikeShipping';
 import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 			const trackingNumberField = task.customFields?.find((f: { id: string }) => f.id === trackingNumberFieldId);
 			const trackingNumber = trackingNumberField?.value;
 
-			if (!trackingNumber) {
+			if (!isValidTrackingValue(trackingNumber)) {
 				continue;
 			}
 

@@ -20,6 +20,15 @@ type WrikeWebhookPayload = {
 	folderId: string;
 };
 
+export function isValidTrackingValue(value: string | null | undefined): value is string {
+	if (!value) return false;
+	const normalized = value.trim().toUpperCase();
+	if (!normalized) return false;
+	if (!normalized.includes('PGCA')) return false;
+	if (!/\d/.test(normalized)) return false;
+	return true;
+}
+
 async function getWrikeTask(taskId: string): Promise<WrikeTask | null> {
 	const apiToken = process.env.WRIKE_API_TOKEN;
 	if (!apiToken) {
@@ -45,7 +54,7 @@ async function getWrikeTask(taskId: string): Promise<WrikeTask | null> {
 	}
 }
 
-function extractOrderData(task: WrikeTask): ShippingConfirmationData | null {
+function extractOrderData(task: WrikeTask, trackingNumber: string): ShippingConfirmationData | null {
 	// Extract order number from title (format: "Order #12345 - John Doe")
 	const titleMatch = task.title.match(/Order #(\d+)/);
 	if (!titleMatch) {
@@ -54,19 +63,9 @@ function extractOrderData(task: WrikeTask): ShippingConfirmationData | null {
 	}
 
 	const orderNumber = titleMatch[1];
-	const trackingNumberFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
 
-	if (!trackingNumberFieldId) {
-		console.error('[wrikeShipping] WRIKE_TRACKING_NUMBER_FIELD_ID not configured');
-		return null;
-	}
-
-	// Extract tracking number from custom fields
-	const trackingNumberField = task.customFields?.find((f) => f.id === trackingNumberFieldId);
-	const trackingNumber = trackingNumberField?.value;
-
-	if (!trackingNumber) {
-		console.error('[wrikeShipping] No tracking number found for order #', orderNumber);
+	if (!isValidTrackingValue(trackingNumber)) {
+		console.log('[wrikeShipping] Invalid tracking number for order #', orderNumber);
 		return null;
 	}
 
@@ -143,8 +142,20 @@ export async function handleWrikeTaskCompletion(payload: WrikeWebhookPayload): P
 		return { success: true, message: 'Not an order task, skipping shipping confirmation' };
 	}
 
+	const trackingNumberFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
+	if (!trackingNumberFieldId) {
+		return { success: false, error: 'WRIKE_TRACKING_NUMBER_FIELD_ID not configured' };
+	}
+
+	const trackingNumberField = task.customFields?.find((f) => f.id === trackingNumberFieldId);
+	const trackingNumber = trackingNumberField?.value;
+
+	if (!isValidTrackingValue(trackingNumber)) {
+		return { success: true, message: 'Completed task has no valid tracking number, skipping shipping confirmation' };
+	}
+
 	// Extract order data
-	const orderData = extractOrderData(task);
+	const orderData = extractOrderData(task, trackingNumber);
 	if (!orderData) {
 		return { success: false, error: 'Failed to extract order data from task' };
 	}

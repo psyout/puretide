@@ -5,7 +5,11 @@ import Image from 'next/image';
 import LogoHorizontal from './LogoHorizotal';
 
 type HeroSlide = {
-	backgroundImage: string;
+	backgroundImage?: string;
+	video?: {
+		src: string;
+		poster: string;
+	};
 	description: string;
 };
 
@@ -49,31 +53,50 @@ export default function HeroClient({ slides }: HeroClientProps) {
 
 	return (
 		<section className='relative w-full h-[100svh] sm:h-screen [@media(min-aspect-ratio:4/3)]:max-h-none [@media(max-aspect-ratio:4/3)]:max-h-[900px] overflow-hidden'>
-			{/* Background image slider */}
+			{/* Background image/video slider */}
 			<div className='absolute inset-0 w-full h-full'>
 				{slides.map((slide, index) => (
 					<div
-						key={slide.backgroundImage}
+						key={slide.backgroundImage || slide.video?.src}
 						className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}>
-						<div className='absolute inset-0 w-full h-full block sm:hidden blur-xs z-0'>
-							<Image
-								src={slide.backgroundImage}
-								alt=''
-								fill
-								sizes='(min-width: 640px) 0vw, 100vw'
-								priority={isMobile && index === 0}
-								className='object-cover'
-							/>
-						</div>
-						<Image
-							src={slide.backgroundImage}
-							alt={`Hero background ${index + 1}`}
-							fill
-							priority={!isMobile && index === 0}
-							sizes='(max-width: 639px) 0vw, 100vw'
-							className='object-cover hidden sm:block'
-						/>
-						<div className='absolute inset-0 bg-gradient-to-b from-mineral-white/70 via-mineral-white/25 to-mineral-white/70 backdrop-blur-[1px]' />
+						{slide.video ? (
+							<>
+								{/* Video slide */}
+								<video
+									src={slide.video.src}
+									poster={slide.video.poster}
+									autoPlay
+									muted
+									loop
+									playsInline
+									className='absolute inset-0 w-full h-full object-cover'
+								/>
+								<div className='absolute inset-0 bg-gradient-to-b from-mineral-white/70 via-mineral-white/25 to-mineral-white/70 backdrop-blur-[1px]' />
+							</>
+						) : slide.backgroundImage ? (
+							<>
+								{/* Image slide */}
+								<div className='absolute inset-0 w-full h-full block sm:hidden blur-xs z-0'>
+									<Image
+										src={slide.backgroundImage}
+										alt=''
+										fill
+										sizes='(min-width: 640px) 0vw, 100vw'
+										priority={isMobile && index === 0}
+										className='object-cover'
+									/>
+								</div>
+								<Image
+									src={slide.backgroundImage}
+									alt={`Hero background ${index + 1}`}
+									fill
+									priority={!isMobile && index === 0}
+									sizes='(max-width: 639px) 0vw, 100vw'
+									className='object-cover hidden sm:block'
+								/>
+								<div className='absolute inset-0 bg-gradient-to-b from-mineral-white/70 via-mineral-white/25 to-mineral-white/70 backdrop-blur-[1px]' />
+							</>
+						) : null}
 					</div>
 				))}
 			</div>

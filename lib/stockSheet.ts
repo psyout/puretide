@@ -52,6 +52,8 @@ const reportSheetsError = (label: string, error: unknown) => {
 	console.error(`${label}:`, error);
 };
 
+const canonicalizeHeader = (value: string) => value.trim().toLowerCase();
+
 const getSheetsClient = () => {
 	if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
 		throw new Error('Google Sheets credentials are not configured');
@@ -81,12 +83,12 @@ const getSheetTitle = async (sheets: ReturnType<typeof getSheetsClient>) => {
 const normalizeRow = (row: string[], headerRow: string[]): Record<HeaderKey, string> => {
 	const result = {} as Record<HeaderKey, string>;
 	const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
-		acc[header] = index;
+		acc[canonicalizeHeader(header)] = index;
 		return acc;
 	}, {});
 
 	HEADERS.forEach((header) => {
-		const index = indexMap[header];
+		const index = indexMap[canonicalizeHeader(header)];
 		result[header] = index != null ? (row[index] ?? '') : '';
 	});
 	return result;
@@ -133,7 +135,8 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 		}
 
 		const [headerRow, ...dataRows] = rows as string[][];
-		const headerMatch = REQUIRED_HEADERS.every((header) => headerRow?.includes(header));
+		const canonicalHeaders = new Set((headerRow ?? []).map((header) => canonicalizeHeader(header)));
+		const headerMatch = REQUIRED_HEADERS.every((header) => canonicalHeaders.has(canonicalizeHeader(header)));
 		if (!headerMatch) {
 			return baseProducts;
 		}

@@ -38,7 +38,7 @@ echo "Syncing static assets into standalone runtime..."
 ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; rm -rf .next/standalone/.next/static; mkdir -p .next/standalone/.next; cp -R .next/static .next/standalone/.next/static; rm -rf .next/standalone/public; cp -R public .next/standalone/public"
 
 echo "Installing deps on VPS (standalone node_modules are symlinks; replace with real deps)..."
-ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm cache clean --force && (NODE_OPTIONS=\"--max-old-space-size=512\" npm ci --omit=dev || npm install --omit=dev)"
+ssh "${SSH_TARGET}" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm cache clean --force && NODE_OPTIONS=\"--max-old-space-size=512\" npm install --omit=dev"
 
 echo "Ensuring sql.js WASM exists inside standalone runtime..."
 ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; mkdir -p .next/standalone/node_modules/sql.js/dist; cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/standalone/node_modules/sql.js/dist/sql-wasm.wasm"
