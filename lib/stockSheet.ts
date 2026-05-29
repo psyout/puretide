@@ -131,14 +131,14 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 
 		const rows = response.data.values ?? [];
 		if (rows.length === 0) {
-			return baseProducts;
+			throw new Error('No product rows returned from Google Sheets.');
 		}
 
 		const [headerRow, ...dataRows] = rows as string[][];
 		const canonicalHeaders = new Set((headerRow ?? []).map((header) => canonicalizeHeader(header)));
 		const headerMatch = REQUIRED_HEADERS.every((header) => canonicalHeaders.has(canonicalizeHeader(header)));
 		if (!headerMatch) {
-			return baseProducts;
+			throw new Error('Google Sheets header mismatch. Required columns are missing or renamed.');
 		}
 
 		const sheetProducts = dataRows
@@ -213,6 +213,9 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 		return sheetProducts;
 	} catch (error) {
 		reportSheetsError('Error reading products from sheet', error);
+		if (process.env.NODE_ENV !== 'production') {
+			throw new Error(`Unable to access product inventory: ${getErrorMessage(error)}`);
+		}
 		throw new Error('Unable to access product inventory. Please try again later.');
 	}
 };
