@@ -71,7 +71,6 @@ export default function HeroClient({ slides }: HeroClientProps) {
 									playsInline
 									className='absolute inset-0 w-full h-full object-cover'
 								/>
-								<div className='absolute inset-0 bg-gradient-to-b from-mineral-white/70 via-mineral-white/25 to-mineral-white/70 backdrop-blur-[1px]' />
 							</>
 						) : slide.backgroundImage ? (
 							<>
@@ -94,7 +93,6 @@ export default function HeroClient({ slides }: HeroClientProps) {
 									sizes='(max-width: 639px) 0vw, 100vw'
 									className='object-cover hidden sm:block'
 								/>
-								<div className='absolute inset-0 bg-gradient-to-b from-mineral-white/70 via-mineral-white/25 to-mineral-white/70 backdrop-blur-[1px]' />
 							</>
 						) : null}
 					</div>
@@ -106,10 +104,10 @@ export default function HeroClient({ slides }: HeroClientProps) {
 				<div className='mb-3 lg:mb-6'>
 					<LogoHorizontal
 						className='h-28 sm:h-32 md:h-36 lg:h-40 w-auto mx-auto drop-shadow-2xl [@media(max-height:800px)]:h-28'
-						fillColor='fill-deep-tidal-teal-600 drop-shadow-xl/50'
+						fillColor='fill-white drop-shadow-xl/50'
 					/>
 				</div>
-				<p className='text-deep-tidal-teal-600 text-lg sm:text-xl md:text-2xl lg:text-1xl max-w-[80%] sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(255,255,255,0.5)] font-matimo h-[220px] sm:h-[200px] lg:h-[180px] [@media(max-height:800px)]:text-lg [@media(max-height:800px)]:h-[160px]'>
+				<p className='text-white text-lg sm:text-xl md:text-2xl lg:text-1xl max-w-[80%] sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] font-matimo h-[220px] sm:h-[200px] lg:h-[180px] [@media(max-height:800px)]:text-lg [@media(max-height:800px)]:h-[160px]'>
 					{currentSlide.description}
 				</p>
 			</div>
