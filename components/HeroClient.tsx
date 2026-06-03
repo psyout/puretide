@@ -59,6 +59,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 					<div
 						key={slide.backgroundImage || slide.video?.src}
 						className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}>
+						{index === 1 ? <div className='absolute inset-0 bg-black/15 z-[1]' /> : null}
 						{slide.video ? (
 							<>
 								{/* Video slide */}

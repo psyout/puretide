@@ -35,6 +35,23 @@ const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description',
 const getErrorCode = (error: unknown) => (error && typeof error === 'object' && 'code' in error ? String((error as { code?: string }).code ?? '') : '');
 const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+const getGaxiosStatus = (error: unknown): number | null => {
+	if (!error || typeof error !== 'object') return null;
+	const maybeResponse = (error as { response?: unknown }).response;
+	if (!maybeResponse || typeof maybeResponse !== 'object') return null;
+	const status = (maybeResponse as { status?: unknown }).status;
+	return typeof status === 'number' ? status : null;
+};
+
+const isPermissionDeniedError = (error: unknown) => {
+	const status = getGaxiosStatus(error);
+	if (status === 403) return true;
+	const code = getErrorCode(error).toUpperCase();
+	if (code === '403') return true;
+	const message = getErrorMessage(error).toLowerCase();
+	return message.includes('permission') || message.includes('permission_denied') || message.includes('does not have permission');
+};
+
 const isExpectedSheetsFallbackError = (error: unknown) => {
 	const message = getErrorMessage(error).toLowerCase();
 	const code = getErrorCode(error).toUpperCase();
@@ -47,6 +64,12 @@ const reportSheetsError = (label: string, error: unknown) => {
 	}
 	if (isExpectedSheetsFallbackError(error)) {
 		console.warn(`${label}: ${getErrorMessage(error)}`);
+		return;
+	}
+	if (isPermissionDeniedError(error)) {
+		const sheetId = process.env.GOOGLE_SHEET_ID ?? '(missing GOOGLE_SHEET_ID)';
+		const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? '(missing GOOGLE_SERVICE_ACCOUNT_EMAIL)';
+		console.error(`${label}: Google Sheets permission denied (403). Share the spreadsheet (${sheetId}) with the service account (${clientEmail}) or update credentials.`, error);
 		return;
 	}
 	console.error(`${label}:`, error);

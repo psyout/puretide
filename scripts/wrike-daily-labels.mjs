@@ -23,6 +23,10 @@ function getOrdersFolderId() {
 	return process.env.WRIKE_FOLDER_ID || process.env.WRIKE_ORDERS_FOLDER_ID || '';
 }
 
+function getLabelsFolderId() {
+	return process.env.WRIKE_LABELS_FOLDER_ID || '';
+}
+
 function stripHtml(input) {
 	if (!input) return '';
 	return String(input)
@@ -56,6 +60,20 @@ function normalizeLines(text) {
 	return result;
 }
 
+function parseOrderDateFromOrderDescription(html) {
+	if (!html) return null;
+	const m = String(html).match(/<p>\s*Date:\s*([^<]+?)\s*<\/p>/i);
+	if (!m) return null;
+	const text = stripHtml(m[1]).trim();
+	const iso = text.match(/(\d{4}-\d{2}-\d{2})/);
+	if (iso) {
+		const d = new Date(`${iso[1]}T00:00:00`);
+		return Number.isNaN(d.getTime()) ? null : d;
+	}
+	const d = new Date(text);
+	return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function parseLabelFromOrderDescription(html) {
 	const nameMatch = String(html).match(/<b>\s*Name:\s*<\/b>\s*([^<]+?)\s*<br\s*\/?\s*>/i);
 	const name = nameMatch ? stripHtml(nameMatch[1]).trim() : '';
@@ -63,10 +81,41 @@ function parseLabelFromOrderDescription(html) {
 	const shippingMatch = String(html).match(/<h4>\s*Shipping Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
 	const billingMatch = String(html).match(/<h4>\s*Billing Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
 	const match = shippingMatch || billingMatch;
-	if (!match) return null;
-	const text = stripHtml(match[1]);
-	const lines = normalizeLines(text);
-	if (!lines.length) return null;
+
+	let lines = [];
+	if (match) {
+		const text = stripHtml(match[1]);
+		lines = normalizeLines(text);
+	}
+
+	if (!lines.length) {
+		const text = stripHtml(html);
+		const all = normalizeLines(text);
+
+		let inferredName = name;
+		if (!inferredName) {
+			const n1 = text.match(/\bName:\s*(.+)$/im);
+			if (n1) inferredName = n1[1].trim();
+		}
+
+		const stopRe = /^(order items|payment method|order summary|financial summary|stock remaining|order notes|status:)/i;
+		const findBlock = (header) => {
+			const idx = all.findIndex((l) => header.test(l));
+			if (idx < 0) return [];
+			const out = [];
+			for (let i = idx + 1; i < all.length; i += 1) {
+				const l = all[i];
+				if (stopRe.test(l)) break;
+				out.push(l);
+			}
+			return out;
+		};
+
+		lines = findBlock(/^shipping address$/i);
+		if (!lines.length) lines = findBlock(/^billing address$/i);
+		if (!inferredName || !lines.length) return null;
+		return { name: inferredName || 'Recipient', lines };
+	}
 
 	const unitPattern = /^(unit|apt|apartment|suite|ste|#\s*)\s*([^\s]+(?:\s+[^\s]+)*)/i;
 	const addressLines = [];
@@ -110,7 +159,7 @@ async function fetchAllTasksInFolder(folderId, apiToken) {
 			headers: { Authorization: `Bearer ${apiToken}` },
 			params: {
 				descendants: true,
-				fields: JSON.stringify(['description', 'createdDate']),
+				fields: JSON.stringify(['description']),
 				nextPageToken,
 			},
 			validateStatus: () => true,
@@ -250,26 +299,21 @@ async function generateAvery5162DocxSheets(labels, outputPath) {
 		});
 	};
 
-	const children = [];
+	const sections = [];
 	for (let i = 0; i < labels.length; i += 14) {
 		const slice = labels.slice(i, i + 14);
-		if (children.length) children.push(new Paragraph({ text: '', pageBreakBefore: true }));
-		children.push(makeSheetTable(slice));
+		sections.push({
+			properties: {
+				page: {
+					size: { width: pageWidth, height: pageHeight },
+					margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin },
+				},
+			},
+			children: [makeSheetTable(slice)],
+		});
 	}
 
-	const doc = new Document({
-		sections: [
-			{
-				properties: {
-					page: {
-						size: { width: pageWidth, height: pageHeight },
-						margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin },
-					},
-				},
-				children,
-			},
-		],
-	});
+	const doc = new Document({ sections });
 
 	const buf = await Packer.toBuffer(doc);
 	fs.writeFileSync(outputPath, buf);
@@ -294,17 +338,26 @@ async function run() {
 		process.exit(1);
 	}
 
+	const labelsFolderId = getLabelsFolderId();
+	const outputFolderId = labelsFolderId || folderId;
+
 	const baseDate = parseIsoDateOnly(args.date) ?? new Date();
 	const { start, end } = toLocalDayRange(baseDate);
 	const isoDate = start.toISOString().slice(0, 10);
 
 	console.log('Wrike daily Avery 5162 sheet generator\n');
 	console.log('  Date:', isoDate);
-	console.log('  Folder:', folderId);
+	console.log('  Folder:', outputFolderId);
 	console.log('');
 
 	const tasks = await fetchAllTasksInFolder(folderId, apiToken);
 	const todays = tasks.filter((t) => {
+		const orderDate = parseOrderDateFromOrderDescription(t?.description || '');
+		if (orderDate) {
+			const day = new Date(orderDate);
+			day.setHours(0, 0, 0, 0);
+			return day >= start && day <= end;
+		}
 		const created = t?.createdDate ? new Date(t.createdDate) : null;
 		if (!created) return false;
 		return created >= start && created <= end;
@@ -332,7 +385,7 @@ async function run() {
 		return;
 	}
 
-	const dailyTask = await createTaskInFolder(folderId, `Daily Labels ${isoDate}`, `Daily Avery 5162 label sheets for ${isoDate}`, apiToken);
+	const dailyTask = await createTaskInFolder(outputFolderId, `Daily Labels ${isoDate}`, `Daily Avery 5162 label sheets for ${isoDate}`, apiToken);
 	if (!dailyTask) {
 		console.error('Failed to create daily labels task in Wrike.');
 		process.exit(1);

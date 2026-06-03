@@ -10,8 +10,14 @@ type Label = { name: string; lines: string[] };
 
 type WrikeTask = {
 	id: string;
+	title?: string;
 	description?: string;
 	createdDate?: string;
+};
+
+type WrikeAttachment = {
+	id: string;
+	name?: string;
 };
 
 function startOfLocalDay(d: Date): Date {
@@ -258,26 +264,21 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 		});
 	};
 
-	const children: (Paragraph | Table)[] = [];
+	const sections = [] as { properties: any; children: (Paragraph | Table)[] }[];
 	for (let i = 0; i < labels.length; i += 14) {
 		const slice = labels.slice(i, i + 14);
-		if (children.length) children.push(new Paragraph({ text: '', pageBreakBefore: true }));
-		children.push(makeSheetTable(slice));
+		sections.push({
+			properties: {
+				page: {
+					size: { width: pageWidth, height: pageHeight },
+					margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin, header: 0, footer: 0 },
+				},
+			},
+			children: [makeSheetTable(slice)],
+		});
 	}
 
-	const doc = new Document({
-		sections: [
-			{
-				properties: {
-					page: {
-						size: { width: pageWidth, height: pageHeight },
-						margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin, header: 0, footer: 0 },
-					},
-				},
-				children,
-			},
-		],
-	});
+	const doc = new Document({ sections });
 
 	const buf = await Packer.toBuffer(doc);
 	fs.writeFileSync(outputPath, buf);
@@ -317,10 +318,63 @@ async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string,
 	return filtered;
 }
 
-async function createTaskInFolder(folderId: string, title: string, description: string, apiToken: string): Promise<{ id: string } | null> {
+function getLabelsTaskStatus(): string | null {
+	const raw = String(process.env.WRIKE_LABELS_TASK_STATUS ?? '').trim();
+	return raw ? raw : null;
+}
+
+async function findTaskIdByExactTitleInFolder(folderId: string, apiToken: string, title: string): Promise<string | null> {
+	let nextPageToken: string | undefined = undefined;
+	while (true) {
+		const params: any = { descendants: false };
+		if (nextPageToken) params.nextPageToken = nextPageToken;
+		const res: { status: number; data: any } = await axios.get(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
+			headers: { Authorization: `Bearer ${apiToken}` },
+			params,
+			validateStatus: () => true,
+		});
+		if (res.status < 200 || res.status >= 300) {
+			throw new Error(`Wrike API ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`);
+		}
+		const data: any = res.data || {};
+		const batch: any[] = Array.isArray(data.data) ? data.data : [];
+		const found = batch.find((t) => String(t?.title ?? '').trim() === title.trim());
+		if (found?.id) return String(found.id);
+		nextPageToken = data.nextPageToken;
+		if (!nextPageToken) break;
+	}
+	return null;
+}
+
+async function listAttachments(taskId: string, apiToken: string): Promise<WrikeAttachment[]> {
+	const res: { status: number; data: any } = await axios.get(`${WRIKE_API_BASE}/tasks/${taskId}/attachments`, {
+		headers: { Authorization: `Bearer ${apiToken}` },
+		validateStatus: () => true,
+	});
+	if (res.status < 200 || res.status >= 300) {
+		throw new Error(`Wrike attachments list failed ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`);
+	}
+	return Array.isArray(res.data?.data) ? res.data.data : [];
+}
+
+async function tryUpdateTaskStatus(taskId: string, apiToken: string, status: string): Promise<void> {
+	const res: { status: number; data: any } = await axios.put(
+		`${WRIKE_API_BASE}/tasks/${taskId}`,
+		{ status },
+		{
+			headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+			validateStatus: () => true,
+		},
+	);
+	if (res.status < 200 || res.status >= 300) {
+		console.warn(`[wrikeDailyLabels] Failed to update task status to "${status}" for task ${taskId}: ${res.status}`);
+	}
+}
+
+async function createTaskInFolder(folderId: string, title: string, description: string, apiToken: string, status?: string | null): Promise<{ id: string } | null> {
 	const res: { status: number; data: any } = await axios.post(
 		`${WRIKE_API_BASE}/folders/${folderId}/tasks`,
-		{ title, description, status: 'Active' },
+		{ title, description, status: status || 'Active' },
 		{
 			headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
 			validateStatus: () => true,
@@ -431,15 +485,38 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 		return { ok: false, date: isoDate, reason: 'no-labels', ordersConsidered: inDay.length, labelsParsed: 0 };
 	}
 
-	const outPath = path.resolve(process.cwd(), `daily-labels-${isoDate}-avery-5162.docx`);
+	const outFileName = `daily-labels-${isoDate}-avery-5162.docx`;
+	const outPath = path.resolve(process.cwd(), outFileName);
 	await generateAvery5162DocxSheets(labels, outPath);
 
 	try {
-		const dailyTask = await createTaskInFolder(params.labelsFolderId, `Daily Labels ${isoDate}`, `Daily Avery 5162 label sheets for ${isoDate}`, params.apiToken);
-		if (!dailyTask) {
-			return { ok: false, date: isoDate, reason: 'wrike-create-task-failed', ordersConsidered: inDay.length, labelsParsed: labels.length };
+		const title = `Daily Labels ${isoDate}`;
+		const desiredStatus = getLabelsTaskStatus();
+		let taskId = await findTaskIdByExactTitleInFolder(params.labelsFolderId, params.apiToken, title);
+		if (!taskId) {
+			const dailyTask = await createTaskInFolder(params.labelsFolderId, title, `Daily Avery 5162 label sheets for ${isoDate}`, params.apiToken, desiredStatus);
+			if (!dailyTask) {
+				return { ok: false, date: isoDate, reason: 'wrike-create-task-failed', ordersConsidered: inDay.length, labelsParsed: labels.length };
+			}
+			taskId = dailyTask.id;
+		} else if (desiredStatus) {
+			await tryUpdateTaskStatus(taskId, params.apiToken, desiredStatus);
 		}
-		const uploaded = await uploadAttachmentToTask(dailyTask.id, outPath, params.apiToken);
+
+		const attachments = await listAttachments(taskId, params.apiToken);
+		const existing = attachments.find((a) => String(a?.name ?? '') === outFileName);
+		if (existing?.id) {
+			return {
+				ok: true,
+				date: isoDate,
+				ordersConsidered: inDay.length,
+				labelsParsed: labels.length,
+				dailyTaskId: taskId,
+				attachmentId: existing.id,
+			};
+		}
+
+		const uploaded = await uploadAttachmentToTask(taskId, outPath, params.apiToken);
 		if (!uploaded) {
 			return { ok: false, date: isoDate, reason: 'wrike-upload-failed', ordersConsidered: inDay.length, labelsParsed: labels.length };
 		}
@@ -448,7 +525,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 			date: isoDate,
 			ordersConsidered: inDay.length,
 			labelsParsed: labels.length,
-			dailyTaskId: dailyTask.id,
+			dailyTaskId: taskId,
 			attachmentId: uploaded.id,
 		};
 	} finally {
@@ -490,17 +567,40 @@ export async function generateAndAttachLabelsForRange(params: {
 		return { ok: false, startDate: startIso, endDate: endIso, reason: 'no-labels', ordersConsidered: inRange.length, labelsParsed: 0 };
 	}
 
-	const outPath = path.resolve(process.cwd(), `labels-${startIso}-to-${endIso}-avery-5162.docx`);
+	const outFileName = `labels-${startIso}-to-${endIso}-avery-5162.docx`;
+	const outPath = path.resolve(process.cwd(), outFileName);
 	await generateAvery5162DocxSheets(labels, outPath);
 
 	try {
 		const title = params.title ?? `Weekly Labels ${startIso} to ${endIso}`;
 		const description = params.description ?? `Avery 5162 label sheets for ${startIso} to ${endIso}`;
-		const task = await createTaskInFolder(params.labelsFolderId, title, description, params.apiToken);
-		if (!task) {
-			return { ok: false, startDate: startIso, endDate: endIso, reason: 'wrike-create-task-failed', ordersConsidered: inRange.length, labelsParsed: labels.length };
+		const desiredStatus = getLabelsTaskStatus();
+		let taskId = await findTaskIdByExactTitleInFolder(params.labelsFolderId, params.apiToken, title);
+		if (!taskId) {
+			const task = await createTaskInFolder(params.labelsFolderId, title, description, params.apiToken, desiredStatus);
+			if (!task) {
+				return { ok: false, startDate: startIso, endDate: endIso, reason: 'wrike-create-task-failed', ordersConsidered: inRange.length, labelsParsed: labels.length };
+			}
+			taskId = task.id;
+		} else if (desiredStatus) {
+			await tryUpdateTaskStatus(taskId, params.apiToken, desiredStatus);
 		}
-		const uploaded = await uploadAttachmentToTask(task.id, outPath, params.apiToken);
+
+		const attachments = await listAttachments(taskId, params.apiToken);
+		const existing = attachments.find((a) => String(a?.name ?? '') === outFileName);
+		if (existing?.id) {
+			return {
+				ok: true,
+				startDate: startIso,
+				endDate: endIso,
+				ordersConsidered: inRange.length,
+				labelsParsed: labels.length,
+				taskId,
+				attachmentId: existing.id,
+			};
+		}
+
+		const uploaded = await uploadAttachmentToTask(taskId, outPath, params.apiToken);
 		if (!uploaded) {
 			return { ok: false, startDate: startIso, endDate: endIso, reason: 'wrike-upload-failed', ordersConsidered: inRange.length, labelsParsed: labels.length };
 		}
@@ -510,7 +610,7 @@ export async function generateAndAttachLabelsForRange(params: {
 			endDate: endIso,
 			ordersConsidered: inRange.length,
 			labelsParsed: labels.length,
-			taskId: task.id,
+			taskId,
 			attachmentId: uploaded.id,
 		};
 	} finally {
