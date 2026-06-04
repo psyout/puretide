@@ -2,6 +2,9 @@ import { products as fallbackProducts } from '@/lib/products';
 import { readSheetProducts } from '@/lib/stockSheet';
 import ProductGridClient from './ProductGridClient';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function ProductGrid() {
 	let items = fallbackProducts;
 	let stockUnavailable = false;
