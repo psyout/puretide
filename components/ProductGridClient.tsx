@@ -12,57 +12,20 @@ type ProductGridClientProps = {
 export default function ProductGridClient({ initialItems, stockUnavailable = false }: ProductGridClientProps) {
 	const [selectedCategory, setSelectedCategory] = useState('All');
 	const [items, setItems] = useState<Product[]>(initialItems);
-	const [isStockUnavailable, setIsStockUnavailable] = useState(stockUnavailable);
-	const [stockError, setStockError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(initialItems.length === 0);
 	const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
 	const [imageGateExpired, setImageGateExpired] = useState(false);
 
-	// 1. Fetch products from API
 	useEffect(() => {
-		let isMounted = true;
+		if (stockUnavailable) {
+			console.warn('[stock] Initial stock unavailable flag received; rendering without real-time inventory.');
+		}
+	}, [stockUnavailable]);
 
-		const load = async () => {
-			if (isMounted) setIsLoading(true);
-			const controller = new AbortController();
-			const timeoutId = window.setTimeout(() => controller.abort(), 8000);
-			try {
-				const response = await fetch('/api/stock', { cache: 'no-store', signal: controller.signal });
-				if (!response.ok) {
-					throw new Error(`Stock request failed: ${response.status}`);
-				}
-				const data = (await response.json()) as { ok: boolean; items?: Product[] };
-				if (isMounted && data.ok && data.items) {
-					const visibleItems = data.items.filter((product) => {
-						const status = product.status ?? 'published';
-						return status === 'published' || status === 'stock-out';
-					});
-					setItems(visibleItems);
-					setIsStockUnavailable(false);
-					setStockError(null);
-				} else if (isMounted && !data.ok) {
-					setStockError('Couldn’t refresh stock. Showing cached data.');
-					setIsStockUnavailable(true);
-				}
-			} catch (error) {
-				if (!isMounted) return;
-				const isAbort = error instanceof DOMException && error.name === 'AbortError';
-				setStockError(isAbort ? 'Stock request timed out. Showing cached data.' : 'Couldn’t refresh stock. Showing cached data.');
-				setIsStockUnavailable(true);
-			} finally {
-				window.clearTimeout(timeoutId);
-				if (isMounted) setIsLoading(false);
-			}
-		};
-
-		void load();
-		const interval = window.setInterval(load, 60000);
-
-		return () => {
-			isMounted = false;
-			window.clearInterval(interval);
-		};
-	}, []);
+	useEffect(() => {
+		setItems(initialItems);
+		setIsLoading(false);
+	}, [initialItems]);
 
 	// 3. Memoized categories and filtered products (Must be before useEffects that use them)
 	const categories = useMemo(() => ['All', ...Array.from(new Set(items.map((product) => product.category)))], [items]);
@@ -164,23 +127,6 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 						</div>
 					</div>
 				</div>
-
-				{isStockUnavailable && (
-					<div className='bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 mx-auto max-w-2xl'>
-						<p
-							className='text-center text-sm text-amber-800'
-							role='alert'>
-							<strong>Inventory System Offline:</strong> Real-time stock data is temporarily unavailable. Please try again later or contact us for availability.
-						</p>
-					</div>
-				)}
-				{stockError && (
-					<p
-						className='text-center text-sm text-deep-tidal-teal-600/80 mb-2'
-						role='status'>
-						{stockError}
-					</p>
-				)}
 				<div>
 					<div className='relative mt-8'>
 						{showSkeleton && (

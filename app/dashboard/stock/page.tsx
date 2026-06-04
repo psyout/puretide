@@ -101,7 +101,7 @@ export default function StockDashboardPage() {
 		const load = async () => {
 			try {
 				setProductsError(null);
-				const response = await fetch('/api/stock');
+				const response = await fetch('/api/dashboard/stock', { credentials: 'include' });
 				const data = (await response.json()) as { ok?: boolean; items?: Product[]; error?: string };
 				if (response.ok && data.ok && data.items) {
 					setRows(data.items);

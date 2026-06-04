@@ -151,7 +151,7 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 			}
 		});
 
-		const lowStock = updated.filter((product) => product.stock <= LOW_STOCK_THRESHOLD);
+		const lowStock = updated.filter((product) => product.status === 'published' && product.stock <= LOW_STOCK_THRESHOLD);
 
 		await writeSheetProducts(updated);
 		await sendLowStockAlert(lowStock);

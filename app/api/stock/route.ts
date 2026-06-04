@@ -7,7 +7,24 @@ import type { Product } from '@/types/product';
 
 const LOW_STOCK_THRESHOLD = 5;
 
-export async function GET() {
+function requireStockReadKey(request: Request): boolean {
+	const key = process.env.STOCK_API_KEY;
+	if (!key) {
+		return process.env.NODE_ENV !== 'production';
+	}
+	const provided =
+		request.headers.get('x-api-key') ??
+		request.headers
+			.get('authorization')
+			?.replace(/^Bearer\s+/i, '')
+			.trim();
+	return provided === key;
+}
+
+export async function GET(request: Request) {
+	if (!requireStockReadKey(request)) {
+		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
+	}
 	try {
 		const catalogProducts = await readSheetProducts();
 
@@ -70,7 +87,7 @@ export async function POST(request: Request) {
 
 		await writeSheetProducts(items);
 
-		const lowStock = items.filter((item) => Number(item.stock) <= LOW_STOCK_THRESHOLD && item.status !== 'inactive');
+		const lowStock = items.filter((item) => item.status === 'published' && Number(item.stock) <= LOW_STOCK_THRESHOLD);
 
 		await sendLowStockAlert(lowStock);
 
