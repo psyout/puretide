@@ -241,16 +241,19 @@ function toLocalDayRange(date = new Date()) {
 	return { start, end };
 }
 
-async function generateAvery5162DocxSheets(labels, outputPath) {
+async function generateAvery5160DocxSheets(labels, outputPath) {
 	const pageWidth = 8.5 * 1440;
 	const pageHeight = 11 * 1440;
-	const labelWidth = 4 * 1440;
-	const rowPitch = 1.5 * 1440;
+	// Avery 5160/8160: 1" x 2-5/8" (30 per page)
+	const labelWidth = 2.625 * 1440;
+	const columnGap = 0.125 * 1440;
+	const tableWidth = labelWidth * 3 + columnGap * 2;
+	const rowPitch = 1 * 1440;
 	const topMargin = 0.5 * 1440;
 	const bottomMargin = 0.5 * 1440;
-	const leftMargin = 0.15625 * 1440;
-	const rightMargin = 0.15625 * 1440;
-	const cellPadding = 0.08 * 1440;
+	const leftMargin = 0.1875 * 1440;
+	const rightMargin = 0.1875 * 1440;
+	const cellPadding = 0;
 
 	const makeLabelParagraphs = (label) => {
 		if (!label) return [new Paragraph('')];
@@ -258,14 +261,16 @@ async function generateAvery5162DocxSheets(labels, outputPath) {
 		paras.push(
 			new Paragraph({
 				alignment: AlignmentType.LEFT,
-				children: [new TextRun({ text: `To: ${label.name}`, bold: true, size: 22 })],
+				spacing: { before: 0, after: 0 },
+				children: [new TextRun({ text: `To: ${label.name}`, bold: true, size: 20 })],
 			}),
 		);
 		for (const line of label.lines || []) {
 			paras.push(
 				new Paragraph({
 					alignment: AlignmentType.LEFT,
-					children: [new TextRun({ text: line, size: 20 })],
+					spacing: { before: 0, after: 0 },
+					children: [new TextRun({ text: line, size: 18 })],
 				}),
 			);
 		}
@@ -279,34 +284,42 @@ async function generateAvery5162DocxSheets(labels, outputPath) {
 			children: makeLabelParagraphs(label),
 		});
 
+	const makeGapCell = () =>
+		new TableCell({
+			width: { size: columnGap, type: WidthType.DXA },
+			margins: { top: 0, bottom: 0, left: 0, right: 0 },
+			children: [new Paragraph({ spacing: { before: 0, after: 0 } })],
+		});
+
 	const makeSheetTable = (sheetLabels) => {
 		const rows = [];
-		for (let r = 0; r < 7; r += 1) {
-			const left = sheetLabels[r * 2] || null;
-			const right = sheetLabels[r * 2 + 1] || null;
+		for (let r = 0; r < 10; r += 1) {
+			const c0 = sheetLabels[r * 3] || null;
+			const c1 = sheetLabels[r * 3 + 1] || null;
+			const c2 = sheetLabels[r * 3 + 2] || null;
 			rows.push(
 				new TableRow({
 					height: { value: rowPitch, rule: HeightRule.EXACT },
-					children: [makeCell(left), makeCell(right)],
+					children: [makeCell(c0), makeGapCell(), makeCell(c1), makeGapCell(), makeCell(c2)],
 				}),
 			);
 		}
 
 		return new Table({
-			width: { size: 100, type: WidthType.PERCENTAGE },
-			columnWidths: [labelWidth, labelWidth],
+			width: { size: tableWidth, type: WidthType.DXA },
+			columnWidths: [labelWidth, columnGap, labelWidth, columnGap, labelWidth],
 			rows,
 		});
 	};
 
 	const sections = [];
-	for (let i = 0; i < labels.length; i += 14) {
-		const slice = labels.slice(i, i + 14);
+	for (let i = 0; i < labels.length; i += 30) {
+		const slice = labels.slice(i, i + 30);
 		sections.push({
 			properties: {
 				page: {
 					size: { width: pageWidth, height: pageHeight },
-					margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin },
+					margin: { top: topMargin, bottom: bottomMargin, left: leftMargin, right: rightMargin, header: 0, footer: 0 },
 				},
 			},
 			children: [makeSheetTable(slice)],
@@ -345,7 +358,7 @@ async function run() {
 	const { start, end } = toLocalDayRange(baseDate);
 	const isoDate = start.toISOString().slice(0, 10);
 
-	console.log('Wrike daily Avery 5162 sheet generator\n');
+	console.log('Wrike daily Avery 5160/8160 sheet generator\n');
 	console.log('  Date:', isoDate);
 	console.log('  Folder:', outputFolderId);
 	console.log('');
@@ -377,15 +390,15 @@ async function run() {
 		return;
 	}
 
-	const outPath = path.resolve(process.cwd(), `daily-labels-${isoDate}-avery-5162.docx`);
-	await generateAvery5162DocxSheets(labels, outPath);
+	const outPath = path.resolve(process.cwd(), `daily-labels-${isoDate}-avery-5160.docx`);
+	await generateAvery5160DocxSheets(labels, outPath);
 
 	if (args.dryRun) {
 		console.log('Dry run enabled. Generated:', outPath);
 		return;
 	}
 
-	const dailyTask = await createTaskInFolder(outputFolderId, `Daily Labels ${isoDate}`, `Daily Avery 5162 label sheets for ${isoDate}`, apiToken);
+	const dailyTask = await createTaskInFolder(outputFolderId, `Daily Labels ${isoDate}`, `Daily Avery 5160/8160 label sheets for ${isoDate}`, apiToken);
 	if (!dailyTask) {
 		console.error('Failed to create daily labels task in Wrike.');
 		process.exit(1);

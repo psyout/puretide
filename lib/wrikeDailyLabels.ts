@@ -141,10 +141,10 @@ export function parseLabelFromOrderDescription(html: string): Label | null {
 	return { name: name || 'Recipient', lines: addressLines };
 }
 
-export async function generateAvery5162DocxSheets(labels: Label[], outputPath: string): Promise<void> {
+export async function generateAvery5160DocxSheets(labels: Label[], outputPath: string): Promise<void> {
 	const logoPath = path.resolve(process.cwd(), 'public', 'logo.png');
 	const logoBytes = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : null;
-	const textIndentTwips = logoBytes ? 1200 : 0;
+	const textIndentTwips = logoBytes ? 720 : 0;
 	const noBorders = {
 		top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
 		bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -153,11 +153,11 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 		insideH: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
 		insideV: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
 	};
-	const offsetXIn = Number(process.env.AVERY_5162_OFFSET_X_IN ?? 0);
-	const offsetYIn = Number(process.env.AVERY_5162_OFFSET_Y_IN ?? 0);
+	const offsetXIn = Number(process.env.AVERY_5160_OFFSET_X_IN ?? 0);
+	const offsetYIn = Number(process.env.AVERY_5160_OFFSET_Y_IN ?? 0);
 	const offsetXTwips = Number.isFinite(offsetXIn) ? offsetXIn * 1440 : 0;
 	const offsetYTwips = Number.isFinite(offsetYIn) ? offsetYIn * 1440 : 0;
-	const cellTopPadIn = Number(process.env.AVERY_5162_CELL_TOP_PAD_IN ?? NaN);
+	const cellTopPadIn = Number(process.env.AVERY_5160_CELL_TOP_PAD_IN ?? NaN);
 	let logoTransform: { width: number; height: number } | null = null;
 	if (logoBytes) {
 		try {
@@ -165,29 +165,31 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 			const meta = await sharp(logoBytes).metadata();
 			const w = meta.width ?? 0;
 			const h = meta.height ?? 0;
-			const targetH = 30;
+			const targetH = 18;
 			const targetW = w > 0 && h > 0 ? Math.round((w / h) * targetH) : targetH;
 			logoTransform = { width: targetW, height: targetH };
 		} catch {
-			logoTransform = { width: 30, height: 30 };
+			logoTransform = { width: 18, height: 18 };
 		}
 	}
 
 	const pageWidth = 8.5 * 1440;
 	const pageHeight = 11 * 1440;
-	const labelWidth = 4 * 1440;
-	const rowPitch = (4 / 3) * 1440;
-	// Match Avery 5162 Word template defaults (twips) extracted from document.xml:
-	// top=1199, right=446, bottom=820, left=349
-	const baseTopMargin = 1199;
-	const baseBottomMargin = 820;
-	const baseLeftMargin = 349;
-	const baseRightMargin = 446;
+	// Avery 5160/8160: 1" x 2-5/8" (30 per page)
+	const labelWidth = 2.625 * 1440;
+	const columnGap = 0.125 * 1440;
+	const tableWidth = labelWidth * 3 + columnGap * 2;
+	const rowPitch = 1 * 1440;
+	// Reasonable defaults aligned with Avery 5160 style sheets; fine-tune with AVERY_5160_OFFSET_{X,Y}_IN
+	const baseTopMargin = 0.5 * 1440;
+	const baseBottomMargin = 0.5 * 1440;
+	const baseLeftMargin = 0.1875 * 1440;
+	const baseRightMargin = 0.1875 * 1440;
 	const topMargin = baseTopMargin + offsetYTwips;
 	const bottomMargin = Math.max(0, baseBottomMargin - offsetYTwips);
 	const leftMargin = baseLeftMargin + offsetXTwips;
 	const rightMargin = Math.max(0, baseRightMargin - offsetXTwips);
-	const cellPadding = 0.08 * 1440;
+	const cellPadding = 0;
 	const cellTopPadding = Number.isFinite(cellTopPadIn) ? cellTopPadIn * 1440 : cellPadding;
 
 	const makeLabelParagraphs = (label: Label | null) => {
@@ -207,10 +209,10 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 						new ImageRun({
 							data: logoBytes,
 							type: 'png',
-							transformation: logoTransform ?? { width: 30, height: 30 },
+							transformation: logoTransform ?? { width: 18, height: 18 },
 						}),
 						new TextRun({ text: '\t' }),
-						new TextRun({ text: `To: ${label.name}`, bold: true, font: 'Helvetica', size: 28 }),
+						new TextRun({ text: `To: ${label.name}`, bold: true, font: 'Helvetica', size: 20 }),
 					],
 				}),
 			);
@@ -218,7 +220,7 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 			paras.push(
 				new Paragraph({
 					...basePara,
-					children: [new TextRun({ text: `To: ${label.name}`, bold: true, font: 'Helvetica', size: 28 })],
+					children: [new TextRun({ text: `To: ${label.name}`, bold: true, font: 'Helvetica', size: 20 })],
 				}),
 			);
 		}
@@ -228,7 +230,7 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 				new Paragraph({
 					...basePara,
 					indent: textIndentTwips ? { left: textIndentTwips } : undefined,
-					children: [new TextRun({ text: line, font: 'Helvetica', size: 24 })],
+					children: [new TextRun({ text: line, font: 'Helvetica', size: 18 })],
 				}),
 			);
 		}
@@ -243,21 +245,30 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 			children: makeLabelParagraphs(label),
 		});
 
+	const makeGapCell = () =>
+		new TableCell({
+			width: { size: columnGap, type: WidthType.DXA },
+			margins: { top: 0, bottom: 0, left: 0, right: 0 },
+			borders: noBorders,
+			children: [new Paragraph({ spacing: { before: 0, after: 0 } })],
+		});
+
 	const makeSheetTable = (sheetLabels: Label[]) => {
 		const rows: TableRow[] = [];
-		for (let r = 0; r < 7; r += 1) {
-			const left = sheetLabels[r * 2] || null;
-			const right = sheetLabels[r * 2 + 1] || null;
+		for (let r = 0; r < 10; r += 1) {
+			const c0 = sheetLabels[r * 3] || null;
+			const c1 = sheetLabels[r * 3 + 1] || null;
+			const c2 = sheetLabels[r * 3 + 2] || null;
 			rows.push(
 				new TableRow({
 					height: { value: rowPitch, rule: HeightRule.EXACT },
-					children: [makeCell(left), makeCell(right)],
+					children: [makeCell(c0), makeGapCell(), makeCell(c1), makeGapCell(), makeCell(c2)],
 				}),
 			);
 		}
 		return new Table({
-			width: { size: pageWidth - leftMargin - rightMargin, type: WidthType.DXA },
-			columnWidths: [labelWidth, labelWidth],
+			width: { size: tableWidth, type: WidthType.DXA },
+			columnWidths: [labelWidth, columnGap, labelWidth, columnGap, labelWidth],
 			layout: TableLayoutType.FIXED,
 			borders: noBorders,
 			rows,
@@ -265,8 +276,8 @@ export async function generateAvery5162DocxSheets(labels: Label[], outputPath: s
 	};
 
 	const sections = [] as { properties: any; children: (Paragraph | Table)[] }[];
-	for (let i = 0; i < labels.length; i += 14) {
-		const slice = labels.slice(i, i + 14);
+	for (let i = 0; i < labels.length; i += 30) {
+		const slice = labels.slice(i, i + 30);
 		sections.push({
 			properties: {
 				page: {
@@ -445,16 +456,16 @@ export type RangeLabelsResult =
 			labelsParsed?: number;
 	  };
 
-function shouldFillAvery5162Sheets(): boolean {
-	const v = String(process.env.AVERY_5162_FILL_SHEETS ?? '')
-		.trim()
-		.toLowerCase();
+function shouldFillAverySheets(): boolean {
+	const raw5160 = String(process.env.AVERY_5160_FILL_SHEETS ?? '').trim();
+	const raw = raw5160 || String(process.env.AVERY_5162_FILL_SHEETS ?? '').trim();
+	const v = raw.toLowerCase();
 	return v === '1' || v === 'true' || v === 'yes';
 }
 
 function fillLabelsToFullSheets(labels: Label[]): Label[] {
-	// Avery 5162/8162: 14 labels per sheet.
-	const perSheet = 14;
+	// Avery 5160/8160: 30 labels per sheet.
+	const perSheet = 30;
 	if (labels.length === 0) return labels;
 	const out = [...labels];
 	while (out.length % perSheet !== 0) {
@@ -477,7 +488,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 		if (!parsed || !parsed.name || parsed.lines.length === 0) continue;
 		labels.push(parsed);
 	}
-	if (shouldFillAvery5162Sheets()) {
+	if (shouldFillAverySheets()) {
 		labels = fillLabelsToFullSheets(labels);
 	}
 
@@ -485,16 +496,16 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 		return { ok: false, date: isoDate, reason: 'no-labels', ordersConsidered: inDay.length, labelsParsed: 0 };
 	}
 
-	const outFileName = `daily-labels-${isoDate}-avery-5162.docx`;
+	const outFileName = `daily-labels-${isoDate}-avery-5160.docx`;
 	const outPath = path.resolve(process.cwd(), outFileName);
-	await generateAvery5162DocxSheets(labels, outPath);
+	await generateAvery5160DocxSheets(labels, outPath);
 
 	try {
 		const title = `Daily Labels ${isoDate}`;
 		const desiredStatus = getLabelsTaskStatus();
 		let taskId = await findTaskIdByExactTitleInFolder(params.labelsFolderId, params.apiToken, title);
 		if (!taskId) {
-			const dailyTask = await createTaskInFolder(params.labelsFolderId, title, `Daily Avery 5162 label sheets for ${isoDate}`, params.apiToken, desiredStatus);
+			const dailyTask = await createTaskInFolder(params.labelsFolderId, title, `Daily Avery 5160/8160 label sheets for ${isoDate}`, params.apiToken, desiredStatus);
 			if (!dailyTask) {
 				return { ok: false, date: isoDate, reason: 'wrike-create-task-failed', ordersConsidered: inDay.length, labelsParsed: labels.length };
 			}
@@ -559,7 +570,7 @@ export async function generateAndAttachLabelsForRange(params: {
 		if (!parsed || !parsed.name || parsed.lines.length === 0) continue;
 		labels.push(parsed);
 	}
-	if (shouldFillAvery5162Sheets()) {
+	if (shouldFillAverySheets()) {
 		labels = fillLabelsToFullSheets(labels);
 	}
 
@@ -567,13 +578,13 @@ export async function generateAndAttachLabelsForRange(params: {
 		return { ok: false, startDate: startIso, endDate: endIso, reason: 'no-labels', ordersConsidered: inRange.length, labelsParsed: 0 };
 	}
 
-	const outFileName = `labels-${startIso}-to-${endIso}-avery-5162.docx`;
+	const outFileName = `labels-${startIso}-to-${endIso}-avery-5160.docx`;
 	const outPath = path.resolve(process.cwd(), outFileName);
-	await generateAvery5162DocxSheets(labels, outPath);
+	await generateAvery5160DocxSheets(labels, outPath);
 
 	try {
 		const title = params.title ?? `Weekly Labels ${startIso} to ${endIso}`;
-		const description = params.description ?? `Avery 5162 label sheets for ${startIso} to ${endIso}`;
+		const description = params.description ?? `Avery 5160/8160 label sheets for ${startIso} to ${endIso}`;
 		const desiredStatus = getLabelsTaskStatus();
 		let taskId = await findTaskIdByExactTitleInFolder(params.labelsFolderId, params.apiToken, title);
 		if (!taskId) {

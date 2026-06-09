@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import type { Product, ProductVariant, PromoCode } from '@/types/product';
+import type { Product, PromoCode } from '@/types/product';
 import { products as baseProducts } from '@/lib/products';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -7,30 +7,9 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-const HEADERS = [
-	'id',
-	'slug',
-	'name',
-	'subtitle',
-	'description',
-	'details',
-	'price',
-	'total stock',
-	'category',
-	'mg',
-	'purity',
-	'image',
-	'icons',
-	'status',
-	'price_1',
-	'mg_1',
-	'stock_1',
-	'price_2',
-	'mg_2',
-	'stock_2',
-] as const;
+const HEADERS = ['slug', 'name', 'subtitle', 'description', 'details', 'price', 'total stock', 'jay stock', 'marcus stock', 'category', 'mg', 'purity', 'image', 'icons', 'status'] as const;
 type HeaderKey = (typeof HEADERS)[number];
-const REQUIRED_HEADERS: Array<HeaderKey> = ['id', 'slug', 'name', 'description', 'details', 'price', 'total stock', 'category'];
+const REQUIRED_HEADERS: Array<HeaderKey> = ['slug', 'name', 'description', 'details', 'price', 'category'];
 
 const getErrorCode = (error: unknown) => (error && typeof error === 'object' && 'code' in error ? String((error as { code?: string }).code ?? '') : '');
 const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -75,7 +54,13 @@ const reportSheetsError = (label: string, error: unknown) => {
 	console.error(`${label}:`, error);
 };
 
-const canonicalizeHeader = (value: string) => value.trim().toLowerCase();
+const canonicalizeHeader = (value: string) =>
+	value
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
 
 const getSheetsClient = () => {
 	if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
@@ -159,47 +144,30 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 
 		const [headerRow, ...dataRows] = rows as string[][];
 		const canonicalHeaders = new Set((headerRow ?? []).map((header) => canonicalizeHeader(header)));
-		const headerMatch = REQUIRED_HEADERS.every((header) => canonicalHeaders.has(canonicalizeHeader(header)));
-		if (!headerMatch) {
-			throw new Error('Google Sheets header mismatch. Required columns are missing or renamed.');
+		const missingHeaders = REQUIRED_HEADERS.filter((header) => !canonicalHeaders.has(canonicalizeHeader(header)));
+		const hasTotalStock = canonicalHeaders.has(canonicalizeHeader('total stock'));
+		const hasSplitStock = canonicalHeaders.has(canonicalizeHeader('jay stock')) && canonicalHeaders.has(canonicalizeHeader('marcus stock'));
+		if (!hasTotalStock && !hasSplitStock) {
+			missingHeaders.push('total stock');
+		}
+		if (missingHeaders.length > 0) {
+			const received = (headerRow ?? []).map((h) => String(h ?? '')).filter(Boolean);
+			const suffix = process.env.NODE_ENV === 'production' ? '' : ` Received headers: ${received.slice(0, 30).join(' | ')}${received.length > 30 ? ' | ...' : ''}`;
+			throw new Error(`Google Sheets header mismatch. Required columns are missing or renamed: ${missingHeaders.join(', ')}.${suffix}`);
 		}
 
 		const sheetProducts = dataRows
 			.map((row) => normalizeRow(row, headerRow))
-			.filter((row) => row.id)
+			.filter((row) => row.slug)
 			.map((row) => {
-				const price1 = parseNumber(row.price_1);
-				const mg1 = row.mg_1;
-				const stock1 = parseNumber(row.stock_1);
-				const price2 = parseNumber(row.price_2);
-				const mg2 = row.mg_2;
-				const stock2 = parseNumber(row.stock_2);
-
-				const variants: Product['variants'] = [];
-				if (mg1 && price1 > 0) {
-					variants.push({
-						key: `${row.id}-${mg1}`,
-						label: `${mg1}mg`,
-						price: price1,
-						stock: stock1,
-					});
-				}
-				if (mg2 && price2 > 0) {
-					variants.push({
-						key: `${row.id}-${mg2}`,
-						label: `${mg2}mg`,
-						price: price2,
-						stock: stock2,
-					});
-				}
-
-				const useVariant1 = variants.length > 0;
-				const finalPrice = useVariant1 ? price1 : parseNumber(row.price);
-				const finalStock = useVariant1 ? stock1 : parseNumber(row['total stock']);
-				const finalMg = useVariant1 ? `${mg1}mg` : row.mg;
+				const inferredId = row.slug;
+				const splitStockTotal = parseNumber(row['jay stock']) + parseNumber(row['marcus stock']);
+				const finalStock = parseNumber(row['total stock'], splitStockTotal);
+				const finalPrice = parseNumber(row.price);
+				const finalMg = row.mg;
 
 				return {
-					id: row.id,
+					id: inferredId,
 					slug: row.slug,
 					name: row.name,
 					subtitle: row.subtitle || undefined,
@@ -207,7 +175,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 					details: row.details || undefined,
 					price: finalPrice,
 					stock: finalStock,
-					image: row.image || (baseProducts.find((product) => product.id === row.id)?.image ?? ''),
+					image: row.image || (baseProducts.find((product) => product.id === inferredId)?.image ?? ''),
 					category: row.category,
 					mg: finalMg || undefined,
 					purity: row.purity || undefined,
@@ -216,16 +184,9 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 								.split(',')
 								.map((icon) => icon.trim())
 								.filter(Boolean)
-						: (baseProducts.find((product) => product.id === row.id)?.icons ?? []),
-					status: normalizeStatus(row.status || baseProducts.find((product) => product.id === row.id)?.status),
-					variants: variants.length > 0 ? variants : undefined,
-					// Include raw variant columns for stock decrement
-					price_1: price1 || undefined,
-					mg_1: mg1 || undefined,
-					stock_1: stock1 || undefined,
-					price_2: price2 || undefined,
-					mg_2: mg2 || undefined,
-					stock_2: stock2 || undefined,
+						: (baseProducts.find((product) => product.id === inferredId)?.icons ?? []),
+					status: normalizeStatus(row.status || baseProducts.find((product) => product.id === inferredId)?.status),
+					variants: undefined,
 				};
 			});
 
@@ -356,10 +317,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 		const values = [
 			[...HEADERS],
 			...items.map((product) => {
-				const variant1 = product.variants?.[0];
-				const variant2 = product.variants?.[1];
 				return [
-					product.id,
 					product.slug,
 					product.name,
 					product.subtitle ?? '',
@@ -367,18 +325,14 @@ export const writeSheetProducts = async (items: Product[]) => {
 					product.details ?? '',
 					product.price.toFixed(2),
 					String(product.stock),
+					'',
+					'',
 					product.category,
 					product.mg ?? '',
 					product.purity ?? '',
 					product.image,
 					(product.icons ?? []).join(', '),
 					product.status ?? 'published',
-					variant1?.price.toFixed(2) ?? '',
-					variant1?.label.replace('mg', '') ?? '',
-					String(variant1?.stock ?? ''),
-					variant2?.price.toFixed(2) ?? '',
-					variant2?.label.replace('mg', '') ?? '',
-					String(variant2?.stock ?? ''),
 				];
 			}),
 		];
