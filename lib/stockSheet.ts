@@ -161,10 +161,8 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 			.filter((row) => row.slug)
 			.map((row) => {
 				const inferredId = row.slug;
-				const splitStockTotal = parseNumber(row['jay stock']) + parseNumber(row['marcus stock']);
-				const finalStock = parseNumber(row['total stock'], splitStockTotal);
+				const finalStock = parseNumber(row['total stock'], 0);
 				const finalPrice = parseNumber(row.price);
-				const finalMg = row.mg;
 
 				return {
 					id: inferredId,
@@ -177,7 +175,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 					stock: finalStock,
 					image: row.image || (baseProducts.find((product) => product.id === inferredId)?.image ?? ''),
 					category: row.category,
-					mg: finalMg || undefined,
+					mg: row.mg || undefined,
 					purity: row.purity || undefined,
 					icons: row.icons
 						? row.icons
@@ -314,9 +312,36 @@ export const writeSheetProducts = async (items: Product[]) => {
 		const title = await getSheetTitle(sheets);
 		const range = `${title}!A1:Z`;
 
+		const existingResponse = await sheets.spreadsheets.values.get({
+			spreadsheetId: SHEET_ID,
+			range,
+		});
+		const existingRows = existingResponse.data.values ?? [];
+		const [existingHeaderRow, ...existingDataRows] = existingRows as string[][];
+		const existingIndexMap = (existingHeaderRow ?? []).reduce<Record<string, number>>((acc, header, index) => {
+			acc[canonicalizeHeader(String(header ?? ''))] = index;
+			return acc;
+		}, {});
+		const existingJayIdx = existingIndexMap[canonicalizeHeader('jay stock')];
+		const existingMarcusIdx = existingIndexMap[canonicalizeHeader('marcus stock')];
+		const existingSlugIdx = existingIndexMap[canonicalizeHeader('slug')];
+
+		const existingSplitStockBySlug = new Map<string, { jay: string; marcus: string }>();
+		if (existingSlugIdx != null) {
+			for (const row of existingDataRows) {
+				const slug = String(row?.[existingSlugIdx] ?? '').trim();
+				if (!slug) continue;
+				existingSplitStockBySlug.set(slug, {
+					jay: existingJayIdx != null ? String(row?.[existingJayIdx] ?? '') : '',
+					marcus: existingMarcusIdx != null ? String(row?.[existingMarcusIdx] ?? '') : '',
+				});
+			}
+		}
+
 		const values = [
 			[...HEADERS],
 			...items.map((product) => {
+				const existing = existingSplitStockBySlug.get(product.slug);
 				return [
 					product.slug,
 					product.name,
@@ -325,8 +350,8 @@ export const writeSheetProducts = async (items: Product[]) => {
 					product.details ?? '',
 					product.price.toFixed(2),
 					String(product.stock),
-					'',
-					'',
+					existing?.jay ?? '',
+					existing?.marcus ?? '',
 					product.category,
 					product.mg ?? '',
 					product.purity ?? '',

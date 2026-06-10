@@ -112,7 +112,8 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 				}
 				// Check for variant match (e.g., "MOTS-C-40" matches product "MOTS-C")
 				if (itemId.includes('-')) {
-					const baseId = itemId.split('-')[0];
+					const parts = itemId.split('-').filter(Boolean);
+					const baseId = parts.length > 1 ? parts.slice(0, -1).join('-') : itemId;
 					return baseId === product.id || baseId === product.slug;
 				}
 				return false;
@@ -122,33 +123,10 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 				return product;
 			}
 
-			// Check if this is a variant item
-			const itemId = String(match.id);
-			const isVariant = itemId.includes('-');
-
-			if (isVariant) {
-				// Extract variant mg from ID (e.g., "40" from "MOTS-C-40")
-				const variantMg = itemId.split('-')[1];
-				console.log('[updateSheetStock] Variant item:', itemId, 'variantMg:', variantMg, 'product mg_1:', product.mg_1, 'product mg_2:', product.mg_2);
-				// Determine which variant stock column to decrement
-				if (String(product.mg_1) === variantMg) {
-					const nextStock = Math.max(0, (product.stock_1 || 0) - match.quantity);
-					console.log('[updateSheetStock] Decrementing stock_1 from', product.stock_1, 'to', nextStock);
-					return { ...product, stock_1: nextStock };
-				} else if (String(product.mg_2) === variantMg) {
-					const nextStock = Math.max(0, (product.stock_2 || 0) - match.quantity);
-					console.log('[updateSheetStock] Decrementing stock_2 from', product.stock_2, 'to', nextStock);
-					return { ...product, stock_2: nextStock };
-				}
-				// Fallback: decrement base stock if variant not found
-				console.log('[updateSheetStock] No variant match, falling back to base stock');
-				const nextStock = Math.max(0, product.stock - match.quantity);
-				return { ...product, stock: nextStock };
-			} else {
-				// Regular product: decrement base stock
-				const nextStock = Math.max(0, product.stock - match.quantity);
-				return { ...product, stock: nextStock };
-			}
+			// Decrement total stock only (source of truth)
+			const nextStock = Math.max(0, product.stock - match.quantity);
+			console.log('[updateSheetStock] Decrementing total stock for', product.slug, 'from', product.stock, 'to', nextStock);
+			return { ...product, stock: nextStock };
 		});
 
 		const lowStock = updated.filter((product) => product.status === 'published' && product.stock <= LOW_STOCK_THRESHOLD);
@@ -156,31 +134,11 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 		await writeSheetProducts(updated);
 		await sendLowStockAlert(lowStock);
 
-		// Return stock levels for ordered items
+		// Return stock levels for ordered items (using total stock only)
 		const orderedItemsStock = items.map((item) => {
 			const itemId = String(item.id);
-			const isVariant = itemId.includes('-');
-			let stock = 0;
-
-			if (isVariant) {
-				const baseId = itemId.split('-')[0];
-				const variantMg = itemId.split('-')[1];
-				const product = updated.find((p) => p.id === baseId || p.slug === baseId);
-				if (product) {
-					if (String(product.mg_1) === variantMg) {
-						stock = product.stock_1 || 0;
-					} else if (String(product.mg_2) === variantMg) {
-						stock = product.stock_2 || 0;
-					} else {
-						stock = product.stock || 0;
-					}
-				}
-			} else {
-				const product = updated.find((p) => p.id === itemId || p.slug === itemId);
-				stock = product?.stock ?? 0;
-			}
-
-			return { id: itemId, name: item.name, stock };
+			const product = updated.find((p) => p.id === itemId || p.slug === itemId);
+			return { id: itemId, name: item.name, stock: product?.stock ?? 0 };
 		});
 
 		return orderedItemsStock;
