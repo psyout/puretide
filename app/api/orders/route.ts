@@ -19,6 +19,7 @@ import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
 import { validateEnv } from '@/lib/env';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
+import { products as baseProducts } from '@/lib/products';
 
 interface OrderPayload {
 	customer: {
@@ -102,10 +103,19 @@ function getOrderNotificationRecipient() {
 async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array<{ id: string; name: string; stock: number }>> {
 	try {
 		const current = await readSheetProducts();
+		const baseSlugById = new Map(baseProducts.map((p) => [String(p.id), String(p.slug)]));
+
+		const resolveItemKey = (rawId: string) => {
+			const trimmed = String(rawId ?? '').trim();
+			if (!trimmed) return '';
+			return baseSlugById.get(trimmed) ?? trimmed;
+		};
+
+		const resolvedItems = items.map((item) => ({ ...item, __key: resolveItemKey(String(item.id)) }));
 		const updated = current.map((product) => {
 			// Check if any item matches this product (either base ID or variant ID)
-			const match = items.find((item) => {
-				const itemId = String(item.id);
+			const match = resolvedItems.find((item) => {
+				const itemId = String(item.__key);
 				// Check for direct match (base product)
 				if (itemId === product.id || itemId === product.slug) {
 					return true;
@@ -148,8 +158,8 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 		await sendLowStockAlert(lowStock);
 
 		// Return stock levels for ordered items (total stock only)
-		const orderedItemsStock = items.map((item) => {
-			const itemId = String(item.id);
+		const orderedItemsStock = resolvedItems.map((item) => {
+			const itemId = String(item.__key);
 			const product = updated.find((p) => p.id === itemId || p.slug === itemId);
 			if (product) return { id: itemId, name: item.name, stock: product.stock };
 			if (itemId.includes('-')) {
@@ -160,6 +170,14 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 			}
 			return { id: itemId, name: item.name, stock: 0 };
 		});
+
+		for (const item of resolvedItems) {
+			const itemId = String(item.__key);
+			const found = updated.some((p) => p.id === itemId || p.slug === itemId);
+			if (!found) {
+				console.warn('[updateSheetStock] No matching sheet product for cart item:', { rawId: item.id, resolvedId: itemId, name: item.name });
+			}
+		}
 
 		return orderedItemsStock;
 	} catch (error) {
