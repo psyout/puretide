@@ -102,9 +102,44 @@ const normalizeRow = (row: string[], headerRow: string[]): Record<HeaderKey, str
 	return result;
 };
 
+const normalizeNumericCell = (value: string) => {
+	const trimmed = String(value ?? '').trim();
+	// Google Sheets may represent text-forced numbers with a leading apostrophe, e.g. "'10"
+	// Also strip commas and whitespace so values like "1,234" or " 25 " parse.
+	return trimmed.replace(/^'+/, '').replace(/,/g, '').replace(/\s+/g, '').trim();
+};
+
+const toSafeStockInteger = (value: number, label: string) => {
+	if (!Number.isFinite(value)) {
+		console.error('[stockSheet] Invalid stock number:', { label, value });
+		throw new Error(`Invalid ${label}: ${String(value)}`);
+	}
+	const rounded = Math.round(value);
+	if (Math.abs(value - rounded) > 1e-9) {
+		console.warn('[stockSheet] Stock was not an integer, rounding:', { label, value, rounded });
+	}
+	return rounded;
+};
+
 const parseNumber = (value: string, fallback = 0) => {
-	const numeric = Number(value);
+	const normalized = normalizeNumericCell(value);
+	if (!normalized) return fallback;
+	const numeric = Number(normalized);
 	return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const parseRequiredNumber = (value: string, label: string) => {
+	const normalized = normalizeNumericCell(value);
+	if (!normalized) {
+		console.error('[stockSheet] Missing required numeric value:', { label, value });
+		throw new Error(`Invalid ${label}: empty value.`);
+	}
+	const numeric = Number(normalized);
+	if (!Number.isFinite(numeric)) {
+		console.error('[stockSheet] Failed to parse numeric value:', { label, value, normalized });
+		throw new Error(`Invalid ${label}: "${value}".`);
+	}
+	return numeric;
 };
 
 const normalizeStatus = (value?: string): NonNullable<Product['status']> => {
@@ -161,9 +196,9 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 			.filter((row) => row.slug)
 			.map((row) => {
 				const inferredId = row.slug;
-				// Use total stock if available, otherwise fall back to Jay+Marcus sum (backward compatibility)
-				const splitStockTotal = parseNumber(row['jay stock']) + parseNumber(row['marcus stock']);
-				const finalStock = parseNumber(row['total stock'], splitStockTotal);
+				// Total Stock is the single source of truth
+				const parsedStock = parseRequiredNumber(row['total stock'], `Total Stock for slug "${row.slug}"`);
+				const finalStock = toSafeStockInteger(parsedStock, `Total Stock for slug "${row.slug}"`);
 				const finalPrice = parseNumber(row.price);
 
 				return {
@@ -351,7 +386,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 					product.description,
 					product.details ?? '',
 					product.price.toFixed(2),
-					String(product.stock),
+					toSafeStockInteger(product.stock, `Total Stock for slug "${product.slug}"`),
 					existing?.jay ?? '',
 					existing?.marcus ?? '',
 					product.category,
@@ -367,11 +402,12 @@ export const writeSheetProducts = async (items: Product[]) => {
 		await sheets.spreadsheets.values.update({
 			spreadsheetId: SHEET_ID,
 			range,
-			valueInputOption: 'RAW',
+			valueInputOption: 'USER_ENTERED',
 			requestBody: { values },
 		});
 	} catch (error) {
 		reportSheetsError('Error writing products to sheet', error);
+		throw error;
 	}
 };
 

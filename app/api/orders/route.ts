@@ -123,30 +123,23 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 				return product;
 			}
 
-			// Check if this is a variant item
-			const itemId = String(match.id);
-			const isVariant = itemId.includes('-');
-
-			if (isVariant) {
-				// Extract variant mg from ID (e.g., "40" from "MOTS-C-40")
-				const parts = itemId.split('-').filter(Boolean);
-				const variantMg = parts[parts.length - 1] ?? '';
-				// Determine which variant stock column to decrement
-				if (String(product.mg_1) === variantMg) {
-					const nextStock = Math.max(0, (product.stock_1 || 0) - match.quantity);
-					return { ...product, stock_1: nextStock };
-				} else if (String(product.mg_2) === variantMg) {
-					const nextStock = Math.max(0, (product.stock_2 || 0) - match.quantity);
-					return { ...product, stock_2: nextStock };
-				}
-				// Fallback: decrement base stock if variant not found
-				const nextStock = Math.max(0, product.stock - match.quantity);
-				return { ...product, stock: nextStock };
-			} else {
-				// Regular product: decrement base stock
-				const nextStock = Math.max(0, product.stock - match.quantity);
-				return { ...product, stock: nextStock };
+			// Total Stock is the single source of truth
+			if (!Number.isFinite(product.stock)) {
+				throw new Error(`[updateSheetStock] Invalid numeric stock for ${product.slug}: ${String(product.stock)}`);
 			}
+			const currentStockInt = Math.round(product.stock);
+			if (Math.abs(product.stock - currentStockInt) > 1e-9) {
+				console.warn('[updateSheetStock] Stock was not an integer, rounding before decrement:', {
+					slug: product.slug,
+					stock: product.stock,
+					rounded: currentStockInt,
+				});
+			}
+			const nextStock = currentStockInt - match.quantity;
+			if (!Number.isFinite(nextStock)) {
+				throw new Error(`[updateSheetStock] Computed invalid next stock for ${product.slug}: ${String(nextStock)}`);
+			}
+			return { ...product, stock: Math.max(0, nextStock) };
 		});
 
 		const lowStock = updated.filter((product) => product.status === 'published' && product.stock <= LOW_STOCK_THRESHOLD);
@@ -154,37 +147,24 @@ async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array
 		await writeSheetProducts(updated);
 		await sendLowStockAlert(lowStock);
 
-		// Return stock levels for ordered items
+		// Return stock levels for ordered items (total stock only)
 		const orderedItemsStock = items.map((item) => {
 			const itemId = String(item.id);
-			const isVariant = itemId.includes('-');
-			let stock = 0;
-
-			if (isVariant) {
-				const baseId = itemId.split('-')[0];
-				const variantMg = itemId.split('-')[1];
-				const product = updated.find((p) => p.id === baseId || p.slug === baseId);
-				if (product) {
-					if (String(product.mg_1) === variantMg) {
-						stock = product.stock_1 || 0;
-					} else if (String(product.mg_2) === variantMg) {
-						stock = product.stock_2 || 0;
-					} else {
-						stock = product.stock || 0;
-					}
-				}
-			} else {
-				const product = updated.find((p) => p.id === itemId || p.slug === itemId);
-				stock = product?.stock ?? 0;
+			const product = updated.find((p) => p.id === itemId || p.slug === itemId);
+			if (product) return { id: itemId, name: item.name, stock: product.stock };
+			if (itemId.includes('-')) {
+				const parts = itemId.split('-').filter(Boolean);
+				const baseId = parts.length > 1 ? parts.slice(0, -1).join('-') : itemId;
+				const baseProduct = updated.find((p) => p.id === baseId || p.slug === baseId);
+				return { id: itemId, name: item.name, stock: baseProduct?.stock ?? 0 };
 			}
-
-			return { id: itemId, name: item.name, stock };
+			return { id: itemId, name: item.name, stock: 0 };
 		});
 
 		return orderedItemsStock;
 	} catch (error) {
 		console.error('Failed to update stock sheet', error);
-		return [];
+		throw error;
 	}
 }
 
@@ -401,7 +381,8 @@ export async function POST(request: Request) {
 			try {
 				updatedStock = await updateSheetStock(payload.cartItems);
 			} catch (error) {
-				console.error('[Orders] Failed to update stock sheet', error);
+				console.error('[Orders] Failed to update stock sheet (order will not continue):', error);
+				return;
 			}
 
 			try {
