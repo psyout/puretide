@@ -128,7 +128,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		`Recipient Email: ${paymentDetails.recipientEmail}`,
 		`Memo/Message: ${input.orderNumber}`,
 		'',
-		'Important: Include your order number in the memo/message field for proper tracking.',
+		'IMPORTANT: Include your order number in the memo/message field for proper tracking.',
 		'We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.',
 		'',
 		'Email notice: If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.',

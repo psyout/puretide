@@ -387,7 +387,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 								</div>
 							</div>
 							<div className='text-xs text-deep-tidal-teal-600 mt-4 pt-4 border-t border-deep-tidal-teal/10 space-y-2'>
-								<p>Important: Include your order number in the memo/message field for proper tracking.</p>
+								<p>IMPORTANT: Include your order number in the memo/message field for proper tracking.</p>
 								<p>We only accept e&ndash;Transfers sent to the email listed above. Do not send payments to any other email address.</p>
 								<p>
 									Should you encounter any payment&ndash;related issues, please contact our support at: <span className='font-semibold'>{paymentDetails.supportEmail}</span>

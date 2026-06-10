@@ -313,7 +313,7 @@ export async function POST(request: Request) {
 
 		const payload: OrderPayload = {
 			...orderPayload,
-			cartItems: cartItems.map((item) => ({ ...item, id: Number(item.id) })),
+			cartItems: cartItems.map((item) => ({ ...item, id: item.id })),
 			subtotal,
 			shippingCost,
 			discountAmount,
