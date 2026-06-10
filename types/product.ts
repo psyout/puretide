@@ -26,6 +26,13 @@ export interface Product {
 	reorderPoint?: number;
 	reorderQuantity?: number;
 	variants?: ProductVariant[];
+	// Variant columns from Google Sheet (for stock decrement)
+	price_1?: number;
+	mg_1?: string;
+	stock_1?: number;
+	price_2?: number;
+	mg_2?: string;
+	stock_2?: number;
 }
 
 export interface PromoCode {

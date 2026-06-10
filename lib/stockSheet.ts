@@ -161,7 +161,9 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 			.filter((row) => row.slug)
 			.map((row) => {
 				const inferredId = row.slug;
-				const finalStock = parseNumber(row['total stock'], 0);
+				// Use total stock if available, otherwise fall back to Jay+Marcus sum (backward compatibility)
+				const splitStockTotal = parseNumber(row['jay stock']) + parseNumber(row['marcus stock']);
+				const finalStock = parseNumber(row['total stock'], splitStockTotal);
 				const finalPrice = parseNumber(row.price);
 
 				return {

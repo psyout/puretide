@@ -1,3 +1,5 @@
+import { products as fallbackProducts } from '@/lib/products';
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_LENGTH = {
 	firstName: 100,
@@ -91,35 +93,47 @@ export async function validateStockAvailability(
 	cartItems: CartItemForStock[],
 	getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> }>>,
 ): Promise<string | null> {
-	const products = await getProducts();
+	let products = await getProducts();
+	// Fallback to base products if Google Sheet returns empty or fails
+	if (!products || products.length === 0) {
+		console.warn('[validateStockAvailability] Google Sheet returned empty, using fallback products');
+		products = fallbackProducts;
+	}
 	for (const item of cartItems) {
-		// Check if this is a variant ID (contains dash)
-		const isVariant = String(item.id).includes('-');
+		const itemId = String(item.id);
 		let available = 0;
 		let productName = item.name ?? item.id;
 
-		if (isVariant) {
-			// Extract base product ID (before the dash)
-			const baseId = String(item.id).split('-')[0];
-			const product = products.find((p) => p.id === baseId || p.slug === baseId);
-			if (!product) {
-				return `Product "${item.name ?? item.id}" is not available.`;
-			}
-			// Find the variant in the product's variants array
-			const variant = product.variants?.find((v) => v.key === item.id);
-			if (!variant) {
-				return `Product "${item.name ?? item.id}" is not available.`;
-			}
-			available = Number(variant.stock) || 0;
-			productName = product.name ?? product.id;
-		} else {
-			// Regular product lookup
-			const product = products.find((p) => String(item.id) === p.id || String(item.id) === p.slug);
-			if (!product) {
-				return `Product "${item.name ?? item.id}" is not available.`;
-			}
+		// First, try to find the product by exact ID match (regular product)
+		const product = products.find((p) => itemId === p.id || itemId === p.slug);
+
+		if (product) {
+			// Regular product found - use its total stock
 			available = Number(product.stock) || 0;
 			productName = product.name ?? product.id;
+		} else if (itemId.includes('-')) {
+			// Not found as regular product, try parsing as variant
+			// Extract base product ID (all segments except last, for IDs like "MOTS-C-40")
+			const parts = itemId.split('-').filter(Boolean);
+			const baseId = parts.length > 1 ? parts.slice(0, -1).join('-') : itemId;
+			const baseProduct = products.find((p) => p.id === baseId || p.slug === baseId);
+			if (!baseProduct) {
+				console.error('[validateStockAvailability] Product not found:', { itemId, baseId, availableSlugs: products.map((p) => p.slug) });
+				return `Product "${item.name ?? item.id}" is not available.`;
+			}
+			// Use base product's total stock (source of truth)
+			available = Number(baseProduct.stock) || 0;
+			productName = baseProduct.name ?? baseProduct.id;
+		} else {
+			// Not found at all - try partial match (e.g., "bacteriostatic-water-10mg" -> "bacteriostatic-water")
+			const partialMatch = products.find((p) => itemId.startsWith(p.id + '-') || itemId.startsWith(p.slug + '-'));
+			if (partialMatch) {
+				available = Number(partialMatch.stock) || 0;
+				productName = partialMatch.name ?? partialMatch.id;
+			} else {
+				console.error('[validateStockAvailability] Product not found:', { itemId, availableSlugs: products.map((p) => p.slug) });
+				return `Product "${item.name ?? item.id}" is not available.`;
+			}
 		}
 
 		if (item.quantity > available) {
