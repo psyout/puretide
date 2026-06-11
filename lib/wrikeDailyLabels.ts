@@ -20,6 +20,20 @@ type WrikeAttachment = {
 	name?: string;
 };
 
+function parseOrderDateFromOrderDescription(html: string): Date | null {
+	if (!html) return null;
+	const m = String(html).match(/<p>\s*Date:\s*([^<]+?)\s*<\/p>/i);
+	if (!m) return null;
+	const text = stripHtml(m[1]).trim();
+	const iso = text.match(/(\d{4}-\d{2}-\d{2})/);
+	if (iso) {
+		const d = new Date(`${iso[1]}T00:00:00`);
+		return Number.isNaN(d.getTime()) ? null : d;
+	}
+	const d = new Date(text);
+	return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function startOfLocalDay(d: Date): Date {
 	const x = new Date(d);
 	x.setHours(0, 0, 0, 0);
@@ -321,17 +335,25 @@ async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string,
 		nextPageToken = data.nextPageToken;
 		if (!nextPageToken) break;
 	}
-	const filtered = allTasks.filter((t) => {
+
+	// Prefer explicit order date embedded in the task description; fallback to Wrike task createdDate.
+	return allTasks.filter((t) => {
+		const desc = t?.description ?? '';
+		const orderDate = parseOrderDateFromOrderDescription(desc);
+		if (orderDate) {
+			const day = startOfLocalDay(orderDate);
+			return day >= start && day <= end;
+		}
 		const created = t?.createdDate ? new Date(t.createdDate) : null;
 		if (!created) return false;
 		return created >= start && created <= end;
 	});
-	return filtered;
 }
 
 function getLabelsTaskStatus(): string | null {
 	const raw = String(process.env.WRIKE_LABELS_TASK_STATUS ?? '').trim();
-	return raw ? raw : null;
+	// Default to the required workflow status if not configured.
+	return raw ? raw : 'Ready to Print';
 }
 
 async function findTaskIdByExactTitleInFolder(folderId: string, apiToken: string, title: string): Promise<string | null> {
@@ -480,6 +502,8 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 	const end = endOfLocalDay(date);
 	const isoDate = formatIsoDateOnlyLocal(start);
 
+	console.log('[wrikeDailyLabels] generateAndAttachDailyLabels:start', { isoDate, start: start.toISOString(), end: end.toISOString() });
+
 	const inDay = await fetchTasksInFolderByDateRange(params.ordersFolderId, params.apiToken, start, end);
 
 	let labels: Label[] = [];
@@ -493,6 +517,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 	}
 
 	if (labels.length === 0) {
+		console.log('[wrikeDailyLabels] no labels found', { isoDate, ordersConsidered: inDay.length });
 		return { ok: false, date: isoDate, reason: 'no-labels', ordersConsidered: inDay.length, labelsParsed: 0 };
 	}
 
@@ -507,16 +532,19 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 		if (!taskId) {
 			const dailyTask = await createTaskInFolder(params.labelsFolderId, title, `Daily Avery 5160/8160 label sheets for ${isoDate}`, params.apiToken, desiredStatus);
 			if (!dailyTask) {
+				console.error('[wrikeDailyLabels] wrike create task failed', { isoDate });
 				return { ok: false, date: isoDate, reason: 'wrike-create-task-failed', ordersConsidered: inDay.length, labelsParsed: labels.length };
 			}
 			taskId = dailyTask.id;
-		} else if (desiredStatus) {
+		}
+		if (desiredStatus) {
 			await tryUpdateTaskStatus(taskId, params.apiToken, desiredStatus);
 		}
 
 		const attachments = await listAttachments(taskId, params.apiToken);
 		const existing = attachments.find((a) => String(a?.name ?? '') === outFileName);
 		if (existing?.id) {
+			console.log('[wrikeDailyLabels] attachment already exists; skipping upload', { isoDate, taskId, attachmentId: existing.id });
 			return {
 				ok: true,
 				date: isoDate,
@@ -529,8 +557,10 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 
 		const uploaded = await uploadAttachmentToTask(taskId, outPath, params.apiToken);
 		if (!uploaded) {
+			console.error('[wrikeDailyLabels] wrike upload failed', { isoDate, taskId });
 			return { ok: false, date: isoDate, reason: 'wrike-upload-failed', ordersConsidered: inDay.length, labelsParsed: labels.length };
 		}
+		console.log('[wrikeDailyLabels] uploaded', { isoDate, taskId, attachmentId: uploaded.id });
 		return {
 			ok: true,
 			date: isoDate,

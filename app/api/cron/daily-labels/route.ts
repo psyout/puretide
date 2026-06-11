@@ -51,8 +51,22 @@ export async function POST(request: Request) {
 		const dateParam = url.searchParams.get('date');
 		const requested = parseIsoDateOnly(dateParam);
 
-		// Default: yesterday (local server time)
-		const base = requested ?? new Date(Date.now() - 24 * 60 * 60 * 1000);
+		// Default: yesterday (local server time, DST-safe)
+		let base: Date;
+		if (requested) {
+			base = requested;
+		} else {
+			const todayStart = new Date();
+			todayStart.setHours(0, 0, 0, 0);
+			const y = new Date(todayStart);
+			y.setDate(y.getDate() - 1);
+			base = y;
+		}
+
+		console.log('[cron:daily-labels] start', {
+			requestedDate: requested ? requested.toISOString().slice(0, 10) : null,
+			resolvedDate: base.toISOString().slice(0, 10),
+		});
 
 		const result = await generateAndAttachDailyLabels({
 			apiToken: wrike.apiToken,
@@ -61,9 +75,12 @@ export async function POST(request: Request) {
 			date: base,
 		});
 
+		console.log('[cron:daily-labels] done', result);
+
 		return NextResponse.json(result, { status: 200 });
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to generate daily labels.', error, logLabel: 'cron:daily-labels:post' });
+		console.error('[cron:daily-labels] failed', { errorId: safe.errorId, message: safe.message });
 		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

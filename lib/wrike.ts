@@ -1,10 +1,10 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import fs from 'node:fs';
 import path from 'node:path';
 import FormData from 'form-data';
 import axios from 'axios';
 import sharp from 'sharp';
 import { AlignmentType, Document, HeightRule, ImageRun, Packer, Paragraph, TabStopType, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
+import { generateAvery5160DocxSheets } from '@/lib/wrikeDailyLabels';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -541,93 +541,6 @@ function parseLabelFromOrderDescription(html: string): { name: string; lines: st
 	return { name: name || 'Recipient', lines: addressLines };
 }
 
-async function generateSingleLabelPdf(label: { name: string; lines: string[] }, outputPath: string): Promise<void> {
-	const pdfDoc = await PDFDocument.create();
-	const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-	const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-	// Ensure logo PNG exists and embed it
-	const logoPngPath = await ensureLogoPng();
-	let logoImage = null;
-	let logoWidth = 0;
-	let logoHeight = 0;
-	if (logoPngPath) {
-		const logoBytes = fs.readFileSync(logoPngPath);
-		logoImage = await pdfDoc.embedPng(logoBytes);
-		// Preserve aspect ratio: cap height at 36pt
-		const { width, height } = await pdfDoc.embedPng(logoBytes);
-		const maxLogoHeight = 30;
-		logoHeight = maxLogoHeight;
-		logoWidth = (width / height) * maxLogoHeight;
-	}
-
-	// 4x6 inches
-	const pageWidth = 4 * 72;
-	const pageHeight = 6 * 72;
-	const margin = 18;
-	const nameSize = 14;
-	const logoMargin = 12;
-	const textLeft = logoImage ? margin + logoWidth + logoMargin : margin;
-
-	// Limit label content height to 2 inches
-	const maxY = pageHeight - margin - 2 * 72;
-
-	const page = pdfDoc.addPage([pageWidth, pageHeight]);
-	let y = pageHeight - margin;
-	const maxWidth = pageWidth - margin * 2;
-
-	// Draw logo at top-left if available
-	if (logoImage) {
-		page.drawImage(logoImage, {
-			x: margin,
-			y: pageHeight - margin - logoHeight,
-			width: logoWidth,
-			height: logoHeight,
-		});
-	}
-
-	const lineSize = 12;
-	const leading = 14;
-
-	const wrapText = (font: any, text: string, size: number, maxWidth: number): string[] => {
-		const words = String(text).split(/\s+/).filter(Boolean);
-		const lines: string[] = [];
-		let current = '';
-		for (const w of words) {
-			const candidate = current ? `${current} ${w}` : w;
-			const width = font.widthOfTextAtSize(candidate, size);
-			if (width <= maxWidth) {
-				current = candidate;
-				continue;
-			}
-			if (current) lines.push(current);
-			current = w;
-		}
-		if (current) lines.push(current);
-		return lines;
-	};
-
-	const nameLines = wrapText(fontBold, `To: ${label.name}`, nameSize, maxWidth);
-	for (const line of nameLines) {
-		y -= nameSize;
-		page.drawText(line, { x: textLeft, y, size: nameSize, font: fontBold, color: rgb(0, 0, 0) });
-	}
-
-	// No extra space between name and address
-	for (const addrLine of label.lines) {
-		const wrapped = wrapText(font, addrLine, lineSize, maxWidth);
-		for (const wLine of wrapped) {
-			y -= leading;
-			if (y < maxY) break; // Stop at 2-inch limit
-			page.drawText(wLine, { x: textLeft, y, size: lineSize, font, color: rgb(0, 0, 0) });
-		}
-		if (y < maxY) break; // Stop at 2-inch limit
-	}
-
-	const bytes = await pdfDoc.save();
-	fs.writeFileSync(outputPath, bytes);
-}
-
 async function generateAvery5162Docx(label: { name: string; lines: string[] }, outputPath: string, options?: { fillAll?: boolean }): Promise<void> {
 	const fillAll = options?.fillAll ?? true;
 
@@ -812,42 +725,31 @@ export async function attachLabelPdfToOrder(orderTaskId: string, orderDescriptio
 	console.log('[Wrike] Order description preview (first 400 chars):', orderDescription.slice(0, 400));
 	const parsed = parseLabelFromOrderDescription(orderDescription);
 	if (!parsed || !parsed.name || !parsed.lines.length) {
-		console.warn('[Wrike] Could not parse label from order description; skipping PDF attachment.');
+		console.warn('[Wrike] Could not parse label from order description; skipping label attachment.');
 		return;
 	}
 
-	const tempPdf = path.resolve(process.cwd(), `label-${orderTaskId}.pdf`);
-	const tempDocx = path.resolve(process.cwd(), `label-${orderTaskId}-avery-5162.docx`);
-	await generateSingleLabelPdf(parsed, tempPdf);
-	await generateAvery5162Docx(parsed, tempDocx, { fillAll: false });
+	const tempDocx = path.resolve(process.cwd(), `label-${orderTaskId}-avery-5160.docx`);
+	await generateAvery5160DocxSheets([parsed], tempDocx);
 
 	let subtask = await findSubtaskByTitle(orderTaskId, 'Create shipping labels', apiToken);
 	if (!subtask) {
 		subtask = await createSubtask(orderTaskId, 'Create shipping labels', '', apiToken);
 		if (!subtask) {
-			console.warn('[Wrike] Failed to create "Create shipping labels" subtask; skipping PDF attachment.');
-			fs.unlinkSync(tempPdf);
+			console.warn('[Wrike] Failed to create "Create shipping labels" subtask; skipping label attachment.');
 			fs.unlinkSync(tempDocx);
 			return;
 		}
 	}
 
-	const uploadedPdf = await uploadAttachmentToTask(subtask.id, tempPdf, apiToken);
-	if (uploadedPdf) {
-		console.log('[Wrike] Label PDF attached to subtask:', { subtaskId: subtask.id, attachmentId: uploadedPdf.id });
-	} else {
-		console.warn('[Wrike] Failed to upload label PDF to subtask.');
-	}
-
 	const uploadedDocx = await uploadAttachmentToTask(subtask.id, tempDocx, apiToken);
 	if (uploadedDocx) {
-		console.log('[Wrike] Avery 5162 Word label attached to subtask:', { subtaskId: subtask.id, attachmentId: uploadedDocx.id });
+		console.log('[Wrike] Avery 5160/8160 Word label attached to subtask:', { subtaskId: subtask.id, attachmentId: uploadedDocx.id });
 	} else {
-		console.warn('[Wrike] Failed to upload Avery 5162 Word label to subtask.');
+		console.warn('[Wrike] Failed to upload Avery 5160/8160 Word label to subtask.');
 	}
 
 	try {
-		fs.unlinkSync(tempPdf);
 		fs.unlinkSync(tempDocx);
 	} catch {
 		// ignore cleanup failure

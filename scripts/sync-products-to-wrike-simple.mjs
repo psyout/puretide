@@ -15,7 +15,7 @@ const productsFolderId = process.env.WRIKE_PRODUCTS_FOLDER_ID;
 
 // Google Sheets configuration
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
-const SHEET_RANGE = 'Sheet1!A:L'; // Adjust range as needed
+const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 
 async function getSheetProducts() {
 	const auth = new GoogleAuth({
@@ -29,9 +29,21 @@ async function getSheetProducts() {
 	const sheets = google.sheets({ version: 'v4', auth });
 
 	try {
+		// Get sheet title if not specified
+		let sheetName = SHEET_NAME;
+		if (!sheetName) {
+			const spreadsheet = await sheets.spreadsheets.get({
+				spreadsheetId: SPREADSHEET_ID,
+			});
+			sheetName = spreadsheet.data.sheets?.[0]?.properties?.title;
+			if (!sheetName) {
+				throw new Error('No sheet found in spreadsheet');
+			}
+		}
+
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SPREADSHEET_ID,
-			range: SHEET_RANGE,
+			range: `${sheetName}!A:Z`,
 		});
 
 		const rows = response.data.values;
@@ -41,7 +53,7 @@ async function getSheetProducts() {
 		}
 
 		// Skip header row and parse products
-		const headers = rows[0];
+		const headers = rows[0].map((h) => h?.toLowerCase().trim() || '');
 		const products = [];
 
 		for (let i = 1; i < rows.length; i++) {
@@ -49,18 +61,18 @@ async function getSheetProducts() {
 			if (row.length < headers.length) continue;
 
 			const product = {
-				id: row[headers.indexOf('id')] || '',
+				id: row[headers.indexOf('slug')] || '',
 				slug: row[headers.indexOf('slug')] || '',
 				name: row[headers.indexOf('name')] || '',
 				description: row[headers.indexOf('description')] || '',
 				price: parseFloat(row[headers.indexOf('price')] || '0'),
-				stock: parseInt(row[headers.indexOf('stock')] || '0'),
+				stock: parseInt(row[headers.indexOf('total stock')] || '0'),
 				category: row[headers.indexOf('category')] || '',
 				image: row[headers.indexOf('image')] || '',
 				status: row[headers.indexOf('status')] || 'published',
 			};
 
-			if (product.id && product.name) {
+			if (product.slug && product.name) {
 				products.push(product);
 			}
 		}
