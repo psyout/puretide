@@ -1,4 +1,5 @@
 import { sendShippingConfirmation, ShippingConfirmationData } from './shippingEmail';
+import { getOrderByOrderNumberFromDb, upsertOrderInDb } from './ordersDb';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -24,9 +25,32 @@ export function isValidTrackingValue(value: string | null | undefined): value is
 	if (!value) return false;
 	const normalized = value.trim().toUpperCase();
 	if (!normalized) return false;
+	if (normalized === 'MANUAL' || normalized === 'N/A' || normalized === 'LOCAL' || normalized === 'NONE') return false;
+	// Reject placeholder-only value (just "PGCA" without actual tracking number)
+	if (normalized === 'PGCA') return false;
+	// Canada Post tracking numbers contain "PGCA"
 	if (!normalized.includes('PGCA')) return false;
+	// Valid tracking numbers should contain at least one digit
 	if (!/\d/.test(normalized)) return false;
 	return true;
+}
+
+async function hasTrackingEmailAlreadyBeenSent(orderNumber: string): Promise<boolean> {
+	const order = await getOrderByOrderNumberFromDb(orderNumber);
+	if (!order) return false;
+	return Boolean(order.trackingEmailSentAt);
+}
+
+async function markTrackingEmailSent(params: { orderNumber: string; taskId: string; trackingNumber: string }): Promise<void> {
+	const existing = await getOrderByOrderNumberFromDb(params.orderNumber);
+	if (!existing) return;
+	const now = new Date().toISOString();
+	await upsertOrderInDb({
+		...existing,
+		trackingEmailSentAt: now,
+		trackingEmailSentTrackingNumber: params.trackingNumber,
+		trackingEmailSentWrikeTaskId: params.taskId,
+	});
 }
 
 async function getWrikeTask(taskId: string): Promise<WrikeTask | null> {
@@ -134,12 +158,33 @@ export async function handleWrikeTaskCompletion(payload: WrikeWebhookPayload): P
 	// Get full task details
 	const task = await getWrikeTask(taskId);
 	if (!task) {
-		return { success: false, error: 'Failed to fetch task details' };
+		// Wrike can deliver duplicate webhook events and transient network failures can occur.
+		// We return success=true so the webhook endpoint still returns 200 and doesn't trigger retries.
+		return { success: true, message: 'skipped: failed to fetch task details (transient wrike fetch error)' };
 	}
 
 	// Verify this is an order task (should have "Order #" in title)
 	if (!task.title.includes('Order #')) {
 		return { success: true, message: 'Not an order task, skipping shipping confirmation' };
+	}
+
+	// Extract order number early so we can apply durable idempotency via the orders DB.
+	const titleMatch = task.title.match(/Order #(\d+)/);
+	const orderNumber = titleMatch?.[1];
+	if (!orderNumber) {
+		return { success: true, message: 'Not an order task (no order number), skipping shipping confirmation' };
+	}
+
+	// Durable idempotency: if order record shows the tracking email was already sent, never send again.
+	if (await hasTrackingEmailAlreadyBeenSent(orderNumber)) {
+		console.log(`[wrikeShipping] skipped: tracking email already sent`, { orderNumber, taskId });
+		return { success: true, message: 'skipped: tracking email already sent' };
+	}
+
+	// Legacy/secondary idempotency: description marker.
+	if (task.description.includes('Shipping Confirmation Sent')) {
+		console.log(`[wrikeShipping] skipped: tracking email already sent (task description marker)`, { orderNumber, taskId });
+		return { success: true, message: 'skipped: tracking email already sent' };
 	}
 
 	const trackingNumberFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
@@ -151,7 +196,8 @@ export async function handleWrikeTaskCompletion(payload: WrikeWebhookPayload): P
 	const trackingNumber = trackingNumberField?.value;
 
 	if (!isValidTrackingValue(trackingNumber)) {
-		return { success: true, message: 'Completed task has no valid tracking number, skipping shipping confirmation' };
+		console.log(`[wrikeShipping] skipped: invalid tracking number`, { orderNumber, taskId, trackingNumber });
+		return { success: true, message: 'skipped: invalid tracking number' };
 	}
 
 	// Extract order data
@@ -168,6 +214,7 @@ export async function handleWrikeTaskCompletion(payload: WrikeWebhookPayload): P
 
 		// Update task description to note that shipping confirmation was sent
 		await updateTaskWithShippingConfirmation(taskId, orderData.trackingNumber);
+		await markTrackingEmailSent({ orderNumber: orderData.orderNumber, taskId, trackingNumber: orderData.trackingNumber });
 
 		return {
 			success: true,
