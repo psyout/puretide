@@ -352,8 +352,13 @@ async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string,
 
 function getLabelsTaskStatus(): string | null {
 	const raw = String(process.env.WRIKE_LABELS_TASK_STATUS ?? '').trim();
-	// Default to the required workflow status if not configured.
-	return raw ? raw : 'Ready to Print';
+	return raw ? raw : null;
+}
+
+function isWrikeBasicStatus(status: string): boolean {
+	// Wrike API supports these base statuses universally.
+	// Custom workflow statuses typically require different fields and are not guaranteed to be accepted via `status`.
+	return ['Active', 'Completed', 'Deferred', 'Cancelled'].includes(status);
 }
 
 async function findTaskIdByExactTitleInFolder(folderId: string, apiToken: string, title: string): Promise<string | null> {
@@ -405,15 +410,19 @@ async function tryUpdateTaskStatus(taskId: string, apiToken: string, status: str
 }
 
 async function createTaskInFolder(folderId: string, title: string, description: string, apiToken: string, status?: string | null): Promise<{ id: string } | null> {
-	const res: { status: number; data: any } = await axios.post(
-		`${WRIKE_API_BASE}/folders/${folderId}/tasks`,
-		{ title, description, status: status || 'Active' },
-		{
-			headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
-			validateStatus: () => true,
-		},
-	);
+	const requestedStatus = status ? String(status).trim() : '';
+	const body: any = { title, description };
+	if (requestedStatus && isWrikeBasicStatus(requestedStatus)) {
+		body.status = requestedStatus;
+	}
+
+	const res: { status: number; data: any } = await axios.post(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, body, {
+		headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+		validateStatus: () => true,
+	});
 	if (res.status < 200 || res.status >= 300) {
+		// If the caller provided a custom status string that Wrike rejects, we should not fail the entire job.
+		// However, we also can't reliably infer how to set custom statuses via API without explicit configuration.
 		throw new Error(`Wrike create task failed ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`);
 	}
 	return res.data?.data?.[0] || null;
