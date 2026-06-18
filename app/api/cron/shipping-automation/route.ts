@@ -21,7 +21,16 @@ export async function GET(request: NextRequest) {
 
 		if (existsSync(trackingFilePath)) {
 			const trackingData = await readFile(trackingFilePath, 'utf-8');
-			sentEmails = new Set(JSON.parse(trackingData));
+			const parsed: unknown = JSON.parse(trackingData);
+			if (Array.isArray(parsed)) {
+				sentEmails = new Set(parsed.map((v) => String(v)));
+			} else if (parsed && typeof parsed === 'object') {
+				// Legacy/broken state: file contained "{}" instead of "[]".
+				// Treat it as empty so we don't crash or accidentally mark everything as sent.
+				sentEmails = new Set<string>();
+			} else {
+				sentEmails = new Set<string>();
+			}
 		}
 
 		// Get Wrike API token and orders folder ID
@@ -66,9 +75,9 @@ export async function GET(request: NextRequest) {
 				continue;
 			}
 
-			// Check if shipping email already sent (using a custom field or description marker)
-			// Check for "Shipping email sent" marker in description
-			if (task.description?.includes('Shipping email sent')) {
+			// Check for shipping confirmation marker in description
+			// Keep this aligned with the webhook pipeline's marker.
+			if (task.description?.includes('Shipping Confirmation Sent')) {
 				continue;
 			}
 
@@ -117,7 +126,7 @@ export async function GET(request: NextRequest) {
 			const shippingMethod = shippingMethodMatch?.[1]?.includes('express') ? 'express' : 'regular';
 
 			// Send shipping confirmation email
-			const success = await sendShippingConfirmation({
+			const emailResult = await sendShippingConfirmation({
 				orderNumber,
 				customerEmail,
 				customerName,
@@ -125,11 +134,11 @@ export async function GET(request: NextRequest) {
 				shippingMethod,
 			});
 
-			if (success) {
+			if (emailResult.success) {
 				// Mark task as processed by adding a note to the description
 				const updatedDescription = task.description
-					? `${task.description}\n\n<p><i>Shipping email sent: ${new Date().toISOString()}</i></p>`
-					: `<p><i>Shipping email sent: ${new Date().toISOString()}</i></p>`;
+					? `${task.description}\n\n<p><i>Shipping Confirmation Sent: ${new Date().toISOString()}</i></p>`
+					: `<p><i>Shipping Confirmation Sent: ${new Date().toISOString()}</i></p>`;
 
 				// Update task description via Wrike API
 				const updateResponse = await fetch(`https://www.wrike.com/api/v4/tasks/${task.id}`, {
@@ -152,7 +161,7 @@ export async function GET(request: NextRequest) {
 					console.error(`[shippingAutomation] Failed to update task description for order #${orderNumber}`);
 				}
 			} else {
-				console.error(`[shippingAutomation] Failed to send shipping confirmation for order #${orderNumber}`);
+				console.error(`[shippingAutomation] Failed to send shipping confirmation for order #${orderNumber}`, emailResult.error);
 			}
 		}
 
