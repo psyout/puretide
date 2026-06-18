@@ -328,7 +328,7 @@ export async function POST(request: Request) {
 					}
 				: {
 						stockUpdated: true,
-						emailsSent: true,
+						emailsSent: Boolean(emailStatus?.sent && adminEmailStatus?.sent),
 						clientSynced: (order.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
 					},
 			emailStatus,

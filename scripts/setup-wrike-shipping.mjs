@@ -112,15 +112,13 @@ async function createWebhook() {
 
 async function activateWebhook(webhookId) {
 	try {
-		const response = await fetch(`${WRIKE_API_BASE}/webhooks/${webhookId}`, {
+		const response = await fetch(`${WRIKE_API_BASE}/webhooks/${webhookId}?status=Active`, {
 			method: 'PUT',
 			headers: {
 				Authorization: `Bearer ${apiToken}`,
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({
-				isActive: true,
-			}),
+			body: JSON.stringify({}),
 		});
 
 		if (!response.ok) {
@@ -132,7 +130,7 @@ async function activateWebhook(webhookId) {
 		const data = await response.json();
 		const webhook = data.data?.[0];
 
-		if (webhook?.isActive) {
+		if (webhook?.isActive || webhook?.status === 'Active') {
 			console.log(`\n✅ Webhook activated successfully!`);
 			console.log(`   Webhook ID: ${webhook.id}`);
 			console.log(`   Status: Active`);

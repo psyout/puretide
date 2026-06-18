@@ -46,6 +46,33 @@ export default function StockDashboardPage() {
 	const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
 	const [ordersLoading, setOrdersLoading] = useState(false);
 	const [ordersError, setOrdersError] = useState<string | null>(null);
+	const [trackingEmailLoading, setTrackingEmailLoading] = useState(false);
+	const [trackingEmailError, setTrackingEmailError] = useState<string | null>(null);
+	const [trackingEmailOkMessage, setTrackingEmailOkMessage] = useState<string | null>(null);
+
+	const handleSendTrackingEmail = async (orderNumber: string) => {
+		setTrackingEmailLoading(true);
+		setTrackingEmailError(null);
+		setTrackingEmailOkMessage(null);
+		try {
+			const response = await fetch('/api/dashboard/tracking-email', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ orderNumber }),
+			});
+			const data = (await response.json()) as { ok?: boolean; message?: string; error?: string };
+			if (!response.ok || !data.ok) {
+				setTrackingEmailError(data.error ?? (response.status === 401 ? 'Unauthorized. Sign in at /dashboard/login.' : 'Failed to send tracking email.'));
+				return;
+			}
+			setTrackingEmailOkMessage(data.message ?? `Tracking email processed for order #${orderNumber}.`);
+		} catch (e) {
+			setTrackingEmailError(e instanceof Error ? e.message : 'Failed to send tracking email.');
+		} finally {
+			setTrackingEmailLoading(false);
+		}
+	};
 
 	const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
 	const [promoCodesLoading, setPromoCodesLoading] = useState(false);
@@ -509,6 +536,10 @@ export default function StockDashboardPage() {
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
 								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-4'>Recent Orders</h2>
 								{ordersError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{ordersError}</div>}
+								{trackingEmailError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{trackingEmailError}</div>}
+								{trackingEmailOkMessage && (
+									<div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{trackingEmailOkMessage}</div>
+								)}
 								{ordersLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading orders...</div>
 								) : orders.length === 0 ? (
@@ -523,6 +554,7 @@ export default function StockDashboardPage() {
 													<th className='pb-3 pr-6 font-medium'>Products</th>
 													<th className='pb-3 pr-6 font-medium'>Date</th>
 													<th className='pb-3 pr-6 font-medium'>Payment</th>
+													<th className='pb-3 pr-6 font-medium'>Actions</th>
 													<th className='pb-3 pl-6 text-right font-medium'>Total</th>
 												</tr>
 											</thead>
@@ -540,15 +572,25 @@ export default function StockDashboardPage() {
 															: order.paymentMethod === 'etransfer'
 																? 'E-Transfer'
 																: String(order.paymentMethod ?? '-');
+													const orderNumber = String(order.orderNumber ?? order.id ?? '-');
 													return (
 														<tr
 															key={String(order.id)}
 															className='border-t border-black/5'>
-															<td className='py-4 pr-6 font-medium'>{String(order.orderNumber ?? order.id ?? '-')}</td>
+															<td className='py-4 pr-6 font-medium'>{orderNumber}</td>
 															<td className='py-4 pr-6'>{c ? `${c.firstName} ${c.lastName}` : '-'}</td>
 															<td className='py-4 pr-6 text-[#6a6a6a]'>{products || '-'}</td>
 															<td className='py-4 pr-6'>{date}</td>
 															<td className='py-4 pr-6'>{payment}</td>
+															<td className='py-4 pr-6'>
+																<button
+																	type='button'
+																	onClick={() => handleSendTrackingEmail(orderNumber)}
+																	disabled={trackingEmailLoading || orderNumber === '-'}
+																	className='px-3 py-1.5 rounded-lg border border-black/10 text-sm font-semibold text-[#2f2f2f] hover:bg-[#f4f4f7] disabled:opacity-50'>
+																	{trackingEmailLoading ? 'Sending...' : 'Send tracking email'}
+																</button>
+															</td>
 															<td className='py-4 pl-6 text-right'>${Number(order.total ?? 0).toFixed(2)}</td>
 														</tr>
 													);

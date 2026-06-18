@@ -310,9 +310,14 @@ export async function POST(request: Request) {
 		}
 
 		const total = Number((subtotal + shippingCost - discountAmount).toFixed(2));
+		const normalizedCustomer = {
+			...orderPayload.customer,
+			email: String(orderPayload.customer.email ?? '').trim(),
+		};
 
 		const payload: OrderPayload = {
 			...orderPayload,
+			customer: normalizedCustomer,
 			cartItems: cartItems.map((item) => ({ ...item, id: item.id })),
 			subtotal,
 			shippingCost,
