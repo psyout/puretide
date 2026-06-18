@@ -140,6 +140,11 @@ export async function GET(request: NextRequest) {
 			});
 
 			if (emailResult.success) {
+				// Persist idempotency immediately. Even if the Wrike update fails, we must not resend.
+				sentEmails.add(orderNumber);
+				await writeFile(trackingFilePath, JSON.stringify(Array.from(sentEmails)), 'utf-8');
+				processedCount++;
+
 				// Mark task as processed by adding a note to the description
 				const updatedDescription = task.description
 					? `${task.description}\n\n<p><i>Shipping Confirmation Sent: ${new Date().toISOString()}</i></p>`
@@ -156,11 +161,6 @@ export async function GET(request: NextRequest) {
 				});
 
 				if (updateResponse.ok) {
-					// Add to tracking set to prevent duplicates
-					sentEmails.add(orderNumber);
-					// Save tracking file immediately to prevent duplicates
-					await writeFile(trackingFilePath, JSON.stringify(Array.from(sentEmails)), 'utf-8');
-					processedCount++;
 					console.log(`[shippingAutomation] Shipping confirmation sent for order #${orderNumber}`);
 				} else {
 					console.error(`[shippingAutomation] Failed to update task description for order #${orderNumber}`);
