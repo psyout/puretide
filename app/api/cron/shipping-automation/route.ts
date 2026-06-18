@@ -75,6 +75,11 @@ export async function GET(request: NextRequest) {
 				continue;
 			}
 
+			const trackingNumberNormalized = String(trackingNumber ?? '')
+				.trim()
+				.replace(/\s+/g, '')
+				.toUpperCase();
+
 			// Check for shipping confirmation marker in description
 			// Keep this aligned with the webhook pipeline's marker.
 			if (task.description?.includes('Shipping Confirmation Sent')) {
@@ -103,7 +108,7 @@ export async function GET(request: NextRequest) {
 				continue;
 			}
 
-			console.log(`[shippingAutomation] Processing order #${orderNumber} with tracking number ${trackingNumber}`);
+			console.log(`[shippingAutomation] Processing order #${orderNumber} with tracking number ${trackingNumberNormalized}`);
 
 			// Extract customer details from task description
 			const description = task.description || '';
@@ -130,7 +135,7 @@ export async function GET(request: NextRequest) {
 				orderNumber,
 				customerEmail,
 				customerName,
-				trackingNumber,
+				trackingNumber: trackingNumberNormalized,
 				shippingMethod,
 			});
 
