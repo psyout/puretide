@@ -209,24 +209,32 @@ export async function createOrderTask(order: OrderData) {
 			: '';
 
 	const description = `
-<h3>Order #${order.orderNumber}</h3>
-<p>Date: ${new Date(order.createdAt).toLocaleString('en-CA')}</p>
-<hr>
-<h4>Customer Information</h4>
-<p>
-<b>Name:</b> ${order.customer.firstName} ${order.customer.lastName}<br>
-<b>Email:</b> ${order.customer.email}<br>
-</p>
-<h4>Shipping Address</h4>
-<p>
-<span style="display:block; border:2px solid #1d4ed8; background:#eff6ff; padding:10px; border-radius:8px;">
-	<b style="display:block; font-size:14px; letter-spacing:0.02em; color:#1d4ed8; margin-bottom:6px;">SHIP TO</b>
-	<span style="display:block; font-size:15px; line-height:1.35;">
-		${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}<br>
-		${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
-	</span>
-</span>
-</p>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+	<div style="display:block; padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff;">
+		<div style="font-size:18px; font-weight:800; letter-spacing:0.01em;">Order #${order.orderNumber}</div>
+		<div style="margin-top:4px; font-size:12px; color:#6b7280;"><b>Date:</b> ${new Date(order.createdAt).toLocaleString('en-CA')}</div>
+	</div>
+	<hr>
+	<h4>Customer Information</h4>
+	<div style="display:block; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; background:#fafafa;">
+		<div style="font-size:14px; line-height:1.5;">
+			<span style="display:inline-block; width:20px;">👤</span><b>Name:</b> ${order.customer.firstName} ${order.customer.lastName}<br>
+			<span style="display:inline-block; width:20px;">✉️</span><b>Email:</b> ${order.customer.email}<br>
+		</div>
+	</div>
+	<h4>Shipping Address</h4>
+	<div style="display:block; border:2px solid #1d4ed8; background:#eff6ff; padding:12px 14px; border-radius:10px;">
+		<div style="display:block; font-size:12px; font-weight:800; letter-spacing:0.08em; color:#1d4ed8; margin-bottom:8px;">
+			🚚 SHIP TO
+		</div>
+		<div style="display:block; font-size:15px; font-weight:700; line-height:1.35; color:#0f172a;">
+			${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}
+		</div>
+		<div style="display:block; margin-top:6px; font-size:14px; line-height:1.35; color:#0f172a;">
+			${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
+		</div>
+	</div>
+</div>
 <hr>
 <h4>Order Items</h4>
 <ul>${itemsList}</ul>
