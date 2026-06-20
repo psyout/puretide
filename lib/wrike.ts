@@ -217,16 +217,15 @@ export async function createOrderTask(order: OrderData) {
 <b>Name:</b> ${order.customer.firstName} ${order.customer.lastName}<br>
 <b>Email:</b> ${order.customer.email}<br>
 </p>
-<h4>Billing Address</h4>
-<p>
-${formatAddressLine(order.customer.address, order.customer.addressLine2).join('<br>')}<br>
-${order.customer.city}, ${order.customer.province} ${order.customer.zipCode}<br>
-${order.customer.country}
-</p>
 <h4>Shipping Address</h4>
 <p>
-${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}<br>
-${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
+<span style="display:block; border:2px solid #1d4ed8; background:#eff6ff; padding:10px; border-radius:8px;">
+	<b style="display:block; font-size:14px; letter-spacing:0.02em; color:#1d4ed8; margin-bottom:6px;">SHIP TO</b>
+	<span style="display:block; font-size:15px; line-height:1.35;">
+		${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}<br>
+		${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
+	</span>
+</span>
 </p>
 <hr>
 <h4>Order Items</h4>
