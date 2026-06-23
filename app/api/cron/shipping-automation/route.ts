@@ -14,7 +14,7 @@ import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const SHIPPING_AUTOMATION_VERSION = '2026-06-23-01';
+const SHIPPING_AUTOMATION_VERSION = '2026-06-23-02';
 
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
 		const { searchParams } = new URL(request.url);
 		const debugTaskId = searchParams.get('taskId');
 		if (debugTaskId) {
-			const taskUrl = `https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}?fields=['customFields','description','status','title','updatedDate']`;
+			const fields = encodeURIComponent(JSON.stringify(['customFields', 'description', 'status', 'title', 'updatedDate']));
+			const taskUrl = `https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}?fields=${fields}`;
 			const taskResp = await fetch(taskUrl, {
 				headers: { Authorization: `Bearer ${apiToken}` },
 			});
