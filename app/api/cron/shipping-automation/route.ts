@@ -14,7 +14,7 @@ import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const SHIPPING_AUTOMATION_VERSION = '2026-06-23-02';
+const SHIPPING_AUTOMATION_VERSION = '2026-06-23-04';
 
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
@@ -49,22 +49,23 @@ export async function GET(request: NextRequest) {
 		const { searchParams } = new URL(request.url);
 		const debugTaskId = searchParams.get('taskId');
 		if (debugTaskId) {
-			const fields = encodeURIComponent(JSON.stringify(['customFields', 'description', 'status', 'title', 'updatedDate']));
-			const taskUrl = `https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}?fields=${fields}`;
+			// Wrike's tasks/{id} endpoint does not allow requesting customFields via the `fields` parameter.
+			// Use the folder task listing (same API we use in the main cron path) and locate the task by id.
+			const taskUrl = `https://www.wrike.com/api/v4/folders/${encodeURIComponent(ordersFolderId)}/tasks?fields=['description','customFields','status','title','updatedDate']`;
 			const taskResp = await fetch(taskUrl, {
 				headers: { Authorization: `Bearer ${apiToken}` },
 			});
 			const taskText = await taskResp.text();
 			if (!taskResp.ok) {
-				return NextResponse.json({ error: 'Failed to fetch task', url: taskUrl, status: taskResp.status, details: taskText.slice(0, 2000) }, { status: 500 });
+				return NextResponse.json({ error: 'Failed to fetch folder tasks', url: taskUrl, status: taskResp.status, details: taskText.slice(0, 2000) }, { status: 500 });
 			}
 			let taskJson: { data?: Array<Record<string, unknown>> };
 			try {
 				taskJson = JSON.parse(taskText) as { data?: Array<Record<string, unknown>> };
 			} catch {
-				return NextResponse.json({ error: 'Wrike task response was not valid JSON', url: taskUrl, status: taskResp.status, details: taskText.slice(0, 2000) }, { status: 500 });
+				return NextResponse.json({ error: 'Wrike folder tasks response was not valid JSON', url: taskUrl, status: taskResp.status, details: taskText.slice(0, 2000) }, { status: 500 });
 			}
-			const task = taskJson.data?.[0] as
+			const task = (taskJson.data ?? []).find((item) => String((item as { id?: unknown }).id ?? '') === String(debugTaskId)) as
 				| {
 						id?: unknown;
 						title?: unknown;
@@ -73,6 +74,19 @@ export async function GET(request: NextRequest) {
 						customFields?: Array<{ id?: unknown; value?: unknown }>;
 				  }
 				| undefined;
+
+			if (!task) {
+				return NextResponse.json(
+					{
+						error: 'Task not found in configured orders folder',
+						version: SHIPPING_AUTOMATION_VERSION,
+						debugTaskId,
+						ordersFolderId,
+						configuredTrackingFieldId: trackingNumberFieldId,
+					},
+					{ status: 404 },
+				);
+			}
 			const customFields = Array.isArray(task?.customFields) ? task!.customFields : [];
 			const selected = customFields.find((f) => String(f.id ?? '') === String(trackingNumberFieldId));
 			return NextResponse.json({
