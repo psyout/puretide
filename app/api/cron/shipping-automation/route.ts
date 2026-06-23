@@ -14,9 +14,12 @@ import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const SHIPPING_AUTOMATION_VERSION = '2026-06-23-01';
+
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
 	const cronSecret = process.env.CRON_SECRET;
+	const debug = process.env.SHIPPING_AUTOMATION_DEBUG === '1';
 
 	if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -33,6 +36,52 @@ export async function GET(request: NextRequest) {
 		if (!apiToken || !ordersFolderId || !trackingNumberFieldId) {
 			console.error('[shippingAutomation] Missing required configuration');
 			return NextResponse.json({ error: 'Missing configuration' }, { status: 500 });
+		}
+
+		if (debug) {
+			console.log('[shippingAutomation] config', {
+				ordersFolderId,
+				trackingNumberFieldId,
+				lookbackHours: process.env.SHIPPING_AUTOMATION_LOOKBACK_HOURS,
+			});
+		}
+
+		const { searchParams } = new URL(request.url);
+		const debugTaskId = searchParams.get('taskId');
+		if (debugTaskId) {
+			const taskResp = await fetch(`https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}?fields=['customFields','description','status','title','updatedDate']`, {
+				headers: { Authorization: `Bearer ${apiToken}` },
+			});
+			const taskText = await taskResp.text();
+			if (!taskResp.ok) {
+				return NextResponse.json({ error: 'Failed to fetch task', status: taskResp.status, details: taskText }, { status: 500 });
+			}
+			const taskJson = JSON.parse(taskText) as { data?: Array<Record<string, unknown>> };
+			const task = taskJson.data?.[0] as
+				| {
+						id?: unknown;
+						title?: unknown;
+						status?: unknown;
+						updatedDate?: unknown;
+						customFields?: Array<{ id?: unknown; value?: unknown }>;
+				  }
+				| undefined;
+			const customFields = Array.isArray(task?.customFields) ? task!.customFields : [];
+			const selected = customFields.find((f) => String(f.id ?? '') === String(trackingNumberFieldId));
+			return NextResponse.json({
+				ok: true,
+				version: SHIPPING_AUTOMATION_VERSION,
+				debugTaskId,
+				configuredTrackingFieldId: trackingNumberFieldId,
+				selectedTrackingFieldValue: selected?.value ?? null,
+				customFields,
+				task: {
+					id: task?.id ?? null,
+					title: task?.title ?? null,
+					status: task?.status ?? null,
+					updatedDate: task?.updatedDate ?? null,
+				},
+			});
 		}
 
 		// Fetch all tasks from the orders folder with custom fields
@@ -76,9 +125,22 @@ export async function GET(request: NextRequest) {
 			const trackingNumberField = task.customFields?.find((f: { id: string }) => f.id === trackingNumberFieldId);
 			const trackingNumber = trackingNumberField?.value;
 			const trackingNumberNormalized = normalizeTrackingNumber(trackingNumber);
+			const orderNumberFromTitle = (task.title?.match(/Order #(\S+)/) ?? [])[1];
 
 			if (!trackingNumberNormalized) {
-				console.log('[shippingAutomation] skipped: invalid or missing tracking number', { taskId: task.id, title: task.title, trackingNumberRaw: trackingNumber });
+				console.log('[shippingAutomation] skipped: invalid or missing tracking number', {
+					taskId: task.id,
+					title: task.title,
+					orderNumber: orderNumberFromTitle,
+					selectedTrackingFieldId: trackingNumberFieldId,
+					trackingNumberRaw: trackingNumber,
+				});
+				if (debug) {
+					console.log('[shippingAutomation] debug customFields', {
+						taskId: task.id,
+						customFields: task.customFields ?? [],
+					});
+				}
 				skippedInvalidTracking++;
 				continue;
 			}
@@ -97,9 +159,17 @@ export async function GET(request: NextRequest) {
 				console.log('[shippingAutomation] skipped: invalid or missing tracking number', {
 					taskId: task.id,
 					title: task.title,
+					orderNumber: orderNumberFromTitle,
+					selectedTrackingFieldId: trackingNumberFieldId,
 					trackingNumberRaw: trackingNumber,
 					trackingNumber: trackingNumberNormalized,
 				});
+				if (debug) {
+					console.log('[shippingAutomation] debug customFields', {
+						taskId: task.id,
+						customFields: task.customFields ?? [],
+					});
+				}
 				skippedInvalidTracking++;
 				continue;
 			}
@@ -241,6 +311,7 @@ export async function GET(request: NextRequest) {
 
 		return NextResponse.json({
 			success: true,
+			version: SHIPPING_AUTOMATION_VERSION,
 			processed: processedCount,
 			skippedAlreadySent,
 			skippedAlreadySending,
