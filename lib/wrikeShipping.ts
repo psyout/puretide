@@ -33,8 +33,10 @@ export function isValidTrackingValue(value: string | null | undefined): value is
 	const normalized = normalizeTrackingNumber(value);
 	if (!normalized) return false;
 	if (normalized === 'MANUAL' || normalized === 'N/A' || normalized === 'LOCAL' || normalized === 'NONE') return false;
-	// Canada Post tracking: PG + 9 digits + CA (e.g., PG754389530CA)
-	if (!/^PG\d{9}CA$/i.test(normalized)) return false;
+	// Canada Post tracking (as used in Wrike):
+	// - PG + 9 digits + CA (e.g., PG754389530CA)
+	// - MW + 9 digits + CA (e.g., MW580076450CA)
+	if (!/^(PG|MW)\d{9}CA$/i.test(normalized)) return false;
 	return true;
 }
 
