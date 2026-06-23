@@ -49,14 +49,20 @@ export async function GET(request: NextRequest) {
 		const { searchParams } = new URL(request.url);
 		const debugTaskId = searchParams.get('taskId');
 		if (debugTaskId) {
-			const taskResp = await fetch(`https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}?fields=['customFields','description','status','title','updatedDate']`, {
+			const taskUrl = `https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}?fields=['customFields','description','status','title','updatedDate']`;
+			const taskResp = await fetch(taskUrl, {
 				headers: { Authorization: `Bearer ${apiToken}` },
 			});
 			const taskText = await taskResp.text();
 			if (!taskResp.ok) {
-				return NextResponse.json({ error: 'Failed to fetch task', status: taskResp.status, details: taskText }, { status: 500 });
+				return NextResponse.json({ error: 'Failed to fetch task', url: taskUrl, status: taskResp.status, details: taskText.slice(0, 2000) }, { status: 500 });
 			}
-			const taskJson = JSON.parse(taskText) as { data?: Array<Record<string, unknown>> };
+			let taskJson: { data?: Array<Record<string, unknown>> };
+			try {
+				taskJson = JSON.parse(taskText) as { data?: Array<Record<string, unknown>> };
+			} catch {
+				return NextResponse.json({ error: 'Wrike task response was not valid JSON', url: taskUrl, status: taskResp.status, details: taskText.slice(0, 2000) }, { status: 500 });
+			}
 			const task = taskJson.data?.[0] as
 				| {
 						id?: unknown;
