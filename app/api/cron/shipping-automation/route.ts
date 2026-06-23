@@ -55,7 +55,12 @@ export async function GET(request: NextRequest) {
 		let skippedInvalidTracking = 0;
 		let skippedNotCompleted = 0;
 		let skippedAlreadySending = 0;
+		let skippedOld = 0;
 		let failedCount = 0;
+
+		const lookbackHoursRaw = process.env.SHIPPING_AUTOMATION_LOOKBACK_HOURS;
+		const lookbackHours = Number.isFinite(Number(lookbackHoursRaw)) && Number(lookbackHoursRaw) > 0 ? Number(lookbackHoursRaw) : 6;
+		const lookbackMs = lookbackHours * 60 * 60 * 1000;
 
 		for (const task of tasks) {
 			// Check if task is "Completed" status
@@ -102,10 +107,21 @@ export async function GET(request: NextRequest) {
 				continue;
 			}
 
-			// Also check if the task was updated recently (to avoid processing same task multiple times in quick succession)
+			// Recency filter: do not send emails for old completed orders.
+			// We only process tasks that were updated recently (usually means status just changed to Completed).
 			const taskUpdated = task.updatedDate ? new Date(task.updatedDate) : null;
 			const now = new Date();
-			if (taskUpdated && now.getTime() - taskUpdated.getTime() < 60000) {
+			if (!taskUpdated || Number.isNaN(taskUpdated.getTime())) {
+				console.log('[shippingAutomation] skipped: missing updatedDate', { taskId: task.id, title: task.title });
+				skippedOld++;
+				continue;
+			}
+			if (now.getTime() - taskUpdated.getTime() > lookbackMs) {
+				console.log('[shippingAutomation] skipped: task too old', { taskId: task.id, title: task.title, updatedDate: task.updatedDate, lookbackHours });
+				skippedOld++;
+				continue;
+			}
+			if (now.getTime() - taskUpdated.getTime() < 60000) {
 				// Skip if task was updated less than 1 minute ago (avoids race conditions)
 				continue;
 			}
@@ -213,6 +229,7 @@ export async function GET(request: NextRequest) {
 			skippedAlreadySending,
 			skippedInvalidTracking,
 			skippedNotCompleted,
+			skippedOld,
 			failed: failedCount,
 		});
 
@@ -223,6 +240,7 @@ export async function GET(request: NextRequest) {
 			skippedAlreadySending,
 			skippedInvalidTracking,
 			skippedNotCompleted,
+			skippedOld,
 			failed: failedCount,
 			totalTasks: tasks.length,
 			timestamp: new Date().toISOString(),
