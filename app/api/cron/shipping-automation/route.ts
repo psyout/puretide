@@ -14,7 +14,7 @@ import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const SHIPPING_AUTOMATION_VERSION = '2026-06-23-07';
+const SHIPPING_AUTOMATION_VERSION = '2026-06-23-08';
 
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
@@ -220,8 +220,13 @@ export async function GET(request: NextRequest) {
 		let skippedCustomerEmailMissing = 0;
 		let failedCount = 0;
 
-		const lookbackHoursRaw = process.env.SHIPPING_AUTOMATION_LOOKBACK_HOURS;
-		const lookbackHours = Number.isFinite(Number(lookbackHoursRaw)) && Number(lookbackHoursRaw) > 0 ? Number(lookbackHoursRaw) : 6;
+		const lookbackHoursOverrideRaw = searchParams.get('lookbackHours');
+		const lookbackHoursRaw = lookbackHoursOverrideRaw ?? process.env.SHIPPING_AUTOMATION_LOOKBACK_HOURS;
+		let lookbackHours = Number.isFinite(Number(lookbackHoursRaw)) && Number(lookbackHoursRaw) > 0 ? Number(lookbackHoursRaw) : 6;
+		// Bound the override so a fat-fingered query param can't cause a massive backfill.
+		if (lookbackHoursOverrideRaw != null) {
+			lookbackHours = Math.max(1, Math.min(168, lookbackHours));
+		}
 		const lookbackMs = lookbackHours * 60 * 60 * 1000;
 
 		for (const task of tasks) {
