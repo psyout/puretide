@@ -14,7 +14,7 @@ import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const SHIPPING_AUTOMATION_VERSION = '2026-06-23-06';
+const SHIPPING_AUTOMATION_VERSION = '2026-06-23-07';
 
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
@@ -265,7 +265,7 @@ export async function GET(request: NextRequest) {
 				continue;
 			}
 
-			if (!isValidTrackingValue(trackingNumber)) {
+			if (!isValidTrackingValue(trackingNumberNormalized)) {
 				console.log('[shippingAutomation] skipped: invalid or missing tracking number', {
 					taskId: task.id,
 					title: task.title,
