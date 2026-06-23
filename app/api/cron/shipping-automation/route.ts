@@ -14,7 +14,7 @@ import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const SHIPPING_AUTOMATION_VERSION = '2026-06-23-04';
+const SHIPPING_AUTOMATION_VERSION = '2026-06-23-06';
 
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
@@ -65,20 +65,106 @@ export async function GET(request: NextRequest) {
 			} catch {
 				return NextResponse.json({ error: 'Wrike folder tasks response was not valid JSON', url: taskUrl, status: taskResp.status, details: taskText.slice(0, 2000) }, { status: 500 });
 			}
-			const task = (taskJson.data ?? []).find((item) => String((item as { id?: unknown }).id ?? '') === String(debugTaskId)) as
+			const debugTaskIdStr = String(debugTaskId);
+			let matchedBy: 'id' | 'permalink' | null = null;
+			let task = (taskJson.data ?? []).find((item) => {
+				const record = item as { id?: unknown; permalink?: unknown; permalinkUrl?: unknown };
+				const idStr = String(record.id ?? '');
+				if (idStr && idStr === debugTaskIdStr) {
+					matchedBy = 'id';
+					return true;
+				}
+				const permalink = String(record.permalink ?? record.permalinkUrl ?? '');
+				if (permalink && permalink.includes(debugTaskIdStr)) {
+					matchedBy = 'permalink';
+					return true;
+				}
+				return false;
+			}) as
 				| {
 						id?: unknown;
 						title?: unknown;
 						status?: unknown;
 						updatedDate?: unknown;
 						customFields?: Array<{ id?: unknown; value?: unknown }>;
+						permalink?: unknown;
+						permalinkUrl?: unknown;
 				  }
 				| undefined;
 
 			if (!task) {
+				// Fallback: task may not be in the configured orders folder (moved, created elsewhere, or folderId misconfigured).
+				// Try fetching the task directly so we can still inspect custom fields.
+				const directTaskUrlWithFields = `https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}?fields=['customFields','description']`;
+				const directRespWithFields = await fetch(directTaskUrlWithFields, {
+					headers: { Authorization: `Bearer ${apiToken}` },
+				});
+				const directTextWithFields = await directRespWithFields.text();
+				if (directRespWithFields.ok) {
+					let directJson: { data?: Array<Record<string, unknown>> };
+					try {
+						directJson = JSON.parse(directTextWithFields) as { data?: Array<Record<string, unknown>> };
+						task = directJson.data?.[0] as typeof task;
+					} catch {
+						return NextResponse.json(
+							{
+								error: 'Wrike direct task response was not valid JSON',
+								version: SHIPPING_AUTOMATION_VERSION,
+								debugTaskId,
+								url: directTaskUrlWithFields,
+								details: directTextWithFields.slice(0, 2000),
+							},
+							{ status: 500 },
+						);
+					}
+				} else {
+					const directTaskUrlNoFields = `https://www.wrike.com/api/v4/tasks/${encodeURIComponent(debugTaskId)}`;
+					const directRespNoFields = await fetch(directTaskUrlNoFields, {
+						headers: { Authorization: `Bearer ${apiToken}` },
+					});
+					const directTextNoFields = await directRespNoFields.text();
+					if (!directRespNoFields.ok) {
+						return NextResponse.json(
+							{
+								error: 'Task not found in orders folder and direct task fetch failed',
+								version: SHIPPING_AUTOMATION_VERSION,
+								debugTaskId,
+								ordersFolderId,
+								configuredTrackingFieldId: trackingNumberFieldId,
+								folderFetchUrl: taskUrl,
+								directFetchUrlAttempted: directTaskUrlWithFields,
+								directFetchWithFieldsStatus: directRespWithFields.status,
+								directFetchWithFieldsDetails: directTextWithFields.slice(0, 2000),
+								directFetchNoFieldsUrl: directTaskUrlNoFields,
+								directFetchNoFieldsStatus: directRespNoFields.status,
+								directFetchNoFieldsDetails: directTextNoFields.slice(0, 2000),
+							},
+							{ status: 404 },
+						);
+					}
+					let directJson: { data?: Array<Record<string, unknown>> };
+					try {
+						directJson = JSON.parse(directTextNoFields) as { data?: Array<Record<string, unknown>> };
+						task = directJson.data?.[0] as typeof task;
+					} catch {
+						return NextResponse.json(
+							{
+								error: 'Wrike direct task (no fields) response was not valid JSON',
+								version: SHIPPING_AUTOMATION_VERSION,
+								debugTaskId,
+								url: directTaskUrlNoFields,
+								details: directTextNoFields.slice(0, 2000),
+							},
+							{ status: 500 },
+						);
+					}
+				}
+			}
+
+			if (!task) {
 				return NextResponse.json(
 					{
-						error: 'Task not found in configured orders folder',
+						error: 'Task not found',
 						version: SHIPPING_AUTOMATION_VERSION,
 						debugTaskId,
 						ordersFolderId,
@@ -93,6 +179,7 @@ export async function GET(request: NextRequest) {
 				ok: true,
 				version: SHIPPING_AUTOMATION_VERSION,
 				debugTaskId,
+				matchedBy,
 				configuredTrackingFieldId: trackingNumberFieldId,
 				selectedTrackingFieldValue: selected?.value ?? null,
 				customFields,
@@ -101,6 +188,8 @@ export async function GET(request: NextRequest) {
 					title: task?.title ?? null,
 					status: task?.status ?? null,
 					updatedDate: task?.updatedDate ?? null,
+					permalink: (task as { permalink?: unknown })?.permalink ?? null,
+					permalinkUrl: (task as { permalinkUrl?: unknown })?.permalinkUrl ?? null,
 				},
 			});
 		}
