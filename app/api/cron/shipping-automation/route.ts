@@ -9,6 +9,7 @@ import {
 	markTrackingEmailSent,
 	normalizeTrackingNumber,
 } from '@/lib/wrikeShipping';
+import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -56,6 +57,8 @@ export async function GET(request: NextRequest) {
 		let skippedNotCompleted = 0;
 		let skippedAlreadySending = 0;
 		let skippedOld = 0;
+		let skippedOrderNotFound = 0;
+		let skippedCustomerEmailMissing = 0;
 		let failedCount = 0;
 
 		const lookbackHoursRaw = process.env.SHIPPING_AUTOMATION_LOOKBACK_HOURS;
@@ -133,6 +136,7 @@ export async function GET(request: NextRequest) {
 			}
 
 			const orderNumber = titleMatch[1];
+			console.log('[shippingAutomation] order number extracted', { orderNumber, taskId: task.id });
 
 			if (await hasTrackingEmailAlreadyBeenSent(orderNumber)) {
 				console.log('[shippingAutomation] skipped: tracking email already sent', { orderNumber, taskId: task.id });
@@ -148,25 +152,25 @@ export async function GET(request: NextRequest) {
 
 			console.log('[shippingAutomation] processing', { orderNumber, taskId: task.id, trackingNumber: trackingNumberNormalized });
 
-			// Extract customer details from task description
-			const description = task.description || '';
-			const emailMatch = description.match(/<b>Email:<\/b> ([^<]+)/);
-			const nameMatch = description.match(/<b>Name:<\/b> ([^<]+)/);
-			const shippingMethodMatch = description.match(/Shipping \(([^)]+)\)/);
-
-			if (!emailMatch || !nameMatch) {
-				console.error(`[shippingAutomation] Could not extract customer details for order #${orderNumber}`);
+			const order = await getOrderByOrderNumberFromDb(orderNumber);
+			if (!order) {
+				console.log('[shippingAutomation] skipped: order not found', { orderNumber, taskId: task.id });
+				skippedOrderNotFound++;
 				continue;
 			}
+			console.log('[shippingAutomation] order found in SQLite', { orderNumber, taskId: task.id });
 
-			// Decode HTML entities (e.g., &#64; -> @)
-			const decodeHtmlEntities = (text: string): string => {
-				return text.replace(/&#(\d+);/g, (_match: string, dec: string) => String.fromCharCode(parseInt(dec, 10)));
-			};
+			const customer = (order as { customer?: unknown }).customer as { firstName?: unknown; lastName?: unknown; email?: unknown } | undefined;
+			const customerEmail = customer?.email != null ? String(customer.email).trim() : '';
+			const customerName = `${customer?.firstName != null ? String(customer.firstName).trim() : ''} ${customer?.lastName != null ? String(customer.lastName).trim() : ''}`.trim();
+			if (!customerEmail) {
+				console.log('[shippingAutomation] skipped: customer email missing', { orderNumber, taskId: task.id });
+				skippedCustomerEmailMissing++;
+				continue;
+			}
+			console.log('[shippingAutomation] customer email found', { orderNumber, taskId: task.id, customerEmail });
 
-			const customerEmail = decodeHtmlEntities(emailMatch[1].trim());
-			const customerName = nameMatch[1].trim();
-			const shippingMethod = shippingMethodMatch?.[1]?.includes('express') ? 'express' : 'regular';
+			const shippingMethod = 'regular' as const;
 
 			await markTrackingEmailSendStarted({
 				orderNumber,
@@ -230,6 +234,8 @@ export async function GET(request: NextRequest) {
 			skippedInvalidTracking,
 			skippedNotCompleted,
 			skippedOld,
+			skippedOrderNotFound,
+			skippedCustomerEmailMissing,
 			failed: failedCount,
 		});
 
@@ -241,6 +247,8 @@ export async function GET(request: NextRequest) {
 			skippedInvalidTracking,
 			skippedNotCompleted,
 			skippedOld,
+			skippedOrderNotFound,
+			skippedCustomerEmailMissing,
 			failed: failedCount,
 			totalTasks: tasks.length,
 			timestamp: new Date().toISOString(),
