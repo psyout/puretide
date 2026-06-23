@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 		if (debugTaskId) {
 			// Wrike's tasks/{id} endpoint does not allow requesting customFields via the `fields` parameter.
 			// Use the folder task listing (same API we use in the main cron path) and locate the task by id.
-			const taskUrl = `https://www.wrike.com/api/v4/folders/${encodeURIComponent(ordersFolderId)}/tasks?fields=['description','customFields','status','title','updatedDate']`;
+			const taskUrl = `https://www.wrike.com/api/v4/folders/${encodeURIComponent(ordersFolderId)}/tasks?fields=['description','customFields']`;
 			const taskResp = await fetch(taskUrl, {
 				headers: { Authorization: `Bearer ${apiToken}` },
 			});
