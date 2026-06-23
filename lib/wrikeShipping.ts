@@ -21,7 +21,7 @@ type WrikeWebhookPayload = {
 	folderId: string;
 };
 
-function normalizeTrackingNumber(value: string | null | undefined): string {
+export function normalizeTrackingNumber(value: string | null | undefined): string {
 	return String(value ?? '')
 		.trim()
 		.replace(/\s+/g, '')
@@ -38,7 +38,7 @@ export function isValidTrackingValue(value: string | null | undefined): value is
 	return true;
 }
 
-async function hasTrackingEmailInProgress(orderNumber: string): Promise<boolean> {
+export async function hasTrackingEmailInProgress(orderNumber: string): Promise<boolean> {
 	const order = await getOrderByOrderNumberFromDb(orderNumber);
 	if (!order) return false;
 	const startedAt = order.trackingEmailSendStartedAt ? String(order.trackingEmailSendStartedAt) : '';
@@ -48,7 +48,7 @@ async function hasTrackingEmailInProgress(orderNumber: string): Promise<boolean>
 	return Date.now() - started.getTime() < 10 * 60 * 1000;
 }
 
-async function markTrackingEmailSendStarted(params: { orderNumber: string; taskId: string; trackingNumber: string; via: 'webhook' | 'manual'; route: string }): Promise<void> {
+export async function markTrackingEmailSendStarted(params: { orderNumber: string; taskId: string; trackingNumber: string; via: 'webhook' | 'manual' | 'cron'; route: string }): Promise<void> {
 	const existing = await getOrderByOrderNumberFromDb(params.orderNumber);
 	const now = new Date().toISOString();
 	const next = existing
@@ -69,7 +69,7 @@ async function markTrackingEmailSendStarted(params: { orderNumber: string; taskI
 	});
 }
 
-async function markTrackingEmailSendFailed(params: { orderNumber: string; error: string }): Promise<void> {
+export async function markTrackingEmailSendFailed(params: { orderNumber: string; error: string }): Promise<void> {
 	const existing = await getOrderByOrderNumberFromDb(params.orderNumber);
 	if (!existing) return;
 	await upsertOrderInDb({
@@ -213,13 +213,13 @@ export async function sendTrackingEmailManually(params: {
 	}
 }
 
-async function hasTrackingEmailAlreadyBeenSent(orderNumber: string): Promise<boolean> {
+export async function hasTrackingEmailAlreadyBeenSent(orderNumber: string): Promise<boolean> {
 	const order = await getOrderByOrderNumberFromDb(orderNumber);
 	if (!order) return false;
 	return Boolean(order.trackingEmailSentAt);
 }
 
-async function markTrackingEmailSent(params: { orderNumber: string; taskId: string; trackingNumber: string }): Promise<void> {
+export async function markTrackingEmailSent(params: { orderNumber: string; taskId: string; trackingNumber: string; customerEmail?: string; via?: 'webhook' | 'cron'; route?: string }): Promise<void> {
 	const existing = await getOrderByOrderNumberFromDb(params.orderNumber);
 	const now = new Date().toISOString();
 	const next = existing
@@ -236,6 +236,9 @@ async function markTrackingEmailSent(params: { orderNumber: string; taskId: stri
 		trackingEmailSentAt: now,
 		trackingEmailSentTrackingNumber: params.trackingNumber,
 		trackingEmailSentWrikeTaskId: params.taskId,
+		trackingEmailSentCustomerEmail: params.customerEmail,
+		trackingEmailSentVia: params.via,
+		trackingEmailSentRoute: params.route,
 	});
 }
 

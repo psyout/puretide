@@ -79,6 +79,17 @@ function normalizeLines(text: string): string[] {
 	return result;
 }
 
+function stripNonAddressLines(lines: string[]): string[] {
+	const isBad = (s: string): boolean => {
+		const x = String(s || '').trim();
+		if (!x) return true;
+		if (/ship\s*to\s*:?/i.test(x)) return true;
+		if (/shipping\s+information\s*:?/i.test(x)) return true;
+		return false;
+	};
+	return (lines ?? []).filter((l) => !isBad(l));
+}
+
 export function parseLabelFromOrderDescription(html: string): Label | null {
 	const nameMatch = String(html).match(/<b>\s*Name:\s*<\/b>\s*([^<]+?)\s*<br\s*\/?\s*>/i);
 	const name = nameMatch ? stripHtml(nameMatch[1]).trim() : '';
@@ -90,7 +101,7 @@ export function parseLabelFromOrderDescription(html: string): Label | null {
 	let lines: string[] = [];
 	if (match) {
 		const text = stripHtml(match[1]);
-		lines = normalizeLines(text);
+		lines = stripNonAddressLines(normalizeLines(text));
 	}
 
 	if (lines.length === 0) {
@@ -118,6 +129,7 @@ export function parseLabelFromOrderDescription(html: string): Label | null {
 
 		lines = findBlock(/^shipping address$/i);
 		if (lines.length === 0) lines = findBlock(/^billing address$/i);
+		lines = stripNonAddressLines(lines);
 		if (!inferredName || lines.length === 0) return null;
 		return { name: inferredName || 'Recipient', lines };
 	}
@@ -534,6 +546,11 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 	}
 
 	const outFileName = `daily-labels-${isoDate}-avery-5160.docx`;
+	const forceUpload = ['1', 'true', 'yes'].includes(
+		String(process.env.DAILY_LABELS_FORCE_UPLOAD ?? '')
+			.trim()
+			.toLowerCase(),
+	);
 	const outPath = path.resolve(process.cwd(), outFileName);
 	await generateAvery5160DocxSheets(labels, outPath);
 
@@ -555,7 +572,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 
 		const attachments = await listAttachments(taskId, params.apiToken);
 		const existing = attachments.find((a) => String(a?.name ?? '') === outFileName);
-		if (existing?.id) {
+		if (existing?.id && !forceUpload) {
 			console.log('[wrikeDailyLabels] attachment already exists; skipping upload', { isoDate, taskId, attachmentId: existing.id });
 			return {
 				ok: true,
@@ -567,7 +584,18 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 			};
 		}
 
-		const uploaded = await uploadAttachmentToTask(taskId, outPath, params.apiToken);
+		let uploadPath = outPath;
+		if (existing?.id && forceUpload) {
+			const rerunName = `daily-labels-${isoDate}-avery-5160-rerun.docx`;
+			uploadPath = path.resolve(process.cwd(), rerunName);
+			try {
+				fs.copyFileSync(outPath, uploadPath);
+			} catch {
+				uploadPath = outPath;
+			}
+		}
+
+		const uploaded = await uploadAttachmentToTask(taskId, uploadPath, params.apiToken);
 		if (!uploaded) {
 			console.error('[wrikeDailyLabels] wrike upload failed', { isoDate, taskId });
 			return { ok: false, date: isoDate, reason: 'wrike-upload-failed', ordersConsidered: inDay.length, labelsParsed: labels.length };
@@ -584,6 +612,14 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 	} finally {
 		try {
 			fs.unlinkSync(outPath);
+			if (forceUpload) {
+				const rerunPath = path.resolve(process.cwd(), `daily-labels-${isoDate}-avery-5160-rerun.docx`);
+				try {
+					fs.unlinkSync(rerunPath);
+				} catch {
+					// ignore cleanup failure
+				}
+			}
 		} catch {
 			// ignore cleanup failure
 		}

@@ -60,6 +60,19 @@ function normalizeLines(text) {
 	return result;
 }
 
+function stripNonAddressLines(lines) {
+	const badLine = (s) => {
+		const x = String(s || '').trim();
+		if (!x) return true;
+		if (/ship\s*to\s*:?/i.test(x)) return true;
+		if (/shipping\s+information\s*:?/i.test(x)) return true;
+		if (/&#x[0-9a-f]+;|&#\d+;|&[a-z]+;/i.test(x) && /ship\s*to/i.test(x)) return true;
+		return false;
+	};
+
+	return lines.filter((l) => !badLine(l));
+}
+
 function parseOrderDateFromOrderDescription(html) {
 	if (!html) return null;
 	const m = String(html).match(/<p>\s*Date:\s*([^<]+?)\s*<\/p>/i);
@@ -85,7 +98,7 @@ function parseLabelFromOrderDescription(html) {
 	let lines = [];
 	if (match) {
 		const text = stripHtml(match[1]);
-		lines = normalizeLines(text);
+		lines = stripNonAddressLines(normalizeLines(text));
 	}
 
 	if (!lines.length) {
@@ -113,6 +126,7 @@ function parseLabelFromOrderDescription(html) {
 
 		lines = findBlock(/^shipping address$/i);
 		if (!lines.length) lines = findBlock(/^billing address$/i);
+		lines = stripNonAddressLines(lines);
 		if (!inferredName || !lines.length) return null;
 		return { name: inferredName || 'Recipient', lines };
 	}
@@ -262,7 +276,7 @@ async function generateAvery5160DocxSheets(labels, outputPath) {
 			new Paragraph({
 				alignment: AlignmentType.LEFT,
 				spacing: { before: 0, after: 0 },
-				children: [new TextRun({ text: `To: ${label.name}`, bold: true, size: 20 })],
+				children: [new TextRun({ text: `${label.name}`, bold: true, size: 20 })],
 			}),
 		);
 		for (const line of label.lines || []) {

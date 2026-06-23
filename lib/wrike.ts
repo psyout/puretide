@@ -255,7 +255,13 @@ ${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.order
 			console.log('Wrike order task created:', task.id);
 			await createOrderSubtasks(task.id, config.ordersFolderId, config.apiToken);
 			// Attach label PDF to the "Create shipping labels" subtask immediately
-			await attachLabelPdfToOrder(task.id, description, config.apiToken);
+			const label = {
+				name: `${order.customer.firstName} ${order.customer.lastName}`.trim(),
+				lines: [...formatAddressLine(shippingAddr.address, shippingAddr.addressLine2), `${shippingAddr.city}, ${shippingAddr.province}`, shippingAddr.zipCode].filter(
+					(l) => String(l).trim().length > 0,
+				),
+			};
+			await attachLabelPdfToOrder(task.id, label, config.apiToken);
 		}
 		return task;
 	} catch (error) {
@@ -718,16 +724,14 @@ async function createSubtask(parentTaskId: string, title: string, description: s
 	return res.data?.data?.[0] || null;
 }
 
-export async function attachLabelPdfToOrder(orderTaskId: string, orderDescription: string, apiToken: string): Promise<void> {
-	console.log('[Wrike] Order description preview (first 400 chars):', orderDescription.slice(0, 400));
-	const parsed = parseLabelFromOrderDescription(orderDescription);
-	if (!parsed || !parsed.name || !parsed.lines.length) {
-		console.warn('[Wrike] Could not parse label from order description; skipping label attachment.');
+export async function attachLabelPdfToOrder(orderTaskId: string, label: { name: string; lines: string[] }, apiToken: string): Promise<void> {
+	if (!label?.name || !Array.isArray(label.lines) || label.lines.length === 0) {
+		console.warn('[Wrike] Missing label address data; skipping label attachment.');
 		return;
 	}
 
 	const tempDocx = path.resolve(process.cwd(), `label-${orderTaskId}-avery-5160.docx`);
-	await generateAvery5160DocxSheets([parsed], tempDocx);
+	await generateAvery5160DocxSheets([label], tempDocx);
 
 	let subtask = await findSubtaskByTitle(orderTaskId, 'Create shipping labels', apiToken);
 	if (!subtask) {

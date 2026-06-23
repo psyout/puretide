@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendShippingConfirmation } from '@/lib/shippingEmail';
-import { isValidTrackingValue } from '@/lib/wrikeShipping';
-import { readFile, writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
+import {
+	hasTrackingEmailAlreadyBeenSent,
+	hasTrackingEmailInProgress,
+	isValidTrackingValue,
+	markTrackingEmailSendFailed,
+	markTrackingEmailSendStarted,
+	markTrackingEmailSent,
+	normalizeTrackingNumber,
+} from '@/lib/wrikeShipping';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
 	const authHeader = request.headers.get('authorization');
@@ -14,24 +23,6 @@ export async function GET(request: NextRequest) {
 
 	try {
 		console.log('[shippingAutomation] Starting automated shipping confirmation check');
-
-		// Load tracking file to prevent duplicate emails
-		const trackingFilePath = './data/shipping-emails-sent.json';
-		let sentEmails = new Set<string>();
-
-		if (existsSync(trackingFilePath)) {
-			const trackingData = await readFile(trackingFilePath, 'utf-8');
-			const parsed: unknown = JSON.parse(trackingData);
-			if (Array.isArray(parsed)) {
-				sentEmails = new Set(parsed.map((v) => String(v)));
-			} else if (parsed && typeof parsed === 'object') {
-				// Legacy/broken state: file contained "{}" instead of "[]".
-				// Treat it as empty so we don't crash or accidentally mark everything as sent.
-				sentEmails = new Set<string>();
-			} else {
-				sentEmails = new Set<string>();
-			}
-		}
 
 		// Get Wrike API token and orders folder ID
 		const apiToken = process.env.WRIKE_API_TOKEN;
@@ -60,25 +51,50 @@ export async function GET(request: NextRequest) {
 		console.log(`[shippingAutomation] Found ${tasks.length} tasks in orders folder`);
 
 		let processedCount = 0;
+		let skippedAlreadySent = 0;
+		let skippedInvalidTracking = 0;
+		let skippedNotCompleted = 0;
+		let skippedAlreadySending = 0;
+		let failedCount = 0;
 
 		for (const task of tasks) {
 			// Check if task is "Completed" status
 			if (task.status !== 'Completed') {
+				skippedNotCompleted++;
 				continue;
 			}
 
 			// Check if task has a tracking number
 			const trackingNumberField = task.customFields?.find((f: { id: string }) => f.id === trackingNumberFieldId);
 			const trackingNumber = trackingNumberField?.value;
+			const trackingNumberNormalized = normalizeTrackingNumber(trackingNumber);
 
-			if (!isValidTrackingValue(trackingNumber)) {
+			if (!trackingNumberNormalized) {
+				console.log('[shippingAutomation] skipped: invalid or missing tracking number', { taskId: task.id, title: task.title, trackingNumberRaw: trackingNumber });
+				skippedInvalidTracking++;
+				continue;
+			}
+			if (trackingNumberNormalized === 'MANUAL' || trackingNumberNormalized === 'N/A' || trackingNumberNormalized === 'LOCAL' || trackingNumberNormalized === 'NONE') {
+				console.log('[shippingAutomation] skipped: manual/local delivery', {
+					taskId: task.id,
+					title: task.title,
+					trackingNumberRaw: trackingNumber,
+					trackingNumber: trackingNumberNormalized,
+				});
+				skippedInvalidTracking++;
 				continue;
 			}
 
-			const trackingNumberNormalized = String(trackingNumber ?? '')
-				.trim()
-				.replace(/\s+/g, '')
-				.toUpperCase();
+			if (!isValidTrackingValue(trackingNumber)) {
+				console.log('[shippingAutomation] skipped: invalid or missing tracking number', {
+					taskId: task.id,
+					title: task.title,
+					trackingNumberRaw: trackingNumber,
+					trackingNumber: trackingNumberNormalized,
+				});
+				skippedInvalidTracking++;
+				continue;
+			}
 
 			// Check for shipping confirmation marker in description
 			// Keep this aligned with the webhook pipeline's marker.
@@ -102,13 +118,19 @@ export async function GET(request: NextRequest) {
 
 			const orderNumber = titleMatch[1];
 
-			// Check if email already sent for this order
-			if (sentEmails.has(orderNumber)) {
-				console.log(`[shippingAutomation] Skipping order #${orderNumber} - email already sent`);
+			if (await hasTrackingEmailAlreadyBeenSent(orderNumber)) {
+				console.log('[shippingAutomation] skipped: tracking email already sent', { orderNumber, taskId: task.id });
+				skippedAlreadySent++;
 				continue;
 			}
 
-			console.log(`[shippingAutomation] Processing order #${orderNumber} with tracking number ${trackingNumberNormalized}`);
+			if (await hasTrackingEmailInProgress(orderNumber)) {
+				console.log('[shippingAutomation] skipped: already sending', { orderNumber, taskId: task.id });
+				skippedAlreadySending++;
+				continue;
+			}
+
+			console.log('[shippingAutomation] processing', { orderNumber, taskId: task.id, trackingNumber: trackingNumberNormalized });
 
 			// Extract customer details from task description
 			const description = task.description || '';
@@ -130,6 +152,14 @@ export async function GET(request: NextRequest) {
 			const customerName = nameMatch[1].trim();
 			const shippingMethod = shippingMethodMatch?.[1]?.includes('express') ? 'express' : 'regular';
 
+			await markTrackingEmailSendStarted({
+				orderNumber,
+				taskId: String(task.id),
+				trackingNumber: trackingNumberNormalized,
+				via: 'cron',
+				route: 'cron:shipping-automation',
+			});
+
 			// Send shipping confirmation email
 			const emailResult = await sendShippingConfirmation({
 				orderNumber,
@@ -140,9 +170,14 @@ export async function GET(request: NextRequest) {
 			});
 
 			if (emailResult.success) {
-				// Persist idempotency immediately. Even if the Wrike update fails, we must not resend.
-				sentEmails.add(orderNumber);
-				await writeFile(trackingFilePath, JSON.stringify(Array.from(sentEmails)), 'utf-8');
+				await markTrackingEmailSent({
+					orderNumber,
+					taskId: String(task.id),
+					trackingNumber: trackingNumberNormalized,
+					customerEmail,
+					via: 'cron',
+					route: 'cron:shipping-automation',
+				});
 				processedCount++;
 
 				// Mark task as processed by adding a note to the description
@@ -161,20 +196,34 @@ export async function GET(request: NextRequest) {
 				});
 
 				if (updateResponse.ok) {
-					console.log(`[shippingAutomation] Shipping confirmation sent for order #${orderNumber}`);
+					console.log('[shippingAutomation] sent', { orderNumber, taskId: task.id });
 				} else {
-					console.error(`[shippingAutomation] Failed to update task description for order #${orderNumber}`);
+					console.error('[shippingAutomation] warning: failed to update task description after send', { orderNumber, taskId: task.id });
 				}
 			} else {
-				console.error(`[shippingAutomation] Failed to send shipping confirmation for order #${orderNumber}`, emailResult.error);
+				await markTrackingEmailSendFailed({ orderNumber, error: String(emailResult.error ?? 'unknown') });
+				failedCount++;
+				console.error('[shippingAutomation] failed to send', { orderNumber, taskId: task.id, error: emailResult.error });
 			}
 		}
 
-		console.log(`[shippingAutomation] Completed. Processed ${processedCount} orders.`);
+		console.log('[shippingAutomation] Completed.', {
+			processed: processedCount,
+			skippedAlreadySent,
+			skippedAlreadySending,
+			skippedInvalidTracking,
+			skippedNotCompleted,
+			failed: failedCount,
+		});
 
 		return NextResponse.json({
 			success: true,
 			processed: processedCount,
+			skippedAlreadySent,
+			skippedAlreadySending,
+			skippedInvalidTracking,
+			skippedNotCompleted,
+			failed: failedCount,
 			totalTasks: tasks.length,
 			timestamp: new Date().toISOString(),
 		});
