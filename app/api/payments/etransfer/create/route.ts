@@ -14,6 +14,11 @@ type Body = {
 
 export async function POST(request: Request) {
 	try {
+		const enabled = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
+		if (!enabled) {
+			return NextResponse.json({ ok: false, error: 'BluePeak e-Transfer is disabled.' }, { status: 503 });
+		}
+
 		const secret = process.env.BLUEPEAK_SECRET_KEY;
 		if (!secret) {
 			return NextResponse.json({ ok: false, error: 'BluePeak not configured (missing BLUEPEAK_SECRET_KEY)' }, { status: 500 });

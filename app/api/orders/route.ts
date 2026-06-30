@@ -13,6 +13,7 @@ import { getIdempotencyKey, getCachedOrder, setCachedOrder } from '@/lib/idempot
 import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
+import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
 
 interface OrderPayload {
 	customer: {
@@ -231,19 +232,28 @@ export async function POST(request: Request) {
 			orderNumber,
 			createdAt,
 			paymentStatus: 'pending' as const,
-			paymentProvider: orderPayload.paymentMethod === 'etransfer' ? 'bluepeak' : undefined,
+			paymentProvider: orderPayload.paymentMethod === 'etransfer' && String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true' ? 'bluepeak' : undefined,
 			etransfer:
 				orderPayload.paymentMethod === 'etransfer'
-					? {
-							provider: 'bluepeak',
-							status: 'awaiting_payment',
-							depositEmail: '',
-							currency: 'CAD',
-							amountExpected: Number(total).toFixed(2),
-							amountReceived: '0.00',
-							paymentReference: orderNumber,
-							paidAt: null,
-						}
+					? String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true'
+						? {
+								provider: 'bluepeak',
+								status: 'awaiting_payment',
+								depositEmail: '',
+								currency: 'CAD',
+								amountExpected: Number(total).toFixed(2),
+								amountReceived: '0.00',
+								paymentReference: orderNumber,
+								paidAt: null,
+							}
+						: {
+								provider: 'manual',
+								currency: 'CAD',
+								amountExpected: Number(total).toFixed(2),
+								amountReceived: '0.00',
+								paymentReference: orderNumber,
+								paidAt: null,
+							}
 					: undefined,
 			...payload,
 		};
@@ -256,6 +266,47 @@ export async function POST(request: Request) {
 		if (idemKey) await setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
 		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);
 		const response = NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber, confirmationToken });
+
+		const emailEnabled = String(process.env.ENABLE_EMAIL_NOTIFICATIONS ?? '').toLowerCase() !== 'false';
+		const wrikeEnabled = String(process.env.ENABLE_WRIKE_INTEGRATION ?? '').toLowerCase() === 'true';
+		if (orderPayload.paymentMethod === 'etransfer' && (emailEnabled || wrikeEnabled)) {
+			void (async () => {
+				try {
+					const fulfillmentOrder = {
+						...(orderRecord as unknown as Record<string, unknown>),
+						paymentMethod: 'etransfer',
+						cardFee: orderPayload.cardFee,
+					} as unknown as FulfillmentOrder;
+
+					const result = await runFulfillment(fulfillmentOrder);
+					await upsertOrderInDb({
+						...(orderRecord as unknown as Record<string, unknown>),
+						fulfillmentStatus: {
+							stockUpdated: true,
+							emailsSent: Boolean(result.emailStatus.sent && result.adminEmailStatus.sent),
+							clientSynced: false,
+						},
+						emailStatus: result.emailStatus,
+						adminEmailStatus: result.adminEmailStatus,
+					});
+				} catch (err) {
+					console.error('[orders] e-Transfer fulfillment failed', err);
+					try {
+						await upsertOrderInDb({
+							...(orderRecord as unknown as Record<string, unknown>),
+							fulfillmentStatus: {
+								stockUpdated: false,
+								emailsSent: false,
+								clientSynced: false,
+								failedAt: new Date().toISOString(),
+							},
+						});
+					} catch (persistErr) {
+						console.error('[orders] Failed to persist fulfillment failure status', persistErr);
+					}
+				}
+			})();
+		}
 
 		// IMPORTANT: For e-transfer orders, fulfillment (emails, stock decrement, Wrike) must only
 		// happen after payment is confirmed via webhook. This route only stores the order.

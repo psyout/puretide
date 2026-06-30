@@ -116,7 +116,9 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		)
 		.join('');
 
-	const customerIntro = isCreditCard ? 'Thank you for your order. Your credit card payment has been received.' : 'We have received your order and it is on hold until payment is confirmed.';
+	const customerIntro = isCreditCard
+		? 'Thank you for your order. Your credit card payment has been received.'
+		: 'We have received your order. Please send your Interac e-Transfer to complete payment.';
 
 	const eTransferInstructionsText = [
 		'',
@@ -304,7 +306,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     </div>
   `;
 
-	const customerSubject = isCreditCard ? `Order #${input.orderNumber} - Order confirmation` : `Order #${input.orderNumber} - Payment pending`;
+	const customerSubject = isCreditCard ? `Order #${input.orderNumber} - Order confirmation` : `Order #${input.orderNumber} - e-Transfer payment instructions`;
 
 	return {
 		customer: {

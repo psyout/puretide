@@ -48,6 +48,11 @@ function toMilliCents(value: string): number {
 }
 
 export async function POST(request: Request) {
+	const enabled = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
+	if (!enabled) {
+		return json({ ok: false, error: 'BluePeak e-Transfer is disabled.' }, { status: 503 });
+	}
+
 	const webhookSecret = process.env.BLUEPEAK_WEBHOOK_SECRET;
 	if (!webhookSecret) {
 		return json({ ok: false, error: 'Webhook not configured (missing BLUEPEAK_WEBHOOK_SECRET)' }, { status: 500 });
@@ -304,8 +309,13 @@ export async function POST(request: Request) {
 		let fulfillmentFailed = false;
 		let emailStatus: unknown;
 		let adminEmailStatus: unknown;
+		const existingFulfillmentStatus = (orderBeforePaid as Record<string, unknown>).fulfillmentStatus as Record<string, unknown> | undefined;
+		const alreadyFulfilled = Boolean(existingFulfillmentStatus && existingFulfillmentStatus.stockUpdated === true);
 		if (dryRunFulfillment) {
 			console.warn(JSON.stringify({ label: 'bluepeak:webhook:dry_run_fulfillment', eventId, reference }));
+		} else if (alreadyFulfilled) {
+			emailStatus = (orderBeforePaid as Record<string, unknown>).emailStatus;
+			adminEmailStatus = (orderBeforePaid as Record<string, unknown>).adminEmailStatus;
 		} else {
 			try {
 				const result = await runFulfillment(orderBeforePaid as unknown as FulfillmentOrder);

@@ -290,8 +290,9 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			let et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
 			const depositEmailRaw = typeof et?.depositEmail === 'string' ? String(et.depositEmail).trim() : '';
 			const checkoutIdRaw = typeof et?.checkoutId === 'string' ? String(et.checkoutId).trim() : '';
+			const enabled = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
 
-			if (!depositEmailRaw || !checkoutIdRaw) {
+			if (enabled && (!depositEmailRaw || !checkoutIdRaw)) {
 				try {
 					const { bluepeakCreateCheckout } = await import('@/lib/bluepeak');
 					const customer = (order as unknown as Record<string, unknown>).customer as Record<string, unknown> | undefined;

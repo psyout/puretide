@@ -99,6 +99,7 @@ const envSchema = z.object({
 	WRIKE_WEBHOOK_SECRET: z.string().optional(),
 
 	// Feature flags
+	ENABLE_BLUEPEAK_ETRANSFER: z.coerce.boolean().default(false),
 	ENABLE_WRIKE_INTEGRATION: z.coerce.boolean().default(false),
 	ENABLE_EMAIL_NOTIFICATIONS: z.coerce.boolean().default(true),
 	ENABLE_SHEET_SYNC: z.coerce.boolean().default(true),
