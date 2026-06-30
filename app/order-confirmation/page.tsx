@@ -287,8 +287,60 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 
 		// E-transfer pending: show deposit instructions (do not imply paid/processing).
 		if (isEtransferOrder) {
-			const et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
-			const depositEmail = typeof et?.depositEmail === 'string' ? et.depositEmail : paymentDetails.recipientEmail;
+			let et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
+			const depositEmailRaw = typeof et?.depositEmail === 'string' ? String(et.depositEmail).trim() : '';
+			const checkoutIdRaw = typeof et?.checkoutId === 'string' ? String(et.checkoutId).trim() : '';
+
+			if (!depositEmailRaw || !checkoutIdRaw) {
+				try {
+					const { bluepeakCreateCheckout } = await import('@/lib/bluepeak');
+					const customer = (order as unknown as Record<string, unknown>).customer as Record<string, unknown> | undefined;
+					const firstName = String(customer?.firstName ?? '').trim();
+					const lastName = String(customer?.lastName ?? '').trim();
+					const email = String(customer?.email ?? '')
+						.trim()
+						.toLowerCase();
+					const amountExpected = typeof et?.amountExpected === 'string' ? String(et.amountExpected).trim() : '';
+
+					if (firstName && lastName && email && amountExpected) {
+						const checkout = await bluepeakCreateCheckout({
+							amount: amountExpected,
+							reference: String(order.orderNumber ?? '').trim(),
+							customer: { first_name: firstName, last_name: lastName, email },
+							idempotencyKey: `etransfer-${String(order.orderNumber ?? '').trim()}`.slice(0, 64),
+						});
+
+						await upsertOrderInDb({
+							...(order as unknown as Record<string, unknown>),
+							paymentProvider: 'bluepeak',
+							etransfer: {
+								...(et ?? {}),
+								provider: 'bluepeak',
+								status: checkout.status,
+								checkoutId: checkout.checkout_id,
+								depositEmail: checkout.deposit_email,
+								recipientName: checkout.recipient_name ?? null,
+								currency: checkout.currency,
+								amountExpected: checkout.amount,
+								amountReceived: checkout.total_credited,
+								paymentReference: checkout.reference,
+								overpaid: checkout.overpaid,
+								memoMismatch: checkout.memo_mismatch ?? null,
+								clientToken: checkout.client_token,
+								paidAt: null,
+								lastEventAt: checkout.created_at,
+							},
+						});
+
+						order = (await getOrderByNumber(String(order.orderNumber ?? '').trim())) ?? order;
+						et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
+					}
+				} catch {
+					// Ignore and fall back to static recipient email.
+				}
+			}
+
+			const depositEmail = typeof et?.depositEmail === 'string' && String(et.depositEmail).trim() ? String(et.depositEmail).trim() : paymentDetails.recipientEmail;
 			const recipientName = typeof et?.recipientName === 'string' && et.recipientName ? et.recipientName : paymentDetails.recipientName;
 			const amountExpected = typeof et?.amountExpected === 'string' && et.amountExpected ? et.amountExpected : formatMoney(order.total);
 			const memo = order.orderNumber ?? '';
