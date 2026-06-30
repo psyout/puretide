@@ -32,3 +32,16 @@ test('postal code validation edge cases', () => {
 	assert.strictEqual(getEffectiveShippingCost('v5k 0a1'), SHIPPING_COSTS.western, 'Lowercase postal code works');
 	assert.strictEqual(getEffectiveShippingCost('X1A 1A1'), SHIPPING_COSTS.eastern, 'Non-western first letter defaults to eastern');
 });
+
+test('required province/postal code cases', () => {
+	// BC (western)
+	assert.strictEqual(getEffectiveShippingCost('V6B 1A1', 'British Columbia'), SHIPPING_COSTS.western);
+	// Alberta (western)
+	assert.strictEqual(getEffectiveShippingCost('T2X 1V4', 'Alberta'), SHIPPING_COSTS.western);
+	// Ontario (eastern)
+	assert.strictEqual(getEffectiveShippingCost('K1A 0B1', 'Ontario'), SHIPPING_COSTS.eastern);
+	// Quebec (eastern)
+	assert.strictEqual(getEffectiveShippingCost('G5H 1A1', 'Quebec'), SHIPPING_COSTS.eastern);
+	// Atlantic (eastern)
+	assert.strictEqual(getEffectiveShippingCost('E1C 4R8', 'New Brunswick'), SHIPPING_COSTS.eastern);
+});

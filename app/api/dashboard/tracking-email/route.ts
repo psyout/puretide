@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 			customerEmail?: string;
 			customerName?: string;
 			trackingNumber?: string;
-			shippingMethod?: 'regular' | 'express';
+			shippingMethod?: 'express';
 		};
 		const orderNumber = body?.orderNumber ? String(body.orderNumber).trim() : '';
 		const taskId = body?.taskId ? String(body.taskId).trim() : '';

@@ -62,6 +62,13 @@ const envSchema = z.object({
 	DIGIPAY_SECRET_KEY: z.string().optional(),
 	DIGIPAY_POSTBACK_ALLOWED_IP: z.string().optional(),
 
+	// BluePeak e-Transfer integration
+	BLUEPEAK_SECRET_KEY: z.string().optional(),
+	BLUEPEAK_WEBHOOK_SECRET: z.string().optional(),
+	BLUEPEAK_BASE_URL: z.string().optional(),
+	BLUEPEAK_WEBHOOK_MAX_SKEW_SECONDS: z.coerce.number().optional(),
+	BLUEPEAK_DRY_RUN_FULFILLMENT: z.string().optional(),
+
 	// Wrike integration
 	WRIKE_API_TOKEN: z.string().optional(),
 	WRIKE_API_BASE: z.string().optional(),
@@ -122,6 +129,14 @@ export function validateEnv(): EnvSchema {
 			// In production, DigiPay HMAC secret is required if DigiPay is used
 			if (validatedEnv.DIGIPAY_SITE_ID && !validatedEnv.DIGIPAY_POSTBACK_HMAC_SECRET) {
 				console.warn('DIGIPAY_POSTBACK_HMAC_SECRET not configured - DigiPay postbacks will be rejected');
+			}
+
+			// In production, BluePeak secrets are required for e-Transfer payments
+			if (!validatedEnv.BLUEPEAK_SECRET_KEY) {
+				console.warn('BLUEPEAK_SECRET_KEY not configured - e-Transfer checkout creation will fail');
+			}
+			if (!validatedEnv.BLUEPEAK_WEBHOOK_SECRET) {
+				console.warn('BLUEPEAK_WEBHOOK_SECRET not configured - e-Transfer webhooks will be rejected');
 			}
 
 			// In production, email should be configured for order notifications
@@ -225,5 +240,20 @@ export function getWrikeConfig() {
 		labelsFolderId: env.WRIKE_LABELS_FOLDER_ID,
 		clientsFolderId: env.WRIKE_CLIENTS_FOLDER_ID,
 		productsFolderId: env.WRIKE_PRODUCTS_FOLDER_ID,
+	};
+}
+
+export function getBluePeakConfig() {
+	const env = getEnv();
+	if (!env.BLUEPEAK_SECRET_KEY) {
+		return null;
+	}
+
+	return {
+		secretKey: env.BLUEPEAK_SECRET_KEY,
+		webhookSecret: env.BLUEPEAK_WEBHOOK_SECRET,
+		baseUrl: env.BLUEPEAK_BASE_URL || 'https://deposit.bluepeakdns.com/v1',
+		webhookMaxSkewSeconds: env.BLUEPEAK_WEBHOOK_MAX_SKEW_SECONDS || 300,
+		dryRunFulfillment: env.BLUEPEAK_DRY_RUN_FULFILLMENT === 'true',
 	};
 }

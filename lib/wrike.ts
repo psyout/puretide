@@ -141,7 +141,7 @@ type OrderData = {
 		province: string;
 		zipCode: string;
 	};
-	shippingMethod: 'regular' | 'express';
+	shippingMethod: 'express';
 	paymentMethod: 'etransfer' | 'creditcard';
 	cardFee?: number;
 	subtotal: number;

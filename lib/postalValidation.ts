@@ -25,15 +25,12 @@ export type ShippingAddressInput = {
 
 /**
  * When shipToDifferentAddress is true, require shipping address object and validate its postal code.
- * Returns an error message if billing or shipping postal code is invalid or Quebec; otherwise null.
+ * Returns an error message if billing or shipping postal code is invalid; otherwise null.
  */
 export function validateOrderPostalCodes(payload: OrderWithPostalCodes): string | null {
 	const billingZip = (payload.customer?.zipCode ?? '').trim().replace(/\s/g, '');
 	if (billingZip.length > 0 && !isValidCanadianPostalCode(payload.customer?.zipCode ?? '')) {
 		return 'Invalid postal code format. Please use format A1A 1A1.';
-	}
-	if (isQuebecPostalCode(payload.customer?.zipCode ?? '')) {
-		return 'We do not ship to Quebec. Please contact us if you have questions.';
 	}
 	if (payload.shipToDifferentAddress) {
 		if (!payload.shippingAddress || typeof payload.shippingAddress !== 'object') {
@@ -45,9 +42,6 @@ export function validateOrderPostalCodes(payload: OrderWithPostalCodes): string 
 		}
 		if (!isValidCanadianPostalCode(payload.shippingAddress.zipCode ?? '')) {
 			return 'Invalid shipping postal code format. Please use format A1A 1A1.';
-		}
-		if (isQuebecPostalCode(payload.shippingAddress.zipCode ?? '')) {
-			return 'We do not ship to Quebec. Please contact us if you have questions.';
 		}
 	}
 	return null;

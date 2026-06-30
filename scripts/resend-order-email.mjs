@@ -104,7 +104,7 @@ function parseOrderFromWrike(description) {
 
 	// Extract shipping method
 	const shippingMethodMatch = html.match(/Shipping \(([^)]+)\)/);
-	const shippingMethod = shippingMethodMatch && shippingMethodMatch[1].toLowerCase().includes('express') ? 'express' : 'regular';
+	const shippingMethod = 'express';
 
 	return {
 		orderNumber: orderNum,

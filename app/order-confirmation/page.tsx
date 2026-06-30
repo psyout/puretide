@@ -5,6 +5,7 @@ import { AutoRefresh } from '@/components/AutoRefresh';
 import OrderConfirmationSurvey from '@/components/OrderConfirmationSurvey';
 import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
+import { CopyToClipboardButton } from '@/components/CopyToClipboardButton';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -113,6 +114,40 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			);
 		}
 
+		// E-transfer paid: show a dedicated payment-received state.
+		if (order.paymentStatus === 'paid' && (order.paymentMethod === 'etransfer' || (order as unknown as Record<string, unknown>).paymentProvider === 'bluepeak')) {
+			const et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
+			const amountReceived = typeof et?.amountReceived === 'string' && et.amountReceived ? et.amountReceived : formatMoney(order.total);
+			return (
+				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+					<Header />
+					<div className='max-w-7xl mx-auto px-6 py-24'>
+						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment received</h1>
+							<p className='text-deep-tidal-teal-800 mb-6'>We’ve confirmed your Interac e-Transfer payment. Your order is now being processed.</p>
+							<div className='grid grid-cols-1 gap-4'>
+								<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
+									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Order number</div>
+									<div className='text-deep-tidal-teal-800 font-semibold text-2xl tracking-wide'>{order.orderNumber}</div>
+								</div>
+								<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
+									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Amount received</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>{amountReceived}</div>
+								</div>
+							</div>
+							<div className='mt-6'>
+								<Link
+									href='/'
+									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+									Return to shop
+								</Link>
+							</div>
+						</div>
+					</div>
+				</div>
+			);
+		}
+
 		// Store that this token has been used by adding a timestamp to the order
 		const orderWithTokenAccess = {
 			...(order as unknown as Record<string, unknown>),
@@ -142,6 +177,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 
 	const paymentProvider = (order as unknown as Record<string, unknown>).paymentProvider;
 	const isDigipayOrder = paymentProvider === 'digipay' || order.paymentMethod === 'creditcard';
+	const isEtransferOrder = order.paymentMethod === 'etransfer' || paymentProvider === 'bluepeak';
 	const providerStatusRaw = normalizeProviderStatus(status) || normalizeProviderStatus(result);
 	const hasExplicitProviderStatus = Boolean(providerStatusRaw);
 
@@ -220,20 +256,90 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			);
 		}
 
-		return (
-			<AutoRefresh
-				interval={5000}
-				maxRefreshes={24}>
-				{(refreshCount) => (
-					<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-						<Header />
-						<div className='max-w-7xl mx-auto px-6 py-24'>
-							<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
-								<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Processing your payment</h1>
-								<p className='text-deep-tidal-teal-800 mb-4'>
-									Your order was received. Payment is being processed. This page will update when payment is confirmed, or you can check back shortly.
-								</p>
-								{refreshCount > 1 && <p className='text-deep-tidal-teal-600 text-sm mb-4'>Checking for payment update... (refresh {refreshCount}/24)</p>}
+		// DigiPay pending: auto-refresh while we wait for postback.
+		if (isDigipayOrder) {
+			return (
+				<AutoRefresh
+					interval={5000}
+					maxRefreshes={24}>
+					{(refreshCount) => (
+						<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+							<Header />
+							<div className='max-w-7xl mx-auto px-6 py-24'>
+								<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+									<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Processing your payment</h1>
+									<p className='text-deep-tidal-teal-800 mb-4'>
+										Your order was received. Payment is being processed. This page will update when payment is confirmed, or you can check back shortly.
+									</p>
+									{refreshCount > 1 && <p className='text-deep-tidal-teal-600 text-sm mb-4'>Checking for payment update... (refresh {refreshCount}/24)</p>}
+									<Link
+										href='/'
+										className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+										Return to shop
+									</Link>
+								</div>
+							</div>
+						</div>
+					)}
+				</AutoRefresh>
+			);
+		}
+
+		// E-transfer pending: show deposit instructions (do not imply paid/processing).
+		if (isEtransferOrder) {
+			const et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
+			const depositEmail = typeof et?.depositEmail === 'string' ? et.depositEmail : paymentDetails.recipientEmail;
+			const recipientName = typeof et?.recipientName === 'string' && et.recipientName ? et.recipientName : paymentDetails.recipientName;
+			const amountExpected = typeof et?.amountExpected === 'string' && et.amountExpected ? et.amountExpected : formatMoney(order.total);
+			const memo = order.orderNumber ?? '';
+
+			return (
+				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+					<Header />
+					<div className='max-w-7xl mx-auto px-6 py-24'>
+						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Interac e-Transfer required</h1>
+							<p className='text-deep-tidal-teal-800 mb-4'>Your order was received. Please send an Interac e-Transfer using the details below.</p>
+							<div className='mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4'>
+								<div className='font-bold text-amber-900 mb-1'>IMPORTANT</div>
+								<div className='text-amber-900 text-sm'>You must include your order number in the Interac memo/message field so your payment can be matched to your order.</div>
+							</div>
+							<p className='text-deep-tidal-teal-800 mb-6 text-sm'>Once payment is confirmed, we will email you a confirmation and begin processing your order.</p>
+							<div className='grid grid-cols-1 gap-4'>
+								<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
+									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Recipient name</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>{recipientName}</div>
+								</div>
+								<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
+									<div className='flex items-center justify-between gap-3'>
+										<div>
+											<div className='text-sm text-deep-tidal-teal-600 mb-1'>Autodeposit email</div>
+											<div className='text-deep-tidal-teal-800 font-semibold break-all'>{depositEmail}</div>
+										</div>
+										<CopyToClipboardButton
+											value={depositEmail}
+											label='Copy autodeposit email'
+										/>
+									</div>
+								</div>
+								<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
+									<div className='text-sm text-deep-tidal-teal-600 mb-1'>Amount</div>
+									<div className='text-deep-tidal-teal-800 font-semibold'>{amountExpected}</div>
+								</div>
+								<div className='rounded-lg border border-deep-tidal-teal/10 p-4'>
+									<div className='flex items-center justify-between gap-3'>
+										<div>
+											<div className='text-sm text-deep-tidal-teal-600 mb-1'>Memo / message (Order number)</div>
+											<div className='text-deep-tidal-teal-800 font-semibold text-sm tracking-wide'>{memo}</div>
+										</div>
+										<CopyToClipboardButton
+											value={memo}
+											label='Copy order number'
+										/>
+									</div>
+								</div>
+							</div>
+							<div className='mt-6'>
 								<Link
 									href='/'
 									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
@@ -242,8 +348,26 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							</div>
 						</div>
 					</div>
-				)}
-			</AutoRefresh>
+				</div>
+			);
+		}
+
+		// Default pending fallback.
+		return (
+			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+				<Header />
+				<div className='max-w-7xl mx-auto px-6 py-24'>
+					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Order received</h1>
+						<p className='text-deep-tidal-teal-800 mb-4'>Your order was received and is awaiting payment confirmation.</p>
+						<Link
+							href='/'
+							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+							Return to shop
+						</Link>
+					</div>
+				</div>
+			</div>
 		);
 	}
 

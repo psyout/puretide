@@ -22,7 +22,7 @@ type OrderEmailInput = {
 		province: string;
 		zipCode: string;
 	};
-	shippingMethod: 'regular' | 'express';
+	shippingMethod: 'express';
 	subtotal: number;
 	shippingCost: number;
 	discountAmount?: number;
@@ -74,7 +74,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const isCreditCard = input.paymentMethod === 'creditcard';
 	const orderDate = formatDate(input.createdAt);
 	const orderName = `${input.customer.firstName} ${input.customer.lastName}`.trim();
-	const shippingLabel = input.shippingMethod === 'express' ? 'Express Shipping' : 'Regular Shipping';
+	const shippingLabel = 'Express Shipping';
 	const paymentMethodLabel = isCreditCard ? 'Credit card' : 'Interac e-Transfer';
 	const billingLines = [
 		orderName,

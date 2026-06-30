@@ -86,7 +86,9 @@ export default function CheckoutClient() {
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
 	const subtotalAfterDiscounts = Number((subtotal - discountAmount).toFixed(2));
 	const qualifiesFreeShipping = subtotalAfterDiscounts > FREE_SHIPPING_THRESHOLD;
-	const shippingCost = appliedFreeShipping || qualifiesFreeShipping ? 0 : getEffectiveShippingCost(formData.zipCode);
+	const destinationZipCode = shipToDifferentAddress ? shippingAddress.zipCode : formData.zipCode;
+	const destinationProvince = shipToDifferentAddress ? shippingAddress.province : formData.province;
+	const shippingCost = appliedFreeShipping || qualifiesFreeShipping ? 0 : getEffectiveShippingCost(destinationZipCode, destinationProvince);
 	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
 	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
@@ -98,13 +100,9 @@ export default function CheckoutClient() {
 
 	// Canadian postal code
 	const isValidCanadianPostalCode = (zip: string) => /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/.test((zip || '').trim().replace(/\s{2,}/g, ' '));
-	const isQuebecPostalCode = (zip: string) => /^[GHJ]/i.test((zip || '').trim().replace(/\s/g, ''));
 	const normalizedZip = (zip: string) => (zip || '').trim().replace(/\s/g, '');
 	const billingZipInvalidFormat = normalizedZip(formData.zipCode).length > 0 && !isValidCanadianPostalCode(formData.zipCode);
 	const shippingZipInvalidFormat = shipToDifferentAddress && normalizedZip(shippingAddress.zipCode).length > 0 && !isValidCanadianPostalCode(shippingAddress.zipCode);
-	const billingZipBlocked = isQuebecPostalCode(formData.zipCode);
-	const shippingZipBlocked = shipToDifferentAddress && isQuebecPostalCode(shippingAddress.zipCode);
-	const hasBlockedPostalCode = billingZipBlocked || shippingZipBlocked;
 	const hasInvalidPostalCodeFormat = billingZipInvalidFormat || shippingZipInvalidFormat;
 
 	useEffect(() => {
@@ -212,10 +210,6 @@ export default function CheckoutClient() {
 			setCheckoutError('Please enter a valid Canadian postal code (e.g. A1A 1A1).');
 			return;
 		}
-		if (hasBlockedPostalCode) {
-			setCheckoutError('We do not ship to Quebec. Please contact us if you have questions.');
-			return;
-		}
 		if (paymentMethod === 'creditcard' && total > CREDIT_CARD_LIMIT) {
 			setCheckoutError('Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.');
 			return;
@@ -268,7 +262,18 @@ export default function CheckoutClient() {
 				setHasSubmitted(false);
 				return;
 			}
-			clearCart();
+
+			// Reserve autodeposit email for this order (server-side BluePeak call)
+			try {
+				await fetch('/api/payments/etransfer/create', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ orderNumber, idempotencyKey: getOrCreateIdempotencyKey() }),
+				});
+			} catch {
+				// If this fails, the order-confirmation page can still show fallback instructions.
+			}
+
 			router.push(`/order-confirmation?orderNumber=${encodeURIComponent(orderNumber)}&token=${encodeURIComponent(confirmationToken)}`);
 		} catch (error) {
 			console.error('Checkout error', error);
@@ -493,11 +498,10 @@ export default function CheckoutClient() {
 										autoComplete='postal-code'
 										placeholder=''
 										maxLength={7}
-										className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat || billingZipBlocked ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
+										className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
 										required
 									/>
-									{billingZipBlocked && <p className='text-sm text-red-600 mt-1'>We do not ship to Quebec. Please contact us if you have questions.</p>}
-									{billingZipInvalidFormat && !billingZipBlocked && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+									{billingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
 								</div>
 
 								<div>
@@ -634,11 +638,10 @@ export default function CheckoutClient() {
 												autoComplete='shipping postal-code'
 												placeholder='A1A 1A1'
 												maxLength={7}
-												className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat || shippingZipBlocked ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
+												className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
 												required
 											/>
-											{shippingZipBlocked && <p className='text-sm text-red-600 mt-1'>We do not ship to Quebec. Please contact us if you have questions.</p>}
-											{shippingZipInvalidFormat && !shippingZipBlocked && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+											{shippingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
 										</div>
 									</div>
 								)}

@@ -89,7 +89,7 @@ export async function sendTrackingEmailManually(params: {
 	customerEmail?: string;
 	customerName?: string;
 	trackingNumber?: string;
-	shippingMethod?: 'regular' | 'express';
+	shippingMethod?: 'express';
 }): Promise<{ ok: boolean; message?: string; error?: string; orderNumber?: string; taskId?: string; trackingNumber?: string }> {
 	try {
 		const apiToken = process.env.WRIKE_API_TOKEN;
@@ -172,7 +172,7 @@ export async function sendTrackingEmailManually(params: {
 				customerEmail: overrideCustomerEmail,
 				customerName: overrideCustomerName,
 				trackingNumber,
-				shippingMethod: params.shippingMethod ?? 'regular',
+				shippingMethod: params.shippingMethod ?? 'express',
 			};
 		} else if (task) {
 			orderData = extractOrderData(task, trackingNumber);
@@ -324,7 +324,7 @@ function extractOrderData(task: WrikeTask, trackingNumber: string): ShippingConf
 
 	const customerEmail = decodeHtmlEntities(emailMatch[1].trim());
 	const customerName = nameMatch[1].trim();
-	const shippingMethod = shippingMethodMatch?.[1]?.includes('express') ? 'express' : 'regular';
+	const shippingMethod: 'express' = 'express';
 
 	// Extract shipping address
 	const shippingAddressMatch = description.match(/<h4>Shipping Address<\/h4>\s*<p>([\s\S]*?)<\/p>/);

@@ -355,7 +355,7 @@ export async function GET(request: NextRequest) {
 			}
 			console.log('[shippingAutomation] customer email found', { orderNumber, taskId: task.id, customerEmail });
 
-			const shippingMethod = 'regular' as const;
+			const shippingMethod = 'express' as const;
 
 			await markTrackingEmailSendStarted({
 				orderNumber,

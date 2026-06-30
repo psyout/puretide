@@ -27,7 +27,7 @@ export type FulfillmentOrder = {
 		province: string;
 		zipCode: string;
 	};
-	shippingMethod: 'regular' | 'express';
+	shippingMethod: 'express';
 	subtotal: number;
 	shippingCost: number;
 	discountAmount?: number;

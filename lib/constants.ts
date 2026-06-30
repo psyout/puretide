@@ -12,11 +12,30 @@ export const DISABLE_SHIPPING_FEE_FOR_TEST = process.env.NEXT_PUBLIC_DISABLE_SHI
 /** Set NEXT_PUBLIC_ENABLE_CREDIT_CARD=false to hide credit card and force e-transfer (e.g. when DigiPay has issues). Omit or true = credit card enabled. */
 export const ENABLE_CREDIT_CARD = process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD !== 'false';
 
-export function getEffectiveShippingCost(postalCode?: string): number {
+const WESTERN_PROVINCES = new Set(['British Columbia', 'Alberta', 'Saskatchewan', 'Manitoba']);
+const EASTERN_PROVINCES = new Set(['Ontario', 'Quebec', 'New Brunswick', 'Nova Scotia', 'Prince Edward Island', 'Newfoundland and Labrador']);
+
+function normalizeProvince(province?: string): string {
+	return String(province ?? '')
+		.trim()
+		.replace(/\s{2,}/g, ' ')
+		.replace(/\b\w+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+}
+
+export function getEffectiveShippingCost(postalCode?: string, province?: string): number {
 	if (DISABLE_SHIPPING_FEE_FOR_TEST) return 0;
-	if (!postalCode) return SHIPPING_COSTS.eastern; // default to eastern if no postal code
-	const firstLetter = postalCode.trim().toUpperCase().charAt(0);
-	return ['V', 'R', 'S', 'T'].includes(firstLetter) ? SHIPPING_COSTS.western : SHIPPING_COSTS.eastern;
+
+	const normalizedPostal = String(postalCode ?? '').trim();
+	if (normalizedPostal) {
+		const firstLetter = normalizedPostal.toUpperCase().charAt(0);
+		return ['V', 'R', 'S', 'T'].includes(firstLetter) ? SHIPPING_COSTS.western : SHIPPING_COSTS.eastern;
+	}
+
+	const normalizedProvince = normalizeProvince(province);
+	if (normalizedProvince && WESTERN_PROVINCES.has(normalizedProvince)) return SHIPPING_COSTS.western;
+	if (normalizedProvince && EASTERN_PROVINCES.has(normalizedProvince)) return SHIPPING_COSTS.eastern;
+
+	return SHIPPING_COSTS.eastern; // default to eastern if no postal code or province
 }
 
 // Stock alert threshold

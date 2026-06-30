@@ -5,7 +5,7 @@ export interface ShippingConfirmationData {
 	customerEmail: string;
 	customerName: string;
 	trackingNumber: string;
-	shippingMethod: 'regular' | 'express';
+	shippingMethod: 'express';
 	shippingAddress?: {
 		address: string;
 		addressLine2: string;
@@ -18,7 +18,7 @@ export interface ShippingConfirmationData {
 export async function sendShippingConfirmation(data: ShippingConfirmationData) {
 	const { orderNumber, customerEmail, customerName, trackingNumber, shippingMethod, shippingAddress } = data;
 
-	const shippingLabel = shippingMethod === 'express' ? 'Express Shipping' : 'Standard Shipping';
+	const shippingLabel = 'Express Shipping';
 
 	const subject = `Pure Tide - Your Order #${orderNumber} Has Shipped!`;
 

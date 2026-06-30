@@ -171,7 +171,9 @@ export async function POST(request: Request) {
 		const trustedCartItems = trustedCart.items;
 
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
-		let shippingCost = getEffectiveShippingCost(orderPayload.customer.zipCode);
+		const destinationZipCode = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.zipCode : orderPayload.customer.zipCode;
+		const destinationProvince = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.province : orderPayload.customer.province;
+		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
 		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
 		let discountAmount = 0;
 

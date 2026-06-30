@@ -27,6 +27,15 @@ export type IdempotencyEntry = {
 	expiresAt: string;
 };
 
+export type WebhookEventEntry = {
+	provider: string;
+	eventId: string;
+	orderNumber: string;
+	eventType: string;
+	createdAt: string;
+	receivedAt: string;
+};
+
 const DB_PATH = process.env.ORDERS_DB_PATH ? path.resolve(process.env.ORDERS_DB_PATH) : path.join(process.cwd(), 'data', 'orders.sqlite');
 const LEGACY_ORDERS_JSON_PATH = process.env.LEGACY_ORDERS_JSON_PATH ? path.resolve(process.env.LEGACY_ORDERS_JSON_PATH) : path.join(process.cwd(), 'data', 'orders.json');
 
@@ -116,6 +125,20 @@ async function getDb(): Promise<SqlJsDatabase> {
 			);
 		`);
 		db.run('CREATE INDEX IF NOT EXISTS idx_idempotency_expires_at ON idempotency(expires_at)');
+
+		db.run(`
+			CREATE TABLE IF NOT EXISTS webhook_events (
+				provider TEXT NOT NULL,
+				event_id TEXT NOT NULL,
+				order_number TEXT,
+				event_type TEXT,
+				created_at TEXT,
+				received_at TEXT NOT NULL,
+				PRIMARY KEY (provider, event_id)
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_webhook_events_order_number ON webhook_events(order_number)');
+		db.run('CREATE INDEX IF NOT EXISTS idx_webhook_events_received_at ON webhook_events(received_at DESC)');
 
 		await migrateLegacyOrdersJson(db);
 		persistDb(db);
@@ -318,6 +341,25 @@ export async function deleteExpiredIdempotencyEntries(): Promise<void> {
 	const db = await getDb();
 	const now = new Date().toISOString();
 	db.run('DELETE FROM idempotency WHERE expires_at <= ?', [now]);
+	persistDb(db);
+}
+
+export async function hasProcessedWebhookEvent(provider: string, eventId: string): Promise<boolean> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT 1 FROM webhook_events WHERE provider = ? AND event_id = ? LIMIT 1');
+	stmt.bind([provider, eventId]);
+	const found = stmt.step();
+	stmt.free();
+	return found;
+}
+
+export async function recordWebhookEvent(entry: WebhookEventEntry): Promise<void> {
+	const db = await getDb();
+	db.run(
+		`INSERT OR IGNORE INTO webhook_events (provider, event_id, order_number, event_type, created_at, received_at)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		[entry.provider, entry.eventId, entry.orderNumber, entry.eventType, entry.createdAt, entry.receivedAt],
+	);
 	persistDb(db);
 }
 

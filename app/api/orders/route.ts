@@ -1,25 +1,18 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { buildOrderEmails } from '@/lib/orderEmail';
-import { sendMail } from '@/lib/email';
-import { readSheetProducts, writeSheetProducts, upsertSheetClient } from '@/lib/stockSheet';
-import { getCachedSheetPromoCodes, getCachedSheetClients } from '@/lib/sheetCache';
+import { readSheetProducts } from '@/lib/stockSheet';
+import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
 import type { PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
-import { sendLowStockAlert } from '@/lib/email';
-import { LOW_STOCK_THRESHOLD, getEffectiveShippingCost, DEFAULT_ORDER_NOTIFICATION_EMAIL, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import { createOrderTask, createClientTask } from '@/lib/wrike';
-import { updateProductStock } from '@/lib/wrikeProducts';
+import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
 import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
 import { getIdempotencyKey, getCachedOrder, setCachedOrder } from '@/lib/idempotency';
 import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
-import { validateEnv } from '@/lib/env';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
-import { products as baseProducts } from '@/lib/products';
 
 interface OrderPayload {
 	customer: {
@@ -42,7 +35,7 @@ interface OrderPayload {
 		province: string;
 		zipCode: string;
 	};
-	shippingMethod: 'regular' | 'express';
+	shippingMethod: 'express';
 	paymentMethod: 'etransfer' | 'creditcard';
 	cardFee?: number;
 	subtotal: number;
@@ -87,102 +80,6 @@ export async function GET(request: Request) {
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to read orders.', error, logLabel: 'orders:get' });
 		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
-	}
-}
-
-type EmailStatus = {
-	sent: boolean;
-	skipped: boolean;
-	error?: string;
-};
-
-function getOrderNotificationRecipient() {
-	return process.env.ORDER_NOTIFICATION_EMAIL ?? DEFAULT_ORDER_NOTIFICATION_EMAIL;
-}
-
-async function updateSheetStock(items: OrderPayload['cartItems']): Promise<Array<{ id: string; name: string; stock: number }>> {
-	try {
-		const current = await readSheetProducts();
-		const baseSlugById = new Map(baseProducts.map((p) => [String(p.id), String(p.slug)]));
-
-		const resolveItemKey = (rawId: string) => {
-			const trimmed = String(rawId ?? '').trim();
-			if (!trimmed) return '';
-			return baseSlugById.get(trimmed) ?? trimmed;
-		};
-
-		const resolvedItems = items.map((item) => ({ ...item, __key: resolveItemKey(String(item.id)) }));
-		const updated = current.map((product) => {
-			// Check if any item matches this product (either base ID or variant ID)
-			const match = resolvedItems.find((item) => {
-				const itemId = String(item.__key);
-				// Check for direct match (base product)
-				if (itemId === product.id || itemId === product.slug) {
-					return true;
-				}
-				// Check for variant match (e.g., "MOTS-C-40" matches product "MOTS-C")
-				if (itemId.includes('-')) {
-					const parts = itemId.split('-').filter(Boolean);
-					const baseId = parts.length > 1 ? parts.slice(0, -1).join('-') : itemId;
-					return baseId === product.id || baseId === product.slug;
-				}
-				return false;
-			});
-
-			if (!match) {
-				return product;
-			}
-
-			// Total Stock is the single source of truth
-			if (!Number.isFinite(product.stock)) {
-				throw new Error(`[updateSheetStock] Invalid numeric stock for ${product.slug}: ${String(product.stock)}`);
-			}
-			const currentStockInt = Math.round(product.stock);
-			if (Math.abs(product.stock - currentStockInt) > 1e-9) {
-				console.warn('[updateSheetStock] Stock was not an integer, rounding before decrement:', {
-					slug: product.slug,
-					stock: product.stock,
-					rounded: currentStockInt,
-				});
-			}
-			const nextStock = currentStockInt - match.quantity;
-			if (!Number.isFinite(nextStock)) {
-				throw new Error(`[updateSheetStock] Computed invalid next stock for ${product.slug}: ${String(nextStock)}`);
-			}
-			return { ...product, stock: Math.max(0, nextStock) };
-		});
-
-		const lowStock = updated.filter((product) => product.status === 'published' && product.stock <= LOW_STOCK_THRESHOLD);
-
-		await writeSheetProducts(updated);
-		await sendLowStockAlert(lowStock);
-
-		// Return stock levels for ordered items (total stock only)
-		const orderedItemsStock = resolvedItems.map((item) => {
-			const itemId = String(item.__key);
-			const product = updated.find((p) => p.id === itemId || p.slug === itemId);
-			if (product) return { id: itemId, name: item.name, stock: product.stock };
-			if (itemId.includes('-')) {
-				const parts = itemId.split('-').filter(Boolean);
-				const baseId = parts.length > 1 ? parts.slice(0, -1).join('-') : itemId;
-				const baseProduct = updated.find((p) => p.id === baseId || p.slug === baseId);
-				return { id: itemId, name: item.name, stock: baseProduct?.stock ?? 0 };
-			}
-			return { id: itemId, name: item.name, stock: 0 };
-		});
-
-		for (const item of resolvedItems) {
-			const itemId = String(item.__key);
-			const found = updated.some((p) => p.id === itemId || p.slug === itemId);
-			if (!found) {
-				console.warn('[updateSheetStock] No matching sheet product for cart item:', { rawId: item.id, resolvedId: itemId, name: item.name });
-			}
-		}
-
-		return orderedItemsStock;
-	} catch (error) {
-		console.error('Failed to update stock sheet', error);
-		throw error;
 	}
 }
 
@@ -277,7 +174,9 @@ export async function POST(request: Request) {
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
 		let discountAmount = 0;
-		let shippingCost = getEffectiveShippingCost(orderPayload.customer.zipCode);
+		const destinationZipCode = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.zipCode : orderPayload.customer.zipCode;
+		const destinationProvince = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.province : orderPayload.customer.province;
+		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
 
 		if (orderPayload.promoCode) {
 			const promoCodes = await getCachedSheetPromoCodes();
@@ -331,7 +230,21 @@ export async function POST(request: Request) {
 			id: `order_${orderNumber}`,
 			orderNumber,
 			createdAt,
-			paymentStatus: 'paid' as const,
+			paymentStatus: 'pending' as const,
+			paymentProvider: orderPayload.paymentMethod === 'etransfer' ? 'bluepeak' : undefined,
+			etransfer:
+				orderPayload.paymentMethod === 'etransfer'
+					? {
+							provider: 'bluepeak',
+							status: 'awaiting_payment',
+							depositEmail: '',
+							currency: 'CAD',
+							amountExpected: Number(total).toFixed(2),
+							amountReceived: '0.00',
+							paymentReference: orderNumber,
+							paidAt: null,
+						}
+					: undefined,
 			...payload,
 		};
 
@@ -344,120 +257,9 @@ export async function POST(request: Request) {
 		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);
 		const response = NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber, confirmationToken });
 
-		const emailData = buildOrderEmails({
-			...payload,
-			orderNumber,
-			createdAt,
-		});
-
-		const adminRecipient = getOrderNotificationRecipient();
-		const customerEmail = payload.customer.email;
-		const customerReplyTo = `${payload.customer.firstName} ${payload.customer.lastName} <${customerEmail}>`;
-
-		void (async () => {
-			try {
-				const emailResult = await sendMail({
-					to: customerEmail,
-					from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
-					subject: emailData.customer.subject,
-					text: emailData.customer.text,
-					html: emailData.customer.html,
-				});
-
-				const adminEmailResult = await sendMail({
-					to: adminRecipient,
-					from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
-					subject: emailData.admin.subject,
-					text: emailData.admin.text,
-					html: emailData.admin.html,
-					replyTo: customerReplyTo,
-				});
-
-				const emailStatus: EmailStatus = emailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: emailResult.error };
-				const adminEmailStatus: EmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
-
-				if (!emailStatus.sent) {
-					console.warn(`[Orders] Order ${orderNumber} customer email not sent: ${emailStatus.error ?? 'unknown'}`);
-				}
-				if (!adminEmailStatus.sent) {
-					console.warn(`[Orders] Order ${orderNumber} admin email not sent: ${adminEmailStatus.error ?? 'unknown'}`);
-				}
-
-				await upsertOrderInDb({
-					...orderRecord,
-					emailPreview: {
-						subject: emailData.customer.subject,
-						text: emailData.customer.text,
-					},
-					adminEmailPreview: {
-						subject: emailData.admin.subject,
-						text: emailData.admin.text,
-					},
-					emailStatus,
-					adminEmailStatus,
-				} as Record<string, unknown>);
-			} catch (error) {
-				console.error('[Orders] Failed to send emails / update email status', error);
-			}
-
-			let updatedStock: Array<{ id: string; name: string; stock: number }> = [];
-			try {
-				updatedStock = await updateSheetStock(payload.cartItems);
-			} catch (error) {
-				console.error('[Orders] Failed to update stock sheet (order will not continue):', error);
-				return;
-			}
-
-			try {
-				for (const s of updatedStock) {
-					await updateProductStock(s.id, s.stock);
-				}
-			} catch (error) {
-				console.error('[Orders] Failed to sync stock to Wrike products', error);
-			}
-
-			try {
-				await createOrderTask({
-					orderNumber,
-					createdAt,
-					customer: payload.customer,
-					shipToDifferentAddress: payload.shipToDifferentAddress,
-					shippingAddress: payload.shippingAddress,
-					shippingMethod: payload.shippingMethod,
-					paymentMethod: payload.paymentMethod,
-					cardFee: payload.cardFee,
-					subtotal: payload.subtotal,
-					shippingCost: payload.shippingCost,
-					discountAmount: payload.discountAmount,
-					promoCode: payload.promoCode,
-					total: payload.total,
-					cartItems: payload.cartItems,
-					stockLevels: updatedStock.map((s) => ({ name: s.name, stock: s.stock })),
-				});
-			} catch (error) {
-				console.error('[Orders] Failed to create Wrike order task', error);
-			}
-
-			try {
-				const clientPayload = {
-					email: payload.customer.email,
-					firstName: payload.customer.firstName,
-					lastName: payload.customer.lastName,
-					address: payload.customer.address,
-					city: payload.customer.city,
-					province: payload.customer.province,
-					zipCode: payload.customer.zipCode,
-					country: payload.customer.country,
-					orderTotal: payload.total,
-					lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-					productsPurchased: payload.cartItems.map((item) => item.name),
-				};
-				await upsertSheetClient(clientPayload);
-				await createClientTask(clientPayload);
-			} catch (error) {
-				console.error('[Orders] Failed to upsert client / create client task', error);
-			}
-		})();
+		// IMPORTANT: For e-transfer orders, fulfillment (emails, stock decrement, Wrike) must only
+		// happen after payment is confirmed via webhook. This route only stores the order.
+		// Credit card orders are created via /api/digipay/create.
 
 		return response;
 	} catch (error) {
