@@ -12,8 +12,12 @@
  *   node scripts/sync-products-to-wrike.mjs
  */
 
-import { config as dotenvConfig } from 'dotenv';
-dotenvConfig();
+try {
+	const dotenv = await import('dotenv');
+	dotenv.config();
+} catch {
+	// dotenv is optional in production; rely on existing process.env
+}
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 const apiToken = process.env.WRIKE_API_TOKEN;
