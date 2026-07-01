@@ -259,7 +259,7 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:D',
+			range: 'PromoCodes!A1:E',
 		});
 
 		const rows = response.data.values ?? [];
@@ -268,11 +268,13 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 		const [, ...dataRows] = rows as string[][];
 		return dataRows.map((row) => {
 			const hasFourColumns = row.length >= 4;
+			const minimumSubtotal = parseNumber((row[4] ?? '').trim() || '0');
 			return {
 				code: (row[0] ?? '').trim().toUpperCase(),
 				discount: parseNumber(row[1] ?? '0'),
 				freeShipping: hasFourColumns ? (row[2] ?? '').trim().toLowerCase() === 'true' : false,
 				active: (hasFourColumns ? row[3] : (row[2] ?? '')).trim().toLowerCase() === 'true',
+				minimumSubtotal: Number.isFinite(minimumSubtotal) ? minimumSubtotal : 0,
 			};
 		});
 	} catch (error) {

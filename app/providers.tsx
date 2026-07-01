@@ -3,5 +3,9 @@
 import { CartProvider } from '@/context/CartContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-	return <CartProvider>{children}</CartProvider>;
+	return (
+		<CartProvider>
+			{children}
+		</CartProvider>
+	);
 }

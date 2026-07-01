@@ -3,6 +3,7 @@ import { sendLowStockAlert, sendMail } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 import { createOrderTask, createClientTask } from '@/lib/wrike';
 import { decrementStock, getProductInventory, getProductsBelowReorderPoint } from '@/lib/wrikeProducts';
+import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
 
 export type FulfillmentOrder = {
 	orderNumber: string;
@@ -94,7 +95,57 @@ export type RunFulfillmentResult = {
 	adminEmailStatus: EmailStatus;
 };
 
+async function decrementGoogleSheetStock(orderNumber: string, items: FulfillmentOrder['cartItems']) {
+	const enabled = String(process.env.ENABLE_SHEET_SYNC ?? '').toLowerCase() !== 'false';
+	if (!enabled) {
+		console.warn(JSON.stringify({ label: 'fulfillment:sheets:skipped', orderNumber, reason: 'ENABLE_SHEET_SYNC=false' }));
+		return;
+	}
+
+	console.log(JSON.stringify({ label: 'fulfillment:sheets:start', orderNumber, items: items.map((i) => ({ id: i.id, qty: i.quantity })) }));
+
+	const products = await readSheetProducts();
+	const byId = new Map(products.map((p) => [p.id, p] as const));
+
+	for (const item of items) {
+		const product = byId.get(String(item.id));
+		if (!product) {
+			console.error(
+				JSON.stringify({
+					label: 'fulfillment:sheets:product_not_found',
+					orderNumber,
+					productId: String(item.id),
+					name: item.name,
+					quantity: item.quantity,
+				}),
+			);
+			throw new Error(`Product not found in Google Sheet: ${String(item.id)}`);
+		}
+
+		const prev = Number(product.stock ?? 0);
+		const qty = Number(item.quantity ?? 0);
+		const next = Math.max(0, prev - qty);
+		product.stock = next;
+
+		console.log(
+			JSON.stringify({
+				label: 'fulfillment:sheets:deduct',
+				orderNumber,
+				productId: product.id,
+				name: product.name,
+				quantity: qty,
+				prevStock: prev,
+				newStock: next,
+			}),
+		);
+	}
+
+	await writeSheetProducts(products);
+	console.log(JSON.stringify({ label: 'fulfillment:sheets:success', orderNumber }));
+}
+
 export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfillmentResult> {
+	console.log(JSON.stringify({ label: 'fulfillment:start', orderNumber: order.orderNumber }));
 	const paymentMethod = (order as Record<string, unknown>).paymentMethod as 'etransfer' | 'creditcard' | undefined;
 	const emailData = buildOrderEmails({
 		orderNumber: order.orderNumber,
@@ -182,6 +233,9 @@ export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfil
 		lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
 		productsPurchased: order.cartItems.map((item) => item.name),
 	});
+
+	// Final step: update Google Sheets stock (source of truth)
+	await decrementGoogleSheetStock(order.orderNumber, order.cartItems);
 
 	return { emailStatus, adminEmailStatus };
 }

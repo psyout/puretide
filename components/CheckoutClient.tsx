@@ -54,10 +54,12 @@ export default function CheckoutClient() {
 	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const [showPromoInput, setShowPromoInput] = useState(false);
 	const [promoCode, setPromoCode] = useState('');
+	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
 	const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
 	const [appliedFreeShipping, setAppliedFreeShipping] = useState(false);
 	const [promoError, setPromoError] = useState<string | null>(null);
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
+	const promoRevalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
 	const shippingMethod = 'express';
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -82,7 +84,7 @@ export default function CheckoutClient() {
 	// When promo is applied, do not stack with volume discount: use raw subtotal and apply promo only
 	const subtotalWithVolume = getTotal();
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
-	const promoApplied = appliedDiscount > 0 || appliedFreeShipping;
+	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
 	const subtotal = promoApplied ? subtotalRaw : subtotalWithVolume;
 	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
 	const subtotalAfterDiscounts = Number((subtotal - discountAmount).toFixed(2));
@@ -130,28 +132,80 @@ export default function CheckoutClient() {
 		setPromoError(null);
 
 		try {
+			const normalizedCode = promoCode.trim().toUpperCase();
 			const response = await fetch('/api/promo/verify', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ code: promoCode }),
+				body: JSON.stringify({ code: normalizedCode, subtotal: subtotalRaw }),
 			});
 
 			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
 			if (data.ok) {
 				setAppliedDiscount(Number(data.discount ?? 0));
 				setAppliedFreeShipping(Boolean(data.freeShipping));
+				setAppliedPromoCode(normalizedCode);
 				setPromoError(null);
 			} else {
 				setPromoError(data.error || 'Invalid code');
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
+				setAppliedPromoCode(null);
 			}
 		} catch (error) {
 			setPromoError('Failed to verify code');
+			setAppliedPromoCode(null);
 		} finally {
 			setIsVerifyingPromo(false);
 		}
 	};
+
+	useEffect(() => {
+		if (!appliedPromoCode) return;
+		if (promoRevalidateTimeoutRef.current) {
+			clearTimeout(promoRevalidateTimeoutRef.current);
+		}
+		const controller = new AbortController();
+		promoRevalidateTimeoutRef.current = setTimeout(async () => {
+			setIsVerifyingPromo(true);
+			try {
+				const response = await fetch('/api/promo/verify', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ code: appliedPromoCode, subtotal: subtotalRaw }),
+					signal: controller.signal,
+				});
+				const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
+				if (data.ok) {
+					setAppliedDiscount(Number(data.discount ?? 0));
+					setAppliedFreeShipping(Boolean(data.freeShipping));
+					setPromoError(null);
+					return;
+				}
+
+				setPromoError(data.error || 'Invalid code');
+				setAppliedDiscount(0);
+				setAppliedFreeShipping(false);
+				setAppliedPromoCode(null);
+			} catch (error) {
+				if (error instanceof DOMException && error.name === 'AbortError') {
+					return;
+				}
+				setPromoError('Failed to verify code');
+				setAppliedDiscount(0);
+				setAppliedFreeShipping(false);
+				setAppliedPromoCode(null);
+			} finally {
+				setIsVerifyingPromo(false);
+			}
+		}, 300);
+
+		return () => {
+			controller.abort();
+			if (promoRevalidateTimeoutRef.current) {
+				clearTimeout(promoRevalidateTimeoutRef.current);
+			}
+		};
+	}, [appliedPromoCode, subtotalRaw]);
 
 	const buildPayload = () => {
 		// Capitalize name and address fields
@@ -181,7 +235,7 @@ export default function CheckoutClient() {
 			shippingMethod,
 			paymentMethod: useCreditCard ? 'creditcard' : 'etransfer',
 			cardFee: useCreditCard ? cardFee : 0,
-			promoCode: promoApplied ? promoCode : undefined,
+			promoCode: promoApplied ? (appliedPromoCode ?? undefined) : undefined,
 			discountAmount: discountAmount || undefined,
 			subtotal,
 			shippingCost,
@@ -869,6 +923,7 @@ export default function CheckoutClient() {
 													onClick={() => {
 														setAppliedDiscount(0);
 														setAppliedFreeShipping(false);
+														setAppliedPromoCode(null);
 														setPromoCode('');
 													}}
 													className='text-xs text-red-500 underline'>
