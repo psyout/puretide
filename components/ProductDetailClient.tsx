@@ -71,7 +71,7 @@ export default function ProductDetailClient({ product, description, details, has
 
 			{/* Product name and mg */}
 			<div className='mt-6'>
-				<h1 className='text-4xl font-bold text-deep-tidal-teal-700 leading-tight'>
+				<h1 className='text-3xl font-bold text-deep-tidal-teal-700 leading-tight'>
 					{product.name}
 					{displayMg && !product.name.toLowerCase().includes('stack') && (
 						<span className='ml-2 inline-block align-top text-base text-deep-tidal-teal-600 font-bold whitespace-nowrap'>{displayMg}</span>
@@ -92,7 +92,7 @@ export default function ProductDetailClient({ product, description, details, has
 								<div
 									key={iconName}
 									className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-eucalyptus-100'>
-									<Icon className='w-5 h-5 text-deep-tidal-teal-700' />
+									<Icon className='w-4 h-4 text-deep-tidal-teal-700' />
 									<span className='text-xs font-medium text-deep-tidal-teal-700'>{iconName}</span>
 								</div>
 							);
@@ -117,8 +117,8 @@ export default function ProductDetailClient({ product, description, details, has
 
 			{/* Price */}
 			<div className='mb-4'>
-				<div className='text-4xl font-bold text-deep-tidal-teal-700 mt-8'>
-					<span className='text-deep-tidal-teal-700 text-[2rem] font-light'>C</span>${displayPrice.toFixed(2)}
+				<div className='text-3xl font-bold text-deep-tidal-teal-700 mt-8'>
+					<span className='text-deep-tidal-teal-700 text-[1.75rem] font-light'>C</span>${displayPrice.toFixed(2)}
 				</div>
 				<div className='flex items-center gap-3 text-sm text-deep-tidal-teal-600'>
 					<span className='flex items-center gap-1'>
