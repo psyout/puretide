@@ -152,8 +152,8 @@ export default function CanadaDayModal() {
 											×
 										</button>
 									</div>
-									<p className='mt-1 text-sm sm:text-base text-deep-tidal-teal-700'>Celebrate Canada Day with exclusive savings.</p>
-									<p className='mt-1 text-xs sm:text-sm text-deep-tidal-teal-600 font-semibold'>Sale ends on July 7th !!</p>
+									<p className='mt-1 text-sm sm:text-base text-deep-tidal-teal-700'>Celebrate Canada Day with exclusive savings</p>
+									<p className='mt-1 text-xs sm:text-sm text-deep-tidal-teal-600 font-semibold'>Sale ends on July 7th</p>
 								</div>
 							</div>
 						</div>
