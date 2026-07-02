@@ -274,7 +274,9 @@ export async function POST(request: Request) {
 
 		const emailEnabled = String(process.env.ENABLE_EMAIL_NOTIFICATIONS ?? '').toLowerCase() !== 'false';
 		const wrikeEnabled = String(process.env.ENABLE_WRIKE_INTEGRATION ?? '').toLowerCase() === 'true';
-		if (orderPayload.paymentMethod === 'etransfer' && (emailEnabled || wrikeEnabled)) {
+		const etProvider = (orderRecord as unknown as { etransfer?: { provider?: string } }).etransfer?.provider;
+		const shouldRunImmediateEtransferFulfillment = etProvider === 'manual';
+		if (orderPayload.paymentMethod === 'etransfer' && shouldRunImmediateEtransferFulfillment && (emailEnabled || wrikeEnabled)) {
 			void (async () => {
 				try {
 					const fulfillmentOrder = {
