@@ -292,6 +292,19 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			const checkoutIdRaw = typeof et?.checkoutId === 'string' ? String(et.checkoutId).trim() : '';
 			const enabled = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
 
+			console.info(
+				JSON.stringify({
+					label: 'order_confirmation:etransfer:branch',
+					orderNumber: String(order.orderNumber ?? ''),
+					enabled,
+					paymentMethod: order.paymentMethod,
+					paymentProvider: String((order as unknown as Record<string, unknown>).paymentProvider ?? ''),
+					etransferProvider: typeof et?.provider === 'string' ? String(et.provider) : null,
+					hasDepositEmail: Boolean(depositEmailRaw),
+					hasCheckoutId: Boolean(checkoutIdRaw),
+				}),
+			);
+
 			if (enabled && (!depositEmailRaw || !checkoutIdRaw)) {
 				try {
 					const { bluepeakCreateCheckout } = await import('@/lib/bluepeak');
@@ -302,6 +315,15 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						.trim()
 						.toLowerCase();
 					const amountExpected = typeof et?.amountExpected === 'string' ? String(et.amountExpected).trim() : '';
+
+					console.info(
+						JSON.stringify({
+							label: 'order_confirmation:etransfer:attempt_bluepeak_checkout',
+							orderNumber: String(order.orderNumber ?? ''),
+							hasCustomer: Boolean(firstName && lastName && email),
+							hasAmountExpected: Boolean(amountExpected),
+						}),
+					);
 
 					if (firstName && lastName && email && amountExpected) {
 						const checkout = await bluepeakCreateCheckout({

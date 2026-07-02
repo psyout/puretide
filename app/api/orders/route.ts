@@ -232,15 +232,17 @@ export async function POST(request: Request) {
 
 		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
 		const createdAt = new Date().toISOString();
+		const bluepeakEnabledRaw = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '');
+		const bluepeakEnabled = bluepeakEnabledRaw.toLowerCase() === 'true';
 		const orderRecord = {
 			id: `order_${orderNumber}`,
 			orderNumber,
 			createdAt,
 			paymentStatus: 'pending' as const,
-			paymentProvider: orderPayload.paymentMethod === 'etransfer' && String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true' ? 'bluepeak' : undefined,
+			paymentProvider: orderPayload.paymentMethod === 'etransfer' && bluepeakEnabled ? 'bluepeak' : undefined,
 			etransfer:
 				orderPayload.paymentMethod === 'etransfer'
-					? String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true'
+					? bluepeakEnabled
 						? {
 								provider: 'bluepeak',
 								status: 'awaiting_payment',
@@ -262,6 +264,17 @@ export async function POST(request: Request) {
 					: undefined,
 			...payload,
 		};
+
+		console.info(
+			JSON.stringify({
+				label: 'orders:create:payment_flow',
+				orderNumber,
+				paymentMethod: orderPayload.paymentMethod,
+				bluepeakEnabledRaw,
+				bluepeakEnabled,
+				etransferProvider: (orderRecord as unknown as { etransfer?: { provider?: string } }).etransfer?.provider ?? null,
+			}),
+		);
 
 		// Save order to DB first so it's always stored even if email fails
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);

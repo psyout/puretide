@@ -14,8 +14,10 @@ type Body = {
 
 export async function POST(request: Request) {
 	try {
-		const enabled = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
+		const enabledRaw = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '');
+		const enabled = enabledRaw.toLowerCase() === 'true';
 		if (!enabled) {
+			console.warn(JSON.stringify({ label: 'bluepeak:create:disabled', enabledRaw }));
 			return NextResponse.json({ ok: false, error: 'BluePeak e-Transfer is disabled.' }, { status: 503 });
 		}
 
@@ -27,6 +29,15 @@ export async function POST(request: Request) {
 		const body = (await request.json()) as Body;
 		const orderNumber = String(body.orderNumber ?? '').trim();
 		if (!orderNumber) return NextResponse.json({ ok: false, error: 'Missing orderNumber.' }, { status: 400 });
+
+		console.info(
+			JSON.stringify({
+				label: 'bluepeak:create:request',
+				orderNumber,
+				enabledRaw,
+				hasIdempotencyKey: Boolean(String(body.idempotencyKey ?? '').trim()),
+			}),
+		);
 
 		const order = await getOrderByOrderNumberFromDb(orderNumber);
 		if (!order) return NextResponse.json({ ok: false, error: 'Order not found.' }, { status: 404 });
