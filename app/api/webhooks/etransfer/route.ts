@@ -48,11 +48,6 @@ function toMilliCents(value: string): number {
 }
 
 export async function POST(request: Request) {
-	const enabled = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
-	if (!enabled) {
-		return json({ ok: false, error: 'BluePeak e-Transfer is disabled.' }, { status: 503 });
-	}
-
 	const webhookSecret = process.env.BLUEPEAK_WEBHOOK_SECRET;
 	if (!webhookSecret) {
 		return json({ ok: false, error: 'Webhook not configured (missing BLUEPEAK_WEBHOOK_SECRET)' }, { status: 500 });
@@ -62,7 +57,7 @@ export async function POST(request: Request) {
 
 	try {
 		const rawBody = await request.text();
-		const signature = request.headers.get('x-autodeposit-signature') ?? request.headers.get('x-adg-signature') ?? '';
+		const signature = request.headers.get('signature') ?? request.headers.get('x-autodeposit-signature') ?? request.headers.get('x-adg-signature') ?? '';
 
 		if (!verifyBluepeakWebhookSignature(rawBody, signature, webhookSecret)) {
 			console.warn(JSON.stringify({ label: 'bluepeak:webhook:invalid_signature' }));
