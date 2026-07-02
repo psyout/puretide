@@ -326,12 +326,31 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 					);
 
 					if (firstName && lastName && email && amountExpected) {
+						const startedAt = Date.now();
+						console.info(
+							JSON.stringify({
+								label: 'order_confirmation:etransfer:bluepeak_checkout_start',
+								orderNumber: String(order.orderNumber ?? ''),
+								amountExpected,
+							}),
+						);
 						const checkout = await bluepeakCreateCheckout({
 							amount: amountExpected,
 							reference: String(order.orderNumber ?? '').trim(),
 							customer: { first_name: firstName, last_name: lastName, email },
 							idempotencyKey: `etransfer-${String(order.orderNumber ?? '').trim()}`.slice(0, 64),
 						});
+						console.info(
+							JSON.stringify({
+								label: 'order_confirmation:etransfer:bluepeak_checkout_success',
+								orderNumber: String(order.orderNumber ?? ''),
+								durationMs: Date.now() - startedAt,
+								status: String(checkout.status ?? ''),
+								hasCheckoutId: Boolean(String(checkout.checkout_id ?? '').trim()),
+								hasDepositEmail: Boolean(String(checkout.deposit_email ?? '').trim()),
+								hasRecipientName: Boolean(String(checkout.recipient_name ?? '').trim()),
+							}),
+						);
 
 						await upsertOrderInDb({
 							...(order as unknown as Record<string, unknown>),
@@ -358,8 +377,17 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						order = (await getOrderByNumber(String(order.orderNumber ?? '').trim())) ?? order;
 						et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
 					}
-				} catch {
-					// Ignore and fall back to static recipient email.
+				} catch (error) {
+					console.error(
+						JSON.stringify({
+							label: 'order_confirmation:etransfer:bluepeak_checkout_failed',
+							orderNumber: String(order.orderNumber ?? ''),
+							hasDepositEmail: Boolean(depositEmailRaw),
+							hasCheckoutId: Boolean(checkoutIdRaw),
+							errorName: error instanceof Error ? error.name : typeof error,
+							errorMessage: error instanceof Error ? error.message : String(error),
+						}),
+					);
 				}
 			}
 
