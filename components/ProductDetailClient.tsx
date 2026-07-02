@@ -81,7 +81,7 @@ export default function ProductDetailClient({ product, description, details, has
 			{product.subtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{product.subtitle}</p>}
 			{!product.subtitle && <div className='mb-1' />}
 
-			{/* Icons */}
+			{/* Icons ***/}
 			{product.icons && product.icons.length > 0 && (
 				<>
 					<div className='flex flex-wrap gap-2 mb-6 md:hidden'>
