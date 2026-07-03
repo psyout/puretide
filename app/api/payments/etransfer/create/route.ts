@@ -14,10 +14,10 @@ type Body = {
 
 export async function POST(request: Request) {
 	try {
-		const enabledRaw = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '');
-		const enabled = enabledRaw.toLowerCase() === 'true';
-		if (!enabled) {
-			console.warn(JSON.stringify({ label: 'bluepeak:create:disabled', enabledRaw }));
+		const etransferProviderRaw = String(process.env.ETRANSFER_PROVIDER ?? 'manual');
+		const etransferProvider = etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
+		if (etransferProvider !== 'bluepeak') {
+			console.warn(JSON.stringify({ label: 'bluepeak:create:disabled', etransferProviderRaw }));
 			return NextResponse.json({ ok: false, error: 'BluePeak e-Transfer is disabled.' }, { status: 503 });
 		}
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 			JSON.stringify({
 				label: 'bluepeak:create:request',
 				orderNumber,
-				enabledRaw,
+				etransferProviderRaw,
 				hasIdempotencyKey: Boolean(String(body.idempotencyKey ?? '').trim()),
 			}),
 		);

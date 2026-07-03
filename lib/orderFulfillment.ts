@@ -129,6 +129,10 @@ export type RunFulfillmentResult = {
 	adminEmailStatus: EmailStatus;
 };
 
+export type RunFulfillmentOptions = {
+	paymentConfirmed?: boolean;
+};
+
 async function decrementGoogleSheetStock(orderNumber: string, items: FulfillmentOrder['cartItems']) {
 	const enabled = String(process.env.ENABLE_SHEET_SYNC ?? '').toLowerCase() !== 'false';
 	if (!enabled) {
@@ -178,13 +182,18 @@ async function decrementGoogleSheetStock(orderNumber: string, items: Fulfillment
 	console.log(JSON.stringify({ label: 'fulfillment:sheets:success', orderNumber }));
 }
 
-export async function runFulfillment(order: FulfillmentOrder): Promise<RunFulfillmentResult> {
+export async function runFulfillment(order: FulfillmentOrder, options: RunFulfillmentOptions = {}): Promise<RunFulfillmentResult> {
 	console.log(JSON.stringify({ label: 'fulfillment:start', orderNumber: order.orderNumber }));
 	const paymentMethod = (order as Record<string, unknown>).paymentMethod as 'etransfer' | 'creditcard' | undefined;
+	const paymentConfirmed = options.paymentConfirmed ?? true;
+	const etransfer = (order as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
+	const etransferProvider = typeof etransfer?.provider === 'string' ? (etransfer.provider === 'bluepeak' ? 'bluepeak' : 'manual') : undefined;
 	const emailData = buildOrderEmails({
 		orderNumber: order.orderNumber,
 		createdAt: order.createdAt,
 		paymentMethod: paymentMethod === 'creditcard' ? 'creditcard' : 'etransfer',
+		paymentConfirmed,
+		etransferProvider,
 		customer: order.customer,
 		shipToDifferentAddress: order.shipToDifferentAddress,
 		shippingAddress: order.shippingAddress,

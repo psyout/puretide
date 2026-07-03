@@ -232,17 +232,17 @@ export async function POST(request: Request) {
 
 		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
 		const createdAt = new Date().toISOString();
-		const bluepeakEnabledRaw = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '');
-		const bluepeakEnabled = bluepeakEnabledRaw.toLowerCase() === 'true';
+		const etransferProviderRaw = String(process.env.ETRANSFER_PROVIDER ?? 'manual');
+		const etransferProvider = etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 		const orderRecord = {
 			id: `order_${orderNumber}`,
 			orderNumber,
 			createdAt,
 			paymentStatus: 'pending' as const,
-			paymentProvider: orderPayload.paymentMethod === 'etransfer' && bluepeakEnabled ? 'bluepeak' : undefined,
+			paymentProvider: orderPayload.paymentMethod === 'etransfer' && etransferProvider === 'bluepeak' ? 'bluepeak' : undefined,
 			etransfer:
 				orderPayload.paymentMethod === 'etransfer'
-					? bluepeakEnabled
+					? etransferProvider === 'bluepeak'
 						? {
 								provider: 'bluepeak',
 								status: 'awaiting_payment',
@@ -270,9 +270,9 @@ export async function POST(request: Request) {
 				label: 'orders:create:payment_flow',
 				orderNumber,
 				paymentMethod: orderPayload.paymentMethod,
-				bluepeakEnabledRaw,
-				bluepeakEnabled,
-				etransferProvider: (orderRecord as unknown as { etransfer?: { provider?: string } }).etransfer?.provider ?? null,
+				etransferProviderRaw,
+				etransferProvider,
+				storedEtransferProvider: (orderRecord as unknown as { etransfer?: { provider?: string } }).etransfer?.provider ?? null,
 			}),
 		);
 
@@ -298,7 +298,7 @@ export async function POST(request: Request) {
 						cardFee: orderPayload.cardFee,
 					} as unknown as FulfillmentOrder;
 
-					const result = await runFulfillment(fulfillmentOrder);
+					const result = await runFulfillment(fulfillmentOrder, { paymentConfirmed: false });
 					await upsertOrderInDb({
 						...(orderRecord as unknown as Record<string, unknown>),
 						fulfillmentStatus: {

@@ -301,34 +301,12 @@ export async function POST(request: Request) {
 			return json({ ok: true, alreadyProcessed: true });
 		}
 
-		let fulfillmentFailed = false;
-		let emailStatus: unknown;
-		let adminEmailStatus: unknown;
 		const existingFulfillmentStatus = (orderBeforePaid as Record<string, unknown>).fulfillmentStatus as Record<string, unknown> | undefined;
 		const alreadyFulfilled = Boolean(existingFulfillmentStatus && existingFulfillmentStatus.stockUpdated === true);
-		if (dryRunFulfillment) {
-			console.warn(JSON.stringify({ label: 'bluepeak:webhook:dry_run_fulfillment', eventId, reference }));
-		} else if (alreadyFulfilled) {
-			emailStatus = (orderBeforePaid as Record<string, unknown>).emailStatus;
-			adminEmailStatus = (orderBeforePaid as Record<string, unknown>).adminEmailStatus;
-		} else {
-			try {
-				const result = await runFulfillment(orderBeforePaid as unknown as FulfillmentOrder);
-				emailStatus = result.emailStatus;
-				adminEmailStatus = result.adminEmailStatus;
-			} catch (fulfillError) {
-				console.error(JSON.stringify({ label: 'bluepeak:webhook:fulfillment_failed', eventId, reference }));
-				console.error(fulfillError);
-				fulfillmentFailed = true;
-				try {
-					await createRetryJobForOrder(reference);
-				} catch (retryError) {
-					console.error(JSON.stringify({ label: 'bluepeak:webhook:retry_job_failed', reference }));
-					console.error(retryError);
-				}
-			}
-		}
+		const existingEmailStatus = (orderBeforePaid as Record<string, unknown>).emailStatus;
+		const existingAdminEmailStatus = (orderBeforePaid as Record<string, unknown>).adminEmailStatus;
 
+		// Mark paid and respond quickly so the provider doesn't time out.
 		await upsertOrderInDb({
 			...(updatedBase as Record<string, unknown>),
 			paymentStatus: 'paid',
@@ -337,21 +315,73 @@ export async function POST(request: Request) {
 				...((updatedBase as Record<string, unknown>).etransfer as Record<string, unknown>),
 				paidAt,
 			},
-			fulfillmentStatus: fulfillmentFailed
-				? {
-						stockUpdated: false,
-						emailsSent: false,
-						clientSynced: false,
-						failedAt: paidAt,
-					}
-				: {
-						stockUpdated: true,
-						emailsSent: Boolean((emailStatus as { sent?: boolean } | undefined)?.sent && (adminEmailStatus as { sent?: boolean } | undefined)?.sent),
-						clientSynced: (orderBeforePaid.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
-					},
-			emailStatus,
-			adminEmailStatus,
+			// Preserve existing fulfillment statuses if present; otherwise initialize as pending.
+			fulfillmentStatus: existingFulfillmentStatus ?? {
+				stockUpdated: false,
+				emailsSent: false,
+				clientSynced: false,
+			},
+			emailStatus: existingEmailStatus,
+			adminEmailStatus: existingAdminEmailStatus,
 		});
+
+		if (dryRunFulfillment) {
+			console.warn(JSON.stringify({ label: 'bluepeak:webhook:dry_run_fulfillment', eventId, reference }));
+			return json({ ok: true, dryRun: true });
+		}
+
+		if (!alreadyFulfilled) {
+			void (async () => {
+				let fulfillmentFailed = false;
+				let emailStatus: unknown;
+				let adminEmailStatus: unknown;
+				try {
+					const latest = await getOrderByOrderNumberFromDb(reference);
+					if (!latest) return;
+					const latestFulfillmentStatus = (latest as Record<string, unknown>).fulfillmentStatus as Record<string, unknown> | undefined;
+					if (latestFulfillmentStatus && latestFulfillmentStatus.stockUpdated === true) return;
+
+					const result = await runFulfillment(latest as unknown as FulfillmentOrder, { paymentConfirmed: true });
+					emailStatus = result.emailStatus;
+					adminEmailStatus = result.adminEmailStatus;
+				} catch (fulfillError) {
+					console.error(JSON.stringify({ label: 'bluepeak:webhook:fulfillment_failed', eventId, reference }));
+					console.error(fulfillError);
+					fulfillmentFailed = true;
+					try {
+						await createRetryJobForOrder(reference);
+					} catch (retryError) {
+						console.error(JSON.stringify({ label: 'bluepeak:webhook:retry_job_failed', reference }));
+						console.error(retryError);
+					}
+				}
+
+				try {
+					const latestAfter = await getOrderByOrderNumberFromDb(reference);
+					if (!latestAfter) return;
+					await upsertOrderInDb({
+						...(latestAfter as Record<string, unknown>),
+						fulfillmentStatus: fulfillmentFailed
+							? {
+									stockUpdated: false,
+									emailsSent: false,
+									clientSynced: false,
+									failedAt: new Date().toISOString(),
+								}
+							: {
+									stockUpdated: true,
+									emailsSent: Boolean((emailStatus as { sent?: boolean } | undefined)?.sent && (adminEmailStatus as { sent?: boolean } | undefined)?.sent),
+									clientSynced: (latestAfter.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
+								},
+						emailStatus: fulfillmentFailed ? (latestAfter as Record<string, unknown>).emailStatus : emailStatus,
+						adminEmailStatus: fulfillmentFailed ? (latestAfter as Record<string, unknown>).adminEmailStatus : adminEmailStatus,
+					});
+				} catch (persistErr) {
+					console.error(JSON.stringify({ label: 'bluepeak:webhook:fulfillment_persist_failed', reference }));
+					console.error(persistErr);
+				}
+			})();
+		}
 
 		return json({ ok: true });
 	} catch (error) {

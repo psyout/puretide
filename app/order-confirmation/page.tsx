@@ -290,22 +290,24 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			let et = (order as unknown as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
 			const depositEmailRaw = typeof et?.depositEmail === 'string' ? String(et.depositEmail).trim() : '';
 			const checkoutIdRaw = typeof et?.checkoutId === 'string' ? String(et.checkoutId).trim() : '';
-			const enabled = String(process.env.ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
+			const etransferProviderRaw = String(process.env.ETRANSFER_PROVIDER ?? 'manual');
+			const etransferProvider = etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 
 			console.info(
 				JSON.stringify({
 					label: 'order_confirmation:etransfer:branch',
 					orderNumber: String(order.orderNumber ?? ''),
-					enabled,
+					etransferProviderRaw,
+					etransferProvider,
 					paymentMethod: order.paymentMethod,
 					paymentProvider: String((order as unknown as Record<string, unknown>).paymentProvider ?? ''),
-					etransferProvider: typeof et?.provider === 'string' ? String(et.provider) : null,
+					storedEtransferProvider: typeof et?.provider === 'string' ? String(et.provider) : null,
 					hasDepositEmail: Boolean(depositEmailRaw),
 					hasCheckoutId: Boolean(checkoutIdRaw),
 				}),
 			);
 
-			if (enabled && (!depositEmailRaw || !checkoutIdRaw)) {
+			if (etransferProvider === 'bluepeak' && (!depositEmailRaw || !checkoutIdRaw)) {
 				try {
 					const { bluepeakCreateCheckout } = await import('@/lib/bluepeak');
 					const customer = (order as unknown as Record<string, unknown>).customer as Record<string, unknown> | undefined;
@@ -442,6 +444,14 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 									</div>
 								</div>
 							</div>
+							{etransferProvider === 'bluepeak' && (
+								<p className='mt-4 text-deep-tidal-teal-700 text-sm'>
+									Note: The recipient email may be our standard payment email or a unique email securely assigned by our payment provider for this order. We do not generate
+									these email addresses — they are used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and
+									include your order number in the memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order
+									will begin processing.
+								</p>
+							)}
 							<div className='mt-6'>
 								<Link
 									href='/'
@@ -613,6 +623,14 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 									<div className='text-deep-tidal-teal-800 font-semibold'>{orderNumber}</div>
 								</div>
 							</div>
+							{paymentProvider === 'bluepeak' && (
+								<p className='text-sm text-deep-tidal-teal-800 mt-4'>
+									Note: The recipient email may be our standard payment email or a unique email securely assigned by our payment provider for this order. We do not generate
+									these email addresses — they are used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and
+									include your order number in the memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order
+									will begin processing.
+								</p>
+							)}
 							<div className='text-xs text-deep-tidal-teal-600 mt-4 pt-4 border-t border-deep-tidal-teal/10 space-y-2'>
 								<p>IMPORTANT: Include your order number in the memo/message field for proper tracking.</p>
 								<p>We only accept e&ndash;Transfers sent to the email listed above. Do not send payments to any other email address.</p>

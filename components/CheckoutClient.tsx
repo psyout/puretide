@@ -12,7 +12,7 @@ import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
-const ENABLE_BLUEPEAK_ETRANSFER = String(process.env.NEXT_PUBLIC_ENABLE_BLUEPEAK_ETRANSFER ?? '').toLowerCase() === 'true';
+const ETRANSFER_PROVIDER = String(process.env.NEXT_PUBLIC_ETRANSFER_PROVIDER ?? 'manual').toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 
 function capitalizeWords(str: string): string {
 	return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
@@ -318,7 +318,7 @@ export default function CheckoutClient() {
 				return;
 			}
 
-			if (ENABLE_BLUEPEAK_ETRANSFER) {
+			if (ETRANSFER_PROVIDER === 'bluepeak') {
 				// Reserve autodeposit email for this order (server-side BluePeak call)
 				try {
 					await fetch('/api/payments/etransfer/create', {

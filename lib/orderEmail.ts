@@ -2,6 +2,8 @@ type OrderEmailInput = {
 	orderNumber: string;
 	createdAt: string;
 	paymentMethod?: 'etransfer' | 'creditcard';
+	paymentConfirmed?: boolean;
+	etransferProvider?: 'manual' | 'bluepeak';
 	customer: {
 		firstName: string;
 		lastName: string;
@@ -72,6 +74,9 @@ function escapeHtml(value: string): string {
 
 export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const isCreditCard = input.paymentMethod === 'creditcard';
+	const paymentConfirmed = Boolean(input.paymentConfirmed);
+	const etransferProvider = input.etransferProvider ?? 'manual';
+	const isBluepeak = etransferProvider === 'bluepeak';
 	const orderDate = formatDate(input.createdAt);
 	const orderName = `${input.customer.firstName} ${input.customer.lastName}`.trim();
 	const shippingLabel = 'Express Shipping';
@@ -118,7 +123,9 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 
 	const customerIntro = isCreditCard
 		? 'Thank you for your order. Your credit card payment has been received.'
-		: 'We have received your order. Please send your Interac e-Transfer to complete payment.';
+		: paymentConfirmed
+			? 'Thank you for your order. We’ve confirmed your Interac e-Transfer payment and your order is now being processed.'
+			: 'We have received your order. Please send your Interac e-Transfer to complete payment.';
 
 	const eTransferInstructionsText = [
 		'',
@@ -130,6 +137,12 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		`Recipient Email: ${paymentDetails.recipientEmail}`,
 		`Memo/Message: ${input.orderNumber}`,
 		'',
+		...(isBluepeak
+			? [
+					'Note: The recipient email may be our standard payment email or a unique email securely assigned by our payment provider for this order. We do not generate these email addresses — they are used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and include your order number in the memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order will begin processing.',
+					'',
+				]
+			: []),
 		'IMPORTANT: Include your order number in the memo/message field for proper tracking.',
 		'We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.',
 		'',
@@ -146,7 +159,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		`Hi ${input.customer.firstName},`,
 		'',
 		customerIntro,
-		...(isCreditCard ? [] : eTransferInstructionsText),
+		...(isCreditCard || paymentConfirmed ? [] : eTransferInstructionsText),
 		'Order summary',
 		`Order #${input.orderNumber} (${orderDate})`,
 		'',
@@ -170,9 +183,10 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		.filter(Boolean)
 		.join('\n');
 
-	const eTransferBlockHtml = isCreditCard
-		? ''
-		: `
+	const eTransferBlockHtml =
+		isCreditCard || paymentConfirmed
+			? ''
+			: `
       <h4 style="margin: 24px 0 8px;">Interac e-Transfer Payment</h4>
       <p>After placing your order, please send an Interac e-Transfer to complete your payment. We use auto-deposit, so funds will be deposited directly into our bank account without requiring a security question.</p>
       <ul>
@@ -180,6 +194,11 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
         <li><strong>Recipient Email:</strong> ${paymentDetails.recipientEmail}</li>
         <li><strong>Memo/Message:</strong> ${input.orderNumber}</li>
       </ul>
+      ${
+			isBluepeak
+				? '<p>Note: The recipient email may be our standard payment email or a unique email securely assigned by our payment provider for this order. We do not generate these email addresses — they are used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and include your order number in the memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order will begin processing.</p>'
+				: ''
+		}
       <p><strong>Important:</strong> Include your order number in the memo/message field for proper tracking.</p>
       <p>We only accept e-Transfers sent to the email listed above. Do not send payments to any other email address.</p>
       <p><strong>Email notice:</strong> If you do not see future updates, please check your junk/spam folder and add us to your contacts or safe sender list.</p>
@@ -306,7 +325,11 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
     </div>
   `;
 
-	const customerSubject = isCreditCard ? `Order #${input.orderNumber} - Order confirmation` : `Order #${input.orderNumber} - e-Transfer payment instructions`;
+	const customerSubject = isCreditCard
+		? `Order #${input.orderNumber} - Order confirmation`
+		: paymentConfirmed
+			? `Order #${input.orderNumber} - Payment received`
+			: `Order #${input.orderNumber} - e-Transfer payment instructions`;
 
 	return {
 		customer: {
