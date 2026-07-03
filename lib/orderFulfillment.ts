@@ -59,16 +59,50 @@ export async function updateWrikeStock(items: FulfillmentOrder['cartItems']): Pr
 		const stockLevels: Array<{ name: string; stock: number; cost: number }> = [];
 
 		for (const item of items) {
+			const before = await getProductInventory(String(item.id));
+			console.log(
+				JSON.stringify({
+					label: 'fulfillment:wrike:item_start',
+					productId: String(item.id),
+					name: item.name,
+					quantity: item.quantity,
+					beforeStock: before?.stock ?? null,
+					beforeCost: before?.cost ?? null,
+					beforeWrikeTaskId: before?.wrikeTaskId ?? null,
+				}),
+			);
 			const success = await decrementStock(String(item.id), item.quantity);
 			if (success) {
 				const inventory = await getProductInventory(String(item.id));
+				console.log(
+					JSON.stringify({
+						label: 'fulfillment:wrike:item_success',
+						productId: String(item.id),
+						name: item.name,
+						quantity: item.quantity,
+						afterStock: inventory?.stock ?? null,
+						afterCost: inventory?.cost ?? null,
+						afterWrikeTaskId: inventory?.wrikeTaskId ?? null,
+					}),
+				);
 				stockLevels.push({
 					name: item.name,
 					stock: inventory?.stock ?? 0,
 					cost: inventory?.cost ?? 0,
 				});
 			} else {
-				console.warn('[orderFulfillment] Failed to decrement stock for:', item.id);
+				const after = await getProductInventory(String(item.id));
+				console.warn(
+					JSON.stringify({
+						label: 'fulfillment:wrike:item_failed',
+						productId: String(item.id),
+						name: item.name,
+						quantity: item.quantity,
+						beforeStock: before?.stock ?? null,
+						afterStock: after?.stock ?? null,
+						afterWrikeTaskId: after?.wrikeTaskId ?? null,
+					}),
+				);
 				stockLevels.push({ name: item.name, stock: 0, cost: 0 });
 			}
 		}

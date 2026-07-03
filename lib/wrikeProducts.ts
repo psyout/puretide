@@ -47,12 +47,51 @@ type SyncResult = {
 };
 
 async function getTasksInFolder(folderId: string, apiToken: string): Promise<WrikeTask[]> {
-	const response = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
-		headers: { Authorization: `Bearer ${apiToken}` },
-	});
-	if (!response.ok) return [];
-	const data = await response.json();
-	return data.data ?? [];
+	// We rely on customFields (Product ID + Stock) for inventory matching.
+	// Wrike omits customFields from task listings unless explicitly requested.
+	const fieldsParam = encodeURIComponent(JSON.stringify(['customFields']));
+	const tasks: WrikeTask[] = [];
+	let nextPageToken: string | undefined;
+	let page = 0;
+
+	while (true) {
+		const url = new URL(`${WRIKE_API_BASE}/folders/${folderId}/tasks`);
+		url.searchParams.set('fields', `[%22customFields%22]`);
+		if (nextPageToken) url.searchParams.set('nextPageToken', nextPageToken);
+		// Note: limit can be left to Wrike defaults; pagination is handled via nextPageToken.
+
+		const response = await fetch(url.toString(), {
+			headers: { Authorization: `Bearer ${apiToken}` },
+		});
+		if (!response.ok) {
+			console.warn(
+				JSON.stringify({
+					label: 'wrike:products:list_tasks_failed',
+					status: response.status,
+					folderId,
+					page,
+					hasNextPageToken: Boolean(nextPageToken),
+				}),
+			);
+			break;
+		}
+
+		const data = (await response.json()) as { data?: WrikeTask[]; nextPageToken?: string };
+		tasks.push(...(data.data ?? []));
+		nextPageToken = data.nextPageToken;
+		page += 1;
+		if (!nextPageToken) break;
+		if (page === 1) {
+			console.warn(
+				JSON.stringify({
+					label: 'wrike:products:list_tasks_pagination_detected',
+					folderId,
+				}),
+			);
+		}
+	}
+
+	return tasks;
 }
 
 async function createTask(folderId: string, title: string, description: string, apiToken: string, customFields?: CustomFieldInput[]): Promise<WrikeTask | null> {
@@ -147,7 +186,20 @@ export async function getAllProductInventory(): Promise<ProductInventory[]> {
 
 	try {
 		const tasks = await getTasksInFolder(config.productsFolderId, config.apiToken);
-		const inventory = tasks.map(parseProductInventoryFromTask).filter((inv): inv is ProductInventory => inv !== null);
+		const parsed = tasks.map(parseProductInventoryFromTask);
+		const inventory = parsed.filter((inv): inv is ProductInventory => inv !== null);
+		const parsedNull = parsed.length - inventory.length;
+		console.log(
+			JSON.stringify({
+				label: 'wrike:products:inventory_snapshot',
+				folderId: config.productsFolderId,
+				tasksFetched: tasks.length,
+				inventoryParsed: inventory.length,
+				tasksMissingProductIdField: parsedNull,
+				productIdFieldIdConfigured: Boolean(process.env.WRIKE_PRODUCT_ID_FIELD_ID),
+				stockFieldIdConfigured: Boolean(process.env.WRIKE_STOCK_FIELD_ID),
+			}),
+		);
 		return inventory;
 	} catch (error) {
 		console.error('[WrikeProducts] Failed to fetch inventory:', error);
@@ -202,13 +254,24 @@ export async function updateProductStock(productId: string, newStock: number): P
 
 	const inventory = await getProductInventory(productId);
 	if (!inventory) {
-		console.warn('[WrikeProducts] Product not found in Wrike:', productId);
+		console.warn(
+			JSON.stringify({
+				label: 'wrike:products:update_stock_product_not_found',
+				productId,
+				folderId: config.productsFolderId,
+			}),
+		);
 		return false;
 	}
 
 	const stockFieldId = process.env.WRIKE_STOCK_FIELD_ID;
 	if (!stockFieldId) {
-		console.warn('[WrikeProducts] WRIKE_STOCK_FIELD_ID not configured');
+		console.warn(
+			JSON.stringify({
+				label: 'wrike:products:update_stock_missing_stock_field_id',
+				productId,
+			}),
+		);
 		return false;
 	}
 
@@ -222,12 +285,28 @@ export async function updateProductStock(productId: string, newStock: number): P
 		);
 
 		if (updated) {
-			console.log('[WrikeProducts] Updated stock for product:', productId, 'to:', newStock);
+			console.log(
+				JSON.stringify({
+					label: 'wrike:products:update_stock_success',
+					productId,
+					wrikeTaskId: inventory.wrikeTaskId,
+					prevStock: inventory.stock,
+					newStock,
+				}),
+			);
 			return true;
 		}
 		return false;
 	} catch (error) {
-		console.error('[WrikeProducts] Failed to update stock:', error);
+		console.error(
+			JSON.stringify({
+				label: 'wrike:products:update_stock_failed',
+				productId,
+				wrikeTaskId: inventory.wrikeTaskId,
+				newStock,
+			}),
+		);
+		console.error(error);
 		return false;
 	}
 }
@@ -235,11 +314,27 @@ export async function updateProductStock(productId: string, newStock: number): P
 export async function decrementStock(productId: string, quantity: number): Promise<boolean> {
 	const inventory = await getProductInventory(productId);
 	if (!inventory) {
-		console.warn('[WrikeProducts] Cannot decrement stock - product not found:', productId);
+		console.warn(
+			JSON.stringify({
+				label: 'wrike:products:decrement_product_not_found',
+				productId,
+				quantity,
+			}),
+		);
 		return false;
 	}
 
 	const newStock = Math.max(0, inventory.stock - quantity);
+	console.log(
+		JSON.stringify({
+			label: 'wrike:products:decrement_attempt',
+			productId,
+			wrikeTaskId: inventory.wrikeTaskId,
+			quantity,
+			prevStock: inventory.stock,
+			newStock,
+		}),
+	);
 	return updateProductStock(productId, newStock);
 }
 
