@@ -100,6 +100,7 @@ const envSchema = z.object({
 
 	// Feature flags
 	ETRANSFER_PROVIDER: z.enum(['manual', 'bluepeak']).default('manual'),
+	PROMO_MODAL_ENABLED: z.coerce.boolean().default(false),
 	ENABLE_WRIKE_INTEGRATION: z.coerce.boolean().default(false),
 	ENABLE_EMAIL_NOTIFICATIONS: z.coerce.boolean().default(true),
 	ENABLE_SHEET_SYNC: z.coerce.boolean().default(true),

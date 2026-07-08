@@ -10,9 +10,10 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default function Home() {
+	const promoModalEnabled = String(process.env.PROMO_MODAL_ENABLED ?? '').toLowerCase() === 'true';
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-eucalyptus-50 to-deep-tidal-teal-100'>
-			<CanadaDayModal />
+			{promoModalEnabled ? <CanadaDayModal /> : null}
 			<Header />
 
 			<Hero />
