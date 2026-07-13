@@ -466,6 +466,25 @@ function formatIsoDateOnlyLocal(d: Date): string {
 	return `${yyyy}-${mm}-${dd}`;
 }
 
+function toVancouverTime(date: Date): Date {
+	const vancouverDate = new Date(date.toLocaleString('en-US', { timeZone: 'America/Vancouver' }));
+	return vancouverDate;
+}
+
+function startOfDayInVancouver(date: Date): Date {
+	const vancouver = toVancouverTime(date);
+	const start = new Date(vancouver);
+	start.setHours(0, 0, 0, 0);
+	return start;
+}
+
+function toTimeInVancouver(date: Date, hour: number, minute: number): Date {
+	const vancouver = toVancouverTime(date);
+	const target = new Date(vancouver);
+	target.setHours(hour, minute, 0, 0);
+	return target;
+}
+
 export type DailyLabelsResult =
 	| {
 			ok: true;
@@ -481,6 +500,25 @@ export type DailyLabelsResult =
 			reason: string;
 			ordersConsidered?: number;
 			labelsParsed?: number;
+	  };
+
+export type AfternoonLabelsResult =
+	| {
+			ok: true;
+			date: string;
+			ordersConsidered: number;
+			labelsParsed: number;
+			taskId: string;
+			attachmentId: string;
+			cronType: 'afternoon';
+	  }
+	| {
+			ok: false;
+			date: string;
+			reason: string;
+			ordersConsidered?: number;
+			labelsParsed?: number;
+			cronType: 'afternoon';
 	  };
 
 export type RangeLabelsResult =
@@ -701,6 +739,148 @@ export async function generateAndAttachLabelsForRange(params: {
 			labelsParsed: labels.length,
 			taskId,
 			attachmentId: uploaded.id,
+		};
+	} finally {
+		try {
+			fs.unlinkSync(outPath);
+		} catch {
+			// ignore cleanup failure
+		}
+	}
+}
+
+export async function generateAndAttachAfternoonLabels(params: { apiToken: string; ordersFolderId: string; labelsFolderId: string; date?: Date }): Promise<AfternoonLabelsResult> {
+	const now = params.date || new Date();
+	const vancouverNow = toVancouverTime(now);
+	const isoDate = formatIsoDateOnlyLocal(vancouverNow);
+
+	console.log('[wrikeDailyLabels] generateAndAttachAfternoonLabels:start', {
+		cronType: 'afternoon',
+		isoDate,
+		vancouverTime: vancouverNow.toISOString(),
+	});
+
+	const start = startOfDayInVancouver(vancouverNow);
+	const end = toTimeInVancouver(vancouverNow, 16, 0);
+
+	console.log('[wrikeDailyLabels] afternoon date range', {
+		cronType: 'afternoon',
+		start: start.toISOString(),
+		end: end.toISOString(),
+	});
+
+	const inDay = await fetchTasksInFolderByDateRange(params.ordersFolderId, params.apiToken, start, end);
+
+	console.log('[wrikeDailyLabels] afternoon orders considered', {
+		cronType: 'afternoon',
+		ordersConsidered: inDay.length,
+	});
+
+	let labels: Label[] = [];
+	for (const task of inDay) {
+		const parsed = parseLabelFromOrderDescription(task?.description ?? '');
+		if (!parsed || !parsed.name || parsed.lines.length === 0) continue;
+		labels.push(parsed);
+	}
+	if (shouldFillAverySheets()) {
+		labels = fillLabelsToFullSheets(labels);
+	}
+
+	console.log('[wrikeDailyLabels] afternoon labels parsed', {
+		cronType: 'afternoon',
+		labelsParsed: labels.length,
+	});
+
+	if (labels.length === 0) {
+		console.log('[wrikeDailyLabels] no afternoon labels found', {
+			cronType: 'afternoon',
+			isoDate,
+			ordersConsidered: inDay.length,
+		});
+		return {
+			ok: false,
+			date: isoDate,
+			reason: 'no-labels',
+			ordersConsidered: inDay.length,
+			labelsParsed: 0,
+			cronType: 'afternoon',
+		};
+	}
+
+	const outFileName = `afternoon-labels-${isoDate}-avery-5160.docx`;
+	const outPath = path.resolve(process.cwd(), outFileName);
+	await generateAvery5160DocxSheets(labels, outPath);
+
+	try {
+		const title = `Afternoon Labels - ${isoDate}`;
+		const description = `Same-day afternoon Avery 5160/8160 label sheets for ${isoDate} (midnight to 4:00 PM Vancouver time)`;
+		const desiredStatus = getLabelsTaskStatus();
+		let taskId = await findTaskIdByExactTitleInFolder(params.labelsFolderId, params.apiToken, title);
+		if (!taskId) {
+			const task = await createTaskInFolder(params.labelsFolderId, title, description, params.apiToken, desiredStatus);
+			if (!task) {
+				console.error('[wrikeDailyLabels] afternoon wrike create task failed', { isoDate });
+				return {
+					ok: false,
+					date: isoDate,
+					reason: 'wrike-create-task-failed',
+					ordersConsidered: inDay.length,
+					labelsParsed: labels.length,
+					cronType: 'afternoon',
+				};
+			}
+			taskId = task.id;
+		}
+		if (desiredStatus) {
+			await tryUpdateTaskStatus(taskId, params.apiToken, desiredStatus);
+		}
+
+		const attachments = await listAttachments(taskId, params.apiToken);
+		const existing = attachments.find((a) => String(a?.name ?? '') === outFileName);
+		if (existing?.id) {
+			console.log('[wrikeDailyLabels] afternoon attachment already exists; skipping upload', {
+				cronType: 'afternoon',
+				isoDate,
+				taskId,
+				attachmentId: existing.id,
+			});
+			return {
+				ok: true,
+				date: isoDate,
+				ordersConsidered: inDay.length,
+				labelsParsed: labels.length,
+				taskId,
+				attachmentId: existing.id,
+				cronType: 'afternoon',
+			};
+		}
+
+		const uploaded = await uploadAttachmentToTask(taskId, outPath, params.apiToken);
+		if (!uploaded) {
+			console.error('[wrikeDailyLabels] afternoon wrike upload failed', { isoDate, taskId });
+			return {
+				ok: false,
+				date: isoDate,
+				reason: 'wrike-upload-failed',
+				ordersConsidered: inDay.length,
+				labelsParsed: labels.length,
+				cronType: 'afternoon',
+			};
+		}
+		console.log('[wrikeDailyLabels] afternoon uploaded', {
+			cronType: 'afternoon',
+			isoDate,
+			taskId,
+			attachmentId: uploaded.id,
+		});
+		return {
+			ok: true,
+			date: isoDate,
+			ordersConsidered: inDay.length,
+			labelsParsed: labels.length,
+			taskId,
+			attachmentId: uploaded.id,
+			cronType: 'afternoon',
 		};
 	} finally {
 		try {
