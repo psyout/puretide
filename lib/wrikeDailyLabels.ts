@@ -467,8 +467,24 @@ function formatIsoDateOnlyLocal(d: Date): string {
 }
 
 function toVancouverTime(date: Date): Date {
-	const vancouverDate = new Date(date.toLocaleString('en-US', { timeZone: 'America/Vancouver' }));
-	return vancouverDate;
+	const formatter = new Intl.DateTimeFormat('en-US', {
+		timeZone: 'America/Vancouver',
+		year: 'numeric',
+		month: 'numeric',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: 'numeric',
+		second: 'numeric',
+		hour12: false,
+	});
+	const parts = formatter.formatToParts(date);
+	const year = parseInt(parts.find((p) => p.type === 'year')?.value || '0');
+	const month = parseInt(parts.find((p) => p.type === 'month')?.value || '0') - 1;
+	const day = parseInt(parts.find((p) => p.type === 'day')?.value || '0');
+	const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0');
+	const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0');
+	const second = parseInt(parts.find((p) => p.type === 'second')?.value || '0');
+	return new Date(year, month, day, hour, minute, second);
 }
 
 function startOfDayInVancouver(date: Date): Date {
