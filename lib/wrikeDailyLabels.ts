@@ -767,13 +767,16 @@ export async function generateAndAttachLabelsForRange(params: {
 
 export async function generateAndAttachAfternoonLabels(params: { apiToken: string; ordersFolderId: string; labelsFolderId: string; date?: Date }): Promise<AfternoonLabelsResult> {
 	const now = params.date || new Date();
-	const vancouverNow = toVancouverTime(now);
+	// If date is explicitly provided, treat it as Vancouver time directly
+	// Otherwise, convert current time to Vancouver time
+	const vancouverNow = params.date ? now : toVancouverTime(now);
 	const isoDate = formatIsoDateOnlyLocal(vancouverNow);
 
 	console.log('[wrikeDailyLabels] generateAndAttachAfternoonLabels:start', {
 		cronType: 'afternoon',
 		isoDate,
 		vancouverTime: vancouverNow.toISOString(),
+		dateProvided: !!params.date,
 	});
 
 	const start = new Date(vancouverNow);
