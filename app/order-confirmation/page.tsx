@@ -291,7 +291,8 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			const depositEmailRaw = typeof et?.depositEmail === 'string' ? String(et.depositEmail).trim() : '';
 			const checkoutIdRaw = typeof et?.checkoutId === 'string' ? String(et.checkoutId).trim() : '';
 			const etransferProviderRaw = String(process.env.ETRANSFER_PROVIDER ?? 'manual');
-			const etransferProvider = etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
+			const storedProviderRaw = typeof et?.provider === 'string' ? String(et.provider).trim().toLowerCase() : '';
+			const etransferProvider = storedProviderRaw === 'bluepeak' ? 'bluepeak' : etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 
 			console.info(
 				JSON.stringify({
@@ -574,6 +575,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			<OrderConfirmationCartClear
 				orderNumber={orderNumber}
 				paymentStatus={confirmedOrder.paymentStatus ?? undefined}
+				paymentMethod={confirmedOrder.paymentMethod ?? undefined}
 			/>
 			<Header />
 			<div className='max-w-7xl mx-auto pt-40 pb-6 py-24'>

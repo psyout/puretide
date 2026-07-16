@@ -59,10 +59,10 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 					transition={{ duration: 0.8, ease: 'easeOut' }}
 					className={`border-b border-deep-tidal-teal/10 pb-3 mb-5 space-y-2 ${className} overflow-hidden`}>
 					<div className='flex items-center justify-between mb-4'>
-						<h3 className='text-md font-bold text-deep-tidal-teal-800 flex items-center gap-2'>Did you get yout Bacteriostatic Water?</h3>
+						<h3 className='text-[0.9rem] font-regular text-deep-tidal-teal-800 flex items-center gap-2'>Did you get yout Bacteriostatic Water?</h3>
 						<button
 							onClick={() => setShouldHide(true)}
-							className='text-deep-tidal-teal-400 hover:text-deep-tidal-teal-600 transition-colors p-1 rounded hover:bg-deep-tidal-teal/10'
+							className='text-deep-tidal-teal-400 bg-deep-tidal-teal/10 hover:text-deep-tidal-teal-600 transition-colors p-1 rounded hover:bg-deep-tidal-teal/10'
 							aria-label='Hide cross-sell section'>
 							<X className='w-4 h-4' />
 						</button>

@@ -1,4 +1,5 @@
 import type { Product } from '@/types/product';
+import { products as baseProducts } from '@/lib/products';
 
 type CartItemWithPrice = {
 	id: string | number;
@@ -12,9 +13,48 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 	const normalized = cartItems.map((item) => {
 		const itemId = String(item.id);
 		let productPrice = 0;
+		let resolvedId = itemId;
+
+		const normalizeKey = (value: string) =>
+			String(value ?? '')
+				.trim()
+				.toLowerCase()
+				.replace(/\s+/g, ' ');
+
+		const resolveProduct = (): Product | null => {
+			// 1) Canonical match by id/slug
+			const direct = products.find((p) => itemId === p.id || itemId === p.slug);
+			if (direct) {
+				resolvedId = direct.id;
+				return direct;
+			}
+
+			// 2) Back-compat: numeric IDs from legacy baseProducts -> resolve by slug
+			const legacy = baseProducts.find((p) => String(p.id) === itemId);
+			if (legacy?.slug) {
+				const bySlug = products.find((p) => legacy.slug === p.id || legacy.slug === p.slug);
+				if (bySlug) {
+					resolvedId = bySlug.id;
+					return bySlug;
+				}
+			}
+
+			// 3) Temporary back-compat: match by normalized name (if present on cart item)
+			const maybeName = (item as unknown as { name?: unknown }).name;
+			if (typeof maybeName === 'string' && maybeName.trim()) {
+				const n = normalizeKey(maybeName);
+				const byName = products.find((p) => normalizeKey(p.name) === n);
+				if (byName) {
+					resolvedId = byName.id;
+					return byName;
+				}
+			}
+
+			return null;
+		};
 
 		// First, try exact match (regular product)
-		const product = products.find((p) => itemId === p.id || itemId === p.slug);
+		const product = resolveProduct();
 
 		if (product) {
 			// Regular product found - use its price
@@ -43,6 +83,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 
 		return {
 			...item,
+			id: resolvedId,
 			price: productPrice,
 		};
 	});

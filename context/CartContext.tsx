@@ -83,9 +83,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 				try {
 					const parsedCart = JSON.parse(savedCart);
 					if (Array.isArray(parsedCart)) {
-						const sanitized = parsedCart
-							.map((entry) => sanitizeCartItem(entry))
-							.filter((entry): entry is CartItem => entry != null);
+						const sanitized = parsedCart.map((entry) => sanitizeCartItem(entry)).filter((entry): entry is CartItem => entry != null);
 						setCartItems(sanitized);
 					}
 				} catch (e) {
@@ -109,16 +107,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 	}, [cartItems, isInitialized]);
 
 	const addToCart = (product: Product, quantity = 1) => {
+		const rawId = String(product.id ?? '').trim();
+		const rawSlug = typeof product.slug === 'string' ? product.slug.trim() : '';
+		// Canonical identifier:
+		// - Variants keep their variant key in `id` (e.g. "mots-c-40").
+		// - Non-variant products use the normalized slug.
+		const canonicalId = rawId.includes('-') ? rawId : rawSlug || rawId;
 		const stock = Number(product.stock) || 0;
 		const maxQ = stock > 0 ? Math.min(stock, CART_MAX_QUANTITY) : CART_MAX_QUANTITY;
 		const toAdd = Math.min(Math.max(1, quantity), maxQ);
 		setCartItems((prevItems) => {
-			const existingItem = prevItems.find((item) => item.id === product.id);
+			const existingItem = prevItems.find((item) => item.id === canonicalId);
 			if (existingItem) {
 				const newQ = Math.min(existingItem.quantity + toAdd, maxQ);
-				return prevItems.map((item) => (item.id === product.id ? { ...item, quantity: newQ } : item));
+				return prevItems.map((item) => (item.id === canonicalId ? { ...item, quantity: newQ } : item));
 			}
-			return [...prevItems, { ...product, quantity: toAdd }];
+			return [
+				...prevItems,
+				{
+					...product,
+					id: canonicalId,
+					slug: rawSlug || canonicalId,
+					quantity: toAdd,
+				},
+			];
 		});
 	};
 
@@ -137,6 +149,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 	const clearCart = () => {
 		setCartItems([]);
+		if (typeof window !== 'undefined') {
+			try {
+				localStorage.removeItem(CART_STORAGE_KEY);
+			} catch {
+				// ignore
+			}
+			try {
+				sessionStorage.removeItem(CART_STORAGE_KEY);
+			} catch {
+				// ignore
+			}
+		}
 	};
 
 	const getTotal = () => {

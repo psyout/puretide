@@ -39,7 +39,7 @@ export default function StockDashboardPage() {
 	const [rows, setRows] = useState<Product[]>(fallbackProducts);
 	const [isDirty, setIsDirty] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
-	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'clients' | 'labels'>('products');
+	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'clients' | 'labels' | 'friends_family'>('products');
 	const [searchValue, setSearchValue] = useState('');
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -86,6 +86,12 @@ export default function StockDashboardPage() {
 	const [clients, setClients] = useState<Array<Record<string, unknown>>>([]);
 	const [clientsLoading, setClientsLoading] = useState(false);
 	const [clientsError, setClientsError] = useState<string | null>(null);
+	const [friendsFamilyEntries, setFriendsFamilyEntries] = useState<Array<{ email: string; isActive: boolean; note?: string; createdAt: string; updatedAt: string }>>([]);
+	const [friendsFamilyLoading, setFriendsFamilyLoading] = useState(false);
+	const [friendsFamilyError, setFriendsFamilyError] = useState<string | null>(null);
+	const [friendsFamilySaving, setFriendsFamilySaving] = useState(false);
+	const [friendsFamilyNewEmail, setFriendsFamilyNewEmail] = useState('');
+	const [friendsFamilyNewNote, setFriendsFamilyNewNote] = useState('');
 	const [surveyAnalytics, setSurveyAnalytics] = useState<{
 		totalClients: number;
 		withSurveyData: number;
@@ -163,6 +169,36 @@ export default function StockDashboardPage() {
 				if (!cancelled) setOrdersError(e instanceof Error ? e.message : 'Failed to load orders.');
 			} finally {
 				if (!cancelled) setOrdersLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [activeTab]);
+
+	useEffect(() => {
+		if (activeTab !== 'friends_family') return;
+		let cancelled = false;
+		setFriendsFamilyLoading(true);
+		setFriendsFamilyError(null);
+		(async () => {
+			try {
+				const response = await fetch('/api/dashboard/friends-family', { credentials: 'include' });
+				const data = (await response.json()) as {
+					ok?: boolean;
+					entries?: Array<{ email: string; isActive: boolean; note?: string; createdAt: string; updatedAt: string }>;
+					error?: string;
+				};
+				if (cancelled) return;
+				if (response.ok && data.ok && Array.isArray(data.entries)) {
+					setFriendsFamilyEntries(data.entries);
+				} else {
+					setFriendsFamilyError(data.error ?? (response.status === 401 ? 'Unauthorized. Sign in at /dashboard/login.' : 'Failed to load Friends & Family allowlist.'));
+				}
+			} catch (e) {
+				if (!cancelled) setFriendsFamilyError(e instanceof Error ? e.message : 'Failed to load Friends & Family allowlist.');
+			} finally {
+				if (!cancelled) setFriendsFamilyLoading(false);
 			}
 		})();
 		return () => {
@@ -469,6 +505,13 @@ export default function StockDashboardPage() {
 								}`}>
 								Clients
 							</button>
+							<button
+								onClick={() => setActiveTab('friends_family')}
+								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+									activeTab === 'friends_family' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+								}`}>
+								Friends & Family
+							</button>
 						</nav>
 					</aside>
 
@@ -514,6 +557,163 @@ export default function StockDashboardPage() {
 									</div>
 									{isDirty && <span className='text-xs text-[#7a7a7a]'>Unsaved changes</span>}
 								</div>
+							</div>
+						)}
+
+						{activeTab === 'friends_family' && (
+							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
+								<h2 className='text-xl font-semibold text-[#1f1f1f] mb-2'>Friends & Family</h2>
+								<p className='text-sm text-[#7a7a7a] mb-4'>Manage approved emails eligible for the manual e-Transfer flow after OTP verification.</p>
+								{friendsFamilyError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{friendsFamilyError}</div>}
+								<div className='rounded-xl border border-black/5 bg-[#f4f4f7] p-4 mb-4'>
+									<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+										<input
+											type='email'
+											value={friendsFamilyNewEmail}
+											onChange={(e) => setFriendsFamilyNewEmail(e.target.value)}
+											placeholder='email@example.com'
+											className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+										/>
+										<input
+											type='text'
+											value={friendsFamilyNewNote}
+											onChange={(e) => setFriendsFamilyNewNote(e.target.value)}
+											placeholder='Note (optional)'
+											className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+										/>
+										<button
+											type='button'
+											disabled={friendsFamilySaving || !friendsFamilyNewEmail.trim()}
+											onClick={async () => {
+												setFriendsFamilySaving(true);
+												setFriendsFamilyError(null);
+												try {
+													const response = await fetch('/api/dashboard/friends-family', {
+														method: 'POST',
+														headers: { 'Content-Type': 'application/json' },
+														credentials: 'include',
+														body: JSON.stringify({ email: friendsFamilyNewEmail, isActive: true, note: friendsFamilyNewNote || null }),
+													});
+													const data = (await response.json()) as { ok?: boolean; error?: string };
+													if (!response.ok || !data.ok) {
+														setFriendsFamilyError(
+															data.error ?? (response.status === 401 ? 'Unauthorized. Sign in at /dashboard/login.' : 'Failed to add allowlist entry.'),
+														);
+														return;
+													}
+													setFriendsFamilyNewEmail('');
+													setFriendsFamilyNewNote('');
+													const refresh = await fetch('/api/dashboard/friends-family', { credentials: 'include' });
+													const refreshed = (await refresh.json()) as { ok?: boolean; entries?: typeof friendsFamilyEntries; error?: string };
+													if (refresh.ok && refreshed.ok && Array.isArray(refreshed.entries)) setFriendsFamilyEntries(refreshed.entries);
+												} catch (e) {
+													setFriendsFamilyError(e instanceof Error ? e.message : 'Failed to add allowlist entry.');
+												} finally {
+													setFriendsFamilySaving(false);
+												}
+											}}
+											className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:bg-[#bdbdbd]'>
+											{friendsFamilySaving ? 'Saving...' : 'Add & Activate'}
+										</button>
+									</div>
+								</div>
+								{friendsFamilyLoading ? (
+									<div className='text-[#6a6a6a] py-8'>Loading allowlist...</div>
+								) : friendsFamilyEntries.length === 0 ? (
+									<div className='text-[#6a6a6a] py-8'>No Friends & Family emails yet.</div>
+								) : (
+									<div className='overflow-x-auto'>
+										<table className='w-full min-w-[720px]'>
+											<thead>
+												<tr className='text-left text-xs uppercase tracking-wide text-[#9b9b9b]'>
+													<th className='pb-3 pr-6 font-medium'>Email</th>
+													<th className='pb-3 pr-6 font-medium'>Active</th>
+													<th className='pb-3 pr-6 font-medium'>Note</th>
+													<th className='pb-3 pr-6 font-medium'>Created</th>
+													<th className='pb-3 pr-6 font-medium'>Updated</th>
+													<th className='pb-3 pr-6 font-medium'>Actions</th>
+												</tr>
+											</thead>
+											<tbody className='text-sm text-[#2f2f2f]'>
+												{friendsFamilyEntries.map((entry) => (
+													<tr
+														key={entry.email}
+														className='border-t border-black/5'>
+														<td className='py-3 pr-6 font-medium'>{entry.email}</td>
+														<td className='py-3 pr-6'>
+															<input
+																type='checkbox'
+																checked={entry.isActive}
+																onChange={async (e) => {
+																	const next = e.target.checked;
+																	setFriendsFamilyEntries((prev) => prev.map((p) => (p.email === entry.email ? { ...p, isActive: next } : p)));
+																	const response = await fetch('/api/dashboard/friends-family', {
+																		method: 'POST',
+																		headers: { 'Content-Type': 'application/json' },
+																		credentials: 'include',
+																		body: JSON.stringify({ email: entry.email, isActive: next, note: entry.note ?? null }),
+																	});
+																	const data = (await response.json()) as { ok?: boolean; error?: string };
+																	if (!response.ok || !data.ok) {
+																		setFriendsFamilyError(data.error ?? 'Failed to update entry.');
+																	}
+																}}
+																className='h-4 w-4'
+															/>
+														</td>
+														<td className='py-3 pr-6'>
+															<input
+																type='text'
+																value={entry.note ?? ''}
+																onChange={(e) => {
+																	const next = e.target.value;
+																	setFriendsFamilyEntries((prev) => prev.map((p) => (p.email === entry.email ? { ...p, note: next } : p)));
+																}}
+																onBlur={async () => {
+																	const response = await fetch('/api/dashboard/friends-family', {
+																		method: 'POST',
+																		headers: { 'Content-Type': 'application/json' },
+																		credentials: 'include',
+																		body: JSON.stringify({ email: entry.email, isActive: entry.isActive, note: entry.note ?? null }),
+																	});
+																	const data = (await response.json()) as { ok?: boolean; error?: string };
+																	if (!response.ok || !data.ok) {
+																		setFriendsFamilyError(data.error ?? 'Failed to update entry.');
+																	}
+																}}
+																placeholder=''
+																className='w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm'
+															/>
+														</td>
+														<td className='py-3 pr-6 text-[#6a6a6a]'>{entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : '-'}</td>
+														<td className='py-3 pr-6 text-[#6a6a6a]'>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString() : '-'}</td>
+														<td className='py-3 pr-6'>
+															<button
+																type='button'
+																onClick={async () => {
+																	const response = await fetch('/api/dashboard/friends-family', {
+																		method: 'DELETE',
+																		headers: { 'Content-Type': 'application/json' },
+																		credentials: 'include',
+																		body: JSON.stringify({ email: entry.email }),
+																	});
+																	const data = (await response.json()) as { ok?: boolean; error?: string };
+																	if (!response.ok || !data.ok) {
+																		setFriendsFamilyError(data.error ?? 'Failed to delete entry.');
+																		return;
+																	}
+																	setFriendsFamilyEntries((prev) => prev.filter((p) => p.email !== entry.email));
+																}}
+																className='px-3 py-1.5 rounded-lg border border-black/10 text-sm font-semibold text-rose-600 hover:bg-[#f4f4f7]'>
+																Delete
+															</button>
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
 							</div>
 						)}
 

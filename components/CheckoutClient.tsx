@@ -13,6 +13,7 @@ import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIP
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 const ETRANSFER_PROVIDER = String(process.env.NEXT_PUBLIC_ETRANSFER_PROVIDER ?? 'manual').toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
+const FRIENDS_FAMILY_ENABLED = String(process.env.NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED ?? '').toLowerCase() === 'true';
 
 function capitalizeWords(str: string): string {
 	return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
@@ -38,7 +39,7 @@ function isTrustedPaymentRedirect(urlRaw: string): boolean {
 export default function CheckoutClient() {
 	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
-	const [formData, setFormData] = useState({
+	const initialFormData = {
 		firstName: '',
 		lastName: '',
 		country: 'Canada',
@@ -49,6 +50,16 @@ export default function CheckoutClient() {
 		province: 'British Columbia',
 		zipCode: '',
 		orderNotes: '',
+	};
+	const initialShippingAddress = {
+		address: '',
+		addressLine2: '',
+		city: '',
+		province: 'British Columbia',
+		zipCode: '',
+	};
+	const [formData, setFormData] = useState({
+		...initialFormData,
 	});
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -66,14 +77,17 @@ export default function CheckoutClient() {
 	const [showTermsModal, setShowTermsModal] = useState(false);
 	const [checkoutError, setCheckoutError] = useState<string | null>(null);
 	const [shippingAddress, setShippingAddress] = useState({
-		address: '',
-		addressLine2: '',
-		city: '',
-		province: 'British Columbia',
-		zipCode: '',
+		...initialShippingAddress,
 	});
 	const [honeypotCompany, setHoneypotCompany] = useState(''); // honeypot: leave empty
 	const idempotencyKeyRef = useRef<string | null>(null);
+	const [friendsFamilyExpanded, setFriendsFamilyExpanded] = useState(false);
+	const [friendsFamilyStartLoading, setFriendsFamilyStartLoading] = useState(false);
+	const [friendsFamilyVerifyLoading, setFriendsFamilyVerifyLoading] = useState(false);
+	const [friendsFamilyMessage, setFriendsFamilyMessage] = useState<string | null>(null);
+	const [friendsFamilyError, setFriendsFamilyError] = useState<string | null>(null);
+	const [friendsFamilyCode, setFriendsFamilyCode] = useState('');
+	const [friendsFamilyVerified, setFriendsFamilyVerified] = useState(false);
 	const getOrCreateIdempotencyKey = () => {
 		if (!idempotencyKeyRef.current) {
 			idempotencyKeyRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -113,6 +127,25 @@ export default function CheckoutClient() {
 			router.push('/cart');
 		}
 	}, [cartItems.length, hasSubmitted, router]);
+
+	useEffect(() => {
+		if (!FRIENDS_FAMILY_ENABLED) return;
+		let cancelled = false;
+		(async () => {
+			try {
+				const response = await fetch('/api/friends-family/status', { method: 'POST', credentials: 'include' });
+				const data = (await response.json()) as { ok?: boolean; verified?: boolean };
+				if (!cancelled && response.ok && data.ok) {
+					setFriendsFamilyVerified(Boolean(data.verified));
+				}
+			} catch {
+				// ignore
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	// When user navigates back from DigiPay (bfcache restore), reset processing state so they can edit and resubmit
 	useEffect(() => {
@@ -253,6 +286,44 @@ export default function CheckoutClient() {
 		};
 	};
 
+	const resetCheckoutState = () => {
+		setFormData({ ...initialFormData });
+		setShipToDifferentAddress(false);
+		setShippingAddress({ ...initialShippingAddress });
+		setAgreedToTerms(false);
+		setShowTermsModal(false);
+		setCheckoutError(null);
+		setPromoCode('');
+		setAppliedPromoCode(null);
+		setAppliedDiscount(0);
+		setAppliedFreeShipping(false);
+		setPromoError(null);
+		setShowPromoInput(false);
+		setHasSubmitted(false);
+		setIsProcessing(false);
+		setPaymentMethod('etransfer');
+	};
+
+	// When we successfully create an order, we want to navigate away (confirmation page or external card provider)
+	// without triggering the "empty cart" redirect effect on this checkout page.
+	// Keeping hasSubmitted=true prevents the cart-empty guard from redirecting to /cart mid-navigation.
+	const resetCheckoutStateForExit = () => {
+		setFormData({ ...initialFormData });
+		setShipToDifferentAddress(false);
+		setShippingAddress({ ...initialShippingAddress });
+		setAgreedToTerms(false);
+		setShowTermsModal(false);
+		setCheckoutError(null);
+		setPromoCode('');
+		setAppliedPromoCode(null);
+		setAppliedDiscount(0);
+		setAppliedFreeShipping(false);
+		setPromoError(null);
+		setShowPromoInput(false);
+		setIsProcessing(false);
+		setPaymentMethod('etransfer');
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setHasSubmitted(true);
@@ -286,7 +357,9 @@ export default function CheckoutClient() {
 					if (!isTrustedPaymentRedirect(data.redirectUrl)) {
 						throw new Error('Received an invalid payment redirect URL. Please contact support.');
 					}
-					// Cart is cleared on order-confirmation when paymentStatus === 'paid' to avoid losing cart if redirect fails
+					// Order is successfully created at this point; clear cart + checkout state before leaving the site.
+					clearCart();
+					resetCheckoutStateForExit();
 					window.location.href = data.redirectUrl;
 					return;
 				}
@@ -318,7 +391,7 @@ export default function CheckoutClient() {
 				return;
 			}
 
-			if (ETRANSFER_PROVIDER === 'bluepeak') {
+			if (ETRANSFER_PROVIDER === 'bluepeak' && !(FRIENDS_FAMILY_ENABLED && friendsFamilyVerified)) {
 				// Reserve autodeposit email for this order (server-side BluePeak call)
 				try {
 					await fetch('/api/payments/etransfer/create', {
@@ -331,7 +404,12 @@ export default function CheckoutClient() {
 				}
 			}
 
-			router.push(`/order-confirmation?orderNumber=${encodeURIComponent(orderNumber)}&token=${encodeURIComponent(confirmationToken)}`);
+			// Order successfully created; navigate to confirmation first, then clear cart.
+			// Keeping hasSubmitted=true avoids the empty-cart redirect race on this page.
+			const confirmationUrl = `/order-confirmation?orderNumber=${encodeURIComponent(orderNumber)}&token=${encodeURIComponent(confirmationToken)}`;
+			router.push(confirmationUrl);
+			clearCart();
+			resetCheckoutStateForExit();
 		} catch (error) {
 			console.error('Checkout error', error);
 			setCheckoutError(error instanceof Error ? error.message : 'We could not place your order. Please try again.');
@@ -365,12 +443,12 @@ export default function CheckoutClient() {
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
 					← Back to Cart
 				</Link>
-				<h1 className='text-4xl font-bold mb-8 text-deep-tidal-teal-800'>Checkout</h1>
+				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>Checkout</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-2 lg:order-1 lg:col-span-2'>
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-md'>
-							<h2 className='text-2xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
+							<h2 className='text-xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
 							{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
 								<div
 									role='alert'
@@ -733,14 +811,6 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
-								{paymentMethod === 'etransfer' && (
-									<div className=' pb-4 border-b border-deep-tidal-teal/10'>
-										<h3 className='font-semibold text-deep-tidal-teal-800 mb-2'>Interac e-Transfer</h3>
-										<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
-											After placing your order, please send an Interac e-Transfer with the instructions provided.
-										</p>
-									</div>
-								)}
 								<div className='py-1'>
 									<label
 										htmlFor='checkout-terms'
@@ -1002,6 +1072,107 @@ export default function CheckoutClient() {
 										</span>
 										<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
 									</label>
+									{FRIENDS_FAMILY_ENABLED && paymentMethod === 'etransfer' && (
+										<div className='border-t border-b pt-3 pb-4'>
+											<div className='flex items-start justify-between gap-4'>
+												<div>
+													<p className='text-sm font-semibold text-deep-tidal-teal-800'>Friends & Family verification</p>
+													<p className='text-xs text-deep-tidal-teal-700 mt-1'>
+														If you’re eligible, you can verify your email to use the Friends & Family e-Transfer flow.
+													</p>
+													{friendsFamilyVerified && <p className='text-xs text-emerald-700 mt-2'>Verified session active.</p>}
+												</div>
+												<button
+													type='button'
+													onClick={() => {
+														setFriendsFamilyExpanded((v) => !v);
+														setFriendsFamilyError(null);
+														setFriendsFamilyMessage(null);
+													}}
+													className='text-sm font-semibold text-deep-tidal-teal hover:text-deep-tidal-teal-600'>
+													{friendsFamilyExpanded ? 'Hide' : 'Verify'}
+												</button>
+											</div>
+
+											{friendsFamilyExpanded && (
+												<div className='mt-4 space-y-3'>
+													{(friendsFamilyError || friendsFamilyMessage) && (
+														<div
+															className={`rounded-lg px-4 py-3 text-sm border ${
+																friendsFamilyError ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+															}`}>
+															{friendsFamilyError ?? friendsFamilyMessage}
+														</div>
+													)}
+													<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+														<button
+															type='button'
+															disabled={friendsFamilyStartLoading || !formData.email.trim()}
+															onClick={async () => {
+																setFriendsFamilyStartLoading(true);
+																setFriendsFamilyError(null);
+																setFriendsFamilyMessage(null);
+																try {
+																	const response = await fetch('/api/friends-family/start', {
+																		method: 'POST',
+																		headers: { 'Content-Type': 'application/json' },
+																		body: JSON.stringify({ email: formData.email }),
+																	});
+																	const data = (await response.json()) as { ok?: boolean; message?: string };
+																	setFriendsFamilyMessage(data.message ?? 'If this email is eligible, a verification code has been sent.');
+																} catch (e) {
+																	setFriendsFamilyMessage('If this email is eligible, a verification code has been sent.');
+																} finally {
+																	setFriendsFamilyStartLoading(false);
+																}
+															}}
+															className='bg-deep-tidal-teal text-mineral-white font-semibold px-4 py-2 rounded-lg hover:bg-deep-tidal-teal-600 disabled:opacity-50'>
+															{friendsFamilyStartLoading ? 'Sending...' : 'Send code'}
+														</button>
+														<input
+															type='text'
+															value={friendsFamilyCode}
+															onChange={(e) => setFriendsFamilyCode(e.target.value)}
+															placeholder='6-digit code'
+															inputMode='numeric'
+															className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+														/>
+														<button
+															type='button'
+															disabled={friendsFamilyVerifyLoading || !formData.email.trim() || friendsFamilyCode.trim().length !== 6}
+															onClick={async () => {
+																setFriendsFamilyVerifyLoading(true);
+																setFriendsFamilyError(null);
+																setFriendsFamilyMessage(null);
+																try {
+																	const response = await fetch('/api/friends-family/verify', {
+																		method: 'POST',
+																		headers: { 'Content-Type': 'application/json' },
+																		credentials: 'include',
+																		body: JSON.stringify({ email: formData.email, code: friendsFamilyCode }),
+																	});
+																	const data = (await response.json()) as { ok?: boolean; error?: string };
+																	if (!response.ok || !data.ok) {
+																		setFriendsFamilyError(data.error ?? 'Invalid verification code.');
+																		return;
+																	}
+																	setFriendsFamilyVerified(true);
+																	setFriendsFamilyMessage('Verification successful.');
+																	setFriendsFamilyCode('');
+																} catch (e) {
+																	setFriendsFamilyError(e instanceof Error ? e.message : 'Failed to verify code.');
+																} finally {
+																	setFriendsFamilyVerifyLoading(false);
+																}
+															}}
+															className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50'>
+															{friendsFamilyVerifyLoading ? 'Verifying...' : 'Verify'}
+														</button>
+													</div>
+												</div>
+											)}
+										</div>
+									)}
 									<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
 										<span className='flex items-center gap-2'>
 											<input

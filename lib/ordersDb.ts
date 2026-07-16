@@ -36,6 +36,16 @@ export type WebhookEventEntry = {
 	receivedAt: string;
 };
 
+export type ShippingEmailRecord = {
+	orderNumber: string;
+	trackingNumber: string;
+	sentAt: string;
+	wrikeTaskId?: string;
+	via?: string;
+	route?: string;
+	customerEmail?: string;
+};
+
 const DB_PATH = process.env.ORDERS_DB_PATH ? path.resolve(process.env.ORDERS_DB_PATH) : path.join(process.cwd(), 'data', 'orders.sqlite');
 const LEGACY_ORDERS_JSON_PATH = process.env.LEGACY_ORDERS_JSON_PATH ? path.resolve(process.env.LEGACY_ORDERS_JSON_PATH) : path.join(process.cwd(), 'data', 'orders.json');
 
@@ -46,6 +56,58 @@ declare global {
 	var __ordersDb: SqlJsDatabase | undefined;
 	// eslint-disable-next-line no-var
 	var __ordersDbInit: Promise<SqlJsDatabase> | undefined;
+}
+
+export async function getShippingEmailRecord(orderNumber: string, trackingNumber: string): Promise<ShippingEmailRecord | null> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM shipping_emails WHERE order_number = ? AND tracking_number = ? LIMIT 1');
+	stmt.bind([orderNumber, trackingNumber]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as Record<string, unknown>;
+	stmt.free();
+	return {
+		orderNumber: String(row.order_number),
+		trackingNumber: String(row.tracking_number),
+		sentAt: String(row.sent_at),
+		wrikeTaskId: row.wrike_task_id != null ? String(row.wrike_task_id) : undefined,
+		via: row.via != null ? String(row.via) : undefined,
+		route: row.route != null ? String(row.route) : undefined,
+		customerEmail: row.customer_email != null ? String(row.customer_email) : undefined,
+	};
+}
+
+export async function getAnyShippingEmailRecordForOrder(orderNumber: string): Promise<ShippingEmailRecord | null> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM shipping_emails WHERE order_number = ? ORDER BY sent_at DESC LIMIT 1');
+	stmt.bind([orderNumber]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as Record<string, unknown>;
+	stmt.free();
+	return {
+		orderNumber: String(row.order_number),
+		trackingNumber: String(row.tracking_number),
+		sentAt: String(row.sent_at),
+		wrikeTaskId: row.wrike_task_id != null ? String(row.wrike_task_id) : undefined,
+		via: row.via != null ? String(row.via) : undefined,
+		route: row.route != null ? String(row.route) : undefined,
+		customerEmail: row.customer_email != null ? String(row.customer_email) : undefined,
+	};
+}
+
+export async function insertShippingEmailRecord(record: ShippingEmailRecord): Promise<void> {
+	const db = await getDb();
+	db.run(
+		`INSERT OR IGNORE INTO shipping_emails (order_number, tracking_number, sent_at, wrike_task_id, via, route, customer_email)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		[record.orderNumber, record.trackingNumber, record.sentAt, record.wrikeTaskId ?? null, record.via ?? null, record.route ?? null, record.customerEmail ?? null],
+	);
+	persistDb(db);
 }
 
 function normalizeOrder(order: StoredOrder): StoredOrder {
@@ -139,6 +201,47 @@ async function getDb(): Promise<SqlJsDatabase> {
 		`);
 		db.run('CREATE INDEX IF NOT EXISTS idx_webhook_events_order_number ON webhook_events(order_number)');
 		db.run('CREATE INDEX IF NOT EXISTS idx_webhook_events_received_at ON webhook_events(received_at DESC)');
+
+		db.run(`
+			CREATE TABLE IF NOT EXISTS shipping_emails (
+				order_number TEXT NOT NULL,
+				tracking_number TEXT NOT NULL,
+				sent_at TEXT NOT NULL,
+				wrike_task_id TEXT,
+				via TEXT,
+				route TEXT,
+				customer_email TEXT,
+				PRIMARY KEY (order_number, tracking_number)
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_shipping_emails_order_number ON shipping_emails(order_number)');
+		db.run('CREATE INDEX IF NOT EXISTS idx_shipping_emails_sent_at ON shipping_emails(sent_at DESC)');
+
+		db.run(`
+			CREATE TABLE IF NOT EXISTS friends_family_allowlist (
+				email TEXT PRIMARY KEY,
+				is_active INTEGER NOT NULL,
+				note TEXT,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_friends_family_allowlist_active ON friends_family_allowlist(is_active)');
+
+		db.run(`
+			CREATE TABLE IF NOT EXISTS friends_family_email_otps (
+				id TEXT PRIMARY KEY,
+				email TEXT NOT NULL,
+				otp_hash TEXT NOT NULL,
+				salt TEXT NOT NULL,
+				expires_at TEXT NOT NULL,
+				attempts INTEGER NOT NULL DEFAULT 0,
+				consumed_at TEXT,
+				created_at TEXT NOT NULL
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_friends_family_email_otps_email_expires ON friends_family_email_otps(email, expires_at)');
+		db.run('CREATE INDEX IF NOT EXISTS idx_friends_family_email_otps_expires_at ON friends_family_email_otps(expires_at)');
 
 		await migrateLegacyOrdersJson(db);
 		persistDb(db);
@@ -383,4 +486,122 @@ export async function getPendingRetryJobs(): Promise<RetryJob[]> {
 	}
 	stmt.free();
 	return jobs;
+}
+
+export type FriendsFamilyAllowlistEntry = {
+	email: string;
+	isActive: boolean;
+	note?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export async function listFriendsFamilyAllowlistEntries(): Promise<FriendsFamilyAllowlistEntry[]> {
+	const db = await getDb();
+	const result = db.exec('SELECT email, is_active, note, created_at, updated_at FROM friends_family_allowlist ORDER BY email ASC');
+	if (result.length === 0) return [];
+	const rows = result[0];
+	const idxEmail = rows.columns.indexOf('email');
+	const idxActive = rows.columns.indexOf('is_active');
+	const idxNote = rows.columns.indexOf('note');
+	const idxCreated = rows.columns.indexOf('created_at');
+	const idxUpdated = rows.columns.indexOf('updated_at');
+	return rows.values.map((row) => ({
+		email: String(row[idxEmail] ?? ''),
+		isActive: Number(row[idxActive] ?? 0) === 1,
+		note: row[idxNote] != null ? String(row[idxNote]) : undefined,
+		createdAt: String(row[idxCreated] ?? ''),
+		updatedAt: String(row[idxUpdated] ?? ''),
+	}));
+}
+
+export async function upsertFriendsFamilyAllowlistEntry(input: { email: string; isActive: boolean; note?: string | null }): Promise<void> {
+	const db = await getDb();
+	const now = new Date().toISOString();
+	db.run(
+		`INSERT INTO friends_family_allowlist (email, is_active, note, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(email) DO UPDATE SET
+			is_active = excluded.is_active,
+			note = excluded.note,
+			updated_at = excluded.updated_at`,
+		[input.email, input.isActive ? 1 : 0, input.note ?? null, now, now],
+	);
+	persistDb(db);
+}
+
+export async function deleteFriendsFamilyAllowlistEntry(email: string): Promise<void> {
+	const db = await getDb();
+	db.run('DELETE FROM friends_family_allowlist WHERE email = ?', [email]);
+	persistDb(db);
+}
+
+export async function isFriendsFamilyEmailAllowlisted(email: string): Promise<boolean> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT 1 FROM friends_family_allowlist WHERE email = ? AND is_active = 1 LIMIT 1');
+	stmt.bind([email]);
+	const ok = stmt.step();
+	stmt.free();
+	return ok;
+}
+
+export type FriendsFamilyOtpRecord = {
+	id: string;
+	email: string;
+	otpHash: string;
+	salt: string;
+	expiresAt: string;
+	attempts: number;
+	consumedAt?: string;
+	createdAt: string;
+};
+
+export async function insertFriendsFamilyOtpRecord(record: FriendsFamilyOtpRecord): Promise<void> {
+	const db = await getDb();
+	db.run(
+		`INSERT INTO friends_family_email_otps (id, email, otp_hash, salt, expires_at, attempts, consumed_at, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		[record.id, record.email, record.otpHash, record.salt, record.expiresAt, record.attempts, record.consumedAt ?? null, record.createdAt],
+	);
+	persistDb(db);
+}
+
+export async function getUnconsumedFriendsFamilyOtpByEmail(email: string, nowIso: string): Promise<FriendsFamilyOtpRecord | null> {
+	const db = await getDb();
+	const stmt = db.prepare(
+		`SELECT id, email, otp_hash, salt, expires_at, attempts, consumed_at, created_at
+		 FROM friends_family_email_otps
+		 WHERE email = ? AND consumed_at IS NULL AND expires_at > ?
+		 ORDER BY created_at DESC
+		 LIMIT 1`,
+	);
+	stmt.bind([email, nowIso]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as Record<string, unknown>;
+	stmt.free();
+	return {
+		id: String(row.id),
+		email: String(row.email),
+		otpHash: String(row.otp_hash),
+		salt: String(row.salt),
+		expiresAt: String(row.expires_at),
+		attempts: Number(row.attempts ?? 0),
+		consumedAt: row.consumed_at != null ? String(row.consumed_at) : undefined,
+		createdAt: String(row.created_at),
+	};
+}
+
+export async function incrementFriendsFamilyOtpAttempts(id: string): Promise<void> {
+	const db = await getDb();
+	db.run('UPDATE friends_family_email_otps SET attempts = attempts + 1 WHERE id = ?', [id]);
+	persistDb(db);
+}
+
+export async function consumeFriendsFamilyOtp(id: string, consumedAtIso: string): Promise<void> {
+	const db = await getDb();
+	db.run('UPDATE friends_family_email_otps SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL', [consumedAtIso, id]);
+	persistDb(db);
 }

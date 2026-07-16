@@ -89,6 +89,40 @@ export function validateShippingAddress(addr: ShippingAddressInput | null | unde
 
 export type CartItemForStock = { id: string; name?: string; quantity: number };
 
+function normalizeKey(value: string) {
+	return String(value ?? '')
+		.trim()
+		.toLowerCase()
+		.replace(/\s+/g, ' ');
+}
+
+function resolveProductForCartItem(
+	products: Array<{ id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> }>,
+	item: CartItemForStock,
+): { product: { id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> } | null; resolvedId: string } {
+	const itemId = String(item.id);
+
+	// 1) Canonical: exact match by product id/slug
+	const direct = products.find((p) => itemId === p.id || itemId === p.slug);
+	if (direct) return { product: direct, resolvedId: direct.id };
+
+	// 2) Back-compat: numeric IDs from legacy baseProducts -> resolve by slug
+	const legacy = fallbackProducts.find((p) => String(p.id) === itemId);
+	if (legacy?.slug) {
+		const bySlug = products.find((p) => legacy.slug === p.id || legacy.slug === p.slug);
+		if (bySlug) return { product: bySlug, resolvedId: bySlug.id };
+	}
+
+	// 3) Temporary back-compat: match by normalized name
+	const itemName = item.name ? normalizeKey(item.name) : '';
+	if (itemName) {
+		const byName = products.find((p) => p.name && normalizeKey(p.name) === itemName);
+		if (byName) return { product: byName, resolvedId: byName.id };
+	}
+
+	return { product: null, resolvedId: itemId };
+}
+
 export async function validateStockAvailability(
 	cartItems: CartItemForStock[],
 	getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> }>>,
@@ -104,8 +138,9 @@ export async function validateStockAvailability(
 		let available = 0;
 		let productName = item.name ?? item.id;
 
-		// First, try to find the product by exact ID match (regular product)
-		const product = products.find((p) => itemId === p.id || itemId === p.slug);
+		// First, resolve product identity (canonical slug + safe back-compat fallbacks)
+		const resolved = resolveProductForCartItem(products, item);
+		const product = resolved.product;
 
 		if (product) {
 			// Regular product found - use its total stock
@@ -131,7 +166,7 @@ export async function validateStockAvailability(
 				available = Number(partialMatch.stock) || 0;
 				productName = partialMatch.name ?? partialMatch.id;
 			} else {
-				console.error('[validateStockAvailability] Product not found:', { itemId, availableSlugs: products.map((p) => p.slug) });
+				console.error('[validateStockAvailability] Product not found:', { itemId, resolvedId: resolved.resolvedId, availableSlugs: products.map((p) => p.slug) });
 				return `Product "${item.name ?? item.id}" is not available.`;
 			}
 		}

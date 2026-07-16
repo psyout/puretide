@@ -1,15 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendShippingConfirmation } from '@/lib/shippingEmail';
-import {
-	hasTrackingEmailAlreadyBeenSent,
-	hasTrackingEmailInProgress,
-	isValidTrackingValue,
-	markTrackingEmailSendFailed,
-	markTrackingEmailSendStarted,
-	markTrackingEmailSent,
-	normalizeTrackingNumber,
-} from '@/lib/wrikeShipping';
-import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
+import { processShippingConfirmation } from '@/lib/wrikeShipping';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -47,7 +37,19 @@ export async function GET(request: NextRequest) {
 		}
 
 		const { searchParams } = new URL(request.url);
+		const dryRun = searchParams.get('dryRun') === '1';
+		const dryRunOrderNumber = searchParams.get('orderNumber');
 		const debugTaskId = searchParams.get('taskId');
+		if (dryRun && (dryRunOrderNumber || debugTaskId)) {
+			const result = await processShippingConfirmation({
+				via: 'cron',
+				route: 'cron:shipping-automation',
+				orderNumber: dryRunOrderNumber ? String(dryRunOrderNumber).trim() : undefined,
+				taskId: debugTaskId ? String(debugTaskId).trim() : undefined,
+				dryRun: true,
+			});
+			return NextResponse.json(result, { status: 200 });
+		}
 		if (debugTaskId) {
 			// Wrike's tasks/{id} endpoint does not allow requesting customFields via the `fields` parameter.
 			// Use the folder task listing (same API we use in the main cron path) and locate the task by id.
@@ -230,68 +232,8 @@ export async function GET(request: NextRequest) {
 		const lookbackMs = lookbackHours * 60 * 60 * 1000;
 
 		for (const task of tasks) {
-			// Check if task is "Completed" status
 			if (task.status !== 'Completed') {
 				skippedNotCompleted++;
-				continue;
-			}
-
-			// Check if task has a tracking number
-			const trackingNumberField = task.customFields?.find((f: { id: string }) => f.id === trackingNumberFieldId);
-			const trackingNumber = trackingNumberField?.value;
-			const trackingNumberNormalized = normalizeTrackingNumber(trackingNumber);
-			const orderNumberFromTitle = (task.title?.match(/Order #(\S+)/) ?? [])[1];
-
-			if (!trackingNumberNormalized) {
-				console.log('[shippingAutomation] skipped: invalid or missing tracking number', {
-					taskId: task.id,
-					title: task.title,
-					orderNumber: orderNumberFromTitle,
-					selectedTrackingFieldId: trackingNumberFieldId,
-					trackingNumberRaw: trackingNumber,
-				});
-				if (debug) {
-					console.log('[shippingAutomation] debug customFields', {
-						taskId: task.id,
-						customFields: task.customFields ?? [],
-					});
-				}
-				skippedInvalidTracking++;
-				continue;
-			}
-			if (trackingNumberNormalized === 'MANUAL' || trackingNumberNormalized === 'N/A' || trackingNumberNormalized === 'LOCAL' || trackingNumberNormalized === 'NONE') {
-				console.log('[shippingAutomation] skipped: manual/local delivery', {
-					taskId: task.id,
-					title: task.title,
-					trackingNumberRaw: trackingNumber,
-					trackingNumber: trackingNumberNormalized,
-				});
-				skippedInvalidTracking++;
-				continue;
-			}
-
-			if (!isValidTrackingValue(trackingNumberNormalized)) {
-				console.log('[shippingAutomation] skipped: invalid or missing tracking number', {
-					taskId: task.id,
-					title: task.title,
-					orderNumber: orderNumberFromTitle,
-					selectedTrackingFieldId: trackingNumberFieldId,
-					trackingNumberRaw: trackingNumber,
-					trackingNumber: trackingNumberNormalized,
-				});
-				if (debug) {
-					console.log('[shippingAutomation] debug customFields', {
-						taskId: task.id,
-						customFields: task.customFields ?? [],
-					});
-				}
-				skippedInvalidTracking++;
-				continue;
-			}
-
-			// Check for shipping confirmation marker in description
-			// Keep this aligned with the webhook pipeline's marker.
-			if (task.description?.includes('Shipping Confirmation Sent')) {
 				continue;
 			}
 
@@ -314,101 +256,23 @@ export async function GET(request: NextRequest) {
 				continue;
 			}
 
-			// Extract order number from title
-			const titleMatch = task.title.match(/Order #(\S+)/);
-			if (!titleMatch) {
-				continue;
-			}
-
-			const orderNumber = titleMatch[1];
-			console.log('[shippingAutomation] order number extracted', { orderNumber, taskId: task.id });
-
-			if (await hasTrackingEmailAlreadyBeenSent(orderNumber)) {
-				console.log('[shippingAutomation] skipped: tracking email already sent', { orderNumber, taskId: task.id });
-				skippedAlreadySent++;
-				continue;
-			}
-
-			if (await hasTrackingEmailInProgress(orderNumber)) {
-				console.log('[shippingAutomation] skipped: already sending', { orderNumber, taskId: task.id });
-				skippedAlreadySending++;
-				continue;
-			}
-
-			console.log('[shippingAutomation] processing', { orderNumber, taskId: task.id, trackingNumber: trackingNumberNormalized });
-
-			const order = await getOrderByOrderNumberFromDb(orderNumber);
-			if (!order) {
-				console.log('[shippingAutomation] skipped: order not found', { orderNumber, taskId: task.id });
-				skippedOrderNotFound++;
-				continue;
-			}
-			console.log('[shippingAutomation] order found in SQLite', { orderNumber, taskId: task.id });
-
-			const customer = (order as { customer?: unknown }).customer as { firstName?: unknown; lastName?: unknown; email?: unknown } | undefined;
-			const customerEmail = customer?.email != null ? String(customer.email).trim() : '';
-			const customerName = `${customer?.firstName != null ? String(customer.firstName).trim() : ''} ${customer?.lastName != null ? String(customer.lastName).trim() : ''}`.trim();
-			if (!customerEmail) {
-				console.log('[shippingAutomation] skipped: customer email missing', { orderNumber, taskId: task.id });
-				skippedCustomerEmailMissing++;
-				continue;
-			}
-			console.log('[shippingAutomation] customer email found', { orderNumber, taskId: task.id, customerEmail });
-
-			const shippingMethod = 'express' as const;
-
-			await markTrackingEmailSendStarted({
-				orderNumber,
-				taskId: String(task.id),
-				trackingNumber: trackingNumberNormalized,
+			const result = await processShippingConfirmation({
 				via: 'cron',
 				route: 'cron:shipping-automation',
+				taskId: String(task.id),
 			});
-
-			// Send shipping confirmation email
-			const emailResult = await sendShippingConfirmation({
-				orderNumber,
-				customerEmail,
-				customerName,
-				trackingNumber: trackingNumberNormalized,
-				shippingMethod,
-			});
-
-			if (emailResult.success) {
-				await markTrackingEmailSent({
-					orderNumber,
-					taskId: String(task.id),
-					trackingNumber: trackingNumberNormalized,
-					customerEmail,
-					via: 'cron',
-					route: 'cron:shipping-automation',
-				});
+			if (result.ok && result.message.startsWith('sent ')) {
 				processedCount++;
-
-				// Mark task as processed by adding a note to the description
-				const updatedDescription = task.description
-					? `${task.description}\n\n<p><i>Shipping Confirmation Sent: ${new Date().toISOString()}</i></p>`
-					: `<p><i>Shipping Confirmation Sent: ${new Date().toISOString()}</i></p>`;
-
-				// Update task description via Wrike API
-				const updateResponse = await fetch(`https://www.wrike.com/api/v4/tasks/${task.id}`, {
-					method: 'PUT',
-					headers: {
-						Authorization: `Bearer ${apiToken}`,
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({ description: updatedDescription }),
-				});
-
-				if (updateResponse.ok) {
-					console.log('[shippingAutomation] sent', { orderNumber, taskId: task.id });
-				} else {
-					console.error('[shippingAutomation] warning: failed to update task description after send', { orderNumber, taskId: task.id });
-				}
-			} else {
-				await markTrackingEmailSendFailed({ orderNumber, error: String(emailResult.error ?? 'unknown') });
+			} else if (result.ok && result.message.includes('already sent for same tracking')) {
+				skippedAlreadySent++;
+			} else if (result.ok && result.message.includes('already sending')) {
+				skippedAlreadySending++;
+			} else if (result.ok && result.message.includes('invalid tracking')) {
+				skippedInvalidTracking++;
+			} else if (result.ok && result.message.includes('order number not found')) {
+				skippedOrderNotFound++;
+			} else if (!result.ok) {
 				failedCount++;
-				console.error('[shippingAutomation] failed to send', { orderNumber, taskId: task.id, error: emailResult.error });
 			}
 		}
 

@@ -1,5 +1,5 @@
 import { sendShippingConfirmation, ShippingConfirmationData } from './shippingEmail';
-import { getOrderByOrderNumberFromDb, upsertOrderInDb } from './ordersDb';
+import { getAnyShippingEmailRecordForOrder, getOrderByOrderNumberFromDb, getShippingEmailRecord, insertShippingEmailRecord, upsertOrderInDb } from './ordersDb';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -21,6 +21,45 @@ type WrikeWebhookPayload = {
 	folderId: string;
 };
 
+export type ShippingDryRunReport = {
+	ok: boolean;
+	input: {
+		orderNumber?: string;
+		taskId?: string;
+		trackingNumberProvided?: string;
+	};
+	wrike: {
+		configuredTrackingFieldId?: string;
+		taskFound: boolean;
+		taskId?: string;
+		title?: string;
+		status?: string;
+		selectedCustomFieldId?: string;
+		rawTrackingValue?: string | null;
+		normalizedTrackingValue?: string;
+		customFieldsCount?: number;
+	};
+	sqlite: {
+		orderFound: boolean;
+		orderNumber?: string;
+		customerEmail?: string;
+		customerName?: string;
+	};
+	idempotency: {
+		trackingEmailSentAt?: string | null;
+		trackingEmailSentTrackingNumber?: string | null;
+		trackingEmailSendStartedAt?: string | null;
+		trackingEmailSendStartedTrackingNumber?: string | null;
+		alreadySentForSameTracking: boolean;
+		alreadySentForDifferentTracking: boolean;
+		inProgress: boolean;
+	};
+	decision: {
+		wouldSend: boolean;
+		reason: string;
+	};
+};
+
 export function normalizeTrackingNumber(value: string | null | undefined): string {
 	return String(value ?? '')
 		.trim()
@@ -32,12 +71,315 @@ export function isValidTrackingValue(value: string | null | undefined): value is
 	if (!value) return false;
 	const normalized = normalizeTrackingNumber(value);
 	if (!normalized) return false;
-	if (normalized === 'MANUAL' || normalized === 'N/A' || normalized === 'LOCAL' || normalized === 'NONE') return false;
+	if (normalized === 'MANUAL' || normalized === 'N/A' || normalized === 'NA' || normalized === 'LOCAL' || normalized === 'NONE') return false;
+	if (normalized === 'PGCA') return false;
 	// Canada Post tracking (as used in Wrike):
-	// - PG + 9 digits + CA (e.g., PG754389530CA)
-	// - MW + 9 digits + CA (e.g., MW580076450CA)
-	if (!/^(PG|MW)\d{9}CA$/i.test(normalized)) return false;
+	// Common formats used by the business:
+	// - 2 letters + 9 digits + CA (e.g., PG754389530CA, MW580076525CA)
+	// Allow any 2-letter service prefix (do not restrict to PG only).
+	if (!/^[A-Z]{2}\d{9}CA$/i.test(normalized)) return false;
 	return true;
+}
+
+function extractOrderNumberFromWrikeTitle(title: string): string {
+	const match = String(title ?? '').match(/Order #(\S+)/);
+	return match?.[1] ? String(match[1]).trim() : '';
+}
+
+async function buildShippingConfirmationDataFromSqlite(params: { orderNumber: string; trackingNumber: string }): Promise<ShippingConfirmationData | null> {
+	const order = await getOrderByOrderNumberFromDb(params.orderNumber);
+	if (!order) return null;
+	const customer = (order as { customer?: unknown }).customer as { firstName?: unknown; lastName?: unknown; email?: unknown } | undefined;
+	const customerEmail = customer?.email != null ? String(customer.email).trim() : '';
+	const customerName = `${customer?.firstName != null ? String(customer.firstName).trim() : ''} ${customer?.lastName != null ? String(customer.lastName).trim() : ''}`.trim();
+	if (!customerEmail) return null;
+	return {
+		orderNumber: params.orderNumber,
+		customerEmail,
+		customerName,
+		trackingNumber: params.trackingNumber,
+		shippingMethod: 'express',
+	};
+}
+
+export type ShippingProcessParams = {
+	via: 'webhook' | 'cron';
+	route: string;
+	taskId?: string;
+	orderNumber?: string;
+	trackingNumberOverride?: string;
+	dryRun?: boolean;
+};
+
+export async function processShippingConfirmation(params: ShippingProcessParams): Promise<{
+	ok: boolean;
+	message: string;
+	report?: ShippingDryRunReport;
+}> {
+	const orderNumberInput = params.orderNumber ? String(params.orderNumber).trim() : '';
+	const taskIdInput = params.taskId ? String(params.taskId).trim() : '';
+	const trackingOverride = params.trackingNumberOverride ? normalizeTrackingNumber(params.trackingNumberOverride) : '';
+
+	const task = taskIdInput ? await getWrikeTaskWithCustomFields({ taskId: taskIdInput }) : orderNumberInput ? await getWrikeTaskWithCustomFields({ orderNumber: orderNumberInput }) : null;
+
+	const configuredTrackingFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
+	const customFields = Array.isArray(task?.customFields) ? task!.customFields : [];
+	const selectedTrackingField = configuredTrackingFieldId ? customFields.find((f) => String(f.id) === String(configuredTrackingFieldId)) : undefined;
+	const trackingRaw = selectedTrackingField?.value ?? null;
+	const trackingNormalized = trackingOverride || normalizeTrackingNumber(trackingRaw);
+
+	const orderNumberFromTask = task?.title ? extractOrderNumberFromWrikeTitle(task.title) : '';
+	const orderNumber = orderNumberInput || orderNumberFromTask;
+
+	const status = task?.status ? String(task.status) : '';
+	const isCompleted = status.toLowerCase() === 'completed';
+
+	console.log('[shippingConfirmation] inspect', {
+		via: params.via,
+		route: params.route,
+		taskId: task?.id ?? taskIdInput ?? null,
+		orderNumber: orderNumber || null,
+		status: status || null,
+		configuredTrackingFieldId: configuredTrackingFieldId ?? null,
+		selectedCustomFieldId: selectedTrackingField?.id ?? null,
+		trackingRaw,
+		trackingNormalized,
+		customFieldsCount: customFields.length,
+	});
+
+	const report = await dryRunShippingConfirmation({
+		orderNumber: orderNumber || undefined,
+		taskId: (task?.id ?? taskIdInput) || undefined,
+		trackingNumber: trackingOverride || undefined,
+	});
+
+	if (params.dryRun) {
+		return { ok: true, message: 'dry-run', report };
+	}
+
+	if (!task) return { ok: true, message: 'skipped: wrike task not found' };
+	if (!isCompleted) return { ok: true, message: 'skipped: task not completed' };
+	if (!orderNumber) return { ok: true, message: 'skipped: order number not found' };
+	if (!trackingNormalized) return { ok: true, message: 'skipped: tracking missing/empty' };
+	if (!isValidTrackingValue(trackingNormalized)) return { ok: true, message: 'skipped: invalid tracking number' };
+
+	const alreadySentExact = await getShippingEmailRecord(orderNumber, trackingNormalized);
+	if (alreadySentExact) {
+		console.log('[shippingConfirmation] skipped: already sent for same tracking', {
+			orderNumber,
+			taskId: task.id,
+			trackingNumber: trackingNormalized,
+			sentAt: alreadySentExact.sentAt,
+		});
+		return { ok: true, message: 'skipped: already sent for same tracking' };
+	}
+	const anySent = await getAnyShippingEmailRecordForOrder(orderNumber);
+	if (anySent && normalizeTrackingNumber(anySent.trackingNumber) !== trackingNormalized) {
+		console.log('[shippingConfirmation] skipped: already sent for different tracking (no correction resend policy)', {
+			orderNumber,
+			taskId: task.id,
+			trackingNumber: trackingNormalized,
+			previousTrackingNumber: anySent.trackingNumber,
+			previousSentAt: anySent.sentAt,
+		});
+		return { ok: true, message: 'skipped: already sent for different tracking (correction resend disabled)' };
+	}
+
+	if (await hasTrackingEmailInProgress(orderNumber)) {
+		return { ok: true, message: 'skipped: already sending' };
+	}
+
+	await markTrackingEmailSendStarted({
+		orderNumber,
+		taskId: task.id,
+		trackingNumber: trackingNormalized,
+		via: params.via,
+		route: params.route,
+	});
+
+	const orderData = await buildShippingConfirmationDataFromSqlite({ orderNumber, trackingNumber: trackingNormalized });
+	if (!orderData) {
+		await markTrackingEmailSendFailed({ orderNumber, error: 'sqlite order not found or customer email missing' });
+		return { ok: false, message: 'sqlite order not found or customer email missing' };
+	}
+
+	const emailResult = await sendShippingConfirmation(orderData);
+	if (!emailResult.success) {
+		await markTrackingEmailSendFailed({ orderNumber, error: String(emailResult.error ?? 'unknown') });
+		return { ok: false, message: `failed to send: ${emailResult.error}` };
+	}
+
+	await insertShippingEmailRecord({
+		orderNumber,
+		trackingNumber: trackingNormalized,
+		sentAt: new Date().toISOString(),
+		wrikeTaskId: task.id,
+		via: params.via,
+		route: params.route,
+		customerEmail: orderData.customerEmail,
+	});
+
+	await updateTaskWithShippingConfirmation(task.id, trackingNormalized);
+	await markTrackingEmailSent({
+		orderNumber,
+		taskId: task.id,
+		trackingNumber: trackingNormalized,
+		customerEmail: orderData.customerEmail,
+		via: params.via,
+		route: params.route,
+	});
+
+	return { ok: true, message: `sent shipping confirmation for order #${orderNumber}` };
+}
+
+async function getWrikeTaskWithCustomFields(params: { taskId: string } | { orderNumber: string }): Promise<WrikeTask | null> {
+	const apiToken = process.env.WRIKE_API_TOKEN;
+	const ordersFolderId = process.env.WRIKE_ORDERS_FOLDER_ID;
+	if (!apiToken || !ordersFolderId) return null;
+
+	try {
+		const response = await fetch(`${WRIKE_API_BASE}/folders/${encodeURIComponent(ordersFolderId)}/tasks?fields=['description','customFields']`, {
+			headers: { Authorization: `Bearer ${apiToken}` },
+		});
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Failed to fetch folder tasks: ${response.status} ${error}`);
+		}
+		const data = (await response.json()) as { data?: WrikeTask[] };
+		const tasks: WrikeTask[] = Array.isArray(data.data) ? data.data : [];
+		if ('taskId' in params) {
+			return tasks.find((t) => String(t.id) === String(params.taskId)) ?? null;
+		}
+		return tasks.find((t) => String(t.title ?? '').includes(`Order #${params.orderNumber}`)) ?? null;
+	} catch (error) {
+		console.error('[wrikeShipping] Error fetching Wrike task with custom fields:', error);
+		return null;
+	}
+}
+
+export async function dryRunShippingConfirmation(params: { orderNumber?: string; taskId?: string; trackingNumber?: string }): Promise<ShippingDryRunReport> {
+	const orderNumberRaw = params.orderNumber ? String(params.orderNumber).trim() : '';
+	const taskIdRaw = params.taskId ? String(params.taskId).trim() : '';
+	const trackingProvidedRaw = params.trackingNumber ? String(params.trackingNumber) : '';
+	const trackingProvidedNormalized = trackingProvidedRaw ? normalizeTrackingNumber(trackingProvidedRaw) : '';
+
+	if (!orderNumberRaw && !taskIdRaw) {
+		return {
+			ok: false,
+			input: { orderNumber: orderNumberRaw || undefined, taskId: taskIdRaw || undefined, trackingNumberProvided: trackingProvidedRaw || undefined },
+			wrike: { taskFound: false },
+			sqlite: { orderFound: false },
+			idempotency: {
+				alreadySentForSameTracking: false,
+				alreadySentForDifferentTracking: false,
+				inProgress: false,
+			},
+			decision: { wouldSend: false, reason: 'missing required input: orderNumber or taskId' },
+		};
+	}
+
+	const configuredTrackingFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
+	const task = taskIdRaw ? await getWrikeTaskWithCustomFields({ taskId: taskIdRaw }) : await getWrikeTaskWithCustomFields({ orderNumber: orderNumberRaw });
+	const customFields = Array.isArray(task?.customFields) ? task!.customFields : [];
+	const selected = configuredTrackingFieldId ? customFields.find((f) => String(f.id) === String(configuredTrackingFieldId)) : undefined;
+	const trackingRaw = selected?.value ?? null;
+	const trackingNormalized = trackingProvidedNormalized || normalizeTrackingNumber(trackingRaw);
+
+	const extractedOrderNumber = (() => {
+		if (orderNumberRaw) return orderNumberRaw;
+		const title = task?.title ? String(task.title) : '';
+		const match = title.match(/Order #(\S+)/);
+		return match?.[1] ? String(match[1]).trim() : '';
+	})();
+
+	const order = extractedOrderNumber ? await getOrderByOrderNumberFromDb(extractedOrderNumber) : null;
+	const customer = (order as { customer?: unknown } | null)?.customer as { firstName?: unknown; lastName?: unknown; email?: unknown } | undefined;
+	const customerEmail = customer?.email != null ? String(customer.email).trim() : '';
+	const customerName = `${customer?.firstName != null ? String(customer.firstName).trim() : ''} ${customer?.lastName != null ? String(customer.lastName).trim() : ''}`.trim();
+
+	const sentExact = extractedOrderNumber && trackingNormalized ? await getShippingEmailRecord(extractedOrderNumber, trackingNormalized) : null;
+	const sentAny = extractedOrderNumber ? await getAnyShippingEmailRecordForOrder(extractedOrderNumber) : null;
+	const sentAt = sentExact?.sentAt ?? sentAny?.sentAt ?? null;
+	const sentTracking = sentAny?.trackingNumber ?? null;
+	const startedAt = order && 'trackingEmailSendStartedAt' in order ? String((order as Record<string, unknown>).trackingEmailSendStartedAt ?? '') : '';
+	const startedTracking = order && 'trackingEmailSendStartedTrackingNumber' in order ? String((order as Record<string, unknown>).trackingEmailSendStartedTrackingNumber ?? '') : '';
+
+	const alreadySentForSameTracking = Boolean(sentExact);
+	const alreadySentForDifferentTracking = Boolean(sentAny && trackingNormalized) && normalizeTrackingNumber(sentAny!.trackingNumber) !== trackingNormalized;
+	const inProgress = extractedOrderNumber ? await hasTrackingEmailInProgress(extractedOrderNumber) : false;
+
+	let wouldSend = true;
+	let reason = 'eligible';
+	if (!task) {
+		wouldSend = false;
+		reason = 'wrike task not found';
+	} else if (String(task.status ?? '').toLowerCase() !== 'completed') {
+		wouldSend = false;
+		reason = 'task not completed';
+	} else if (!trackingNormalized) {
+		wouldSend = false;
+		reason = 'tracking missing/empty';
+	} else if (!isValidTrackingValue(trackingNormalized)) {
+		wouldSend = false;
+		reason = 'tracking invalid (validation failed)';
+	} else if (!extractedOrderNumber) {
+		wouldSend = false;
+		reason = 'order number not found';
+	} else if (!order) {
+		wouldSend = false;
+		reason = 'sqlite order not found';
+	} else if (!customerEmail) {
+		wouldSend = false;
+		reason = 'customer email missing in sqlite order_json.customer';
+	} else if (inProgress) {
+		wouldSend = false;
+		reason = 'tracking email send in progress';
+	} else if (alreadySentForSameTracking) {
+		wouldSend = false;
+		reason = 'already sent for same tracking';
+	} else if (alreadySentForDifferentTracking) {
+		wouldSend = false;
+		reason = 'already sent for different tracking (correction policy not implemented)';
+	}
+
+	return {
+		ok: true,
+		input: {
+			orderNumber: orderNumberRaw || undefined,
+			taskId: taskIdRaw || undefined,
+			trackingNumberProvided: trackingProvidedRaw || undefined,
+		},
+		wrike: {
+			configuredTrackingFieldId: configuredTrackingFieldId || undefined,
+			taskFound: Boolean(task),
+			taskId: task?.id,
+			title: task?.title,
+			status: task?.status,
+			selectedCustomFieldId: selected?.id,
+			rawTrackingValue: trackingRaw,
+			normalizedTrackingValue: trackingNormalized,
+			customFieldsCount: customFields.length,
+		},
+		sqlite: {
+			orderFound: Boolean(order),
+			orderNumber: extractedOrderNumber || undefined,
+			customerEmail: customerEmail || undefined,
+			customerName: customerName || undefined,
+		},
+		idempotency: {
+			trackingEmailSentAt: sentAt,
+			trackingEmailSentTrackingNumber: sentTracking,
+			trackingEmailSendStartedAt: startedAt || null,
+			trackingEmailSendStartedTrackingNumber: startedTracking || null,
+			alreadySentForSameTracking,
+			alreadySentForDifferentTracking,
+			inProgress,
+		},
+		decision: {
+			wouldSend,
+			reason,
+		},
+	};
 }
 
 export async function hasTrackingEmailInProgress(orderNumber: string): Promise<boolean> {
@@ -135,8 +477,8 @@ export async function sendTrackingEmailManually(params: {
 			task = tasks.find((t) => t.title?.includes(`Order #${params.orderNumber}`)) ?? null;
 		}
 
-		const titleMatch = task ? task.title.match(/Order #(\d+)/) : null;
-		const orderNumber = orderNumberFromContext ?? titleMatch?.[1] ?? params.orderNumber;
+		const orderNumberFromTitle = task?.title ? extractOrderNumberFromWrikeTitle(task.title) : '';
+		const orderNumber = orderNumberFromContext ?? orderNumberFromTitle ?? params.orderNumber;
 		if (!orderNumber) {
 			return { ok: false, error: 'Not an order task (no order number)' };
 		}
@@ -174,8 +516,8 @@ export async function sendTrackingEmailManually(params: {
 				trackingNumber,
 				shippingMethod: params.shippingMethod ?? 'express',
 			};
-		} else if (task) {
-			orderData = extractOrderData(task, trackingNumber);
+		} else {
+			orderData = await buildShippingConfirmationDataFromSqlite({ orderNumber, trackingNumber });
 		}
 		if (!orderData) return { ok: false, error: 'Failed to extract order data from task' };
 
@@ -216,6 +558,8 @@ export async function sendTrackingEmailManually(params: {
 }
 
 export async function hasTrackingEmailAlreadyBeenSent(orderNumber: string): Promise<boolean> {
+	const anySent = await getAnyShippingEmailRecordForOrder(orderNumber);
+	if (anySent) return true;
 	const order = await getOrderByOrderNumberFromDb(orderNumber);
 	if (!order) return false;
 	return Boolean(order.trackingEmailSentAt);
@@ -293,7 +637,7 @@ async function getWrikeTask(taskId: string): Promise<WrikeTask | null> {
 
 function extractOrderData(task: WrikeTask, trackingNumber: string): ShippingConfirmationData | null {
 	// Extract order number from title (format: "Order #12345 - John Doe")
-	const titleMatch = task.title.match(/Order #(\d+)/);
+	const titleMatch = task.title.match(/Order #(\S+)/);
 	if (!titleMatch) {
 		console.error('[wrikeShipping] Could not extract order number from task title:', task.title);
 		return null;
@@ -369,106 +713,9 @@ export async function handleWrikeTaskCompletion(payload: WrikeWebhookPayload): P
 	}
 
 	console.log('[wrikeShipping] task completed', { taskId });
-
-	// Get full task details
-	const task = await getWrikeTask(taskId);
-	if (!task) {
-		// Wrike can deliver duplicate webhook events and transient network failures can occur.
-		// We return success=true so the webhook endpoint still returns 200 and doesn't trigger retries.
-		return { success: true, message: 'skipped: failed to fetch task details (transient wrike fetch error)' };
-	}
-
-	// Verify this is an order task (should have "Order #" in title)
-	if (!task.title.includes('Order #')) {
-		return { success: true, message: 'Not an order task, skipping shipping confirmation' };
-	}
-
-	// Extract order number early so we can apply durable idempotency via the orders DB.
-	const titleMatch = task.title.match(/Order #(\d+)/);
-	const orderNumber = titleMatch?.[1];
-	if (!orderNumber) {
-		return { success: true, message: 'Not an order task (no order number), skipping shipping confirmation' };
-	}
-
-	// Durable idempotency: if order record shows the tracking email was already sent, never send again.
-	if (await hasTrackingEmailAlreadyBeenSent(orderNumber)) {
-		console.log(`[wrikeShipping] skipped: already sent`, { orderNumber, taskId });
-		return { success: true, message: 'skipped: tracking email already sent' };
-	}
-
-	if (await hasTrackingEmailInProgress(orderNumber)) {
-		console.log(`[wrikeShipping] skipped: already sending`, { orderNumber, taskId });
-		return { success: true, message: 'skipped: already sending' };
-	}
-
-	// Legacy/secondary idempotency: description marker.
-	if (task.description.includes('Shipping Confirmation Sent')) {
-		console.log(`[wrikeShipping] skipped: tracking email already sent (task description marker)`, { orderNumber, taskId });
-		return { success: true, message: 'skipped: tracking email already sent' };
-	}
-
-	const trackingNumberFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
-	if (!trackingNumberFieldId) {
-		return { success: false, error: 'WRIKE_TRACKING_NUMBER_FIELD_ID not configured' };
-	}
-
-	const trackingNumberField = task.customFields?.find((f) => f.id === trackingNumberFieldId);
-	const trackingNumberRaw = trackingNumberField?.value;
-	const trackingNumber = normalizeTrackingNumber(trackingNumberRaw);
-
-	console.log('[wrikeShipping] tracking number found', { orderNumber, taskId, trackingNumberRaw });
-	console.log('[wrikeShipping] tracking number normalized', { orderNumber, taskId, trackingNumber });
-
-	if (!trackingNumber) {
-		console.log('[wrikeShipping] skipped: invalid tracking number (empty)', { orderNumber, taskId, trackingNumberRaw });
-		return { success: true, message: 'skipped: invalid tracking number' };
-	}
-	if (trackingNumber === 'MANUAL' || trackingNumber === 'N/A' || trackingNumber === 'LOCAL' || trackingNumber === 'NONE') {
-		console.log('[wrikeShipping] skipped: manual/local delivery', { orderNumber, taskId, trackingNumberRaw, trackingNumber });
-		return { success: true, message: 'skipped: manual/local delivery' };
-	}
-
-	if (!isValidTrackingValue(trackingNumber)) {
-		console.log(`[wrikeShipping] skipped: invalid tracking number`, { orderNumber, taskId, trackingNumberRaw, trackingNumber });
-		return { success: true, message: 'skipped: invalid tracking number' };
-	}
-
-	await markTrackingEmailSendStarted({
-		orderNumber,
-		taskId,
-		trackingNumber,
-		via: 'webhook',
-		route: 'wrike:webhook',
-	});
-
-	// Extract order data
-	const orderData = extractOrderData(task, trackingNumber);
-	if (!orderData) {
-		await markTrackingEmailSendFailed({ orderNumber, error: 'Failed to extract order data from task' });
-		return { success: false, error: 'Failed to extract order data from task' };
-	}
-
-	// Send shipping confirmation email
-	const emailResult = await sendShippingConfirmation(orderData);
-
-	if (emailResult.success) {
-		console.log('[wrikeShipping] tracking email sent', { orderNumber: orderData.orderNumber, taskId, trackingNumber: orderData.trackingNumber });
-
-		// Update task description to note that shipping confirmation was sent
-		await updateTaskWithShippingConfirmation(taskId, orderData.trackingNumber);
-		await markTrackingEmailSent({ orderNumber: orderData.orderNumber, taskId, trackingNumber: orderData.trackingNumber });
-
-		return {
-			success: true,
-			message: `Shipping confirmation sent for order #${orderData.orderNumber}`,
-		};
-	} else {
-		await markTrackingEmailSendFailed({ orderNumber, error: String(emailResult.error ?? 'unknown') });
-		return {
-			success: false,
-			error: `Failed to send shipping confirmation: ${emailResult.error}`,
-		};
-	}
+	const result = await processShippingConfirmation({ via: 'webhook', route: 'wrike:webhook', taskId });
+	if (result.ok) return { success: true, message: result.message };
+	return { success: false, error: result.message };
 }
 
 async function updateTaskWithShippingConfirmation(taskId: string, trackingNumber: string): Promise<void> {

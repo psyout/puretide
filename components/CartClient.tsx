@@ -67,7 +67,7 @@ export default function CartClient() {
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
 					← Back to Products
 				</Link>
-				<h1 className='text-4xl font-bold mb-8 text-deep-tidal-teal-800'>My Cart</h1>
+				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>My Cart</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='lg:col-span-2'>
@@ -97,9 +97,9 @@ export default function CartClient() {
 									</Link>
 									<div className='flex-1'>
 										<div className='flex items-baseline justify-between gap-3 flex-col lg:items-start lg:gap-1'>
-											<h3 className='text-xl font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
+											<h3 className='text-lg font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
 											<div className='flex items-center gap-2'>
-												<p className='text-2xl text-deep-tidal-teal font-bold'>${getItemPrice(item).toFixed(2)}</p>
+												<p className='text-xl text-deep-tidal-teal font-bold'>${getItemPrice(item).toFixed(2)}</p>
 												{getItemPrice(item) < item.price && (
 													<span className='text-lg text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</span>
 												)}
@@ -156,13 +156,13 @@ export default function CartClient() {
 
 					<div className='lg:col-span-1'>
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md'>
-							<h2 className='text-2xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
+							<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div className='space-y-2 mb-2'>
 								{cartItems.map((item) => (
 									<div
 										key={item.id}
 										className='flex justify-between text-md'>
-										<span className='text-deep-tidal-teal-700'>
+										<span className='text-deep-tidal-teal-700 text-[0.9rem]'>
 											{item.name} × {item.quantity}
 										</span>
 										<span className='text-deep-tidal-teal-800 font-semibold'>${(getItemPrice(item) * item.quantity).toFixed(2)}</span>
@@ -176,7 +176,7 @@ export default function CartClient() {
 									Payment Method
 								</h3>
 								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 cursor-pointer'>
-									<span className='flex items-center gap-2'>
+									<span className='flex items-center gap-2 text-[0.9rem]'>
 										<input
 											type='radio'
 											name='cart-payment'
@@ -198,7 +198,7 @@ export default function CartClient() {
 											disabled={isCreditCardDisabled}
 											className={`rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal ${isCreditCardDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
 										/>
-										<span className='text-deep-tidal-teal-800'>Credit Card</span>
+										<span className='text-deep-tidal-teal-800 text-[0.9rem]'>Credit Card</span>
 									</span>
 									<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
 								</label>
@@ -217,7 +217,7 @@ export default function CartClient() {
 								</div>
 							)}
 							<div className='border-b border-deep-tidal-teal/10 pb-3 mb-3 space-y-2'>
-								<div className='flex justify-between text-xl font-bold'>
+								<div className='flex justify-between text-lg font-bold'>
 									<span className='text-deep-tidal-teal-800'>{paymentMethod === 'creditcard' ? 'Est. total' : 'Total'}</span>
 									<span className='text-deep-tidal-teal'>${(paymentMethod === 'creditcard' ? total * 1.05 : total).toFixed(2)}</span>
 								</div>

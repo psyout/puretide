@@ -195,25 +195,26 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 			.map((row) => normalizeRow(row, headerRow))
 			.filter((row) => row.slug)
 			.map((row) => {
-				const inferredId = row.slug;
+				const normalizedSlug = String(row.slug ?? '').trim();
+				const inferredId = normalizedSlug;
 				// Total Stock is the single source of truth
-				const parsedStock = parseRequiredNumber(row['total stock'], `Total Stock for slug "${row.slug}"`);
-				const finalStock = toSafeStockInteger(parsedStock, `Total Stock for slug "${row.slug}"`);
+				const parsedStock = parseRequiredNumber(row['total stock'], `Total Stock for slug "${normalizedSlug}"`);
+				const finalStock = toSafeStockInteger(parsedStock, `Total Stock for slug "${normalizedSlug}"`);
 				const finalPrice = parseNumber(row.price);
 
 				return {
 					id: inferredId,
-					slug: row.slug,
-					name: row.name,
-					subtitle: row.subtitle || undefined,
-					description: row.description,
-					details: row.details || undefined,
+					slug: normalizedSlug,
+					name: String(row.name ?? '').trim(),
+					subtitle: String(row.subtitle ?? '').trim() || undefined,
+					description: String(row.description ?? ''),
+					details: String(row.details ?? '').trim() || undefined,
 					price: finalPrice,
 					stock: finalStock,
-					image: row.image || (baseProducts.find((product) => product.id === inferredId)?.image ?? ''),
-					category: row.category,
-					mg: row.mg || undefined,
-					purity: row.purity || undefined,
+					image: String(row.image ?? '').trim() || (baseProducts.find((product) => product.id === inferredId)?.image ?? ''),
+					category: String(row.category ?? '').trim(),
+					mg: String(row.mg ?? '').trim() || undefined,
+					purity: String(row.purity ?? '').trim() || undefined,
 					icons: row.icons
 						? row.icons
 								.split(',')

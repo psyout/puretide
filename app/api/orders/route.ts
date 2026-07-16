@@ -15,6 +15,7 @@ import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
+import { decidePaymentPathWithFeatureFlag, getVerifiedFriendsFamilyEmailFromCookie } from '@/lib/friendsFamily';
 
 interface OrderPayload {
 	customer: {
@@ -234,15 +235,24 @@ export async function POST(request: Request) {
 		const createdAt = new Date().toISOString();
 		const etransferProviderRaw = String(process.env.ETRANSFER_PROVIDER ?? 'manual');
 		const etransferProvider = etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
+		const verifiedFriendsFamilyEmail = getVerifiedFriendsFamilyEmailFromCookie(request.headers.get('cookie'));
+		const paymentPath =
+			orderPayload.paymentMethod === 'etransfer'
+				? decidePaymentPathWithFeatureFlag({
+						etransferProvider,
+						customerEmail: normalizedCustomer.email,
+						verifiedFriendsFamilyEmail,
+					})
+				: undefined;
 		const orderRecord = {
 			id: `order_${orderNumber}`,
 			orderNumber,
 			createdAt,
 			paymentStatus: 'pending' as const,
-			paymentProvider: orderPayload.paymentMethod === 'etransfer' && etransferProvider === 'bluepeak' ? 'bluepeak' : undefined,
+			paymentProvider: orderPayload.paymentMethod === 'etransfer' && paymentPath === 'bluepeak' ? 'bluepeak' : undefined,
 			etransfer:
 				orderPayload.paymentMethod === 'etransfer'
-					? etransferProvider === 'bluepeak'
+					? paymentPath === 'bluepeak'
 						? {
 								provider: 'bluepeak',
 								status: 'awaiting_payment',
@@ -262,6 +272,7 @@ export async function POST(request: Request) {
 								paidAt: null,
 							}
 					: undefined,
+			paymentPath,
 			...payload,
 		};
 

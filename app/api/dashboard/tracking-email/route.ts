@@ -3,7 +3,7 @@ import '@/lib/api-prelude';
 import { NextResponse } from 'next/server';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
 import { buildSafeApiError } from '@/lib/apiError';
-import { sendTrackingEmailManually } from '@/lib/wrikeShipping';
+import { dryRunShippingConfirmation, sendTrackingEmailManually } from '@/lib/wrikeShipping';
 
 export async function POST(request: Request) {
 	const authError = requireDashboardAuth(request);
@@ -41,6 +41,28 @@ export async function POST(request: Request) {
 		return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to send tracking email.', error, logLabel: 'dashboard:tracking-email:post' });
+		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
+	}
+}
+
+export async function GET(request: Request) {
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
+
+	try {
+		const { searchParams } = new URL(request.url);
+		const orderNumber = searchParams.get('orderNumber') ? String(searchParams.get('orderNumber')).trim() : '';
+		const taskId = searchParams.get('taskId') ? String(searchParams.get('taskId')).trim() : '';
+		const trackingNumber = searchParams.get('trackingNumber') ? String(searchParams.get('trackingNumber')) : '';
+
+		const report = await dryRunShippingConfirmation({
+			orderNumber: orderNumber || undefined,
+			taskId: taskId || undefined,
+			trackingNumber: trackingNumber || undefined,
+		});
+		return NextResponse.json(report, { status: report.ok ? 200 : 400 });
+	} catch (error) {
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to dry-run shipping confirmation.', error, logLabel: 'dashboard:tracking-email:get' });
 		return NextResponse.json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }
