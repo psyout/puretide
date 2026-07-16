@@ -49,10 +49,12 @@ export async function POST(request: Request) {
 
 		const url = new URL(request.url);
 		const dateParam = url.searchParams.get('date');
+		const testMode = url.searchParams.get('test') === 'true';
 		const requested = parseIsoDateOnly(dateParam);
 
 		console.log('[cron:afternoon-labels] start', {
 			cronType: 'afternoon',
+			testMode,
 			requestedDate: requested ? requested.toISOString().slice(0, 10) : null,
 		});
 
