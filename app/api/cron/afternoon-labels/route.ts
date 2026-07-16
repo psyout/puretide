@@ -27,7 +27,11 @@ function parseIsoDateOnly(s: string | null): Date | null {
 	if (!s) return null;
 	const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})$/);
 	if (!m) return null;
-	const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+	// Parse date parts directly to avoid timezone conversion issues
+	const year = parseInt(m[1], 10);
+	const month = parseInt(m[2], 10) - 1; // JavaScript months are 0-indexed
+	const day = parseInt(m[3], 10);
+	const d = new Date(year, month, day, 0, 0, 0);
 	if (Number.isNaN(d.getTime())) return null;
 	return d;
 }
