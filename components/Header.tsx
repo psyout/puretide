@@ -23,7 +23,7 @@ function MapleLeafIcon({ className }: { className?: string }) {
 	);
 }
 
-export default function Header() {
+export default function Header({ stacked = false }: { stacked?: boolean }) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -65,7 +65,7 @@ export default function Header() {
 	return (
 		<header
 			ref={headerRef}
-			className='bg-deep-tidal-teal-600/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[100]'>
+			className={stacked ? 'bg-deep-tidal-teal-600/80 backdrop-blur-md relative z-[100]' : 'bg-deep-tidal-teal-600/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[100]'}>
 			<div className='max-w-7xl mx-auto px-6 sm:px-6 py-4 flex items-center'>
 				<div className='flex items-center'>
 					<Link

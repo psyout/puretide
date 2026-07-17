@@ -1,20 +1,26 @@
 import ProductGrid from '@/components/ProductGrid';
 import Hero from '@/components/Hero';
-import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import About from '@/components/About';
 import Contact from '@/components/Contact';
 import CanadaDayModal from '@/components/CanadaDayModal';
+import PromoBannerWrapper from '@/components/PromoBannerWrapper';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default function Home() {
 	const promoModalEnabled = String(process.env.PROMO_MODAL_ENABLED ?? '').toLowerCase() === 'true';
+	const promoBannerEnabled = String(process.env.NEXT_PUBLIC_PROMO_BANNER_ENABLED ?? '').toLowerCase() === 'true';
+
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-eucalyptus-50 to-deep-tidal-teal-100'>
 			{promoModalEnabled ? <CanadaDayModal /> : null}
-			<Header />
+			<PromoBannerWrapper
+				enabled={promoBannerEnabled}
+				message={process.env.NEXT_PUBLIC_PROMO_BANNER_MESSAGE}
+				cta={process.env.NEXT_PUBLIC_PROMO_BANNER_CTA}
+			/>
 
 			<Hero />
 

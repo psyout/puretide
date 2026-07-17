@@ -106,6 +106,14 @@ const envSchema = z.object({
 	ENABLE_WRIKE_INTEGRATION: z.coerce.boolean().default(false),
 	ENABLE_EMAIL_NOTIFICATIONS: z.coerce.boolean().default(true),
 	ENABLE_SHEET_SYNC: z.coerce.boolean().default(true),
+
+	// Promotional banner configuration
+	NEXT_PUBLIC_PROMO_BANNER_ENABLED: z.coerce.boolean().default(false),
+	NEXT_PUBLIC_PROMO_BANNER_MESSAGE: z.string().optional(),
+	NEXT_PUBLIC_PROMO_BANNER_CTA: z.string().optional(),
+
+	// Newsletter configuration
+	NEWSLETTER_PROMO_CODE: z.string().optional(),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;

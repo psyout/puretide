@@ -219,12 +219,21 @@ export async function generateAvery5160DocxSheets(labels: Label[], outputPath: s
 	const cellTopPadding = Number.isFinite(cellTopPadIn) ? cellTopPadIn * 1440 : cellPadding;
 
 	const makeLabelParagraphs = (label: Label | null) => {
-		if (!label) return [new Paragraph('')];
 		const paras: Paragraph[] = [];
 		const basePara = {
 			alignment: AlignmentType.LEFT,
 			spacing: { before: 0, after: 0 },
 		} as const;
+
+		// Add placement guide dot to every cell (top-left corner)
+		paras.push(
+			new Paragraph({
+				...basePara,
+				children: [new TextRun({ text: '•', font: 'Helvetica', size: 14, color: '000000' })],
+			}),
+		);
+
+		if (!label) return paras;
 
 		if (logoBytes) {
 			paras.push(
