@@ -54,11 +54,13 @@ export async function POST(request: Request) {
 		const url = new URL(request.url);
 		const dateParam = url.searchParams.get('date');
 		const testMode = url.searchParams.get('test') === 'true';
+		const forceUpload = url.searchParams.get('force') === 'true';
 		const requested = parseIsoDateOnly(dateParam);
 
 		console.log('[cron:afternoon-labels] start', {
 			cronType: 'afternoon',
 			testMode,
+			forceUpload,
 			requestedDate: requested ? requested.toISOString().slice(0, 10) : null,
 		});
 
@@ -67,6 +69,7 @@ export async function POST(request: Request) {
 			ordersFolderId: wrike.ordersFolderId,
 			labelsFolderId,
 			date: requested || undefined,
+			forceUpload,
 		});
 
 		console.log('[cron:afternoon-labels] done', result);

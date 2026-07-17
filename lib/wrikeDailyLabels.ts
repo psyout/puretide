@@ -774,7 +774,13 @@ export async function generateAndAttachLabelsForRange(params: {
 	}
 }
 
-export async function generateAndAttachAfternoonLabels(params: { apiToken: string; ordersFolderId: string; labelsFolderId: string; date?: Date }): Promise<AfternoonLabelsResult> {
+export async function generateAndAttachAfternoonLabels(params: {
+	apiToken: string;
+	ordersFolderId: string;
+	labelsFolderId: string;
+	date?: Date;
+	forceUpload?: boolean;
+}): Promise<AfternoonLabelsResult> {
 	const now = params.date || new Date();
 	// If date is explicitly provided, treat it as Vancouver time directly
 	// Otherwise, convert current time to Vancouver time
@@ -896,7 +902,7 @@ export async function generateAndAttachAfternoonLabels(params: { apiToken: strin
 
 		const attachments = await listAttachments(taskId, params.apiToken);
 		const existing = attachments.find((a) => String(a?.name ?? '') === outFileName);
-		if (existing?.id) {
+		if (existing?.id && !params.forceUpload) {
 			console.log('[wrikeDailyLabels] afternoon attachment already exists; skipping upload', {
 				cronType: 'afternoon',
 				isoDate,
@@ -915,13 +921,25 @@ export async function generateAndAttachAfternoonLabels(params: { apiToken: strin
 			};
 		}
 
+		let uploadPath = outPath;
+		if (existing?.id && params.forceUpload) {
+			const rerunName = `afternoon-labels-${isoDate}-avery-5160-rerun.docx`;
+			uploadPath = path.resolve(process.cwd(), rerunName);
+			try {
+				fs.copyFileSync(outPath, uploadPath);
+			} catch {
+				uploadPath = outPath;
+			}
+		}
+
 		console.log('[wrikeDailyLabels] afternoon uploading attachment to Wrike', {
 			cronType: 'afternoon',
 			taskId,
 			fileName: outFileName,
+			uploadPath,
 		});
 
-		const uploaded = await uploadAttachmentToTask(taskId, outPath, params.apiToken);
+		const uploaded = await uploadAttachmentToTask(taskId, uploadPath, params.apiToken);
 		if (!uploaded) {
 			console.error('[wrikeDailyLabels] afternoon wrike upload failed', { isoDate, taskId });
 			return {
