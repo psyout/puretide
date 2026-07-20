@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import type { Product, ProductVariant } from '@/types/product';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
-import { CreditCard, Truck, FlaskConical, FileText } from 'lucide-react';
+import { ChevronRight, CreditCard, FileBadge, FlaskConical, Truck } from 'lucide-react';
 import { iconMap } from '@/lib/productIcons';
 import Link from 'next/link';
 
@@ -171,6 +171,26 @@ export default function ProductDetailClient({ product, description, details, has
 				</fieldset>
 			)}
 
+			{/* COA */}
+			{hasCoaFile && (
+				<div className='mb-6'>
+					<Link
+						href={`/coa/${matchingCoaFile}`}
+						target='_blank'
+						rel='noopener noreferrer'
+						className='group flex w-full items-center gap-2 rounded-lg bg-gradient-to-br from-deep-tidal-teal to-deep-tidal-teal-800 px-4 py-3 text-mineral-white shadow-lg shadow-deep-tidal-teal/20 transition-all duration-200 hover:shadow-xl  hover:shadow-deep-tidal-teal/25 md:px-6'>
+						<span className='flex h-10 w-10 shrink-0 items-center justify-center  text-mineral-white'>
+							<FileBadge className='h-8 w-8 stroke-[1.5]' />
+						</span>
+						<span className='min-w-0 flex-1'>
+							<span className='block text-lg font-bold leading-tight tracking-tight'>View COA</span>
+							<span className='block text-sm font-medium text-mineral-white/85'>Certificate of Analysis</span>
+						</span>
+						<ChevronRight className='h-8 w-8 shrink-0' />
+					</Link>
+				</div>
+			)}
+
 			{/* Details & Description (accordion) */}
 			<div className='mb-6'>
 				<ProductTabs
@@ -181,7 +201,7 @@ export default function ProductDetailClient({ product, description, details, has
 
 			{/* Discount Table */}
 			{product.slug !== 'bacteriostatic-water' && (
-				<div className='mb-6 mt-10 max-w overflow-hidden rounded-lg border-deep-tidal-teal/10 bg-mineral-white shadow-sm'>
+				<div className='mb-6 mt-10 max-w overflow-hidden rounded-lg border-deep-tidal-teal/10 bg-mineral-white shadow-sm hidden'>
 					<div className='bg-deep-tidal-teal/5 px-4 py-2 border-b border-deep-tidal-teal/10'>
 						<h3 className='text-sm font-bold text-deep-tidal-teal-700 tracking-wider'>Discount per quantity</h3>
 					</div>
@@ -217,34 +237,23 @@ export default function ProductDetailClient({ product, description, details, has
 				</div>
 			)}
 
-			{/* COA */}
-			{hasCoaFile && (
-				<div className='mb-6'>
-					<div className='flex overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible gap-0.5'>
-						<FileText className='w-5 h-5 text-deep-tidal-teal-700' />
-						<div className='flex-shrink-0 inline-flex items-center'>
-							<Link
-								href={`/coa/${matchingCoaFile}`}
-								target='_blank'
-								rel='noopener noreferrer'
-								className='text-deep-tidal-teal-700 text-sm transition-colors duration-200 relative group hover:text-deep-tidal-teal-800 z-10 pl-0.5 pr-1'>
-								<span className='relative z-10 text-deep-tidal-teal-700 group-hover:text-deep-tidal-teal-800'>View COA</span>
-								<span className='absolute bottom-0 left-0 h-0.5 bg-deep-tidal-teal-700 transition-all duration-300 w-full md:w-0 md:group-hover:w-full md:origin-left'></span>
-							</Link>
-						</div>
-					</div>
-				</div>
-			)}
-
 			{/* Disclaimers */}
-			<div className='flex flex-col mb-6'>
-				<div className='flex items-center gap-2'>
-					<FlaskConical className='w-4 h-4 text-deep-tidal-teal-500 mt-0.5 flex-shrink-0' />
-					<p className='md:text-[13px] text-xs text-deep-tidal-teal-600'>For research use only. Not intended for human or animal consumption.</p>
+			<div className='mb-6 grid grid-cols-1 divide-y divide-deep-tidal-teal/15 rounded-2xl bg-gradient-to-br from-deep-tidal-teal/5 to-eucalyptus-50/80 p-4 xl:grid-cols-2 xl:divide-x xl:divide-y-0 xl:divide-deep-tidal-teal/20 xl:p-5'>
+							<div className='flex items-center gap-3 pb-4 xl:pr-6 xl:pb-0'>
+					<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
+						<FlaskConical className='h-6 w-6' />
+					</span>
+					<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
+						<strong className='font-bold text-md'>For research use only.</strong> Not intended for human or animal consumption.
+					</p>
 				</div>
-				<div className='flex items-center gap-2 mt-2'>
-					<Truck className='w-4 h-4 text-deep-tidal-teal-500 mt-0.5 flex-shrink-0' />
-					<p className='md:text-[13px] text-xs text-deep-tidal-teal-600'>Not responsible for shipments to incorrect addresses. Please double check.</p>
+				<div className='flex items-center gap-3 pt-4 xl:pl-6 xl:pt-0'>
+					<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
+						<Truck className='h-6 w-6' />
+					</span>
+					<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
+						<strong className='font-bold text-md'>Not responsible for shipments</strong> to incorrect addresses. Please double check before placing your order.
+					</p>
 				</div>
 			</div>
 
@@ -260,7 +269,10 @@ export default function ProductDetailClient({ product, description, details, has
 			)}
 
 			{/* Actions */}
-			<ProductActions product={productForActions} />
+							<div className='mb-8 md:mb-10'>
+								<ProductActions product={productForActions} />
+							</div>
+
 		</>
 	);
 }

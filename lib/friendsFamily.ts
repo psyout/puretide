@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { checkRateLimit } from '@/lib/rateLimit';
-import { consumeFriendsFamilyOtp, getUnconsumedFriendsFamilyOtpByEmail, incrementFriendsFamilyOtpAttempts, insertFriendsFamilyOtpRecord, isFriendsFamilyEmailAllowlisted } from '@/lib/ordersDb';
+import { consumeFriendsFamilyOtp, getUnconsumedFriendsFamilyOtpByEmail, incrementFriendsFamilyOtpAttempts, insertFriendsFamilyOtpRecord } from '@/lib/ordersDb';
 import { getEnv } from '@/lib/env';
+import { getCachedSheetFriendsFamilyAllowlist } from '@/lib/sheetCache';
 
 export type PaymentPath = 'manual' | 'bluepeak' | 'manual_friends_family';
 
@@ -28,6 +29,13 @@ export function normalizeEmail(raw: string): string {
 const OTP_TTL_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const OTP_ATTEMPT_LIMIT = 8;
+
+export async function isFriendsFamilyEmailAllowlisted(emailRaw: string): Promise<boolean> {
+	const email = normalizeEmail(emailRaw);
+	if (!email) return false;
+	const entries = await getCachedSheetFriendsFamilyAllowlist();
+	return entries.some((entry) => entry.email === email && entry.isActive);
+}
 
 export const FRIENDS_FAMILY_COOKIE_NAME = 'friends_family_session';
 

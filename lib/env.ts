@@ -62,6 +62,10 @@ const envSchema = z.object({
 	DIGIPAY_SECRET_KEY: z.string().optional(),
 	DIGIPAY_POSTBACK_ALLOWED_IP: z.string().optional(),
 
+	// Credit card provider switching
+	CREDIT_CARD_PROVIDER: z.enum(['digipay', 'gatewaylinx']).default('digipay'),
+	NEXT_PUBLIC_CREDIT_CARD_PROVIDER: z.enum(['digipay', 'gatewaylinx']).default('digipay'),
+
 	// BluePeak e-Transfer integration
 	BLUEPEAK_SECRET_KEY: z.string().optional(),
 	BLUEPEAK_WEBHOOK_SECRET: z.string().optional(),

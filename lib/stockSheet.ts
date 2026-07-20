@@ -2,6 +2,12 @@ import { google } from 'googleapis';
 import type { Product, PromoCode } from '@/types/product';
 import { products as baseProducts } from '@/lib/products';
 
+export type FriendsFamilySheetEntry = {
+	email: string;
+	isActive: boolean;
+	note?: string;
+};
+
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -61,6 +67,20 @@ const canonicalizeHeader = (value: string) =>
 		.replace(/[^a-z0-9]+/g, ' ')
 		.replace(/\s+/g, ' ')
 		.trim();
+
+const normalizeSheetEmail = (value: unknown) =>
+	String(value ?? '')
+		.trim()
+		.toLowerCase();
+
+const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const parseSheetBoolean = (value: unknown): boolean => {
+	const normalized = String(value ?? '')
+		.trim()
+		.toLowerCase();
+	return normalized === 'true' || normalized === 'yes' || normalized === '1';
+};
 
 const getSheetsClient = () => {
 	if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
@@ -280,6 +300,58 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 		});
 	} catch (error) {
 		reportSheetsError('Error reading promo codes from sheet', error);
+		return [];
+	}
+};
+
+export const writeSheetFriendsFamilyAllowlist = async (_entries: FriendsFamilySheetEntry[]) => {
+	throw new Error('Friends & Family allowlist is managed directly in the Google Sheet. Edit the "Friends & Family" worksheet instead.');
+};
+
+export const readSheetFriendsFamilyAllowlist = async (): Promise<FriendsFamilySheetEntry[]> => {
+	if (!SHEET_ID) return [];
+
+	try {
+		const sheets = getSheetsClient();
+		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'Friends & Family');
+		if (!sheetExists) {
+			console.error('Sheet "Friends & Family" not found in the spreadsheet. Please create a tab named "Friends & Family" with headers: Email, Active, Note.');
+			return [];
+		}
+
+		const response = await sheets.spreadsheets.values.get({
+			spreadsheetId: SHEET_ID,
+			range: "'Friends & Family'!A:C",
+		});
+		const rows = response.data.values ?? [];
+		if (rows.length <= 1) return [];
+
+		const [headerRowRaw, ...dataRows] = rows as unknown[][];
+		const headerRow = headerRowRaw.map((cell) => String(cell ?? ''));
+		const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
+			acc[canonicalizeHeader(header)] = index;
+			return acc;
+		}, {});
+		const emailIndex = indexMap.email ?? 0;
+		const activeIndex = indexMap.active ?? 1;
+		const noteIndex = indexMap.note ?? 2;
+
+		const entriesByEmail = new Map<string, FriendsFamilySheetEntry>();
+		dataRows.forEach((row) => {
+			const email = normalizeSheetEmail(row[emailIndex]);
+			if (!email || !isValidEmail(email)) return;
+
+			const note = String(row[noteIndex] ?? '').trim();
+			entriesByEmail.set(email, {
+				email,
+				isActive: parseSheetBoolean(row[activeIndex]),
+				...(note ? { note } : {}),
+			});
+		});
+		return Array.from(entriesByEmail.values()).sort((left, right) => left.email.localeCompare(right.email));
+	} catch (error) {
+		reportSheetsError('Error reading Friends & Family allowlist from sheet', error);
 		return [];
 	}
 };

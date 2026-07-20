@@ -8,6 +8,8 @@ export type EnvCheck = { key: string; required: boolean; message?: string };
 const CHECKS: EnvCheck[] = [
 	{ key: 'DIGIPAY_SITE_ID', required: false, message: 'Required for credit card checkout' },
 	{ key: 'DIGIPAY_ENCRYPTION_KEY', required: false, message: 'Required for credit card checkout' },
+	{ key: 'CREDIT_CARD_PROVIDER', required: false, message: 'Credit card provider selection (digipay|gatewaylinx)' },
+	{ key: 'NEXT_PUBLIC_CREDIT_CARD_PROVIDER', required: false, message: 'Frontend provider selection (digipay|gatewaylinx)' },
 	{ key: 'GOOGLE_SHEET_ID', required: false, message: 'Required for products/promos/clients from Sheets' },
 	{ key: 'SMTP_HOST', required: false, message: 'Required for contact form and order emails' },
 ];

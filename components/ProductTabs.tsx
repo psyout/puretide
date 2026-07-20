@@ -10,44 +10,30 @@ type ProductInfoProps = {
 
 export default function ProductTabs({ description, details }: ProductInfoProps) {
 	const [detailsOpen, setDetailsOpen] = useState(false);
-	const [descriptionOpen, setDescriptionOpen] = useState(true);
 
 	return (
-		<div className='space-y-2 flex flex-col gap-2'>
-			{/* Description - Accordion */}
-			<div className=' overflow-hidden'>
-				<button
-					onClick={() => setDescriptionOpen(!descriptionOpen)}
-					className={`w-full flex items-center justify-between px-0 md:px-4 py-3 transition-colors ${descriptionOpen ? 'border-b border-deep-tidal-teal/90' : ''}`}>
-					<span className='text-md font-bold text-deep-tidal-teal-700 tracking-wider'>Description</span>
-					<ChevronDown
-						className={`w-6 h-6 text-deep-tidal-teal-600 transition-all duration-200 hover:bg-deep-tidal-teal/10 hover:text-deep-tidal-teal-800 cursor-pointer rounded-full p-0.5 ${descriptionOpen ? 'rotate-180 bg-deep-tidal-teal/10 text-deep-tidal-teal-800' : ''}`}
-					/>
-				</button>
-				<div className={`overflow-hidden transition-all duration-200 min-h-0 border-b border-deep-tidal-teal/90 ${descriptionOpen ? 'max-h-96' : 'max-h-0'}`}>
-					<p className='px-0 md:px-4 py-3 text-[clamp(0.9rem,3.8vw,0.95rem)] leading-[clamp(1rem,5.2vw,1.4rem)] text-deep-tidal-teal-700 tracking-normal text-pretty break-normal hyphens-none text-left lg:[text-align:justify] lg:hyphens-auto lg:[hyphenate-character:""] [word-break:normal] [overflow-wrap:normal]'>
-						{description}
-					</p>
-				</div>
-			</div>
+		<div className='space-y-5 text-deep-tidal-teal-800'>
+			<section className='border-t border-deep-tidal-teal/10 pt-5'>
+							<h2 className='mb-2 text-lg font-bold tracking-tight'>Description</h2>
+				<p className='text-[0.95rem] leading-6 text-deep-tidal-teal-700 text-pretty'>{description}</p>
+			</section>
 
-			{/* Details - Accordion */}
 			{details && (
-				<div className='overflow-hidden'>
+				<section className='border-y border-deep-tidal-teal/10 py-5'>
 					<button
+						type='button'
 						onClick={() => setDetailsOpen(!detailsOpen)}
-						className={`w-full flex items-center justify-between px-0 md:px-4 py-3 transition-colors border-deep-tidal-teal/90 ${detailsOpen ? '' : 'border-b border-deep-tidal-teal/90'}`}>
-						<span className='text-md font-bold text-deep-tidal-teal-700 tracking-wider '>Details</span>
-						<ChevronDown
-							className={`w-6 h-6 text-deep-tidal-teal-600 transition-all duration-200 hover:bg-deep-tidal-teal/10 hover:text-deep-tidal-teal-800 cursor-pointer rounded-full p-0.5 ${detailsOpen ? 'rotate-180 bg-deep-tidal-teal/10 text-deep-tidal-teal-800' : ''}`}
-						/>
+						aria-expanded={detailsOpen}
+						className='flex w-full items-center justify-between gap-3 py-1 text-left text-lg font-bold tracking-tight text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal-600'>
+						<span>Details</span>
+						<ChevronDown className={`h-5 w-5 shrink-0 transition-transform duration-200 ${detailsOpen ? 'rotate-180' : ''}`} />
 					</button>
-					<div className={`overflow-hidden transition-all duration-200 min-h-0 ${detailsOpen ? 'max-h-96 border-t border-deep-tidal-teal/90' : 'max-h-0'} `}>
-						<p className='px-0 md:px-4 py-3 text-[clamp(0.9rem,3.8vw,0.95rem)] leading-[clamp(1rem,5.2vw,1.4rem)] text-deep-tidal-teal-700 text-pretty break-normal hyphens-none text-left lg:[text-align:justify] lg:hyphens-auto lg:[hyphenate-character:""] [word-break:normal] [overflow-wrap:normal]'>
-							{details}
-						</p>
+					<div className={`grid transition-[grid-template-rows] duration-300 ease-out ${detailsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+						<div className='min-h-0 overflow-hidden'>
+							<p className='pt-3 text-[0.95rem] leading-6 text-deep-tidal-teal-700 text-pretty'>{details}</p>
+						</div>
 					</div>
-				</div>
+				</section>
 			)}
 		</div>
 	);
