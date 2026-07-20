@@ -202,7 +202,7 @@ export default function ProductDetailClient({ product, description, details, has
 			{/* Discount Table */}
 			{product.slug !== 'bacteriostatic-water' && (
 				<div className='mb-6 mt-10 max-w overflow-hidden rounded-lg border-deep-tidal-teal/10 bg-mineral-white shadow-sm hidden'>
-					<div className='bg-deep-tidal-teal/5 px-4 py-2 border-b border-deep-tidal-teal/10'>
+					<div className='bg-deep-tidal-teal/5 px-3 py-2 border-b border-deep-tidal-teal/10'>
 						<h3 className='text-sm font-bold text-deep-tidal-teal-700 tracking-wider'>Discount per quantity</h3>
 					</div>
 					<div className='overflow-x-auto'>
