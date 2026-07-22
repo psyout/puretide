@@ -62,7 +62,7 @@ const PromoBanner = forwardRef<HTMLDivElement, PromoBannerProps>(({ messages, ct
 			onMouseEnter={() => setIsPaused(true)}
 			onMouseLeave={() => setIsPaused(false)}
 			className='bg-eucalyptus-50/100 text-white'>
-			<div className='max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-row sm:flex-row items-center justify-end gap-2 sm:gap-4 min-h-[64px]'>
+			<div className='max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-row sm:flex-row items-center justify-end gap-2 sm:gap-4 min-h-[64px] sm:min-h-[48px]'>
 				<div className='flex-1 sm:flex-none overflow-hidden'>
 					<AnimatePresence mode='wait'>
 						<motion.p
