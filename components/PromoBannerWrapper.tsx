@@ -65,7 +65,7 @@ export default function PromoBannerWrapper({ enabled = false, message, cta }: Pr
 				className='fixed top-0 left-0 right-0 z-[120]'>
 				<AnimatePresence>
 					<PromoBanner
-						message={message}
+						messages={message ? [message] : undefined}
 						cta={cta}
 						ctaButtonRef={ctaButtonRef}
 						onCtaClick={() => setIsModalOpen(true)}
