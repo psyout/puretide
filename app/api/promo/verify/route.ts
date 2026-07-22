@@ -23,6 +23,11 @@ export async function POST(request: Request) {
 
 		const normalizedCode = code.trim().toUpperCase();
 		const promoCodes = await readSheetPromoCodes();
+		console.log('[DEBUG] Promo verification:', {
+			normalizedCode,
+			promoCodesCount: promoCodes.length,
+			allCodes: promoCodes.map((p) => ({ code: p.code, active: p.active, discount: p.discount })),
+		});
 
 		if (promoCodes.length === 0) {
 			// This could mean either no codes exist or the sheet is missing
@@ -30,6 +35,7 @@ export async function POST(request: Request) {
 		}
 
 		const promo = promoCodes.find((p) => p.code === normalizedCode && p.active);
+		console.log('[DEBUG] Found promo:', promo ? { code: promo.code, active: promo.active, discount: promo.discount } : 'Not found');
 
 		if (!promo) {
 			return NextResponse.json({ ok: false, error: 'Invalid or expired promo code' }, { status: 404 });

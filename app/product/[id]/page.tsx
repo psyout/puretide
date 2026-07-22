@@ -111,9 +111,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Trust Indicators */}
-					<div className='grid grid-cols-3 divide-x divide-deep-tidal-teal/10 border-t border-deep-tidal-teal/10'>
+					<div className='grid grid-rows-1 md:grid-cols-3 divide-x divide-deep-tidal-teal/10 border-t  border-deep-tidal-teal/10'>
 						<div className='flex flex-col items-center justify-center gap-2 p-3 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-														<ShieldCheck className='h-8 w-8 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
+														<ShieldCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
 														<div>
 															<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Secure Checkout</h3>
 															<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Your payment is protected</p>

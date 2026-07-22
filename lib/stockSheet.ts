@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import type { Product, PromoCode } from '@/types/product';
+import type { Product, PromoCode, PromotionCampaign, PromotionTier } from '@/types/product';
 import { products as baseProducts } from '@/lib/products';
 
 export type FriendsFamilySheetEntry = {
@@ -81,6 +81,21 @@ const parseSheetBoolean = (value: unknown): boolean => {
 		.toLowerCase();
 	return normalized === 'true' || normalized === 'yes' || normalized === '1';
 };
+
+const getMappedCell = (row: unknown[], indexMap: Record<string, number>, headerAliases: string[]): string => {
+	for (const header of headerAliases) {
+		const index = indexMap[canonicalizeHeader(header)];
+		if (index != null) return String(row[index] ?? '').trim();
+	}
+	return '';
+};
+
+const buildPromotionId = (value: string) =>
+	value
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'promotion';
 
 const getSheetsClient = () => {
 	if (!SHEET_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
@@ -300,6 +315,101 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 		});
 	} catch (error) {
 		reportSheetsError('Error reading promo codes from sheet', error);
+		return [];
+	}
+};
+
+export const readSheetPromotionCampaigns = async (): Promise<PromotionCampaign[]> => {
+	if (!SHEET_ID) return [];
+
+	try {
+		const sheets = getSheetsClient();
+		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'Promotions');
+		if (!sheetExists) {
+			console.error('Sheet "Promotions" not found in the spreadsheet. Please create a tab named "Promotions" with campaign and tier columns.');
+			return [];
+		}
+
+		const response = await sheets.spreadsheets.values.get({
+			spreadsheetId: SHEET_ID,
+			range: 'Promotions!A:K',
+		});
+		const rows = response.data.values ?? [];
+		if (rows.length <= 1) return [];
+
+		const [headerRowRaw, ...dataRows] = rows as unknown[][];
+		const headerRow = headerRowRaw.map((cell) => String(cell ?? ''));
+		const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
+			acc[canonicalizeHeader(header)] = index;
+			return acc;
+		}, {});
+
+		const campaigns = new Map<string, PromotionCampaign>();
+		dataRows.forEach((row) => {
+			const title = getMappedCell(row, indexMap, ['Campaign Title', 'Campaign', 'Title']);
+			const promoCode = getMappedCell(row, indexMap, ['Promo Code', 'Code']);
+			console.log('[DEBUG] Processing row:', { title, promoCode, row });
+			if (!title || !promoCode) {
+				console.log('[DEBUG] Skipping row - missing title or promo code');
+				return;
+			}
+
+			const minimumOrderAmount = parseNumber(getMappedCell(row, indexMap, ['Minimum Order Amount', 'Minimum Purchase Amount', 'Minimum Subtotal', 'Minimum Order', 'Min Amount']) || '0');
+			const discountPercentage = parseNumber(getMappedCell(row, indexMap, ['Discount Percentage', 'Discount Percent', 'Discount']) || '0');
+			console.log('[DEBUG] Parsed values:', { minimumOrderAmount, discountPercentage });
+			if (!Number.isFinite(minimumOrderAmount) || !Number.isFinite(discountPercentage)) {
+				console.log('[DEBUG] Skipping row - invalid numeric values');
+				return;
+			}
+
+			const campaignIdRaw = getMappedCell(row, indexMap, ['Campaign ID', 'Campaign Id', 'ID']);
+			const subtitle = getMappedCell(row, indexMap, ['Subtitle', 'Tagline']);
+			const message = getMappedCell(row, indexMap, ['Promotional Message', 'Message', 'Description']);
+			const backgroundImage = getMappedCell(row, indexMap, ['Background Image', 'Background Image URL', 'Background']);
+			const startDate = getMappedCell(row, indexMap, ['Start Date', 'Starts At', 'Start']);
+			const endDate = getMappedCell(row, indexMap, ['End Date', 'Ends At', 'End']);
+			const displayOrder = parseNumber(getMappedCell(row, indexMap, ['Display Order', 'Order', 'Sort Order']) || '0');
+			const active = parseSheetBoolean(getMappedCell(row, indexMap, ['Active', 'Enabled', 'Status']));
+			if (!active) return;
+			const campaignId = buildPromotionId(campaignIdRaw || `${title}-${startDate}-${endDate}`);
+			const tier: PromotionTier = {
+				minimumOrderAmount,
+				discountPercentage,
+				promoCode: promoCode.trim().toUpperCase(),
+				displayOrder: Number.isFinite(displayOrder) ? displayOrder : 0,
+			};
+
+			const existing = campaigns.get(campaignId);
+			if (existing) {
+				existing.tiers.push(tier);
+				return;
+			}
+
+			campaigns.set(campaignId, {
+				id: campaignId,
+				title,
+				...(subtitle ? { subtitle } : {}),
+				...(message ? { message } : {}),
+				...(backgroundImage ? { backgroundImage } : {}),
+				active,
+				displayOrder: Number.isFinite(displayOrder) ? displayOrder : 0,
+				...(startDate ? { startDate } : {}),
+				...(endDate ? { endDate } : {}),
+				tiers: [tier],
+			});
+		});
+
+		const finalCampaigns = Array.from(campaigns.values())
+			.map((campaign) => ({
+				...campaign,
+				tiers: campaign.tiers.sort((left, right) => left.displayOrder - right.displayOrder || left.minimumOrderAmount - right.minimumOrderAmount),
+			}))
+			.sort((left, right) => left.displayOrder - right.displayOrder || left.title.localeCompare(right.title));
+		console.log('[DEBUG] Final campaigns returned:', JSON.stringify(finalCampaigns, null, 2));
+		return finalCampaigns;
+	} catch (error) {
+		reportSheetsError('Error reading promotions from sheet', error);
 		return [];
 	}
 };

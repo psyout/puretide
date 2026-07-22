@@ -43,6 +43,26 @@ export interface PromoCode {
 	active: boolean;
 }
 
+export interface PromotionTier {
+	minimumOrderAmount: number;
+	discountPercentage: number;
+	promoCode: string;
+	displayOrder: number;
+}
+
+export interface PromotionCampaign {
+	id: string;
+	title: string;
+	subtitle?: string;
+	message?: string;
+	backgroundImage?: string;
+	active: boolean;
+	displayOrder: number;
+	startDate?: string;
+	endDate?: string;
+	tiers: PromotionTier[];
+}
+
 export interface CartItem extends Product {
 	quantity: number;
 }
