@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { PromotionCampaign } from '@/types/product';
@@ -121,9 +122,11 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 							</button>
 
 							<div className='relative z-10 mx-auto flex min-h-full max-w-[680px] flex-col items-center justify-center text-center'>
-								<img
+								<Image
 									src='/logo.png'
 									alt='Pure Tide Advanced Peptide Wellness'
+									width={80}
+									height={80}
 									className='w-[60px] drop-shadow-[0_8px_18px_rgba(0,0,0,0.18)] sm:w-[80px] brightness-0 invert'
 								/>
 
@@ -154,9 +157,11 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 										<div
 											key={`${tier.promoCode}-${tier.minimumOrderAmount}`}
 											className={`flex flex-col items-center gap-1.5 py-2 text-center sm:grid sm:grid-cols-[28px_minmax(70px,0.75fr)_28px_minmax(100px,1fr)_minmax(100px,0.9fr)] sm:items-center sm:gap-2.5 sm:py-2.5 sm:text-left ${index > 0 ? 'border-t border-cyan-200/35' : ''}`}>
-											<img
+											<Image
 												src='/logo.png'
 												alt='Pure Tide'
+												width={36}
+												height={24}
 												className='h-8 w-auto brightness-0 invert sm:h-6 sm:w-9'
 											/>
 											<div className='flex flex-col items-center gap-1 sm:hidden'>
