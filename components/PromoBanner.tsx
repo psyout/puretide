@@ -21,7 +21,7 @@ const PromoBanner = forwardRef<HTMLDivElement, PromoBannerProps>(({ messages, ct
 	const defaultMessages = [
 		'Claim 10% OFF your first order. Enter your email to receive your exclusive discount code 🎉',
 		'Enjoy free shipping on all orders over $300 🚚',
-		'All products are third-party tested in Canada for purity and quality.',
+		'All products are third-party tested in Canada for purity and quality',
 	];
 
 	const bannerMessages = messages || defaultMessages;
