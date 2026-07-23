@@ -82,10 +82,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					<div className='grid grid-cols-1 md:grid-cols-[minmax(0,40%)_minmax(0,60%)]'>
 						<div className='p-0 md:col-start-2 lg:p-10'>
 							{/* Mobile Image Container */}
-															<div className='relative p-4 flex items-center justify-center mb-4 md:hidden'>
-																{hasCoaFile && <div className='absolute left-2 top-2 z-10'><TestidesBadge /></div>}
-																<ProductImage product={product} />
-															</div>
+							<div className='relative p-4 flex items-center justify-center mb-4 md:hidden'>
+								{hasCoaFile && (
+									<div className='absolute left-2 top-2 z-10'>
+										<TestidesBadge />
+									</div>
+								)}
+								<ProductImage product={product} />
+							</div>
 
 							{/* Product Detail Client - handles variants, pricing, icons, tabs, actions */}
 							<ProductDetailClient
@@ -99,10 +103,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						</div>
 
 						{/* Desktop Image Container */}
-													<div className='hidden md:col-start-1 md:row-start-1 md:flex md:min-h-[660px] md:items-start md:justify-center md:p-6 lg:min-h-[720px] lg:p-10'>
-														<div className='relative w-full max-w-sm bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 px-4 py-16 flex justify-center items-start rounded-xl'>
-															{hasCoaFile && <div className='absolute left-4 top-4 z-10'><TestidesBadge /></div>}
-															<ProductImage
+						<div className='hidden md:col-start-1 md:row-start-1 md:flex md:min-h-[660px] md:items-start md:justify-center md:p-6 lg:min-h-[720px] lg:p-10'>
+							<div className='relative w-full max-w-sm bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 px-4 py-16 flex justify-center items-start rounded-xl'>
+								{hasCoaFile && (
+									<div className='absolute left-4 top-4 z-10'>
+										<TestidesBadge />
+									</div>
+								)}
+								<ProductImage
 									product={product}
 									priority
 								/>
@@ -111,26 +119,26 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Trust Indicators */}
-					<div className='grid grid-rows-1 md:grid-cols-3 divide-x divide-deep-tidal-teal/10 border-t  border-deep-tidal-teal/10'>
+					<div className='grid grid-rows-1 md:grid-cols-3 divide-y divide-deep-tidal-teal/10 md:divide-y-0 md:divide-x border-t border-deep-tidal-teal/10'>
 						<div className='flex flex-col items-center justify-center gap-2 p-3 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-														<ShieldCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
-														<div>
-															<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Secure Checkout</h3>
-															<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Your payment is protected</p>
+							<ShieldCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
+							<div>
+								<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Secure Checkout</h3>
+								<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Your payment is protected</p>
 							</div>
 						</div>
 						<div className='flex flex-col items-center justify-center gap-2 p-3 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-														<BadgeCheck className='h-8 w-8 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
-														<div>
-															<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Quality Assured</h3>
-															<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Lab tested & verified</p>
+							<BadgeCheck className='h-8 w-8 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
+							<div>
+								<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Quality Assured</h3>
+								<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Lab tested & verified</p>
 							</div>
 						</div>
 						<div className='flex flex-col items-center justify-center gap-2 p-3 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-														<PackageCheck className='h-8 w-8 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
-														<div>
-															<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Discreet Packaging</h3>
-															<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Private & secure delivery</p>
+							<PackageCheck className='h-8 w-8 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
+							<div>
+								<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Discreet Packaging</h3>
+								<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Private & secure delivery</p>
 							</div>
 						</div>
 					</div>

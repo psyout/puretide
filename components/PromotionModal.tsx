@@ -156,28 +156,21 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 									{campaign.tiers.map((tier, index) => (
 										<div
 											key={`${tier.promoCode}-${tier.minimumOrderAmount}`}
-											className={`flex flex-col items-center gap-1.5 py-2 text-center sm:grid sm:grid-cols-[28px_minmax(70px,0.75fr)_28px_minmax(100px,1fr)_minmax(100px,0.9fr)] sm:items-center sm:gap-2.5 sm:py-2.5 sm:text-left ${index > 0 ? 'border-t border-cyan-200/35' : ''}`}>
-											<Image
-												src='/logo.png'
-												alt='Pure Tide'
-												width={36}
-												height={24}
-												className='h-8 w-auto brightness-0 invert sm:h-6 sm:w-9'
-											/>
+											className={`flex flex-col items-center gap-1.5 py-2 text-center sm:grid sm:grid-cols-[minmax(70px,0.75fr)_minmax(28px,0.2fr)_minmax(100px,1fr)_minmax(100px,0.9fr)] sm:items-center sm:gap-2.5 sm:py-2.5 sm:text-left ${index > 0 ? 'border-t border-cyan-200/35' : ''}`}>
 											<div className='flex flex-col items-center gap-1 sm:hidden'>
 												<div className={`text-lg font-black tracking-[-0.04em] ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
 													{formatCurrency(tier.minimumOrderAmount)}
 												</div>
 												<div className='text-sm font-black uppercase tracking-[-0.04em] text-[#23c5cf]'>SAVE {tier.discountPercentage}%</div>
 												<div className={`text-sm font-semibold ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
-													<span className={`text-xs font-normal ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>Code: </span>
+													<span className={`text-md font-normal ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>Code: </span>
 													<span className='font-black text-[#23c5cf]'>{tier.promoCode}</span>
 												</div>
 											</div>
 											<div className={`hidden sm:block text-lg font-black tracking-[-0.04em] sm:text-xl ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
 												{formatCurrency(tier.minimumOrderAmount)}
 											</div>
-											<div className='hidden sm:block text-xl font-light text-[#23c5cf] sm:text-2xl'>→</div>
+											<div className='hidden sm:flex sm:items-center sm:justify-center text-xl font-light text-[#23c5cf] sm:text-2xl'>→</div>
 											<div className='hidden sm:block text-sm font-black uppercase tracking-[-0.04em] text-[#23c5cf] sm:text-lg'>SAVE {tier.discountPercentage}%</div>
 											<div className={`hidden sm:block col-span-1 text-xs font-semibold sm:text-sm ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
 												<span className={`font-normal ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>(code: </span>
