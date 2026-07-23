@@ -94,7 +94,8 @@ jobs:
           set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
           mkdir -p ~/.ssh
-          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          echo "Adding VPS to known_hosts on port $PORT..."
+          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts || echo "Warning: ssh-keyscan failed, continuing anyway"
 
       - name: SSH smoke test
         shell: bash
@@ -102,30 +103,31 @@ jobs:
           set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$SSH_TARGET" "echo ok"
+          echo "Testing SSH connection to $SSH_TARGET on port $PORT..."
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "echo ok"
 
       - name: Stop app and clean old artifacts on VPS
         run: |
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$PORT" "$SSH_TARGET" "pm2 stop \"${PM2_APP}\" || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone .next/static"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "pm2 stop \"${PM2_APP}\" || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone .next/static"
 
       - name: Sync build artifacts to VPS
         run: |
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p ${PORT}" --exclude='node_modules' .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/.next/standalone/"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p ${PORT}" .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p ${PORT}" public/ "${SSH_TARGET}:${VPS_PATH}/public/"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p ${PORT}" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" --exclude='node_modules' .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/.next/standalone/"
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" public/ "${SSH_TARGET}:${VPS_PATH}/public/"
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
 
       - name: Finalize runtime and restart PM2
         run: |
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; rm -rf .next/standalone/.next/static; mkdir -p .next/standalone/.next; cp -R .next/static .next/standalone/.next/static; rm -rf .next/standalone/public; cp -R public .next/standalone/public"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$PORT" "$SSH_TARGET" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm install --omit=dev"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; mkdir -p .next/standalone/node_modules/sql.js/dist; cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/standalone/node_modules/sql.js/dist/sql-wasm.wasm"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$PORT" "$SSH_TARGET" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; [ -f .env ] && . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -p "$PORT" "$SSH_TARGET" "pm2 describe \"${PM2_APP}\" | sed -n '1,120p'"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; rm -rf .next/standalone/.next/static; mkdir -p .next/standalone/.next; cp -R .next/static .next/standalone/.next/static; rm -rf .next/standalone/public; cp -R public .next/standalone/public"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm install --omit=dev"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; mkdir -p .next/standalone/node_modules/sql.js/dist; cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/standalone/node_modules/sql.js/dist/sql-wasm.wasm"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; [ -f .env ] && . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "pm2 describe \"${PM2_APP}\" | sed -n '1,120p'"
