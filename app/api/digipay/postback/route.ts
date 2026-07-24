@@ -4,6 +4,8 @@ import { getOrderBySessionFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
 import { createRetryJobForOrder } from '@/lib/retryJobs';
 import { validateOrderStateTransition, type OrderPaymentStatus } from '@/lib/orderComputation';
+import { getPaymentProvider } from '@/lib/paymentProvider';
+import { getGatewaylinxConfig } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -153,149 +155,116 @@ function verifyHmacSignature(rawBody: string, request: Request): { ok: true } | 
 
 export async function POST(request: Request) {
 	try {
-		/* ---------- IP Validation ---------- */
-		const clientIp = extractClientIp(request);
-		const allowedIps = getAllowedIps();
+		// Use provider abstraction to validate the postback
+		const provider = getPaymentProvider();
+		const gatewaylinxConfig = getGatewaylinxConfig();
+		const isGatewaylinx = !!gatewaylinxConfig;
 
-		if (!clientIp || !allowedIps.includes(clientIp)) {
-			console.warn(
-				JSON.stringify({
-					label: 'digipay:postback:rejected_ip',
-					clientIp: clientIp || '(empty)',
-				}),
-			);
-			return xmlResponse('fail', 101, `Request from unauthorized IP: ${clientIp || 'unknown'}`);
+		const result = await provider.validatePaymentNotification(request);
+
+		if (!result.ok) {
+			console.warn(JSON.stringify({ label: 'digipay:postback:validation_failed', orderNumber: result.orderNumber }));
+			return xmlResponse('fail', 102, 'Validation failed');
 		}
 
-		const rawBody = await request.text();
-
-		/* ---------- HMAC ---------- */
-		const hmac = verifyHmacSignature(rawBody, request);
-		if (!hmac.ok) {
-			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_hmac', message: hmac.message }));
-			return xmlResponse('fail', 103, hmac.message);
-		}
-
-		/* ---------- Parse ---------- */
-		const data = parsePostbackBody(rawBody);
-		if (Object.keys(data).length === 0) return xmlResponse('fail', 102, 'Invalid postback body');
-
-		const session = typeof data.session === 'string' ? data.session.trim() : '';
-
-		if (!session) {
-			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_session', session: '(empty)' }));
-			return xmlResponse('fail', 102, "Invalid session variable: 'empty'");
-		}
-
-		/* ---------- Load Order ---------- */
-		const order = await getOrderBySessionFromDb(session);
-
+		// Load order
+		const order = await getOrderBySessionFromDb(result.orderNumber);
 		if (!order) {
-			console.warn(JSON.stringify({ label: 'digipay:postback:unknown_session', session }));
-			return xmlResponse('fail', 102, 'Invalid session variable');
+			console.warn(JSON.stringify({ label: 'digipay:postback:unknown_order', orderNumber: result.orderNumber }));
+			return xmlResponse('fail', 102, 'Unknown order');
 		}
 
-		if (order.paymentStatus === 'paid') return xmlResponse('ok', 100, 'Order already processed', session);
+		// Check if order already paid (idempotency)
+		if (order.paymentStatus === 'paid') {
+			console.log(JSON.stringify({ label: 'digipay:postback:already_paid', orderNumber: result.orderNumber }));
+			return xmlResponse('ok', 100, 'Order already processed', result.orderNumber);
+		}
 
-		/* ---------- Payment Status Validation ---------- */
-		const statusRaw = typeof data.status === 'string' ? data.status.trim().toLowerCase() : typeof data.result === 'string' ? data.result.trim().toLowerCase() : '';
+		// For interim statuses (e.g., 3ds_required), return 200 but don't mark as paid
+		if (result.rawStatus && result.rawStatus !== 'approved') {
+			console.log(JSON.stringify({ label: 'digipay:postback:interim_status', orderNumber: result.orderNumber, status: result.rawStatus }));
+			return xmlResponse('ok', 100, 'Interim status acknowledged');
+		}
 
-		const approvedStatuses = ['approved', 'success', 'completed'];
-
-		// DigiPay's documented postback may omit status/result; only reject when explicitly present and not approved
-		if (statusRaw && !approvedStatuses.includes(statusRaw)) {
-			console.warn(JSON.stringify({ label: 'digipay:postback:not_approved', session, status: statusRaw }));
-			if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
-				console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'failed' }));
-				return xmlResponse('ok', 100, 'Order already processed', session);
+		// Amount validation
+		if (result.amountReceived !== undefined) {
+			const expectedAmount = Number(order.total ?? 0);
+			if (Math.abs(result.amountReceived - expectedAmount) > 0.01) {
+				console.warn(
+					JSON.stringify({
+						label: 'digipay:postback:amount_mismatch',
+						orderNumber: result.orderNumber,
+						expectedAmount,
+						receivedAmount: result.amountReceived,
+					}),
+				);
+				if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
+					return xmlResponse('ok', 100, 'Order already processed');
+				}
+				await upsertOrderInDb({
+					...order,
+					paymentStatus: 'failed',
+					paymentFailure: {
+						reason: 'amount_mismatch',
+						expectedAmount,
+						receivedAmount: result.amountReceived,
+						updatedAt: new Date().toISOString(),
+					},
+				} as Record<string, unknown>);
+				return xmlResponse('fail', 104, 'Amount mismatch');
 			}
-			await upsertOrderInDb({
-				...order,
-				paymentStatus: 'failed',
-				paymentFailure: {
-					reason: 'not_approved',
-					providerStatus: statusRaw,
-					updatedAt: new Date().toISOString(),
-				},
-			} as Record<string, unknown>);
-			return xmlResponse('fail', 105, 'Payment not approved');
 		}
 
-		/* ---------- Amount Validation ---------- */
-		const amountVal = data.amount;
-		const rawAmount = typeof amountVal === 'number' ? String(amountVal) : typeof amountVal === 'string' ? amountVal.trim() : '';
-
-		const paidAmount = Number(rawAmount.replace('_', '.'));
-		const expectedAmount = Number(order.total ?? 0);
-
-		if (!rawAmount || Number.isNaN(paidAmount)) {
-			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_amount', session, rawAmount }));
-			if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
-				console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'failed' }));
-				return xmlResponse('ok', 100, 'Order already processed', session);
-			}
-			await upsertOrderInDb({
-				...order,
-				paymentStatus: 'failed',
-				paymentFailure: {
-					reason: 'invalid_amount',
-					rawAmount,
-					updatedAt: new Date().toISOString(),
-				},
-			} as Record<string, unknown>);
-			return xmlResponse('fail', 102, 'Invalid amount format');
-		}
-
-		if (Math.abs(paidAmount - expectedAmount) > 0.01) {
-			console.warn(
-				JSON.stringify({
-					label: 'digipay:postback:amount_mismatch',
-					session,
-					expectedAmount,
-					paidAmount,
-					rawAmount,
-				}),
-			);
-			if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
-				console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'failed' }));
-				return xmlResponse('ok', 100, 'Order already processed', session);
-			}
-			await upsertOrderInDb({
-				...order,
-				paymentStatus: 'failed',
-				paymentFailure: {
-					reason: 'amount_mismatch',
-					expectedAmount,
-					paidAmount,
-					rawAmount,
-					updatedAt: new Date().toISOString(),
-				},
-			} as Record<string, unknown>);
-			return xmlResponse('fail', 104, `Amount mismatch. Expected ${expectedAmount}, received ${paidAmount}`);
-		}
-
-		console.log(JSON.stringify({ label: 'digipay:postback:approved', session, paidAmount }));
+		console.log(JSON.stringify({ label: 'digipay:postback:approved', orderNumber: result.orderNumber, amountReceived: result.amountReceived }));
 
 		const paidAt = new Date().toISOString();
 
-		/* ---------- Run Fulfillment first; mark paid only after success ---------- */
+		// Gatewaylinx dry-run fulfillment mode
+		if (isGatewaylinx && gatewaylinxConfig.dryRunFulfillment) {
+			console.log(JSON.stringify({ label: 'digipay:postback:dry_run', orderNumber: result.orderNumber }));
+
+			// Store additive dry-run audit marker in order_json
+			const existingOrderJson = ((order as Record<string, unknown>).order_json as Record<string, unknown>) || {};
+			const gatewaylinxAudit = {
+				dryRunApprovedAt: paidAt,
+				transactionId: result.transactionId,
+				amountReceived: result.amountReceived,
+				status: result.rawStatus || 'approved',
+			};
+
+			await upsertOrderInDb({
+				...order,
+				order_json: {
+					...existingOrderJson,
+					gatewaylinx: gatewaylinxAudit,
+				},
+			} as Record<string, unknown>);
+
+			console.log(JSON.stringify({ label: 'digipay:postback:dry_run_audit_stored', orderNumber: result.orderNumber, audit: gatewaylinxAudit }));
+
+			// Keep paymentStatus: "pending" - do not trigger fulfillment
+			// Do not decrement stock, create Wrike tasks, or send emails
+			return xmlResponse('ok', 100, 'Dry-run: audit stored, fulfillment skipped');
+		}
+
+		// Production mode: run full fulfillment
 		let emailStatus: { sent: boolean; skipped: boolean; error?: string };
 		let adminEmailStatus: { sent: boolean; skipped: boolean; error?: string };
 		let fulfillmentFailed = false;
 		try {
-			const result = await runFulfillment(order as FulfillmentOrder);
-			emailStatus = result.emailStatus;
-			adminEmailStatus = result.adminEmailStatus;
+			const fulfillmentResult = await runFulfillment(order as FulfillmentOrder);
+			emailStatus = fulfillmentResult.emailStatus;
+			adminEmailStatus = fulfillmentResult.adminEmailStatus;
 		} catch (fulfillError) {
-			console.error(JSON.stringify({ label: 'digipay:postback:fulfillment_failed', session }));
+			console.error(JSON.stringify({ label: 'digipay:postback:fulfillment_failed', orderNumber: result.orderNumber }));
 			console.error(fulfillError);
 			fulfillmentFailed = true;
 			// Create retry job for later fulfillment
 			try {
-				await createRetryJobForOrder(session);
-				console.log(`[digipay:postback] Created retry job for session ${session}`);
+				await createRetryJobForOrder(result.orderNumber);
+				console.log(`[digipay:postback] Created retry job for order ${result.orderNumber}`);
 			} catch (retryError) {
-				console.error(`[digipay:postback] Failed to create retry job for session ${session}`, retryError);
+				console.error(`[digipay:postback] Failed to create retry job for order ${result.orderNumber}`, retryError);
 			}
 			// Set default email status for failed fulfillment
 			emailStatus = { sent: false, skipped: false, error: 'Fulfillment failed' };
@@ -303,16 +272,16 @@ export async function POST(request: Request) {
 		}
 
 		if (!emailStatus.sent) {
-			console.warn(`[DigiPay postback] Order ${session} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : (emailStatus.error ?? 'unknown')}`);
+			console.warn(`[digipay:postback] Order ${result.orderNumber} customer email not sent: ${emailStatus.skipped ? 'SMTP not configured' : (emailStatus.error ?? 'unknown')}`);
 		}
 		if (!adminEmailStatus.sent) {
-			console.warn(`[DigiPay postback] Order ${session} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : (adminEmailStatus.error ?? 'unknown')}`);
+			console.warn(`[digipay:postback] Order ${result.orderNumber} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : (adminEmailStatus.error ?? 'unknown')}`);
 		}
 
 		// Validate state transition before marking as paid
 		if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'paid')) {
-			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', session, from: order.paymentStatus, to: 'paid' }));
-			return xmlResponse('ok', 100, 'Order already processed', session);
+			console.warn(JSON.stringify({ label: 'digipay:postback:invalid_transition', orderNumber: result.orderNumber, from: order.paymentStatus, to: 'paid' }));
+			return xmlResponse('ok', 100, 'Order already processed');
 		}
 
 		await upsertOrderInDb({
@@ -335,9 +304,9 @@ export async function POST(request: Request) {
 			adminEmailStatus,
 		} as Record<string, unknown>);
 
-		console.log(JSON.stringify({ label: 'digipay:postback:marked_paid', session }));
+		console.log(JSON.stringify({ label: 'digipay:postback:marked_paid', orderNumber: result.orderNumber }));
 
-		return xmlResponse('ok', 100, 'Purchase successfully processed', session);
+		return xmlResponse('ok', 100, 'Purchase successfully processed', result.orderNumber);
 	} catch (error) {
 		console.error(JSON.stringify({ label: 'digipay:postback:unhandled_error' }));
 		console.error(error);

@@ -78,11 +78,6 @@ export async function POST(request: Request) {
 	// Validate environment before processing
 	validateEnv();
 
-	const siteId = process.env.DIGIPAY_SITE_ID;
-	const encryptionKey = process.env.DIGIPAY_ENCRYPTION_KEY;
-	const pburl = process.env.DIGIPAY_POSTBACK_URL;
-	const tcompleteBase = process.env.DIGIPAY_TCOMPLETE_BASE;
-
 	const CHECKOUT_RATE_LIMIT = 10;
 	const CHECKOUT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
@@ -247,7 +242,7 @@ export async function POST(request: Request) {
 		const tcompleteBase = process.env.DIGIPAY_TCOMPLETE_BASE || 'https://puretide.com';
 		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
 
-		// Use provider abstraction for unified credit card handling
+		// Get the payment provider based on env var
 		const provider = getPaymentProvider();
 		const gatewaylinxConfig = getGatewaylinxConfig();
 
@@ -269,6 +264,8 @@ export async function POST(request: Request) {
 				tcomplete,
 			};
 		} else {
+			const siteId = process.env.DIGIPAY_SITE_ID;
+			const pburl = process.env.DIGIPAY_POSTBACK_URL;
 			const useSandbox = process.env.DIGIPAY_USE_SANDBOX === 'true';
 			const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID;
 			const effectiveSiteId = useSandbox && sandboxSiteId ? sandboxSiteId : siteId;
@@ -282,10 +279,10 @@ export async function POST(request: Request) {
 
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
-		// Build postback URL (webhook) - use existing endpoint
+		// Build postback URL (webhook)
 		const protocol = request.headers.get('x-forwarded-proto') || 'http';
 		const host = request.headers.get('host') || 'localhost:3000';
-		const postbackUrl = `${protocol}://${host}/api/digipay/postback`;
+		const postbackUrl = `${protocol}://${host}/api/creditcard/webhook`;
 
 		// Call provider's createPaymentSession
 		const sessionResult = await provider.createPaymentSession({
@@ -307,7 +304,7 @@ export async function POST(request: Request) {
 
 		console.log(
 			JSON.stringify({
-				label: 'digipay:create',
+				label: 'creditcard:create',
 				orderNumber,
 				total,
 				paymentProvider: gatewaylinxConfig ? 'gatewaylinx' : 'digipay',
@@ -322,8 +319,8 @@ export async function POST(request: Request) {
 			orderNumber,
 		});
 	} catch (error) {
-		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'digipay:create' });
-		console.error(JSON.stringify({ label: 'digipay:create:error', errorId: safe.errorId }));
+		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'creditcard:create' });
+		console.error(JSON.stringify({ label: 'creditcard:create:error', errorId: safe.errorId }));
 		return json({ ok: false, error: safe.message, errorId: safe.errorId }, { status: 500 });
 	}
 }

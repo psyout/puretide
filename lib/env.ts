@@ -62,6 +62,13 @@ const envSchema = z.object({
 	DIGIPAY_SECRET_KEY: z.string().optional(),
 	DIGIPAY_POSTBACK_ALLOWED_IP: z.string().optional(),
 
+	// Gatewaylinx payment
+	GATEWAYLINX_SITE_ID: z.string().optional(),
+	GATEWAYLINX_HMAC_KEY: z.string().optional(),
+	GATEWAYLINX_RELAY_URL: z.string().optional(),
+	GATEWAYLINX_POSTBACK_ALLOWED_IP: z.string().optional(),
+	GATEWAYLINX_DRY_RUN_FULFILLMENT: z.coerce.boolean().default(false),
+
 	// Credit card provider switching
 	CREDIT_CARD_PROVIDER: z.enum(['digipay', 'gatewaylinx']).default('digipay'),
 	NEXT_PUBLIC_CREDIT_CARD_PROVIDER: z.enum(['digipay', 'gatewaylinx']).default('digipay'),
@@ -271,5 +278,22 @@ export function getBluePeakConfig() {
 		baseUrl: env.BLUEPEAK_BASE_URL || 'https://deposit.bluepeakdns.com/v1',
 		webhookMaxSkewSeconds: env.BLUEPEAK_WEBHOOK_MAX_SKEW_SECONDS || 300,
 		dryRunFulfillment: env.BLUEPEAK_DRY_RUN_FULFILLMENT === 'true',
+	};
+}
+
+export function getGatewaylinxConfig() {
+	const env = getEnv();
+	if (!env.GATEWAYLINX_SITE_ID || !env.GATEWAYLINX_HMAC_KEY || !env.GATEWAYLINX_RELAY_URL) {
+		return null;
+	}
+
+	return {
+		siteId: env.GATEWAYLINX_SITE_ID,
+		hmacKey: env.GATEWAYLINX_HMAC_KEY,
+		relayUrl: env.GATEWAYLINX_RELAY_URL,
+		allowedIps: env.GATEWAYLINX_POSTBACK_ALLOWED_IP?.split(',')
+			.map((ip) => ip.trim())
+			.filter(Boolean) || ['151.245.121.206'],
+		dryRunFulfillment: env.GATEWAYLINX_DRY_RUN_FULFILLMENT,
 	};
 }

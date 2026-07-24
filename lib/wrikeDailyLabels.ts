@@ -22,9 +22,11 @@ type WrikeAttachment = {
 
 function parseOrderDateFromOrderDescription(html: string): Date | null {
 	if (!html) return null;
-	const m = String(html).match(/<p>\s*Date:\s*([^<]+?)\s*<\/p>/i);
+	// Match both <p>Date:...</p> and <b>Date:</b> formats
+	const m = String(html).match(/(?:<p>\s*Date:\s*([^<]+?)\s*<\/p>|<b>\s*Date:\s*<\/b>\s*([^<]+?)(?:<br\s*\/?\s*>|$))/i);
 	if (!m) return null;
-	const text = stripHtml(m[1]).trim();
+	// Extract from either capture group
+	const text = stripHtml(m[1] || m[2]).trim();
 	const iso = text.match(/(\d{4}-\d{2}-\d{2})/);
 	if (iso) {
 		const d = new Date(`${iso[1]}T00:00:00`);

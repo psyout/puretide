@@ -344,6 +344,7 @@ export default function CheckoutClient() {
 
 		try {
 			if (useCreditCard) {
+				// Temporarily use legacy DigiPay endpoint for debugging
 				const response = await fetch('/api/digipay/create', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },

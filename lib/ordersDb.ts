@@ -46,6 +46,21 @@ export type ShippingEmailRecord = {
 	customerEmail?: string;
 };
 
+export type LabelGenerationRun = {
+	id: string;
+	cronType: 'daily' | 'afternoon' | 'range';
+	date: string;
+	ordersConsidered: number;
+	labelsParsed: number;
+	status: 'running' | 'completed' | 'failed';
+	reason?: string;
+	wrikeTaskId?: string;
+	wrikeAttachmentId?: string;
+	startedAt: string;
+	completedAt?: string;
+	errorMessage?: string;
+};
+
 const DB_PATH = process.env.ORDERS_DB_PATH ? path.resolve(process.env.ORDERS_DB_PATH) : path.join(process.cwd(), 'data', 'orders.sqlite');
 const LEGACY_ORDERS_JSON_PATH = process.env.LEGACY_ORDERS_JSON_PATH ? path.resolve(process.env.LEGACY_ORDERS_JSON_PATH) : path.join(process.cwd(), 'data', 'orders.json');
 
@@ -108,6 +123,134 @@ export async function insertShippingEmailRecord(record: ShippingEmailRecord): Pr
 		[record.orderNumber, record.trackingNumber, record.sentAt, record.wrikeTaskId ?? null, record.via ?? null, record.route ?? null, record.customerEmail ?? null],
 	);
 	persistDb(db);
+}
+
+export async function createLabelGenerationRun(run: Omit<LabelGenerationRun, 'id' | 'startedAt'>): Promise<LabelGenerationRun> {
+	const db = await getDb();
+	const id = `label_run_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+	const startedAt = new Date().toISOString();
+
+	db.run(
+		`INSERT INTO label_generation_runs (id, cron_type, date, orders_considered, labels_parsed, status, reason, wrike_task_id, wrike_attachment_id, started_at, completed_at, error_message)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		[
+			id,
+			run.cronType,
+			run.date,
+			run.ordersConsidered,
+			run.labelsParsed,
+			run.status,
+			run.reason ?? null,
+			run.wrikeTaskId ?? null,
+			run.wrikeAttachmentId ?? null,
+			startedAt,
+			run.completedAt ?? null,
+			run.errorMessage ?? null,
+		],
+	);
+	persistDb(db);
+
+	return { ...run, id, startedAt };
+}
+
+export async function updateLabelGenerationRun(
+	id: string,
+	updates: Partial<Pick<LabelGenerationRun, 'status' | 'ordersConsidered' | 'labelsParsed' | 'reason' | 'wrikeTaskId' | 'wrikeAttachmentId' | 'completedAt' | 'errorMessage'>>,
+): Promise<void> {
+	const db = await getDb();
+	const fields: string[] = [];
+	const values: (string | number | null)[] = [];
+
+	if (updates.status !== undefined) {
+		fields.push('status = ?');
+		values.push(updates.status);
+	}
+	if (updates.ordersConsidered !== undefined) {
+		fields.push('orders_considered = ?');
+		values.push(updates.ordersConsidered);
+	}
+	if (updates.labelsParsed !== undefined) {
+		fields.push('labels_parsed = ?');
+		values.push(updates.labelsParsed);
+	}
+	if (updates.reason !== undefined) {
+		fields.push('reason = ?');
+		values.push(updates.reason);
+	}
+	if (updates.wrikeTaskId !== undefined) {
+		fields.push('wrike_task_id = ?');
+		values.push(updates.wrikeTaskId);
+	}
+	if (updates.wrikeAttachmentId !== undefined) {
+		fields.push('wrike_attachment_id = ?');
+		values.push(updates.wrikeAttachmentId);
+	}
+	if (updates.completedAt !== undefined) {
+		fields.push('completed_at = ?');
+		values.push(updates.completedAt);
+	}
+	if (updates.errorMessage !== undefined) {
+		fields.push('error_message = ?');
+		values.push(updates.errorMessage);
+	}
+
+	if (fields.length === 0) return;
+
+	values.push(id);
+	db.run(`UPDATE label_generation_runs SET ${fields.join(', ')} WHERE id = ?`, values);
+	persistDb(db);
+}
+
+export async function getLabelGenerationRun(cronType: string, date: string): Promise<LabelGenerationRun | null> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM label_generation_runs WHERE cron_type = ? AND date = ? ORDER BY started_at DESC LIMIT 1');
+	stmt.bind([cronType, date]);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as Record<string, unknown>;
+	stmt.free();
+	return {
+		id: String(row.id),
+		cronType: row.cron_type as 'daily' | 'afternoon' | 'range',
+		date: String(row.date),
+		ordersConsidered: Number(row.orders_considered),
+		labelsParsed: Number(row.labels_parsed),
+		status: row.status as 'running' | 'completed' | 'failed',
+		reason: row.reason != null ? String(row.reason) : undefined,
+		wrikeTaskId: row.wrike_task_id != null ? String(row.wrike_task_id) : undefined,
+		wrikeAttachmentId: row.wrike_attachment_id != null ? String(row.wrike_attachment_id) : undefined,
+		startedAt: String(row.started_at),
+		completedAt: row.completed_at != null ? String(row.completed_at) : undefined,
+		errorMessage: row.error_message != null ? String(row.error_message) : undefined,
+	};
+}
+
+export async function getRecentLabelGenerationRuns(limit: number = 10): Promise<LabelGenerationRun[]> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM label_generation_runs ORDER BY started_at DESC LIMIT ?');
+	stmt.bind([limit]);
+	const runs: LabelGenerationRun[] = [];
+	while (stmt.step()) {
+		const row = stmt.getAsObject() as Record<string, unknown>;
+		runs.push({
+			id: String(row.id),
+			cronType: row.cron_type as 'daily' | 'afternoon' | 'range',
+			date: String(row.date),
+			ordersConsidered: Number(row.orders_considered),
+			labelsParsed: Number(row.labels_parsed),
+			status: row.status as 'running' | 'completed' | 'failed',
+			reason: row.reason != null ? String(row.reason) : undefined,
+			wrikeTaskId: row.wrike_task_id != null ? String(row.wrike_task_id) : undefined,
+			wrikeAttachmentId: row.wrike_attachment_id != null ? String(row.wrike_attachment_id) : undefined,
+			startedAt: String(row.started_at),
+			completedAt: row.completed_at != null ? String(row.completed_at) : undefined,
+			errorMessage: row.error_message != null ? String(row.error_message) : undefined,
+		});
+	}
+	stmt.free();
+	return runs;
 }
 
 function normalizeOrder(order: StoredOrder): StoredOrder {
@@ -242,6 +385,25 @@ async function getDb(): Promise<SqlJsDatabase> {
 		`);
 		db.run('CREATE INDEX IF NOT EXISTS idx_friends_family_email_otps_email_expires ON friends_family_email_otps(email, expires_at)');
 		db.run('CREATE INDEX IF NOT EXISTS idx_friends_family_email_otps_expires_at ON friends_family_email_otps(expires_at)');
+
+		db.run(`
+			CREATE TABLE IF NOT EXISTS label_generation_runs (
+				id TEXT PRIMARY KEY,
+				cron_type TEXT NOT NULL,
+				date TEXT NOT NULL,
+				orders_considered INTEGER NOT NULL DEFAULT 0,
+				labels_parsed INTEGER NOT NULL DEFAULT 0,
+				status TEXT NOT NULL,
+				reason TEXT,
+				wrike_task_id TEXT,
+				wrike_attachment_id TEXT,
+				started_at TEXT NOT NULL,
+				completed_at TEXT,
+				error_message TEXT
+			);
+		`);
+		db.run('CREATE INDEX IF NOT EXISTS idx_label_generation_runs_cron_type_date ON label_generation_runs(cron_type, date)');
+		db.run('CREATE INDEX IF NOT EXISTS idx_label_generation_runs_started_at ON label_generation_runs(started_at DESC)');
 
 		await migrateLegacyOrdersJson(db);
 		persistDb(db);

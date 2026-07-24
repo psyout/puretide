@@ -28,7 +28,11 @@ export function getPaymentProvider(): PaymentProvider {
 	const provider = getCreditCardProvider();
 
 	if (provider === 'gatewaylinx') {
-		throw new Error('Gatewaylinx provider not implemented yet');
+		// Lazy import to avoid pulling Gatewaylinx dependencies unless used.
+		const { GatewaylinxProvider } = require('./providers/gatewaylinxProvider') as {
+			GatewaylinxProvider: new () => PaymentProvider;
+		};
+		return new GatewaylinxProvider();
 	}
 
 	// Lazy import to avoid pulling DigiPay dependencies unless used.
