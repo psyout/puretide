@@ -232,19 +232,27 @@ export async function POST(request: Request) {
 				status: result.rawStatus || 'approved',
 			};
 
+			// Mark as paid for frontend confirmation, but skip fulfillment
 			await upsertOrderInDb({
 				...order,
+				paymentStatus: 'paid',
+				paidAt,
 				order_json: {
 					...existingOrderJson,
 					gatewaylinx: gatewaylinxAudit,
+				},
+				fulfillmentStatus: {
+					stockUpdated: false,
+					emailsSent: false,
+					clientSynced: false,
+					dryRun: true, // Mark as dry-run for audit
 				},
 			} as Record<string, unknown>);
 
 			console.log(JSON.stringify({ label: 'digipay:postback:dry_run_audit_stored', orderNumber: result.orderNumber, audit: gatewaylinxAudit }));
 
-			// Keep paymentStatus: "pending" - do not trigger fulfillment
-			// Do not decrement stock, create Wrike tasks, or send emails
-			return xmlResponse('ok', 100, 'Dry-run: audit stored, fulfillment skipped');
+			// Mark as paid but skip fulfillment (no stock, Wrike, emails)
+			return xmlResponse('ok', 100, 'Dry-run: marked as paid, fulfillment skipped');
 		}
 
 		// Production mode: run full fulfillment

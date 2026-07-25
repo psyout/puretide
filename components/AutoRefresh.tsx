@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ReactNode } from 'react';
 
 interface AutoRefreshProps {
 	interval?: number;
 	maxRefreshes?: number;
-	children: (refreshCount: number) => React.ReactNode;
+	children: ReactNode;
 }
 
 export function AutoRefresh({ interval = 5000, maxRefreshes = 20, children }: AutoRefreshProps) {
@@ -22,8 +23,8 @@ export function AutoRefresh({ interval = 5000, maxRefreshes = 20, children }: Au
 	}, [refreshCount, interval, maxRefreshes]);
 
 	useEffect(() => {
-		setRefreshCount(prev => prev + 1);
+		setRefreshCount((prev) => prev + 1);
 	}, []);
 
-	return <>{children(refreshCount)}</>;
+	return <>{children}</>;
 }

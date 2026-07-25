@@ -85,9 +85,22 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	const isAllowed = orderNumberParam ? verifyOrderConfirmationToken(orderNumberParam, token?.trim()) : false;
 	let order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
 
-	// Additional security: If token is valid and order exists, mark it as accessed
-	// This prevents the same token from being used multiple times
-	if (isAllowed && order && token) {
+	// Gatewaylinx credit card orders: allow token-less access to show the pending/paid state.
+	// Token security guards e-transfer payment instructions (bank details). Credit card orders
+	// have no sensitive payment instructions to protect, so showing payment status is safe.
+	let isGatewaylinxFallback = false;
+	if (!order && orderNumberParam) {
+		const fallbackOrder = await getOrderByNumber(orderNumberParam);
+		if (fallbackOrder && fallbackOrder.paymentMethod === 'creditcard' && (fallbackOrder as unknown as Record<string, unknown>).paymentProvider === 'gatewaylinx') {
+			order = fallbackOrder;
+			isGatewaylinxFallback = true;
+		}
+	}
+
+	// Additional security: If token is valid and order exists, mark it as accessed.
+	// This prevents the same token from being used multiple times.
+	// Skipped for Gatewaylinx fallback (no token present in that path).
+	if (isAllowed && order && token && !isGatewaylinxFallback) {
 		// Check if this token was already used
 		if ((order as unknown as Record<string, unknown>).tokenAccessedAt) {
 			// Token was already used, show security message
@@ -180,6 +193,38 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	const isEtransferOrder = order.paymentMethod === 'etransfer' || paymentProvider === 'bluepeak';
 	const providerStatusRaw = normalizeProviderStatus(status) || normalizeProviderStatus(result);
 	const hasExplicitProviderStatus = Boolean(providerStatusRaw);
+	const isIndeterminateStatus = providerStatusRaw === 'indeterminate';
+
+	// Gatewaylinx indeterminate: charge outcome unclear — auto-refresh while we wait for postback.
+	if (isDigipayOrder && isIndeterminateStatus) {
+		return (
+			<AutoRefresh
+				interval={5000}
+				maxRefreshes={24}>
+				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+					<Header />
+					<div className='max-w-7xl mx-auto px-6 py-24'>
+						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Confirming your payment</h1>
+							<p className='text-deep-tidal-teal-800 mb-4'>
+								Your order was received, but we could not immediately confirm whether your card was charged. Please do not retry payment — this page
+								will update automatically once we receive confirmation.
+							</p>
+							<p className='text-deep-tidal-teal-600 text-sm mb-4'>Order number: {order.orderNumber ?? orderNumberParam}</p>
+							<p className='text-deep-tidal-teal-600 text-sm mb-4'>
+								If this page does not update within a few minutes, contact support with your order number so we can verify you were not charged twice.
+							</p>
+							<Link
+								href='/'
+								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+								Return to shop
+							</Link>
+						</div>
+					</div>
+				</div>
+			</AutoRefresh>
+		);
+	}
 
 	// CLIENT-SIDE FALLBACK: If DigiPay returns explicit non-approved status, show failure immediately
 	// This ensures users always see the right message on first load, even if server update fails
@@ -256,31 +301,29 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			);
 		}
 
-		// DigiPay pending: auto-refresh while we wait for postback.
+		// DigiPay / Gatewaylinx pending: auto-refresh while we wait for postback or charge confirmation.
 		if (isDigipayOrder) {
 			return (
 				<AutoRefresh
 					interval={5000}
 					maxRefreshes={24}>
-					{(refreshCount) => (
-						<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-							<Header />
-							<div className='max-w-7xl mx-auto px-6 py-24'>
-								<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
-									<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Processing your payment</h1>
-									<p className='text-deep-tidal-teal-800 mb-4'>
-										Your order was received. Payment is being processed. This page will update when payment is confirmed, or you can check back shortly.
-									</p>
-									{refreshCount > 1 && <p className='text-deep-tidal-teal-600 text-sm mb-4'>Checking for payment update... (refresh {refreshCount}/24)</p>}
-									<Link
-										href='/'
-										className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
-										Return to shop
-									</Link>
-								</div>
+					<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+						<Header />
+						<div className='max-w-7xl mx-auto px-6 py-24'>
+							<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
+								<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Processing your payment</h1>
+								<p className='text-deep-tidal-teal-800 mb-4'>
+									Your order was received. Payment is being processed. This page will update when payment is confirmed, or you can check back shortly.
+								</p>
+								<p className='text-deep-tidal-teal-600 text-sm mb-4'>Order number: {order.orderNumber ?? orderNumberParam}</p>
+								<Link
+									href='/'
+									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+									Return to shop
+								</Link>
 							</div>
 						</div>
-					)}
+					</div>
 				</AutoRefresh>
 			);
 		}

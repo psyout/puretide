@@ -29,7 +29,7 @@ function isTrustedPaymentRedirect(urlRaw: string): boolean {
 			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS?.split(',')
 				.map((host) => host.trim().toLowerCase())
 				.filter(Boolean) ?? [];
-		const allowedHosts = new Set([DIGIPAY_DEFAULT_HOST, ...envHosts]);
+		const allowedHosts = new Set([DIGIPAY_DEFAULT_HOST, 'api.pcivault.io', ...envHosts]);
 		return allowedHosts.has(url.hostname.toLowerCase());
 	} catch {
 		return false;
@@ -39,6 +39,93 @@ function isTrustedPaymentRedirect(urlRaw: string): boolean {
 export default function CheckoutClient() {
 	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
+	const [gatewaylinxIframeUrl, setGatewaylinxIframeUrl] = useState<string | null>(null);
+	const [gatewaylinxOrderNumber, setGatewaylinxOrderNumber] = useState<string | null>(null);
+	const [gatewaylinxConfirmationToken, setGatewaylinxConfirmationToken] = useState<string | null>(null);
+	const iframeRef = useRef<HTMLIFrameElement>(null);
+
+	// Handle Gatewaylinx iframe postMessage
+	useEffect(() => {
+		const handleMessage = (event: MessageEvent) => {
+			// Exact full-origin match per API docs
+			if (event.origin !== 'https://api.pcivault.io') return;
+
+			const data = (event.data || {}) as { status?: string; token?: string; reference?: string; last4?: string; message?: string };
+			console.log('Gatewaylinx iframe postMessage:', data);
+
+			if (data.status === 'error') {
+				// Card capture failed inside the iframe — surface the error so the customer can retry
+				setCheckoutError(data.message || 'Card capture failed. Please try again.');
+				setIsProcessing(false);
+				return;
+			}
+
+			// According to Gatewaylinx docs, postMessage contains token + reference.
+			// Do not require status==='success' since the docs example only checks token/reference.
+			if (data.token && data.reference && gatewaylinxOrderNumber) {
+				handleGatewaylinxCharge(gatewaylinxOrderNumber, data.token, data.reference);
+			}
+		};
+
+		window.addEventListener('message', handleMessage);
+		return () => window.removeEventListener('message', handleMessage);
+	}, [gatewaylinxOrderNumber]);
+
+	const buildGatewaylinxConfirmationUrl = (orderNumber: string, extra?: Record<string, string>) => {
+		const params = new URLSearchParams({ orderNumber });
+		// Gatewaylinx orders do not need a single-use confirmation token. The order-confirmation
+		// page already allows token-less access for Gatewaylinx credit card orders, and using a
+		// token here causes "Link already used" errors if the customer refreshes.
+		if (extra) {
+			for (const [key, value] of Object.entries(extra)) {
+				params.set(key, value);
+			}
+		}
+		return `/order-confirmation?${params.toString()}`;
+	};
+
+	const handleGatewaylinxCharge = async (orderNumber: string, token: string, reference: string) => {
+		try {
+			const response = await fetch('/api/digipay/charge', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ orderNumber, token, reference }),
+			});
+			const data = await response.json();
+
+			if (data.redirect && data.redirectUrl) {
+				window.location.href = data.redirectUrl;
+				return;
+			}
+
+			if (data.indeterminate) {
+				clearCart();
+				resetCheckoutStateForExit();
+				router.push(buildGatewaylinxConfirmationUrl(orderNumber, { status: 'indeterminate' }));
+				return;
+			}
+
+			if (data.success) {
+				clearCart();
+				resetCheckoutStateForExit();
+				router.push(buildGatewaylinxConfirmationUrl(orderNumber));
+				return;
+			}
+
+			setCheckoutError(data.error || 'Payment was declined. Please try again.');
+			setIsProcessing(false);
+			setHasSubmitted(false);
+		} catch (error) {
+			setCheckoutError(`Charge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			setIsProcessing(false);
+			setHasSubmitted(false);
+		} finally {
+			setGatewaylinxIframeUrl(null);
+			setGatewaylinxOrderNumber(null);
+			setGatewaylinxConfirmationToken(null);
+		}
+	};
+
 	const initialFormData = {
 		firstName: '',
 		lastName: '',
@@ -344,7 +431,6 @@ export default function CheckoutClient() {
 
 		try {
 			if (useCreditCard) {
-				// Temporarily use legacy DigiPay endpoint for debugging
 				const response = await fetch('/api/digipay/create', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -358,11 +444,31 @@ export default function CheckoutClient() {
 					if (!isTrustedPaymentRedirect(data.redirectUrl)) {
 						throw new Error('Received an invalid payment redirect URL. Please contact support.');
 					}
-					// Order is successfully created at this point; clear cart + checkout state before leaving the site.
-					clearCart();
-					resetCheckoutStateForExit();
-					window.location.href = data.redirectUrl;
-					return;
+
+					// Check if this is Gatewaylinx (inline mode) — exact hostname match
+					const isGatewaylinx = (() => {
+						try {
+							const h = new URL(data.redirectUrl).hostname.toLowerCase();
+							return h === 'api.pcivault.io' || h.endsWith('.pcivault.io');
+						} catch {
+							return false;
+						}
+					})();
+
+					if (isGatewaylinx) {
+						// Use inline mode with iframe
+						setGatewaylinxIframeUrl(data.redirectUrl);
+						setGatewaylinxOrderNumber(data.orderNumber);
+						setGatewaylinxConfirmationToken(data.confirmationToken ?? null);
+						setIsProcessing(false);
+						return;
+					} else {
+						// Use redirect mode (DigiPay)
+						clearCart();
+						resetCheckoutStateForExit();
+						window.location.href = data.redirectUrl;
+						return;
+					}
 				}
 				throw new Error('Invalid response from payment');
 			}
@@ -421,6 +527,39 @@ export default function CheckoutClient() {
 
 	if (cartItems.length === 0) {
 		return null;
+	}
+
+	// Show Gatewaylinx iframe for inline mode
+	if (gatewaylinxIframeUrl) {
+		return (
+			<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
+				<div
+					className='bg-white rounded-lg shadow-2xl w-full max-w-xl flex flex-col overflow-hidden p-10'
+					style={{ height: 'min(480px, 90vh)' }}>
+					<div className='flex justify-between items-center p-4 border-b'>
+						<h2 className='text-lg font-semibold'>Complete Payment</h2>
+						<button
+							onClick={() => {
+								setGatewaylinxIframeUrl(null);
+								setGatewaylinxOrderNumber(null);
+								setGatewaylinxConfirmationToken(null);
+								setIsProcessing(false);
+							}}
+							className='text-gray-500 hover:text-gray-700'>
+							Cancel
+						</button>
+					</div>
+					<div className='flex-1 min-h-0'>
+						<iframe
+							ref={iframeRef}
+							src={gatewaylinxIframeUrl}
+							className='w-full h-full border-0 block'
+							title='Payment Form'
+						/>
+					</div>
+				</div>
+			</div>
+		);
 	}
 
 	// Show full-page loader for all payment processing
@@ -1174,7 +1313,8 @@ export default function CheckoutClient() {
 											)}
 										</div>
 									)}
-									<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+									{/* Credit Card - Hidden for now - Add Flex, remove Hidden */}
+									<label className={`hidden items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
 										<span className='flex items-center gap-2'>
 											<input
 												type='radio'

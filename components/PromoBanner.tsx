@@ -18,11 +18,7 @@ const PromoBanner = forwardRef<HTMLDivElement, PromoBannerProps>(({ messages, ct
 	const [isPaused, setIsPaused] = useState(false);
 	const internalRef = useRef<HTMLDivElement>(null);
 
-	const defaultMessages = [
-		'Claim 10% OFF on your first order',
-		'Enjoy free shipping on all orders over $300. Delivered right to your door',
-		'All products are third-party tested in Canada for purity and quality standards',
-	];
+	const defaultMessages = ['Claim 10% OFF on your first order', 'Enjoy free shipping on all orders over $300', 'All products are third-party tested in Canada'];
 
 	const bannerMessages = messages || defaultMessages;
 

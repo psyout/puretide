@@ -101,7 +101,8 @@ export async function POST(request: Request) {
 		if (idemKey) {
 			const cached = await getCachedDigipay(idemKey);
 			if (cached) {
-				return json({ ok: true, redirectUrl: cached.redirectUrl, orderNumber: cached.orderNumber });
+				const cachedToken = createOrderConfirmationToken(cached.orderNumber);
+				return json({ ok: true, redirectUrl: cached.redirectUrl, orderNumber: cached.orderNumber, confirmationToken: cachedToken ?? null });
 			}
 		}
 
@@ -244,12 +245,23 @@ export async function POST(request: Request) {
 			confirmationParams.set('token', confirmationToken);
 		}
 
-		const tcompleteBase = process.env.DIGIPAY_TCOMPLETE_BASE || 'https://puretide.com';
-		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
-
 		// Use provider abstraction for unified credit card handling
 		const provider = getPaymentProvider();
 		const gatewaylinxConfig = getGatewaylinxConfig();
+
+		// Compute base URL early — needed for both tcomplete and postback.
+		// Gatewaylinx requires public HTTPS URLs for both tcomplete (return URL) and pburl (postback URL).
+		// Localhost URLs are blocked by the processor's firewall and cause indeterminate responses.
+		const ngrokUrl = process.env.NGROK_URL;
+		const reqProtocol = request.headers.get('x-forwarded-proto') || 'http';
+		const reqHost = request.headers.get('host') || 'localhost:3000';
+		const siteBaseUrl = `${reqProtocol}://${reqHost}`;
+		// For Gatewaylinx, use ngrok for both return and postback URLs if available.
+		const gatewaylinxBaseUrl = ngrokUrl ?? siteBaseUrl;
+		const tcompleteBase = gatewaylinxConfig ? gatewaylinxBaseUrl : process.env.DIGIPAY_TCOMPLETE_BASE || 'https://puretide.com';
+		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
+
+		console.log(JSON.stringify({ label: 'digipay:create:tcomplete', tcomplete, siteBaseUrl, gatewaylinxBaseUrl }));
 
 		// Build order record
 		const orderRecord = {
@@ -282,10 +294,15 @@ export async function POST(request: Request) {
 
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
-		// Build postback URL (webhook) - use existing endpoint
-		const protocol = request.headers.get('x-forwarded-proto') || 'http';
-		const host = request.headers.get('host') || 'localhost:3000';
-		const postbackUrl = `${protocol}://${host}/api/digipay/postback`;
+		// Build postback URL using the Gatewaylinx base URL computed above (must be public HTTPS)
+		const postbackPath = gatewaylinxConfig ? '/api/creditcard/webhook' : '/api/digipay/postback';
+		const postbackBaseUrl = gatewaylinxConfig ? gatewaylinxBaseUrl : siteBaseUrl;
+		const postbackUrl = `${postbackBaseUrl}${postbackPath}`;
+
+		// Extract real customer IP for fraud scoring. Omit loopback/localhost IPs because the processor
+		// rejects them; Gatewaylinx will fall back to the request source IP.
+		const rawCustomerIp = request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? request.headers.get('x-real-ip') ?? undefined;
+		const customerIp = rawCustomerIp && !/^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|0:0:0:0:0:0:0:1|localhost)/i.test(rawCustomerIp) ? rawCustomerIp : undefined;
 
 		// Call provider's createPaymentSession
 		const sessionResult = await provider.createPaymentSession({
@@ -293,6 +310,7 @@ export async function POST(request: Request) {
 			amount: total,
 			returnUrl: tcomplete,
 			postbackUrl,
+			customerIp,
 			customer: {
 				firstName: payload.customer.firstName,
 				lastName: payload.customer.lastName,
@@ -320,6 +338,9 @@ export async function POST(request: Request) {
 			ok: true,
 			redirectUrl: sessionResult.redirectUrl,
 			orderNumber,
+			// Return the confirmation token so the frontend can include it in the post-charge redirect.
+			// The same token is embedded in tcomplete for the 3DS return path.
+			confirmationToken: confirmationToken ?? null,
 		});
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'digipay:create' });

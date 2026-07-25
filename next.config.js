@@ -48,6 +48,7 @@ const nextConfig = {
 							"img-src 'self' data: blob: www.facebook.com connect.facebook.net https://www.facebook.com https://connect.facebook.net", // Meta Pixel tracking
 							"font-src 'self' data: fonts.gstatic.com",
 							"connect-src 'self' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com", // Meta Pixel API calls
+							"frame-src 'self' https://api.pcivault.io", // Gatewaylinx iframe for inline mode
 							"frame-ancestors 'none'",
 							"form-action 'self'",
 						].join('; '),
