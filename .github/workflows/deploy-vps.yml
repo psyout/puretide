@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: deploy-vps
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -19,6 +19,7 @@ jobs:
       VPS_PATH: ${{ secrets.VPS_PATH }}
       PM2_APP: ${{ secrets.PM2_APP }}
       VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
+      VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for var in VPS_HOST VPS_USER VPS_PATH PM2_APP; do
+          for var in VPS_HOST VPS_USER VPS_PATH PM2_APP VPS_SSH_KNOWN_HOSTS; do
             if [[ -z "${!var:-}" ]]; then
               echo "Missing required secret: ${var}"
               missing=1
@@ -49,7 +50,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build
         run: NODE_OPTIONS="--max-old-space-size=4096" npm run build
@@ -88,14 +89,14 @@ jobs:
             exit 1
           fi
 
-      - name: Add VPS to known_hosts
+      - name: Install pinned VPS host key
         shell: bash
         run: |
           set -euo pipefail
-          PORT="${VPS_SSH_PORT:-22}"
           mkdir -p ~/.ssh
-          echo "Adding VPS to known_hosts on port $PORT..."
-          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts || echo "Warning: ssh-keyscan failed, continuing anyway"
+          printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          ssh-keygen -F "$VPS_HOST" -f ~/.ssh/known_hosts >/dev/null
 
       - name: SSH smoke test
         shell: bash
@@ -104,30 +105,31 @@ jobs:
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
           echo "Testing SSH connection to $SSH_TARGET on port $PORT..."
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "echo ok"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "echo ok"
 
-      - name: Stop app and clean old artifacts on VPS
+      - name: Prepare VPS without stopping live app
+        shell: bash
         run: |
+          set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "pm2 stop \"${PM2_APP}\" || true && cd \"${VPS_PATH}\" && rm -rf node_modules .next/cache .next/server .next/standalone .next/static"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; test -d \"${VPS_PATH}\"; test -f \"${VPS_PATH}/.env\"; mkdir -p \"${VPS_PATH}/.deploy\" \"${VPS_PATH}/data\"; command -v npm; command -v pm2"
 
-      - name: Sync build artifacts to VPS
+      - name: Sync complete build to VPS staging area
+        shell: bash
         run: |
+          set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" --exclude='node_modules' .next/standalone/ "${SSH_TARGET}:${VPS_PATH}/.next/standalone/"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" .next/static/ "${SSH_TARGET}:${VPS_PATH}/.next/static/"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" public/ "${SSH_TARGET}:${VPS_PATH}/public/"
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p ${PORT}" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
+          SSH="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p ${PORT}"
+          rsync -az --delete -e "$SSH" .next/ "${SSH_TARGET}:${VPS_PATH}/.deploy/next/"
+          rsync -az --delete -e "$SSH" public/ "${SSH_TARGET}:${VPS_PATH}/.deploy/public/"
+          rsync -az -e "$SSH" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/.deploy/"
 
-      - name: Finalize runtime and restart PM2
+      - name: Activate build, restart PM2, and health-check
+        shell: bash
         run: |
+          set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; rm -rf .next/standalone/.next/static; mkdir -p .next/standalone/.next; cp -R .next/static .next/standalone/.next/static; rm -rf .next/standalone/public; cp -R public .next/standalone/public"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "cd \"${VPS_PATH}\" && rm -rf node_modules && npm install --omit=dev"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; mkdir -p .next/standalone/node_modules/sql.js/dist; cp -f node_modules/sql.js/dist/sql-wasm.wasm .next/standalone/node_modules/sql.js/dist/sql-wasm.wasm"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; [ -f .env ] && . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no -p "$PORT" "$SSH_TARGET" "pm2 describe \"${PM2_APP}\" | sed -n '1,120p'"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; test -f .deploy/next/BUILD_ID; test -f .env; test -d data; rm -rf .deploy/previous-next .deploy/previous-public; if [ -d .next ]; then mv .next .deploy/previous-next; fi; if [ -d public ]; then mv public .deploy/previous-public; fi; mv .deploy/next .next; mv .deploy/public public; cp package.json .deploy/package.json; cp package-lock.json .deploy/package-lock.json; npm ci --omit=dev --no-audit --no-fund; set -a; . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env; for i in \$(seq 1 30); do if curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/ >/dev/null; then pm2 save; pm2 describe \"${PM2_APP}\" | sed -n '1,120p'; exit 0; fi; sleep 2; done; pm2 logs \"${PM2_APP}\" --lines 80 --nostream || true; pm2 stop \"${PM2_APP}\" || true; rm -rf .next public; if [ -d .deploy/previous-next ]; then mv .deploy/previous-next .next; fi; if [ -d .deploy/previous-public ]; then mv .deploy/previous-public public; fi; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env; exit 1"
