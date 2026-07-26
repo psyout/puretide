@@ -1,25 +1,4 @@
-import {
-	Activity,
-	Bone,
-	Brain,
-	Clock,
-	Droplets,
-	Flame,
-	Flower2,
-	Gauge,
-	Heart,
-	HeartPulse,
-	Leaf,
-	Moon,
-	Pill,
-	Scale,
-	Shield,
-	Sparkles,
-	Sun,
-	Timer,
-	TrendingUp,
-	Zap,
-} from 'lucide-react';
+import { Activity, Bone, Brain, Clock, Droplets, Flame, Flower2, Gauge, Heart, HeartPulse, Leaf, Moon, Package, Pill, Scale, Shield, Sparkles, Sun, Timer, TrendingUp, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export const iconMap: Record<string, LucideIcon> = {
@@ -45,4 +24,5 @@ export const iconMap: Record<string, LucideIcon> = {
 	Skin: Sun,
 	Digestive: Pill,
 	Intimacy: Heart,
+	Accessory: Package,
 };
