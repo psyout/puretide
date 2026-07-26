@@ -74,7 +74,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 						<Logo className='h-6 sm:h-7 w-auto' />
 					</Link>
 					<span className='ml-3 sm:ml-6 inline-flex items-center gap-2 text-white font-medium tracking-wide text-sm sm:text-base cursor-default'>
-						<span className='text-[1rem] mt-[0.4rem] flex gap-2'>
+						<span className='text-[1rem] mt-[0.4rem] flex gap-1'>
 							Proudly
 							<MapleLeafIcon className='h-[1.35rem] w-auto' /> Canadian
 						</span>
