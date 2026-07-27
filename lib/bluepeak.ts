@@ -51,7 +51,11 @@ export type BluepeakWebhookEvent = {
 };
 
 function getBaseUrl(): string {
-	return (process.env.BLUEPEAK_BASE_URL || 'https://deposit.bluepeakdns.com/v1').replace(/\/$/, '');
+	const raw = String(process.env.BLUEPEAK_BASE_URL || 'https://deposit.bluepeakdns.com/v1')
+		.trim()
+		.replace(/\/$/, '');
+	if (raw.endsWith('/v1')) return raw;
+	return `${raw}/v1`;
 }
 
 function getSecretKey(): string {
