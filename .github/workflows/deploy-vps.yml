@@ -58,6 +58,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
           DASHBOARD_SECRET: ci-placeholder-dashboard-secret
           ORDER_CONFIRMATION_SECRET: ci-placeholder-order-confirmation-secret
+          NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED: true
 
       - name: Sanity check standalone output
         shell: bash
