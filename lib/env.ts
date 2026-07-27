@@ -149,31 +149,37 @@ export function validateEnv(): EnvSchema {
 
 		// Production-specific validations
 		if (validatedEnv.NODE_ENV === 'production') {
+			const isNextBuildPhase = String(process.env.NEXT_PHASE ?? '') === 'phase-production-build';
 			const required = (name: string, value: unknown) => {
 				if (typeof value !== 'string' || value.trim() === '') {
 					throw new Error(`${name} is required in production`);
 				}
 			};
 
-			required('APP_BASE_URL', validatedEnv.APP_BASE_URL);
-			if (!validatedEnv.APP_BASE_URL?.startsWith('https://')) {
-				throw new Error('APP_BASE_URL must use HTTPS in production');
+			// Next.js may evaluate route modules during `next build` (phase-production-build).
+			// In that phase we can't require full production secrets, but we still want strict
+			// validation at runtime.
+			if (!isNextBuildPhase) {
+				required('APP_BASE_URL', validatedEnv.APP_BASE_URL);
+				if (!validatedEnv.APP_BASE_URL?.startsWith('https://')) {
+					throw new Error('APP_BASE_URL must use HTTPS in production');
+				}
+				if (validatedEnv.NGROK_URL) {
+					throw new Error('NGROK_URL must not be configured in production');
+				}
+				required('ORDER_CONFIRMATION_SECRET', validatedEnv.ORDER_CONFIRMATION_SECRET);
+				required('ORDERS_DB_PATH', validatedEnv.ORDERS_DB_PATH);
+				required('SMTP_HOST', validatedEnv.SMTP_HOST);
+				required('SMTP_USER', validatedEnv.SMTP_USER);
+				required('SMTP_PASS', validatedEnv.SMTP_PASS);
+				required('ORDER_NOTIFICATION_EMAIL', validatedEnv.ORDER_NOTIFICATION_EMAIL);
+				required('GOOGLE_SHEET_ID', validatedEnv.GOOGLE_SHEET_ID);
+				required('GOOGLE_SERVICE_ACCOUNT_EMAIL', validatedEnv.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+				required('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY', validatedEnv.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);
+				required('CRON_SECRET', validatedEnv.CRON_SECRET);
 			}
-			if (validatedEnv.NGROK_URL) {
-				throw new Error('NGROK_URL must not be configured in production');
-			}
-			required('ORDER_CONFIRMATION_SECRET', validatedEnv.ORDER_CONFIRMATION_SECRET);
-			required('ORDERS_DB_PATH', validatedEnv.ORDERS_DB_PATH);
-			required('SMTP_HOST', validatedEnv.SMTP_HOST);
-			required('SMTP_USER', validatedEnv.SMTP_USER);
-			required('SMTP_PASS', validatedEnv.SMTP_PASS);
-			required('ORDER_NOTIFICATION_EMAIL', validatedEnv.ORDER_NOTIFICATION_EMAIL);
-			required('GOOGLE_SHEET_ID', validatedEnv.GOOGLE_SHEET_ID);
-			required('GOOGLE_SERVICE_ACCOUNT_EMAIL', validatedEnv.GOOGLE_SERVICE_ACCOUNT_EMAIL);
-			required('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY', validatedEnv.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);
-			required('CRON_SECRET', validatedEnv.CRON_SECRET);
 
-			if (validatedEnv.CREDIT_CARD_PROVIDER === 'gatewaylinx') {
+			if (!isNextBuildPhase && validatedEnv.CREDIT_CARD_PROVIDER === 'gatewaylinx') {
 				required('GATEWAYLINX_SITE_ID', validatedEnv.GATEWAYLINX_SITE_ID);
 				required('GATEWAYLINX_HMAC_KEY', validatedEnv.GATEWAYLINX_HMAC_KEY);
 				required('GATEWAYLINX_RELAY_URL', validatedEnv.GATEWAYLINX_RELAY_URL);
@@ -183,7 +189,7 @@ export function validateEnv(): EnvSchema {
 				}
 			}
 
-			if (validatedEnv.ENABLE_WRIKE_INTEGRATION) {
+			if (!isNextBuildPhase && validatedEnv.ENABLE_WRIKE_INTEGRATION) {
 				required('WRIKE_API_TOKEN', validatedEnv.WRIKE_API_TOKEN);
 				required('WRIKE_ORDERS_FOLDER_ID', validatedEnv.WRIKE_ORDERS_FOLDER_ID);
 				required('WRIKE_CLIENTS_FOLDER_ID', validatedEnv.WRIKE_CLIENTS_FOLDER_ID);
@@ -191,7 +197,7 @@ export function validateEnv(): EnvSchema {
 				required('WRIKE_LABELS_FOLDER_ID', validatedEnv.WRIKE_LABELS_FOLDER_ID);
 			}
 
-			if (validatedEnv.ETRANSFER_PROVIDER === 'bluepeak') {
+			if (!isNextBuildPhase && validatedEnv.ETRANSFER_PROVIDER === 'bluepeak') {
 				required('BLUEPEAK_SECRET_KEY', validatedEnv.BLUEPEAK_SECRET_KEY);
 				required('BLUEPEAK_WEBHOOK_SECRET', validatedEnv.BLUEPEAK_WEBHOOK_SECRET);
 			}
