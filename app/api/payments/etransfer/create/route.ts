@@ -51,6 +51,19 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: true, alreadyPaid: true }, { status: 200 });
 		}
 
+		// Security: Validate that this order should use BluePeak based on its stored payment path
+		const paymentPath = String((order as Record<string, unknown>).paymentPath ?? '');
+		if (paymentPath !== 'bluepeak') {
+			console.warn(JSON.stringify({ label: 'bluepeak:create:invalid_payment_path', orderNumber, paymentPath }));
+			return NextResponse.json(
+				{
+					ok: false,
+					error: 'This order is not configured for BluePeak e-Transfer.',
+				},
+				{ status: 400 },
+			);
+		}
+
 		const et = (order as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
 		const existingCheckoutId = typeof et?.checkoutId === 'string' ? et.checkoutId : '';
 		const existingDepositEmail = typeof et?.depositEmail === 'string' ? et.depositEmail : '';

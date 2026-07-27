@@ -175,6 +175,7 @@ export default function CheckoutClient() {
 	const [friendsFamilyError, setFriendsFamilyError] = useState<string | null>(null);
 	const [friendsFamilyCode, setFriendsFamilyCode] = useState('');
 	const [friendsFamilyVerified, setFriendsFamilyVerified] = useState(false);
+	const [friendsFamilyEligible, setFriendsFamilyEligible] = useState<boolean | null>(null);
 	const getOrCreateIdempotencyKey = () => {
 		if (!idempotencyKeyRef.current) {
 			idempotencyKeyRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -501,12 +502,18 @@ export default function CheckoutClient() {
 			if (ETRANSFER_PROVIDER === 'bluepeak' && !(FRIENDS_FAMILY_ENABLED && friendsFamilyVerified)) {
 				// Reserve autodeposit email for this order (server-side BluePeak call)
 				try {
-					await fetch('/api/payments/etransfer/create', {
+					const response = await fetch('/api/payments/etransfer/create', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ orderNumber, idempotencyKey: getOrCreateIdempotencyKey() }),
 					});
-				} catch {
+					if (!response.ok) {
+						const data = await response.json().catch(() => ({}));
+						console.warn('BluePeak checkout creation failed:', data.error || 'Unknown error');
+						// If this fails, the order-confirmation page can still show fallback instructions.
+					}
+				} catch (error) {
+					console.warn('BluePeak checkout creation error:', error);
 					// If this fails, the order-confirmation page can still show fallback instructions.
 				}
 			}
@@ -1252,16 +1259,19 @@ export default function CheckoutClient() {
 																setFriendsFamilyStartLoading(true);
 																setFriendsFamilyError(null);
 																setFriendsFamilyMessage(null);
+																setFriendsFamilyEligible(null);
 																try {
 																	const response = await fetch('/api/friends-family/start', {
 																		method: 'POST',
 																		headers: { 'Content-Type': 'application/json' },
 																		body: JSON.stringify({ email: formData.email }),
 																	});
-																	const data = (await response.json()) as { ok?: boolean; message?: string };
+																	const data = (await response.json()) as { ok?: boolean; message?: string; eligible?: boolean };
 																	setFriendsFamilyMessage(data.message ?? 'If this email is eligible, a verification code has been sent.');
+																	setFriendsFamilyEligible(data.eligible ?? false);
 																} catch (e) {
 																	setFriendsFamilyMessage('If this email is eligible, a verification code has been sent.');
+																	setFriendsFamilyEligible(false);
 																} finally {
 																	setFriendsFamilyStartLoading(false);
 																}
@@ -1269,52 +1279,56 @@ export default function CheckoutClient() {
 															className='bg-deep-tidal-teal text-mineral-white font-semibold px-4 py-2 rounded-lg hover:bg-deep-tidal-teal-600 disabled:opacity-50'>
 															{friendsFamilyStartLoading ? 'Sending...' : 'Send code'}
 														</button>
-														<input
-															type='text'
-															value={friendsFamilyCode}
-															onChange={(e) => setFriendsFamilyCode(e.target.value)}
-															placeholder='6-digit code'
-															inputMode='numeric'
-															className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-														/>
-														<button
-															type='button'
-															disabled={friendsFamilyVerifyLoading || !formData.email.trim() || friendsFamilyCode.trim().length !== 6}
-															onClick={async () => {
-																setFriendsFamilyVerifyLoading(true);
-																setFriendsFamilyError(null);
-																setFriendsFamilyMessage(null);
-																try {
-																	const response = await fetch('/api/friends-family/verify', {
-																		method: 'POST',
-																		headers: { 'Content-Type': 'application/json' },
-																		credentials: 'include',
-																		body: JSON.stringify({ email: formData.email, code: friendsFamilyCode }),
-																	});
-																	const data = (await response.json()) as { ok?: boolean; error?: string };
-																	if (!response.ok || !data.ok) {
-																		setFriendsFamilyError(data.error ?? 'Invalid verification code.');
-																		return;
-																	}
-																	setFriendsFamilyVerified(true);
-																	setFriendsFamilyMessage('Verification successful.');
-																	setFriendsFamilyCode('');
-																} catch (e) {
-																	setFriendsFamilyError(e instanceof Error ? e.message : 'Failed to verify code.');
-																} finally {
-																	setFriendsFamilyVerifyLoading(false);
-																}
-															}}
-															className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50'>
-															{friendsFamilyVerifyLoading ? 'Verifying...' : 'Verify'}
-														</button>
+														{friendsFamilyEligible === true && (
+															<>
+																<input
+																	type='text'
+																	value={friendsFamilyCode}
+																	onChange={(e) => setFriendsFamilyCode(e.target.value)}
+																	placeholder='6-digit code'
+																	inputMode='numeric'
+																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+																/>
+																<button
+																	type='button'
+																	disabled={friendsFamilyVerifyLoading || !formData.email.trim() || friendsFamilyCode.trim().length !== 6}
+																	onClick={async () => {
+																		setFriendsFamilyVerifyLoading(true);
+																		setFriendsFamilyError(null);
+																		setFriendsFamilyMessage(null);
+																		try {
+																			const response = await fetch('/api/friends-family/verify', {
+																				method: 'POST',
+																				headers: { 'Content-Type': 'application/json' },
+																				credentials: 'include',
+																				body: JSON.stringify({ email: formData.email, code: friendsFamilyCode }),
+																			});
+																			const data = (await response.json()) as { ok?: boolean; error?: string };
+																			if (!response.ok || !data.ok) {
+																				setFriendsFamilyError(data.error ?? 'Invalid verification code.');
+																				return;
+																			}
+																			setFriendsFamilyVerified(true);
+																			setFriendsFamilyMessage('Verification successful.');
+																			setFriendsFamilyCode('');
+																		} catch (e) {
+																			setFriendsFamilyError(e instanceof Error ? e.message : 'Failed to verify code.');
+																		} finally {
+																			setFriendsFamilyVerifyLoading(false);
+																		}
+																	}}
+																	className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50'>
+																	{friendsFamilyVerifyLoading ? 'Verifying...' : 'Verify'}
+																</button>
+															</>
+														)}
 													</div>
 												</div>
 											)}
 										</div>
 									)}
 									{/* Credit Card - Hidden for now - Add Flex, remove Hidden */}
-									<label className={`hidden items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+									<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
 										<span className='flex items-center gap-2'>
 											<input
 												type='radio'

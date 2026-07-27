@@ -253,12 +253,20 @@ export async function POST(request: Request) {
 		// Gatewaylinx requires public HTTPS URLs for both tcomplete (return URL) and pburl (postback URL).
 		// Localhost URLs are blocked by the processor's firewall and cause indeterminate responses.
 		const ngrokUrl = process.env.NGROK_URL;
-		const reqProtocol = request.headers.get('x-forwarded-proto') || 'http';
-		const reqHost = request.headers.get('host') || 'localhost:3000';
-		const siteBaseUrl = `${reqProtocol}://${reqHost}`;
-		// For Gatewaylinx, use ngrok for both return and postback URLs if available.
-		const gatewaylinxBaseUrl = ngrokUrl ?? siteBaseUrl;
-		const tcompleteBase = gatewaylinxConfig ? gatewaylinxBaseUrl : process.env.DIGIPAY_TCOMPLETE_BASE || 'https://puretide.com';
+		const reqProtocol = request.headers.get('x-forwarded-proto') || 'https';
+		const reqHost = request.headers.get('host');
+		const siteBaseUrl = reqHost ? `${reqProtocol}://${reqHost}` : undefined;
+		const isProduction = process.env.NODE_ENV === 'production';
+		const configuredBaseUrl = process.env.APP_BASE_URL?.replace(/\/$/, '');
+		if (gatewaylinxConfig && isProduction && !configuredBaseUrl) {
+			throw new Error('APP_BASE_URL is required for Gatewaylinx in production');
+		}
+		// Production uses the real HTTPS domain; NGROK_URL is local-development-only.
+		const gatewaylinxBaseUrl = configuredBaseUrl ?? (!isProduction ? (ngrokUrl ?? siteBaseUrl) : siteBaseUrl);
+		const tcompleteBase = gatewaylinxConfig ? gatewaylinxBaseUrl : (configuredBaseUrl ?? process.env.DIGIPAY_TCOMPLETE_BASE) || 'https://puretide.com';
+		if (!tcompleteBase) {
+			throw new Error('A public callback URL is required for Gatewaylinx');
+		}
 		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
 
 		console.log(JSON.stringify({ label: 'digipay:create:tcomplete', tcomplete, siteBaseUrl, gatewaylinxBaseUrl }));

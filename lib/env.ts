@@ -1,9 +1,18 @@
 import { z } from 'zod';
 
+const booleanEnv = z.preprocess((value) => {
+	if (typeof value !== 'string') return value;
+	if (value.trim().toLowerCase() === 'true') return true;
+	if (value.trim().toLowerCase() === 'false') return false;
+	return value;
+}, z.boolean());
+
 // Environment variable schema with validation
 const envSchema = z.object({
 	// Basic Next.js
 	NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+	APP_BASE_URL: z.string().url().optional(),
+	NGROK_URL: z.string().url().optional(),
 
 	// Database
 	DATABASE_URL: z.string().optional(), // Not used with SQLite but kept for compatibility
@@ -19,7 +28,7 @@ const envSchema = z.object({
 	// Email (SMTP)
 	SMTP_HOST: z.string().optional(),
 	SMTP_PORT: z.coerce.number().optional(),
-	SMTP_SECURE: z.coerce.boolean().optional(),
+	SMTP_SECURE: booleanEnv.optional(),
 	SMTP_USER: z.string().optional(),
 	SMTP_PASS: z.string().optional(),
 	SMTP_FROM: z.string().optional(),
@@ -30,21 +39,21 @@ const envSchema = z.object({
 	// Email (SMTP) - prefixed overrides
 	ORDER_SMTP_HOST: z.string().optional(),
 	ORDER_SMTP_PORT: z.coerce.number().optional(),
-	ORDER_SMTP_SECURE: z.coerce.boolean().optional(),
+	ORDER_SMTP_SECURE: booleanEnv.optional(),
 	ORDER_SMTP_USER: z.string().optional(),
 	ORDER_SMTP_PASS: z.string().optional(),
 	ORDER_FROM: z.string().optional(),
 
 	CONTACT_SMTP_HOST: z.string().optional(),
 	CONTACT_SMTP_PORT: z.coerce.number().optional(),
-	CONTACT_SMTP_SECURE: z.coerce.boolean().optional(),
+	CONTACT_SMTP_SECURE: booleanEnv.optional(),
 	CONTACT_SMTP_USER: z.string().optional(),
 	CONTACT_SMTP_PASS: z.string().optional(),
 	CONTACT_FROM: z.string().optional(),
 
 	LOW_STOCK_SMTP_HOST: z.string().optional(),
 	LOW_STOCK_SMTP_PORT: z.coerce.number().optional(),
-	LOW_STOCK_SMTP_SECURE: z.coerce.boolean().optional(),
+	LOW_STOCK_SMTP_SECURE: booleanEnv.optional(),
 	LOW_STOCK_SMTP_USER: z.string().optional(),
 	LOW_STOCK_SMTP_PASS: z.string().optional(),
 	LOW_STOCK_FROM: z.string().optional(),
@@ -67,7 +76,7 @@ const envSchema = z.object({
 	GATEWAYLINX_HMAC_KEY: z.string().optional(),
 	GATEWAYLINX_RELAY_URL: z.string().optional(),
 	GATEWAYLINX_POSTBACK_ALLOWED_IP: z.string().optional(),
-	GATEWAYLINX_DRY_RUN_FULFILLMENT: z.coerce.boolean().default(false),
+	GATEWAYLINX_DRY_RUN_FULFILLMENT: booleanEnv.default(false),
 
 	// Credit card provider switching
 	CREDIT_CARD_PROVIDER: z.enum(['digipay', 'gatewaylinx']).default('digipay'),
@@ -78,6 +87,7 @@ const envSchema = z.object({
 	BLUEPEAK_WEBHOOK_SECRET: z.string().optional(),
 	BLUEPEAK_BASE_URL: z.string().optional(),
 	BLUEPEAK_WEBHOOK_MAX_SKEW_SECONDS: z.coerce.number().optional(),
+	BLUEPEAK_POSTBACK_ALLOWED_IP: z.string().optional(),
 	BLUEPEAK_DRY_RUN_FULFILLMENT: z.string().optional(),
 
 	// Wrike integration
@@ -111,15 +121,15 @@ const envSchema = z.object({
 
 	// Feature flags
 	ETRANSFER_PROVIDER: z.enum(['manual', 'bluepeak']).default('manual'),
-	FRIENDS_FAMILY_ENABLED: z.coerce.boolean().default(false),
-	NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED: z.coerce.boolean().default(false),
-	PROMO_MODAL_ENABLED: z.coerce.boolean().default(false),
-	ENABLE_WRIKE_INTEGRATION: z.coerce.boolean().default(false),
-	ENABLE_EMAIL_NOTIFICATIONS: z.coerce.boolean().default(true),
-	ENABLE_SHEET_SYNC: z.coerce.boolean().default(true),
+	FRIENDS_FAMILY_ENABLED: booleanEnv.default(false),
+	NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED: booleanEnv.default(false),
+	PROMO_MODAL_ENABLED: booleanEnv.default(false),
+	ENABLE_WRIKE_INTEGRATION: booleanEnv.default(false),
+	ENABLE_EMAIL_NOTIFICATIONS: booleanEnv.default(true),
+	ENABLE_SHEET_SYNC: booleanEnv.default(true),
 
 	// Promotional banner configuration
-	NEXT_PUBLIC_PROMO_BANNER_ENABLED: z.coerce.boolean().default(false),
+	NEXT_PUBLIC_PROMO_BANNER_ENABLED: booleanEnv.default(false),
 	NEXT_PUBLIC_PROMO_BANNER_MESSAGE: z.string().optional(),
 	NEXT_PUBLIC_PROMO_BANNER_CTA: z.string().optional(),
 
@@ -139,14 +149,51 @@ export function validateEnv(): EnvSchema {
 
 		// Production-specific validations
 		if (validatedEnv.NODE_ENV === 'production') {
-			// In production, ORDER_CONFIRMATION_SECRET is required
-			if (!validatedEnv.ORDER_CONFIRMATION_SECRET) {
-				throw new Error('ORDER_CONFIRMATION_SECRET is required in production');
+			const required = (name: string, value: unknown) => {
+				if (typeof value !== 'string' || value.trim() === '') {
+					throw new Error(`${name} is required in production`);
+				}
+			};
+
+			required('APP_BASE_URL', validatedEnv.APP_BASE_URL);
+			if (!validatedEnv.APP_BASE_URL?.startsWith('https://')) {
+				throw new Error('APP_BASE_URL must use HTTPS in production');
+			}
+			if (validatedEnv.NGROK_URL) {
+				throw new Error('NGROK_URL must not be configured in production');
+			}
+			required('ORDER_CONFIRMATION_SECRET', validatedEnv.ORDER_CONFIRMATION_SECRET);
+			required('ORDERS_DB_PATH', validatedEnv.ORDERS_DB_PATH);
+			required('SMTP_HOST', validatedEnv.SMTP_HOST);
+			required('SMTP_USER', validatedEnv.SMTP_USER);
+			required('SMTP_PASS', validatedEnv.SMTP_PASS);
+			required('ORDER_NOTIFICATION_EMAIL', validatedEnv.ORDER_NOTIFICATION_EMAIL);
+			required('GOOGLE_SHEET_ID', validatedEnv.GOOGLE_SHEET_ID);
+			required('GOOGLE_SERVICE_ACCOUNT_EMAIL', validatedEnv.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+			required('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY', validatedEnv.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);
+			required('CRON_SECRET', validatedEnv.CRON_SECRET);
+
+			if (validatedEnv.CREDIT_CARD_PROVIDER === 'gatewaylinx') {
+				required('GATEWAYLINX_SITE_ID', validatedEnv.GATEWAYLINX_SITE_ID);
+				required('GATEWAYLINX_HMAC_KEY', validatedEnv.GATEWAYLINX_HMAC_KEY);
+				required('GATEWAYLINX_RELAY_URL', validatedEnv.GATEWAYLINX_RELAY_URL);
+				required('GATEWAYLINX_POSTBACK_ALLOWED_IP', validatedEnv.GATEWAYLINX_POSTBACK_ALLOWED_IP);
+				if (validatedEnv.GATEWAYLINX_DRY_RUN_FULFILLMENT) {
+					throw new Error('GATEWAYLINX_DRY_RUN_FULFILLMENT must be false in production');
+				}
 			}
 
-			// In production with standalone output, ORDERS_DB_PATH should be explicitly set
-			if (!validatedEnv.ORDERS_DB_PATH) {
-				console.warn('ORDERS_DB_PATH not configured - using relative path may cause issues in standalone deployments');
+			if (validatedEnv.ENABLE_WRIKE_INTEGRATION) {
+				required('WRIKE_API_TOKEN', validatedEnv.WRIKE_API_TOKEN);
+				required('WRIKE_ORDERS_FOLDER_ID', validatedEnv.WRIKE_ORDERS_FOLDER_ID);
+				required('WRIKE_CLIENTS_FOLDER_ID', validatedEnv.WRIKE_CLIENTS_FOLDER_ID);
+				required('WRIKE_PRODUCTS_FOLDER_ID', validatedEnv.WRIKE_PRODUCTS_FOLDER_ID);
+				required('WRIKE_LABELS_FOLDER_ID', validatedEnv.WRIKE_LABELS_FOLDER_ID);
+			}
+
+			if (validatedEnv.ETRANSFER_PROVIDER === 'bluepeak') {
+				required('BLUEPEAK_SECRET_KEY', validatedEnv.BLUEPEAK_SECRET_KEY);
+				required('BLUEPEAK_WEBHOOK_SECRET', validatedEnv.BLUEPEAK_WEBHOOK_SECRET);
 			}
 
 			// In production, DigiPay HMAC secret is required if DigiPay is used

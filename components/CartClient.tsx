@@ -189,7 +189,7 @@ export default function CartClient() {
 									<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
 								</label>
 								{/* Credit Card - Hidden for now - Add Flex, remove Hidden */}
-								<label className={`items-center justify-between gap-2 hidden ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+								<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
 									<span className='flex items-center gap-2'>
 										<input
 											type='radio'

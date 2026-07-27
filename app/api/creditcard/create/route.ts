@@ -239,12 +239,21 @@ export async function POST(request: Request) {
 			confirmationParams.set('token', confirmationToken);
 		}
 
-		const tcompleteBase = process.env.DIGIPAY_TCOMPLETE_BASE || 'https://puretide.com';
-		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
-
 		// Get the payment provider based on env var
 		const provider = getPaymentProvider();
 		const gatewaylinxConfig = getGatewaylinxConfig();
+		const isProduction = process.env.NODE_ENV === 'production';
+		const configuredBaseUrl = process.env.APP_BASE_URL?.replace(/\/$/, '');
+		const ngrokUrl = process.env.NGROK_URL;
+		if (gatewaylinxConfig && isProduction && !configuredBaseUrl) {
+			throw new Error('APP_BASE_URL is required for Gatewaylinx in production');
+		}
+		const callbackBaseUrl = gatewaylinxConfig ? (configuredBaseUrl ?? (!isProduction ? ngrokUrl : undefined)) : (configuredBaseUrl ?? process.env.DIGIPAY_TCOMPLETE_BASE);
+		if (gatewaylinxConfig && !callbackBaseUrl) {
+			throw new Error('A public callback URL is required for Gatewaylinx');
+		}
+		const tcompleteBase = callbackBaseUrl || 'https://puretide.com';
+		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
 
 		// Build order record
 		const orderRecord = {
@@ -279,10 +288,15 @@ export async function POST(request: Request) {
 
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
 
-		// Build postback URL (webhook)
-		const protocol = request.headers.get('x-forwarded-proto') || 'http';
-		const host = request.headers.get('host') || 'localhost:3000';
-		const postbackUrl = `${protocol}://${host}/api/creditcard/webhook`;
+		// Build postback URL (webhook) using the same public callback base.
+		const protocol = request.headers.get('x-forwarded-proto') || 'https';
+		const host = request.headers.get('host');
+		const requestBaseUrl = host ? `${protocol}://${host}` : undefined;
+		const postbackBaseUrl = gatewaylinxConfig ? callbackBaseUrl : requestBaseUrl;
+		if (!postbackBaseUrl) {
+			throw new Error('A public postback URL is required');
+		}
+		const postbackUrl = `${postbackBaseUrl}/api/creditcard/webhook`;
 
 		// Call provider's createPaymentSession
 		const sessionResult = await provider.createPaymentSession({

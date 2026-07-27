@@ -244,6 +244,19 @@ export async function POST(request: Request) {
 						verifiedFriendsFamilyEmail,
 					})
 				: undefined;
+
+		console.info(
+			JSON.stringify({
+				label: 'orders:create:family_friends_debug',
+				orderNumber,
+				customerEmail: normalizedCustomer.email,
+				verifiedFriendsFamilyEmail,
+				isFamilyFriend: Boolean(verifiedFriendsFamilyEmail && verifiedFriendsFamilyEmail === normalizedCustomer.email),
+				paymentMethod: orderPayload.paymentMethod,
+				paymentPath,
+				etransferProvider,
+			}),
+		);
 		const orderRecord = {
 			id: `order_${orderNumber}`,
 			orderNumber,

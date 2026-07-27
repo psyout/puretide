@@ -45,9 +45,12 @@ ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; mkdir -p .next/stand
 
 echo "Ensuring data directory exists on VPS..."
 ssh "${SSH_TARGET}" "umask 077 && mkdir -p \"${VPS_PATH}/data\" && chmod 700 \"${VPS_PATH}/data\" && touch \"${VPS_PATH}/data/orders.sqlite\" && chmod 600 \"${VPS_PATH}/data/orders.sqlite\""
+echo "Validating production environment on VPS..."
+ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; test ! -e .env.local; test ! -e .env.production.local; test -f .env; grep -q '^NODE_ENV=production$' .env; grep -q '^APP_BASE_URL=https://puretide.ca$' .env; grep -q '^CREDIT_CARD_PROVIDER=gatewaylinx$' .env; grep -q '^GATEWAYLINX_SITE_ID=' .env; grep -q '^GATEWAYLINX_HMAC_KEY=' .env; grep -q '^GATEWAYLINX_RELAY_URL=' .env; grep -q '^GATEWAYLINX_POSTBACK_ALLOWED_IP=' .env; grep -q '^GATEWAYLINX_DRY_RUN_FULFILLMENT=false$' .env; ! grep -q '^NGROK_URL=' .env; ! grep -q 'REPLACE_WITH_' .env"
+
 echo "Restarting pm2 app (${PM2_APP}) on VPS..."
 # HOSTNAME=0.0.0.0 is the key fix for the 502 error
 # ORDERS_DB_PATH ensures SQLite uses absolute path in standalone mode
-ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; [ -f .env ] && . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
+ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; set -a; . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 start .next/standalone/server.js --name \"${PM2_APP}\" --update-env --max-memory-restart 700M"
 
 echo "Done. Website should be live at https://puretide.ca"

@@ -14,13 +14,12 @@ export async function POST(request: Request) {
 		const emailRaw = String(body?.email ?? '');
 		const email = normalizeEmail(emailRaw);
 		if (!isFriendsFamilyEnabled()) {
-			return NextResponse.json({ ok: true, message: 'If this email is eligible, a verification code has been sent.' });
+			return NextResponse.json({ ok: true, message: 'If this email is eligible, a verification code has been sent to you.' });
 		}
 
 		const result = await startFriendsFamilyOtp(request, email);
 
-		// Non-enumerating behavior: we always return ok with the same message.
-		// If eligible, an OTP record was created and we attempt to send the email.
+		// Only send email if eligible (code exists)
 		if (email && typeof result.code === 'string' && result.code.trim() !== '') {
 			const code = result.code.trim();
 			const subject = 'Your Pure Tide Friends & Family verification code';
@@ -52,7 +51,7 @@ export async function POST(request: Request) {
 			});
 		}
 
-		return NextResponse.json({ ok: true, message: result.message });
+		return NextResponse.json({ ok: true, message: result.message, eligible: result.eligible });
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to start verification.', error, logLabel: 'friends-family:start' });
 		// Still non-enumerating; return generic success message even on internal errors.

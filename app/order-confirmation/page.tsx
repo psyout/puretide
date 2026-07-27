@@ -207,8 +207,8 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Confirming your payment</h1>
 							<p className='text-deep-tidal-teal-800 mb-4'>
-								Your order was received, but we could not immediately confirm whether your card was charged. Please do not retry payment — this page
-								will update automatically once we receive confirmation.
+								Your order was received, but we could not immediately confirm whether your card was charged. Please do not retry payment — this page will update automatically
+								once we receive confirmation.
 							</p>
 							<p className='text-deep-tidal-teal-600 text-sm mb-4'>Order number: {order.orderNumber ?? orderNumberParam}</p>
 							<p className='text-deep-tidal-teal-600 text-sm mb-4'>
@@ -335,6 +335,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			const checkoutIdRaw = typeof et?.checkoutId === 'string' ? String(et.checkoutId).trim() : '';
 			const etransferProviderRaw = String(process.env.ETRANSFER_PROVIDER ?? 'manual');
 			const storedProviderRaw = typeof et?.provider === 'string' ? String(et.provider).trim().toLowerCase() : '';
+			const paymentPath = String((order as unknown as Record<string, unknown>).paymentPath ?? '');
 			const etransferProvider = storedProviderRaw === 'bluepeak' ? 'bluepeak' : etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 
 			console.info(
@@ -346,12 +347,15 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 					paymentMethod: order.paymentMethod,
 					paymentProvider: String((order as unknown as Record<string, unknown>).paymentProvider ?? ''),
 					storedEtransferProvider: typeof et?.provider === 'string' ? String(et.provider) : null,
+					paymentPath,
 					hasDepositEmail: Boolean(depositEmailRaw),
 					hasCheckoutId: Boolean(checkoutIdRaw),
 				}),
 			);
 
-			if (etransferProvider === 'bluepeak' && (!depositEmailRaw || !checkoutIdRaw)) {
+			// Security: Only create BluePeak checkout if paymentPath is 'bluepeak'
+			// This prevents overwriting manual_friends_family orders with BluePeak details
+			if (paymentPath === 'bluepeak' && etransferProvider === 'bluepeak' && (!depositEmailRaw || !checkoutIdRaw)) {
 				try {
 					const { bluepeakCreateCheckout } = await import('@/lib/bluepeak');
 					const customer = (order as unknown as Record<string, unknown>).customer as Record<string, unknown> | undefined;
@@ -488,12 +492,16 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 									</div>
 								</div>
 							</div>
-							{etransferProvider === 'bluepeak' && (
+							{depositEmailRaw && depositEmailRaw.includes('@etransfercanada.ca') ? (
 								<p className='mt-4 text-deep-tidal-teal-700 text-sm'>
-									Note: The recipient email may be our standard payment email or a unique email securely assigned by our payment provider for this order. We do not generate
-									these email addresses — they are used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and
-									include your order number in the memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order
-									will begin processing.
+									Note: The recipient email is an unique email securely assigned by our payment provider for this order. We do not generate these email addresses — they are
+									used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and include your order number in the
+									memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order will begin processing.
+								</p>
+							) : (
+								<p className='mt-4 text-deep-tidal-teal-700 text-sm'>
+									Note: Please send your e-Transfer to the email address shown above and include your order number in the memo/message field. Once payment is received and
+									confirmed, you’ll automatically get a payment confirmation email and your order will begin processing.
 								</p>
 							)}
 							<div className='mt-6'>
@@ -668,12 +676,16 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 									<div className='text-deep-tidal-teal-800 font-semibold'>{orderNumber}</div>
 								</div>
 							</div>
-							{paymentProvider === 'bluepeak' && (
+							{paymentProvider === 'bluepeak' ? (
 								<p className='text-sm text-deep-tidal-teal-800 mt-4'>
-									Note: The recipient email may be our standard payment email or a unique email securely assigned by our payment provider for this order. We do not generate
-									these email addresses — they are used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and
-									include your order number in the memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order
-									will begin processing.
+									Note: The recipient email is an unique email securely assigned by our payment provider for this order. We do not generate these email addresses — they are
+									used to safely match your Interac e-Transfer to your order. Please send the e-Transfer only to the email shown above and include your order number in the
+									memo/message. Once payment is received and confirmed, you’ll automatically get a payment confirmation email and your order will begin processing.
+								</p>
+							) : (
+								<p className='text-sm text-deep-tidal-teal-800 mt-4'>
+									Note: Please send your e-Transfer to the email address shown above and include your order number in the memo/message field. Once payment is received and
+									confirmed, you’ll automatically get a payment confirmation email and your order will begin processing.
 								</p>
 							)}
 							<div className='text-xs text-deep-tidal-teal-600 mt-4 pt-4 border-t border-deep-tidal-teal/10 space-y-2'>

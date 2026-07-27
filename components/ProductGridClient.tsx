@@ -84,7 +84,11 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 			<div className='relative mx-auto max-w-7xl px-6'>
 				<div className='mb-5 mt-20'>
 					<div className='text-center'>
-						<h2 className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>Our Products</h2>
+						<h2
+							id='products-sticky-boundary'
+							className='text-4xl font-bold text-deep-tidal-teal-800 mb-4'>
+							Our Products
+						</h2>
 						<p className='text-deep-tidal-teal-700 text-base sm:text-lg max-w-lg mx-auto'>
 							Discover our premium collection of wellness products, each crafted with precision and care.
 						</p>

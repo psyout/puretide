@@ -38,3 +38,30 @@ test('decidePaymentPath: verified cookie email mismatch -> no override', () => {
 	});
 	assert.equal(path, 'bluepeak');
 });
+
+test('decidePaymentPath: case-insensitive email matching', () => {
+	const path = decidePaymentPath({
+		etransferProvider: 'bluepeak',
+		customerEmail: 'Customer@Example.com',
+		verifiedFriendsFamilyEmail: 'customer@example.com',
+	});
+	assert.equal(path, 'manual_friends_family');
+});
+
+test('decidePaymentPath: email with whitespace trimmed', () => {
+	const path = decidePaymentPath({
+		etransferProvider: 'bluepeak',
+		customerEmail: '  customer@example.com  ',
+		verifiedFriendsFamilyEmail: 'customer@example.com',
+	});
+	assert.equal(path, 'manual_friends_family');
+});
+
+test('decidePaymentPath: no verified email -> uses provider setting', () => {
+	const path = decidePaymentPath({
+		etransferProvider: 'manual',
+		customerEmail: 'customer@example.com',
+		verifiedFriendsFamilyEmail: null,
+	});
+	assert.equal(path, 'manual');
+});

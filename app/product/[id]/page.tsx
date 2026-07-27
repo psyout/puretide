@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { Product } from '@/types/product';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
-import Header from '@/components/Header';
+import PromoBannerWrapper from '@/components/PromoBannerWrapper';
 import ProductDetailClient from '@/components/ProductDetailClient';
 import { BadgeCheck, FlaskConical, PackageCheck, ShieldCheck } from 'lucide-react';
 import fs from 'fs';
@@ -68,10 +68,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
 	});
 	const hasCoaFile = !!matchingCoaFile;
 
+	const promoBannerEnabled = String(process.env.NEXT_PUBLIC_PROMO_BANNER_ENABLED ?? '').toLowerCase() === 'true';
+
 	return (
 		<div className='min-h-screen'>
-			<Header />
-			<div className='max-w-7xl mx-auto px-6 py-24'>
+			<PromoBannerWrapper
+				enabled={promoBannerEnabled}
+				message={process.env.NEXT_PUBLIC_PROMO_BANNER_MESSAGE}
+				cta={process.env.NEXT_PUBLIC_PROMO_BANNER_CTA}
+				stickyBoundaryId='product-detail-sticky-boundary'
+			/>
+			<div
+				id='product-detail-sticky-boundary'
+				className='max-w-7xl mx-auto px-6 py-24'>
 				<Link
 					href='/'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>

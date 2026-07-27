@@ -47,20 +47,49 @@ function toMilliCents(value: string): number {
 	return Number(dollars) * 1000 + Number(frac3);
 }
 
+function getRequestIp(request: Request): string {
+	const cfIp = request.headers.get('cf-connecting-ip');
+	if (cfIp) return cfIp.trim();
+	const xRealIp = request.headers.get('x-real-ip');
+	if (xRealIp) return xRealIp.trim();
+	const xff = request.headers.get('x-forwarded-for');
+	if (xff) return xff.split(',')[0]?.trim() || '';
+	return '';
+}
+
 export async function POST(request: Request) {
 	const webhookSecret = process.env.BLUEPEAK_WEBHOOK_SECRET;
 	if (!webhookSecret) {
 		return json({ ok: false, error: 'Webhook not configured (missing BLUEPEAK_WEBHOOK_SECRET)' }, { status: 500 });
 	}
 
+	const allowedIpRaw = String(process.env.BLUEPEAK_POSTBACK_ALLOWED_IP ?? '').trim();
+	if (allowedIpRaw) {
+		const requestIp = getRequestIp(request);
+		const allowed = allowedIpRaw
+			.split(',')
+			.map((value) => value.trim())
+			.filter(Boolean);
+		if (!requestIp || !allowed.includes(requestIp)) {
+			console.warn(JSON.stringify({ label: 'bluepeak:webhook:ip_not_allowed', requestIp, allowedCount: allowed.length }));
+			return json({ ok: false, error: 'Forbidden.' }, { status: 403 });
+		}
+	}
+
 	const dryRunFulfillment = String(process.env.BLUEPEAK_DRY_RUN_FULFILLMENT ?? '').toLowerCase() === 'true';
 
 	try {
 		const rawBody = await request.text();
-		const signature = request.headers.get('signature') ?? request.headers.get('x-autodeposit-signature') ?? request.headers.get('x-adg-signature') ?? '';
+		const signature = request.headers.get('x-adg-signature') ?? request.headers.get('x-autodeposit-signature') ?? request.headers.get('signature') ?? '';
 
 		if (!verifyBluepeakWebhookSignature(rawBody, signature, webhookSecret)) {
-			console.warn(JSON.stringify({ label: 'bluepeak:webhook:invalid_signature' }));
+			console.warn(
+				JSON.stringify({
+					label: 'bluepeak:webhook:invalid_signature',
+					hasSignatureHeader: Boolean(signature),
+					signatureLength: signature ? signature.length : 0,
+				}),
+			);
 			return json({ ok: false, error: 'Invalid signature.' }, { status: 401 });
 		}
 

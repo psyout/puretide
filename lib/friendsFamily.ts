@@ -10,6 +10,7 @@ export type StartFriendsFamilyOtpResult = {
 	ok: true;
 	message: string;
 	code?: string;
+	eligible?: boolean;
 };
 
 export function isFriendsFamilyEnabled(): boolean {
@@ -135,28 +136,32 @@ function checkEmailRateLimit(key: string, max: number, windowMs: number): boolea
 
 export async function startFriendsFamilyOtp(request: Request, emailRaw: string): Promise<StartFriendsFamilyOtpResult> {
 	if (!isFriendsFamilyEnabled()) {
-		return { ok: true, message: 'If this email is eligible, a verification code has been sent.' };
+		return { ok: true, message: 'If this email is eligible, a verification code has been sent to you.', eligible: false };
 	}
 	const email = normalizeEmail(emailRaw);
 
 	// Rate limit by IP
 	const ipRate = checkRateLimit(request, 'friends-family-otp-start', 10, 60 * 60 * 1000);
 	if (!ipRate.allowed) {
-		return { ok: true, message: 'If this email is eligible, a verification code has been sent.' };
+		return { ok: true, message: 'If this email is eligible, a verification code has been sent to you.', eligible: false };
 	}
 
 	// Rate limit by email (non-persistent, additive)
 	if (email) {
 		const allowedByEmail = checkEmailRateLimit(`ff:start:${email}`, 5, 60 * 60 * 1000);
 		if (!allowedByEmail) {
-			return { ok: true, message: 'If this email is eligible, a verification code has been sent.' };
+			return { ok: true, message: 'If this email is eligible, a verification code has been sent to you.', eligible: false };
 		}
 	}
 
 	const eligible = email ? await isFriendsFamilyEmailAllowlisted(email) : false;
 	if (!eligible) {
-		// Non-enumerating behavior
-		return { ok: true, message: 'If this email is eligible, a verification code has been sent.' };
+		// Email not found in spreadsheet - return clear message
+		return {
+			ok: true,
+			message: "This email isn't registered for the Friends & Family program. If you believe this is a mistake, please contact us.",
+			eligible: false,
+		};
 	}
 
 	const code = generateSixDigitOtp();
@@ -175,7 +180,7 @@ export async function startFriendsFamilyOtp(request: Request, emailRaw: string):
 		createdAt: nowIso,
 	});
 
-	return { ok: true, message: 'If this email is eligible, a verification code has been sent.', code };
+	return { ok: true, message: 'A verification code has been sent to your email. Please enter it below to continue.', code, eligible: true };
 }
 
 export async function verifyFriendsFamilyOtp(

@@ -77,11 +77,22 @@ export function moneyStringToCents(value: string): number {
 }
 
 export function verifyBluepeakWebhookSignature(rawBody: string, signatureHeader: string, secret: string): boolean {
-	const provided = (signatureHeader || '').trim();
+	const providedRaw = (signatureHeader || '').trim();
+	if (!providedRaw) return false;
+	const provided = providedRaw.toLowerCase().startsWith('sha256=') ? providedRaw.slice('sha256='.length).trim() : providedRaw;
 	if (!provided) return false;
-	const expected = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('base64');
-	if (provided.length !== expected.length) return false;
-	return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+
+	const key = String(secret ?? '').trim();
+	const expectedBase64 = crypto.createHmac('sha256', key).update(rawBody, 'utf8').digest('base64');
+	const expectedHex = crypto.createHmac('sha256', key).update(rawBody, 'utf8').digest('hex');
+
+	if (provided.length === expectedBase64.length) {
+		return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expectedBase64));
+	}
+	if (provided.length === expectedHex.length) {
+		return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expectedHex));
+	}
+	return false;
 }
 
 export async function bluepeakCreateCheckout(input: {
