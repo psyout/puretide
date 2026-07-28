@@ -2,7 +2,7 @@
 
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { hasProductImage } from '@/lib/productImage';
@@ -69,7 +69,7 @@ export default function CheckoutClient() {
 
 		window.addEventListener('message', handleMessage);
 		return () => window.removeEventListener('message', handleMessage);
-	}, [gatewaylinxOrderNumber]);
+	}, [gatewaylinxOrderNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const buildGatewaylinxConfirmationUrl = (orderNumber: string, extra?: Record<string, string>) => {
 		const params = new URLSearchParams({ orderNumber });

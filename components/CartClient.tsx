@@ -1,21 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
-import { Trash2, CreditCard } from 'lucide-react';
+import { CreditCard, Lock, AlertCircle } from 'lucide-react';
 import { ENABLE_CREDIT_CARD } from '@/lib/constants';
 import CrossSellSection from './CrossSellSection';
+import FreeShippingProgress from './FreeShippingProgress';
+import CartItemDetails from './CartItemDetails';
+import type { Product } from '@/types/product';
 
-export default function CartClient() {
+type CartClientProps = {
+	products: Product[];
+	stockUnavailable: boolean;
+};
+
+export default function CartClient({ products, stockUnavailable }: CartClientProps) {
 	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice, paymentMethod, setPaymentMethod } = useCart();
 	const router = useRouter();
 	const [showClearConfirm, setShowClearConfirm] = useState(false);
 	const total = getTotal();
+
+	// Create a map of product stock for quick lookup
+	const productStockMap = useMemo(() => {
+		const map = new Map<string, number>();
+		products.forEach((product) => {
+			map.set(product.id, Number(product.stock) || 0);
+			if (product.slug) {
+				map.set(product.slug, Number(product.stock) || 0);
+			}
+		});
+		return map;
+	}, [products]);
+
+	// Check if any cart item has invalid quantity (exceeds available stock)
+	const hasCartInvalidQuantity = cartItems.some((item) => {
+		const availableStock = productStockMap.get(item.id) || productStockMap.get(item.slug) || 0;
+		return item.quantity > availableStock;
+	});
 
 	// Credit card payment limit
 	const CREDIT_CARD_LIMIT = 500;
@@ -67,90 +93,134 @@ export default function CartClient() {
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
 					← Back to Products
 				</Link>
-				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>My Cart</h1>
+				<h1 className='text-3xl font-bold mb-6 text-deep-tidal-teal-800'>
+					Your cart, <span className='italic font-thin'>reviewed</span>
+				</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='lg:col-span-2'>
+						{/* Free Shipping Progress Bar */}
+						<FreeShippingProgress subtotal={total} />
+
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-md'>
-							{cartItems.map((item, index) => (
-								<div
-									key={item.id}
-									className={`flex items-center gap-6 ${index < cartItems.length - 1 ? 'pb-6 mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
-									<Link
-										href={`/product/${item.slug || item.id}`}
-										className='h-28 w-28 flex-shrink-0 flex items-center justify-center rounded-lg hover:opacity-90 transition-opacity'
-										aria-label={`View ${item.name} details`}>
-										{hasProductImage(item.image) ? (
-											<Image
-												src={item.image}
-												alt={item.name}
-												width={96}
-												height={96}
-												style={{ width: 'auto', height: 'auto' }}
-												unoptimized={item.image.startsWith('http')}
-												className='max-h-24 max-w-24 w-auto h-auto object-contain'
-												priority
+							{cartItems.map((item, index) => {
+								const availableStock = productStockMap.get(item.id) || productStockMap.get(item.slug) || item.stock || 0;
+								const isOutOfStock = availableStock <= 0;
+								const isLowStock = availableStock > 0 && availableStock <= 3;
+								const isAtStockLimit = item.quantity >= availableStock;
+								const hasInvalidQuantity = item.quantity > availableStock;
+								const isDiscounted = getItemPrice(item) < item.price;
+								const savings = item.price - getItemPrice(item);
+
+								return (
+									<div
+										key={item.id}
+										className={`flex gap-6 ${index < cartItems.length - 1 ? 'pb-6 mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
+										{/* Left Section: Product Image */}
+										<Link
+											href={`/product/${item.slug || item.id}`}
+											className='flex-shrink-0 w-32 h-32 lg:w-36 lg:h-36 flex items-center justify-center rounded-xl bg-deep-tidal-teal/5 hover:opacity-90 transition-opacity'
+											aria-label={`View ${item.name} details`}>
+											{hasProductImage(item.image) ? (
+												<Image
+													src={item.image}
+													alt={item.name}
+													width={128}
+													height={128}
+													unoptimized={item.image.startsWith('http')}
+													className='max-h-28 max-w-28 lg:max-h-32 lg:max-w-32 w-auto h-auto object-contain'
+													priority
+												/>
+											) : (
+												<ProductImagePlaceholder className='max-h-28 max-w-28 lg:max-h-32 lg:max-w-32' />
+											)}
+										</Link>
+
+										{/* Center Section: Product Information */}
+										<div className='flex-1 min-w-0 flex flex-col'>
+											{/* Product Name */}
+											<h3 className='text-md md:text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
+											{item.subtitle && <p className='text-xs md:text-sm text-deep-tidal-teal-600 mb-3'>{item.subtitle}</p>}
+
+											{/* Stock Status */}
+											{stockUnavailable ? (
+												<p className='text-sm text-deep-tidal-teal-500 mb-3'>Stock unavailable</p>
+											) : isOutOfStock ? (
+												<div className='flex items-center gap-2 text-sm text-red-600 font-medium mb-3'>
+													<span className='w-2 h-2 rounded-full bg-red-500' />
+													<span>Out of Stock</span>
+												</div>
+											) : isLowStock ? (
+												<div className='flex items-center gap-2 text-sm text-yellow-600 font-medium mb-3'>
+													<span className='w-2 h-2 rounded-full bg-yellow-500' />
+													<span>Low Stock</span>
+												</div>
+											) : (
+												<div className='flex items-center gap-2 text-sm text-green-600 font-medium mb-3'>
+													<span className='w-2 h-2 rounded-full bg-green-500' />
+													<span>In Stock</span>
+												</div>
+											)}
+
+											{/* Quantity Controls on single row */}
+											<div className='flex items-center gap-2 mb-3'>
+												<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
+													<button
+														onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, availableStock)}
+														className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+														aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
+														<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>−</span>
+													</button>
+													<span className='w-12 px-2 py-1 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10 font-medium text-sm'>
+														{item.quantity}
+													</span>
+													<button
+														onClick={() => updateQuantity(item.id, item.quantity + 1, availableStock)}
+														className={`p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors ${isAtStockLimit || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+														aria-label='Increase quantity'
+														disabled={isAtStockLimit || isOutOfStock}>
+														<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
+													</button>
+												</div>
+												<button
+													onClick={() => removeFromCart(item.id)}
+													className='text-xs text-red-600 hover:text-red-700 font-medium transition-colors whitespace-nowrap'>
+													Remove
+												</button>
+											</div>
+
+											{/* Collapsible Product Details */}
+											<CartItemDetails
+												description={item.description}
+												details={item.details}
 											/>
-										) : (
-											<ProductImagePlaceholder className='max-h-24 max-w-24' />
-										)}
-									</Link>
-									<div className='flex-1'>
-										<div className='flex items-baseline justify-between gap-3 flex-col lg:items-start lg:gap-1'>
-											<h3 className='text-lg font-semibold text-deep-tidal-teal-800'>{item.name}</h3>
-											<div className='flex items-center gap-2'>
-												<p className='text-xl text-deep-tidal-teal font-bold'>${getItemPrice(item).toFixed(2)}</p>
-												{getItemPrice(item) < item.price && (
-													<span className='text-lg text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</span>
-												)}
-											</div>
+
+											{/* Invalid quantity warning */}
+											{hasInvalidQuantity && (
+												<div className='mt-2 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2'>
+													<AlertCircle className='w-4 h-4 flex-shrink-0' />
+													<span>
+														Only {availableStock} {availableStock === 1 ? 'unit is' : 'units are'} currently available. Please update your quantity.
+													</span>
+												</div>
+											)}
 										</div>
-										<p className='mt-2 text-sm text-deep-tidal-teal-700 leading-relaxed line-clamp-2'>{item.description}</p>
-										<div className='mt-3 flex w-full items-center justify-flex-start flex-wrap gap-4 lg:hidden'>
-											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
-												<button
-													onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, item.stock)}
-													className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
-													aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
-													{item.quantity === 1 ? (
-														<Trash2 className='w-5 h-5 text-red-500' />
-													) : (
-														<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>−</span>
-													)}
-												</button>
-												<span className='min-w-[2rem] px-2 py-1.5 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10'>{item.quantity}</span>
-												<button
-													onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)}
-													className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
-													aria-label='Increase quantity'>
-													<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>+</span>
-												</button>
-											</div>
+
+										{/* Right Section: Pricing */}
+										<div className='flex-shrink-0 flex flex-col items-end justify-start w-24 lg:w-28'>
+											<p className='text-lg md:text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
+											{isDiscounted && (
+												<>
+													<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
+													<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-1 rounded'>
+														You save ${savings.toFixed(2)}
+													</span>
+												</>
+											)}
 										</div>
 									</div>
-									<div className='hidden lg:flex items-center'>
-										<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
-											<button
-												onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, item.stock)}
-												className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
-												aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
-												{item.quantity === 1 ? (
-													<Trash2 className='w-5 h-5 text-red-500' />
-												) : (
-													<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>−</span>
-												)}
-											</button>
-											<span className='min-w-[2rem] px-2 py-1.5 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10'>{item.quantity}</span>
-											<button
-												onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)}
-												className='p-2 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
-												aria-label='Increase quantity'>
-												<span className='w-5 h-5 flex items-center justify-center text-lg font-medium'>+</span>
-											</button>
-										</div>
-									</div>
-								</div>
-							))}
+								);
+							})}
 						</div>
 					</div>
 
@@ -232,34 +302,18 @@ export default function CartClient() {
 										alert('Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.');
 										return;
 									}
+									if (hasCartInvalidQuantity) {
+										alert('Please update your quantities to match available stock before proceeding to checkout.');
+										return;
+									}
 									router.push('/checkout');
 								}}
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded transition-colors mb-4'>
-								Proceed to Checkout
+								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded transition-colors mb-4 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+								disabled={hasCartInvalidQuantity}>
+								<span className='flex items-center gap-2 uppercase text-sm'>
+									<Lock size={18} /> Secure Checkout
+								</span>
 							</button>
-							{showClearConfirm ? (
-								<div className='flex gap-2'>
-									<button
-										onClick={() => {
-											clearCart();
-											setShowClearConfirm(false);
-										}}
-										className='flex-1 border border-red-500 text-red-600 hover:bg-red-50 font-semibold py-2 px-4 rounded transition-colors'>
-										Yes, clear cart
-									</button>
-									<button
-										onClick={() => setShowClearConfirm(false)}
-										className='flex-1 border border-deep-tidal-teal/30 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 font-semibold py-2 px-4 rounded transition-colors'>
-										Cancel
-									</button>
-								</div>
-							) : (
-								<button
-									onClick={() => setShowClearConfirm(true)}
-									className='w-full border border-deep-tidal-teal/30 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 font-semibold py-2 px-4 rounded transition-colors'>
-									Clear Cart
-								</button>
-							)}
 						</div>
 					</div>
 				</div>
