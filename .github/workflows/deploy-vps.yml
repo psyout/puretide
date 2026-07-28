@@ -124,7 +124,12 @@ jobs:
           set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; test -d \"${VPS_PATH}\"; test -f \"${VPS_PATH}/.env\"; mkdir -p \"${VPS_PATH}/.deploy\" \"${VPS_PATH}/data\"; command -v npm; command -v pm2"
+          # Seed the staging static/ dir from the currently live build so
+          # previously deployed, content-hashed CSS/JS chunk files are
+          # preserved across this deployment. Without this, any browser tab
+          # or cache still holding HTML from the previous build would 404 on
+          # its CSS/JS the moment this deployment replaces .next/static.
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; test -d \"${VPS_PATH}\"; test -f \"${VPS_PATH}/.env\"; mkdir -p \"${VPS_PATH}/.deploy/next/static\" \"${VPS_PATH}/.deploy/public\" \"${VPS_PATH}/data\"; command -v npm; command -v pm2; cd \"${VPS_PATH}\"; if [ -d .next/static ]; then rsync -a .next/static/ .deploy/next/static/; fi"
 
       - name: Sync complete build to VPS staging area
         shell: bash
@@ -133,7 +138,15 @@ jobs:
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
           SSH="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p ${PORT}"
-          rsync -az --delete -e "$SSH" .next/ "${SSH_TARGET}:${VPS_PATH}/.deploy/next/"
+          # .next/static holds content-hashed CSS/JS chunks. Sync WITHOUT
+          # --delete so assets from previous deployments (seeded above)
+          # remain available for any client whose cached HTML still
+          # references them by their old hashed filename.
+          rsync -az -e "$SSH" .next/static/ "${SSH_TARGET}:${VPS_PATH}/.deploy/next/static/"
+          # Everything else in .next (server code, BUILD_ID, standalone
+          # runtime) must match this exact build, so it is fully replaced.
+          # --exclude keeps this from touching the static/ dir populated above.
+          rsync -az --delete --exclude='static' -e "$SSH" .next/ "${SSH_TARGET}:${VPS_PATH}/.deploy/next/"
           rsync -az --delete -e "$SSH" public/ "${SSH_TARGET}:${VPS_PATH}/.deploy/public/"
           rsync -az -e "$SSH" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/.deploy/"
 
@@ -143,4 +156,87 @@ jobs:
           set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
           SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; cd \"${VPS_PATH}\"; test -f .deploy/next/BUILD_ID; test -f .env; test -d data; rm -rf .deploy/previous-next .deploy/previous-public; if [ -d .next ]; then mv .next .deploy/previous-next; fi; if [ -d public ]; then mv public .deploy/previous-public; fi; mv .deploy/next .next; mv .deploy/public public; cp package.json .deploy/package.json; cp package-lock.json .deploy/package-lock.json; npm ci --omit=dev --no-audit --no-fund; set -a; . ./.env; set +a; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env; for i in \$(seq 1 30); do if curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/ >/dev/null; then pm2 save; pm2 describe \"${PM2_APP}\" | sed -n '1,120p'; exit 0; fi; sleep 2; done; pm2 logs \"${PM2_APP}\" --lines 80 --nostream || true; pm2 stop \"${PM2_APP}\" || true; rm -rf .next public; if [ -d .deploy/previous-next ]; then mv .deploy/previous-next .next; fi; if [ -d .deploy/previous-public ]; then mv .deploy/previous-public public; fi; HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env; exit 1"
+          COMMIT_SHA="${GITHUB_SHA}"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "
+            set -euo pipefail
+            cd \"${VPS_PATH}\"
+            echo \"Deploying commit ${COMMIT_SHA}\"
+            echo \"Node: \$(node --version)  npm: \$(npm --version)\"
+            test -f .deploy/next/BUILD_ID
+            test -f .env
+            test -d data
+
+            echo 'Verifying staged CSS assets...'
+            test -d .deploy/next/static/css
+            CSS_COUNT=\$(find .deploy/next/static/css -type f -name '*.css' | wc -l | tr -d ' ')
+            echo \"Staged CSS file count: \${CSS_COUNT}\"
+            if [ \"\${CSS_COUNT}\" -lt 1 ]; then
+              echo 'Deployment aborted: no CSS files found in staged build.'
+              exit 1
+            fi
+
+            rm -rf .deploy/previous-next .deploy/previous-public
+            if [ -d .next ]; then mv .next .deploy/previous-next; fi
+            if [ -d public ]; then mv public .deploy/previous-public; fi
+            mv .deploy/next .next
+            mv .deploy/public public
+            cp package.json .deploy/package.json
+            cp package-lock.json .deploy/package-lock.json
+
+            npm ci --omit=dev --no-audit --no-fund
+
+            set -a; . ./.env; set +a
+            HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env
+
+            rollback() {
+              echo 'Rolling back to previous release...'
+              pm2 stop \"${PM2_APP}\" || true
+              rm -rf .next public
+              if [ -d .deploy/previous-next ]; then mv .deploy/previous-next .next; fi
+              if [ -d .deploy/previous-public ]; then mv .deploy/previous-public public; fi
+              HOSTNAME=0.0.0.0 ORDERS_DB_PATH=\"${VPS_PATH}/data/orders.sqlite\" pm2 restart \"${PM2_APP}\" --update-env || true
+              echo 'Rollback complete.'
+            }
+
+            HEALTHY=0
+            for i in \$(seq 1 30); do
+              if curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/ >/dev/null; then
+                HEALTHY=1
+                break
+              fi
+              sleep 2
+            done
+
+            if [ \"\${HEALTHY}\" -ne 1 ]; then
+              echo 'Health check failed: homepage did not respond.'
+              pm2 logs \"${PM2_APP}\" --lines 80 --nostream || true
+              rollback
+              exit 1
+            fi
+
+            echo 'Verifying production CSS asset delivery...'
+            HTML=\$(curl --fail --silent --show-error --max-time 5 http://127.0.0.1:3000/)
+            CSS_PATHS=\$(printf '%s' \"\${HTML}\" | grep -oE '/_next/static/css/[A-Za-z0-9._-]+\.css' | sort -u)
+
+            if [ -z \"\${CSS_PATHS}\" ]; then
+              echo 'Health check failed: homepage HTML references no CSS files.'
+              rollback
+              exit 1
+            fi
+
+            for css_path in \${CSS_PATHS}; do
+              RESULT=\$(curl --silent --show-error --max-time 5 -o /dev/null -w '%{http_code} %{content_type}' \"http://127.0.0.1:3000\${css_path}\")
+              STATUS=\"\${RESULT%% *}\"
+              CTYPE=\"\${RESULT#* }\"
+              echo \"  \${css_path} -> \${STATUS} (\${CTYPE})\"
+              if [ \"\${STATUS}\" != '200' ] || [[ \"\${CTYPE}\" != text/css* ]]; then
+                echo \"Health check failed: \${css_path} returned \${STATUS} (\${CTYPE}).\"
+                rollback
+                exit 1
+              fi
+            done
+
+            pm2 save
+            echo \"Deployment verified: homepage and all referenced CSS assets returned HTTP 200 for commit ${COMMIT_SHA}.\"
+            pm2 describe \"${PM2_APP}\" | sed -n '1,120p'
+          "

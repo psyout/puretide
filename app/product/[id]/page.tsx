@@ -77,7 +77,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 				message={process.env.NEXT_PUBLIC_PROMO_BANNER_MESSAGE}
 				cta={process.env.NEXT_PUBLIC_PROMO_BANNER_CTA}
 			/>
-			<div className='max-w-7xl mx-auto px-6 py-10'>
+			<div className='max-w-7xl mx-auto px-6 pt-32 pb-10'>
 				<Link
 					href='/'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>

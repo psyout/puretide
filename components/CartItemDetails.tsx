@@ -14,15 +14,15 @@ export default function CartItemDetails({ description, details }: CartItemDetail
 	const content = details || description;
 
 	return (
-		<div className='mt-3'>
+		<div>
 			<button
 				type='button'
 				onClick={() => setIsOpen(!isOpen)}
-				className='flex items-center gap-2 text-sm font-semibold text-deep-tidal-teal-700 hover:text-deep-tidal-teal-900 transition-colors'
+				className='flex items-center justify-between w-full text-sm font-semibold text-deep-tidal-teal-700 hover:text-deep-tidal-teal-900 transition-colors'
 				aria-expanded={isOpen}
 				aria-controls='cart-item-details'>
-				{isOpen ? <ChevronUp className='w-4 h-4' /> : <ChevronDown className='w-4 h-4' />}
 				<span>Product Details</span>
+				{isOpen ? <ChevronUp className='w-4 h-4' /> : <ChevronDown className='w-4 h-4' />}
 			</button>
 			<div
 				id='cart-item-details'

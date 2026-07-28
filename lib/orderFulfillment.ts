@@ -185,6 +185,7 @@ async function decrementGoogleSheetStock(orderNumber: string, items: Fulfillment
 export async function runFulfillment(order: FulfillmentOrder, options: RunFulfillmentOptions = {}): Promise<RunFulfillmentResult> {
 	console.log(JSON.stringify({ label: 'fulfillment:start', orderNumber: order.orderNumber }));
 	const paymentMethod = (order as Record<string, unknown>).paymentMethod as 'etransfer' | 'creditcard' | undefined;
+	const paymentPath = (order as Record<string, unknown>).paymentPath as 'manual' | 'bluepeak' | 'manual_friends_family' | undefined;
 	const paymentConfirmed = options.paymentConfirmed ?? true;
 	const etransfer = (order as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
 	const etransferProvider = typeof etransfer?.provider === 'string' ? (etransfer.provider === 'bluepeak' ? 'bluepeak' : 'manual') : undefined;
@@ -194,6 +195,7 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		paymentMethod: paymentMethod === 'creditcard' ? 'creditcard' : 'etransfer',
 		paymentConfirmed,
 		etransferProvider,
+		paymentPath,
 		customer: order.customer,
 		shipToDifferentAddress: order.shipToDifferentAddress,
 		shippingAddress: order.shippingAddress,

@@ -51,7 +51,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	if (cartItems.length === 0) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-				<div className='max-w-7xl mx-auto px-6 py-24'>
+				<div className='max-w-7xl mx-auto px-6 pt-32 pb-24'>
 					<Link
 						href='/'
 						className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -87,7 +87,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='max-w-7xl mx-auto px-6 py-24'>
+			<div className='max-w-7xl mx-auto px-6 pt-32 pb-24'>
 				<Link
 					href='/'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
@@ -115,108 +115,221 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 								return (
 									<div
 										key={item.id}
-										className={`flex gap-6 ${index < cartItems.length - 1 ? 'pb-6 mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
-										{/* Left Section: Product Image */}
-										<Link
-											href={`/product/${item.slug || item.id}`}
-											className='flex-shrink-0 w-32 h-32 lg:w-36 lg:h-36 flex items-center justify-center rounded-xl bg-deep-tidal-teal/5 hover:opacity-90 transition-opacity'
-											aria-label={`View ${item.name} details`}>
-											{hasProductImage(item.image) ? (
-												<Image
-													src={item.image}
-													alt={item.name}
-													width={128}
-													height={128}
-													unoptimized={item.image.startsWith('http')}
-													className='max-h-28 max-w-28 lg:max-h-32 lg:max-w-32 w-auto h-auto object-contain'
-													priority
-												/>
-											) : (
-												<ProductImagePlaceholder className='max-h-28 max-w-28 lg:max-h-32 lg:max-w-32' />
-											)}
-										</Link>
+										className={`flex flex-col gap-3 md:gap-4 ${index < cartItems.length - 1 ? 'pb-4 md:pb-6 mb-4 md:mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
+										{/* Mobile: Product Overview (Image + Info side by side) */}
+										<div className='md:hidden flex gap-3 mb-2 items-start'>
+											{/* Product Image */}
+											<Link
+												href={`/product/${item.slug || item.id}`}
+												className='flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center rounded-lg bg-deep-tidal-teal/5 hover:opacity-90 transition-opacity'
+												aria-label={`View ${item.name} details`}>
+												{hasProductImage(item.image) ? (
+													<Image
+														src={item.image}
+														alt={item.name}
+														width={96}
+														height={96}
+														unoptimized={item.image.startsWith('http')}
+														className='max-h-16 max-w-16 sm:max-h-20 sm:max-w-20 w-auto h-auto object-contain'
+														priority
+													/>
+												) : (
+													<ProductImagePlaceholder className='max-h-16 max-w-16 sm:max-h-20 sm:max-w-20' />
+												)}
+											</Link>
 
-										{/* Center Section: Product Information */}
-										<div className='flex-1 min-w-0 flex flex-col'>
-											{/* Product Name */}
-											<h3 className='text-md md:text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
-											{item.subtitle && <p className='text-xs md:text-sm text-deep-tidal-teal-600 mb-3'>{item.subtitle}</p>}
+											{/* Product Info */}
+											<div className='flex-1 min-w-0 flex flex-col'>
+												{/* Product Name */}
+												<h3 className='text-sm sm:text-base font-bold text-deep-tidal-teal-800 mb-0.5 line-clamp-2 leading-tight'>{item.name}</h3>
+												{item.subtitle && <p className='text-xs text-deep-tidal-teal-600 mb-1.5'>{item.subtitle}</p>}
 
-											{/* Stock Status */}
-											{stockUnavailable ? (
-												<p className='text-sm text-deep-tidal-teal-500 mb-3'>Stock unavailable</p>
-											) : isOutOfStock ? (
-												<div className='flex items-center gap-2 text-sm text-red-600 font-medium mb-3'>
-													<span className='w-2 h-2 rounded-full bg-red-500' />
-													<span>Out of Stock</span>
-												</div>
-											) : isLowStock ? (
-												<div className='flex items-center gap-2 text-sm text-yellow-600 font-medium mb-3'>
-													<span className='w-2 h-2 rounded-full bg-yellow-500' />
-													<span>Low Stock</span>
-												</div>
-											) : (
-												<div className='flex items-center gap-2 text-sm text-green-600 font-medium mb-3'>
-													<span className='w-2 h-2 rounded-full bg-green-500' />
-													<span>In Stock</span>
-												</div>
-											)}
+												{/* Stock Status */}
+												{stockUnavailable ? (
+													<p className='text-xs text-deep-tidal-teal-500 mb-1.5'>Stock unavailable</p>
+												) : isOutOfStock ? (
+													<div className='flex items-center gap-1.5 text-xs text-red-600 font-medium mb-1.5'>
+														<span className='w-1.5 h-1.5 rounded-full bg-red-500' />
+														<span>Out of Stock</span>
+													</div>
+												) : isLowStock ? (
+													<div className='flex items-center gap-1.5 text-xs text-yellow-600 font-medium mb-1.5'>
+														<span className='w-1.5 h-1.5 rounded-full bg-yellow-500' />
+														<span>Low Stock</span>
+													</div>
+												) : (
+													<div className='flex items-center gap-1.5 text-xs text-green-600 font-medium mb-1.5'>
+														<span className='w-1.5 h-1.5 rounded-full bg-green-500' />
+														<span>In Stock</span>
+													</div>
+												)}
 
-											{/* Quantity Controls on single row */}
-											<div className='flex items-center gap-2 mb-3'>
-												<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
-													<button
-														onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, availableStock)}
-														className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
-														aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
-														<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>−</span>
-													</button>
-													<span className='w-12 px-2 py-1 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10 font-medium text-sm'>
-														{item.quantity}
+												{/* Pricing */}
+												<div className='flex items-baseline gap-2 mb-1'>
+													<p className='text-base sm:text-lg font-bold text-deep-tidal-teal'>${getItemPrice(item).toFixed(2)}</p>
+													{isDiscounted && <p className='text-xs text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</p>}
+												</div>
+												{isDiscounted && (
+													<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-0.5 rounded'>
+														You save ${savings.toFixed(2)}
 													</span>
-													<button
-														onClick={() => updateQuantity(item.id, item.quantity + 1, availableStock)}
-														className={`p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors ${isAtStockLimit || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
-														aria-label='Increase quantity'
-														disabled={isAtStockLimit || isOutOfStock}>
-														<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
-													</button>
-												</div>
+												)}
+											</div>
+										</div>
+
+										{/* Mobile: Quantity and Remove Row */}
+										<div className='md:hidden flex items-center justify-between mb-2'>
+											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
 												<button
-													onClick={() => removeFromCart(item.id)}
-													className='text-xs text-red-600 hover:text-red-700 font-medium transition-colors whitespace-nowrap'>
-													Remove
+													onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, availableStock)}
+													className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+													aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
+													<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>−</span>
+												</button>
+												<span className='w-12 px-2 py-1 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10 font-medium text-sm'>
+													{item.quantity}
+												</span>
+												<button
+													onClick={() => updateQuantity(item.id, item.quantity + 1, availableStock)}
+													className={`p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors ${isAtStockLimit || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+													aria-label='Increase quantity'
+													disabled={isAtStockLimit || isOutOfStock}>
+													<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
 												</button>
 											</div>
+											<button
+												onClick={() => removeFromCart(item.id)}
+												className='text-xs text-red-600 hover:text-red-700 font-medium transition-colors whitespace-nowrap'>
+												Remove
+											</button>
+										</div>
 
-											{/* Collapsible Product Details */}
+										{/* Mobile: Product Details Disclosure */}
+										<div className='md:hidden border-t border-deep-tidal-teal/10 pt-2'>
 											<CartItemDetails
 												description={item.description}
 												details={item.details}
 											/>
-
-											{/* Invalid quantity warning */}
-											{hasInvalidQuantity && (
-												<div className='mt-2 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2'>
-													<AlertCircle className='w-4 h-4 flex-shrink-0' />
-													<span>
-														Only {availableStock} {availableStock === 1 ? 'unit is' : 'units are'} currently available. Please update your quantity.
-													</span>
-												</div>
-											)}
 										</div>
 
-										{/* Right Section: Pricing */}
-										<div className='flex-shrink-0 flex flex-col items-end justify-start w-24 lg:w-28'>
-											<p className='text-lg md:text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
-											{isDiscounted && (
-												<>
-													<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
-													<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-1 rounded'>
-														You save ${savings.toFixed(2)}
-													</span>
-												</>
-											)}
+										{/* Mobile: Invalid quantity warning */}
+										{hasInvalidQuantity && (
+											<div className='md:hidden mt-2 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2'>
+												<AlertCircle className='w-3.5 h-3.5 flex-shrink-0' />
+												<span>
+													Only {availableStock} {availableStock === 1 ? 'unit is' : 'units are'} currently available. Please update your quantity.
+												</span>
+											</div>
+										)}
+
+										{/* Desktop: Main Row - Image | Info | Pricing */}
+										<div className='hidden md:flex gap-6 items-start'>
+											{/* Desktop: Left Section - Product Image */}
+											<Link
+												href={`/product/${item.slug || item.id}`}
+												className='flex flex-shrink-0 w-36 h-36 items-center justify-center rounded-xl bg-deep-tidal-teal/5 hover:opacity-90 transition-opacity'
+												aria-label={`View ${item.name} details`}>
+												{hasProductImage(item.image) ? (
+													<Image
+														src={item.image}
+														alt={item.name}
+														width={128}
+														height={128}
+														unoptimized={item.image.startsWith('http')}
+														className='max-h-32 max-w-32 w-auto h-auto object-contain'
+														priority
+													/>
+												) : (
+													<ProductImagePlaceholder className='max-h-32 max-w-32' />
+												)}
+											</Link>
+
+											{/* Desktop: Center Section - Product Information */}
+											<div className='flex-1 min-w-0 flex flex-col'>
+												{/* Product Name */}
+												<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
+												{item.subtitle && <p className='text-sm text-deep-tidal-teal-600 mb-3'>{item.subtitle}</p>}
+
+												{/* Stock Status */}
+												{stockUnavailable ? (
+													<p className='text-sm text-deep-tidal-teal-500 mb-3'>Stock unavailable</p>
+												) : isOutOfStock ? (
+													<div className='flex items-center gap-2 text-sm text-red-600 font-medium mb-3'>
+														<span className='w-2 h-2 rounded-full bg-red-500' />
+														<span>Out of Stock</span>
+													</div>
+												) : isLowStock ? (
+													<div className='flex items-center gap-2 text-sm text-yellow-600 font-medium mb-3'>
+														<span className='w-2 h-2 rounded-full bg-yellow-500' />
+														<span>Low Stock</span>
+													</div>
+												) : (
+													<div className='flex items-center gap-2 text-sm text-green-600 font-medium mb-3'>
+														<span className='w-2 h-2 rounded-full bg-green-500' />
+														<span>In Stock</span>
+													</div>
+												)}
+
+												{/* Quantity Controls on single row */}
+												<div className='flex items-center gap-2 mb-3'>
+													<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
+														<button
+															onClick={
+																item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, availableStock)
+															}
+															className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
+															aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
+															<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>−</span>
+														</button>
+														<span className='w-12 px-2 py-1 text-center text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10 font-medium text-sm'>
+															{item.quantity}
+														</span>
+														<button
+															onClick={() => updateQuantity(item.id, item.quantity + 1, availableStock)}
+															className={`p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors ${isAtStockLimit || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+															aria-label='Increase quantity'
+															disabled={isAtStockLimit || isOutOfStock}>
+															<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
+														</button>
+													</div>
+													<button
+														onClick={() => removeFromCart(item.id)}
+														className='text-xs text-red-600 hover:text-red-700 font-medium transition-colors whitespace-nowrap'>
+														Remove
+													</button>
+												</div>
+
+												{/* Invalid quantity warning */}
+												{hasInvalidQuantity && (
+													<div className='mt-2 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2'>
+														<AlertCircle className='w-4 h-4 flex-shrink-0' />
+														<span>
+															Only {availableStock} {availableStock === 1 ? 'unit is' : 'units are'} currently available. Please update your quantity.
+														</span>
+													</div>
+												)}
+											</div>
+
+											{/* Desktop: Right Section - Pricing */}
+											<div className='flex-shrink-0 flex flex-col items-end justify-start w-28'>
+												<p className='text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
+												{isDiscounted && (
+													<>
+														<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
+														<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-1 rounded'>
+															You save ${savings.toFixed(2)}
+														</span>
+													</>
+												)}
+											</div>
+										</div>
+
+										{/* Desktop: Product Details - Full Width */}
+										<div className='hidden md:block border-t border-deep-tidal-teal/10 pt-3'>
+											<CartItemDetails
+												description={item.description}
+												details={item.details}
+											/>
 										</div>
 									</div>
 								);

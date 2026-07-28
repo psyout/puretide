@@ -594,7 +594,7 @@ export default function CheckoutClient() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='max-w-7xl mx-auto px-6 py-24'>
+			<div className='max-w-7xl mx-auto px-6 pt-32 pb-24'>
 				<Link
 					href='/cart'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>

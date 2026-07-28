@@ -4,6 +4,7 @@ type OrderEmailInput = {
 	paymentMethod?: 'etransfer' | 'creditcard';
 	paymentConfirmed?: boolean;
 	etransferProvider?: 'manual' | 'bluepeak';
+	paymentPath?: 'manual' | 'bluepeak' | 'manual_friends_family';
 	customer: {
 		firstName: string;
 		lastName: string;
@@ -80,7 +81,14 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const orderDate = formatDate(input.createdAt);
 	const orderName = `${input.customer.firstName} ${input.customer.lastName}`.trim();
 	const shippingLabel = 'Express Shipping';
-	const paymentMethodLabel = isCreditCard ? 'Credit card' : 'Interac e-Transfer';
+	const isFriendsFamilyEtransfer = !isCreditCard && input.paymentPath === 'manual_friends_family';
+	const paymentMethodLabel = isCreditCard
+		? 'Credit card'
+		: isFriendsFamilyEtransfer
+			? 'Friends & Family Interac e-Transfer'
+			: input.paymentPath === 'bluepeak'
+				? 'Interac e-Transfer (BluePeak)'
+				: 'Interac e-Transfer';
 	const billingLines = [
 		orderName,
 		input.customer.address,
