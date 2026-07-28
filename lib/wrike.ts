@@ -143,6 +143,7 @@ type OrderData = {
 	};
 	shippingMethod: 'express';
 	paymentMethod: 'etransfer' | 'creditcard';
+	paymentPath?: 'manual' | 'bluepeak' | 'manual_friends_family';
 	cardFee?: number;
 	subtotal: number;
 	shippingCost: number;
@@ -180,16 +181,6 @@ export async function createOrderTask(order: OrderData) {
 
 	const itemsList = order.cartItems.map((item) => `<li>${item.name} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`).join('');
 
-	const stockList = order.stockLevels?.length
-		? order.stockLevels
-				.map((item) => {
-					const isLow = item.stock <= 5;
-					const costInfo = item.cost ? ` (Cost: $${item.cost.toFixed(2)})` : '';
-					return `<li>${item.name}: <b style="${isLow ? 'color:red' : ''}">${item.stock} units</b>${isLow ? ' ⚠️ LOW' : ''}${costInfo}</li>`;
-				})
-				.join('')
-		: '';
-
 	const totalCost = order.totalCost ?? 0;
 	const grossProfit = order.subtotal - totalCost;
 	const profitMargin = order.subtotal > 0 ? (grossProfit / order.subtotal) * 100 : 0;
@@ -218,6 +209,8 @@ export async function createOrderTask(order: OrderData) {
 		<b>👤 Name:</b> ${order.customer.firstName} ${order.customer.lastName}<br>
 		<b>✉️ Email:</b> ${order.customer.email}<br>
 	</p>
+	<h4>Customer Type</h4>
+	<p style="margin:0 0 10px 0;"><b>${order.paymentPath === 'manual_friends_family' ? '👥 Family & Friends' : '👤 Regular Customer'}</b></p>
 	<h4>Shipping Address</h4>
 	<p style="margin:0 0 10px 0;">
 		<b>🚚 SHIP TO:</b><br>
@@ -230,7 +223,7 @@ export async function createOrderTask(order: OrderData) {
 <ul>${itemsList}</ul>
 <hr>
 <h4>Payment Method</h4>
-<p><b>${order.paymentMethod === 'creditcard' ? '💳 Credit Card' : '🏦 E-Transfer (Interac)'}</b></p>
+<p><b>${order.paymentMethod === 'creditcard' ? '💳 Credit Card' : order.paymentPath === 'manual_friends_family' ? '🏦 Family & Friends E-Transfer' : '🏦 E-Transfer (Interac)'}</b></p>
 <hr>
 <h4>Order Summary</h4>
 <p>
@@ -239,10 +232,7 @@ Shipping (${order.shippingMethod}): $${order.shippingCost.toFixed(2)}<br>
 ${order.cardFee ? `Card Fee (5%): $${order.cardFee.toFixed(2)}<br>` : ''}${order.discountAmount ? `Discount${order.promoCode ? ` (${order.promoCode})` : ''}: -$${order.discountAmount.toFixed(2)}<br>` : ''}<b>Total: $${order.total.toFixed(2)}</b>
 </p>
 ${financialSection}
-${stockList ? `<hr><h4>Stock Remaining</h4><ul>${stockList}</ul>` : ''}
-${order.customer.orderNotes ? `<hr><h4>Order Notes</h4><p>${order.customer.orderNotes}</p>` : ''}
-<hr>
-<p><b>Status: NEW ORDER - AWAITING PAYMENT</b></p>
+${order.customer.orderNotes ? `<hr><h4>Internal Notes</h4><p>${order.customer.orderNotes}</p>` : ''}
 	`.trim();
 
 	try {

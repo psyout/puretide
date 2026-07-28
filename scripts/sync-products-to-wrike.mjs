@@ -24,15 +24,28 @@ const apiToken = process.env.WRIKE_API_TOKEN;
 const productsFolderId = process.env.WRIKE_PRODUCTS_FOLDER_ID;
 
 async function getTasksInFolder(folderId) {
-	const response = await fetch(`${WRIKE_API_BASE}/folders/${folderId}/tasks`, {
-		headers: { Authorization: `Bearer ${apiToken}` },
-	});
-	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`Failed to fetch tasks: ${response.status} ${text}`);
-	}
-	const data = await response.json();
-	return data.data ?? [];
+	const tasks = [];
+	let nextPageToken;
+
+	do {
+		const url = new URL(`${WRIKE_API_BASE}/folders/${folderId}/tasks`);
+		url.searchParams.set('fields', '["customFields"]');
+		if (nextPageToken) url.searchParams.set('nextPageToken', nextPageToken);
+
+		const response = await fetch(url.toString(), {
+			headers: { Authorization: `Bearer ${apiToken}` },
+		});
+		if (!response.ok) {
+			const text = await response.text();
+			throw new Error(`Failed to fetch tasks: ${response.status} ${text}`);
+		}
+
+		const data = await response.json();
+		tasks.push(...(data.data ?? []));
+		nextPageToken = data.nextPageToken;
+	} while (nextPageToken);
+
+	return tasks;
 }
 
 async function createProductTask(product) {

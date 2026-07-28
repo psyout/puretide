@@ -349,17 +349,13 @@ export const readSheetPromotionCampaigns = async (): Promise<PromotionCampaign[]
 		dataRows.forEach((row) => {
 			const title = getMappedCell(row, indexMap, ['Campaign Title', 'Campaign', 'Title']);
 			const promoCode = getMappedCell(row, indexMap, ['Promo Code', 'Code']);
-			console.log('[DEBUG] Processing row:', { title, promoCode, row });
 			if (!title || !promoCode) {
-				console.log('[DEBUG] Skipping row - missing title or promo code');
 				return;
 			}
 
 			const minimumOrderAmount = parseNumber(getMappedCell(row, indexMap, ['Minimum Order Amount', 'Minimum Purchase Amount', 'Minimum Subtotal', 'Minimum Order', 'Min Amount']) || '0');
 			const discountPercentage = parseNumber(getMappedCell(row, indexMap, ['Discount Percentage', 'Discount Percent', 'Discount']) || '0');
-			console.log('[DEBUG] Parsed values:', { minimumOrderAmount, discountPercentage });
 			if (!Number.isFinite(minimumOrderAmount) || !Number.isFinite(discountPercentage)) {
-				console.log('[DEBUG] Skipping row - invalid numeric values');
 				return;
 			}
 
@@ -406,7 +402,6 @@ export const readSheetPromotionCampaigns = async (): Promise<PromotionCampaign[]
 				tiers: campaign.tiers.sort((left, right) => left.displayOrder - right.displayOrder || left.minimumOrderAmount - right.minimumOrderAmount),
 			}))
 			.sort((left, right) => left.displayOrder - right.displayOrder || left.title.localeCompare(right.title));
-		console.log('[DEBUG] Final campaigns returned:', JSON.stringify(finalCampaigns, null, 2));
 		return finalCampaigns;
 	} catch (error) {
 		reportSheetsError('Error reading promotions from sheet', error);

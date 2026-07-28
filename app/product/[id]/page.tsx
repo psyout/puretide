@@ -76,11 +76,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 				enabled={promoBannerEnabled}
 				message={process.env.NEXT_PUBLIC_PROMO_BANNER_MESSAGE}
 				cta={process.env.NEXT_PUBLIC_PROMO_BANNER_CTA}
-				stickyBoundaryId='product-detail-sticky-boundary'
 			/>
-			<div
-				id='product-detail-sticky-boundary'
-				className='max-w-7xl mx-auto px-6 py-24'>
+			<div className='max-w-7xl mx-auto px-6 py-10'>
 				<Link
 					href='/'
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>

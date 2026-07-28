@@ -10,11 +10,8 @@ export default function CartPage() {
 				enabled={promoBannerEnabled}
 				message={process.env.NEXT_PUBLIC_PROMO_BANNER_MESSAGE}
 				cta={process.env.NEXT_PUBLIC_PROMO_BANNER_CTA}
-				stickyBoundaryId='cart-sticky-boundary'
 			/>
-			<div id='cart-sticky-boundary'>
-				<CartClient />
-			</div>
+			<CartClient />
 		</>
 	);
 }

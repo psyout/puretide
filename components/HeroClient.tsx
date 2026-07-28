@@ -52,7 +52,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 	const currentSlide = slides[currentIndex];
 
 	return (
-		<section className='relative w-full h-[100svh] sm:h-screen [@media(min-aspect-ratio:4/3)]:max-h-none [@media(max-aspect-ratio:4/3)]:max-h-[900px] overflow-hidden'>
+		<section className='hero-section relative w-full h-[100svh] sm:h-screen [@media(max-height:500px)]:h-auto [@media(max-height:500px)]:min-h-[700px] [@media(min-aspect-ratio:4/3)]:max-h-none [@media(max-aspect-ratio:4/3)]:max-h-[900px] overflow-hidden'>
 			{/* Background image/video slider */}
 			<div className='absolute inset-0 w-full h-full'>
 				{slides.map((slide, index) => (
@@ -101,7 +101,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			</div>
 
 			{/* Text overlay */}
-			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-16 sm:px-6 text-center text-pretty'>
+			<div className='absolute inset-0 z-10 flex flex-col items-center justify-center mx-auto max-w-7xl px-16 sm:px-6 text-center text-pretty'>
 				<div className='mb-3 lg:mb-6'>
 					<LogoHorizontal
 						className='h-28 sm:h-32 md:h-36 lg:h-40 w-auto mx-auto drop-shadow-2xl [@media(max-height:800px)]:h-28'

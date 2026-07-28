@@ -243,7 +243,11 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		return sum + item.cost * (cartItem?.quantity ?? 0);
 	}, 0);
 
-	const orderForWrike = order as FulfillmentOrder & { paymentMethod?: 'etransfer' | 'creditcard'; cardFee?: number };
+	const orderForWrike = order as FulfillmentOrder & {
+		paymentMethod?: 'etransfer' | 'creditcard';
+		paymentPath?: 'manual' | 'bluepeak' | 'manual_friends_family';
+		cardFee?: number;
+	};
 	await createOrderTask({
 		orderNumber: order.orderNumber,
 		createdAt: order.createdAt,
@@ -252,6 +256,7 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		shippingAddress: order.shippingAddress,
 		shippingMethod: order.shippingMethod,
 		paymentMethod: orderForWrike.paymentMethod ?? 'creditcard',
+		paymentPath: orderForWrike.paymentPath,
 		cardFee: orderForWrike.cardFee,
 		subtotal: order.subtotal,
 		shippingCost: order.shippingCost,

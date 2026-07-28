@@ -161,7 +161,15 @@ export async function processShippingConfirmation(params: ShippingProcessParams)
 	if (!isCompleted) return { ok: true, message: 'skipped: task not completed' };
 	if (!orderNumber) return { ok: true, message: 'skipped: order number not found' };
 	if (!trackingNormalized) return { ok: true, message: 'skipped: tracking missing/empty' };
-	if (!isValidTrackingValue(trackingNormalized)) return { ok: true, message: 'skipped: invalid tracking number' };
+	if (!isValidTrackingValue(trackingNormalized)) {
+		console.log('[shippingConfirmation] skipped: invalid tracking number', {
+			orderNumber,
+			taskId: task.id,
+			trackingNormalized,
+			reason: trackingNormalized === 'PGCA' ? 'placeholder PGCA not replaced with actual tracking number' : 'does not match Canada Post format (2 letters + 9 digits + CA)',
+		});
+		return { ok: true, message: 'skipped: invalid tracking number' };
+	}
 
 	const alreadySentExact = await getShippingEmailRecord(orderNumber, trackingNormalized);
 	if (alreadySentExact) {

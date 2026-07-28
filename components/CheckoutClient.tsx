@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
-import { CreditCard, Truck, Plus, Minus, Trash2 } from 'lucide-react';
+import { CreditCard, Truck, Plus, Minus, Trash2, Loader2 } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
@@ -56,7 +56,7 @@ export default function CheckoutClient() {
 			if (data.status === 'error') {
 				// Card capture failed inside the iframe — surface the error so the customer can retry
 				setCheckoutError(data.message || 'Card capture failed. Please try again.');
-				setIsProcessing(false);
+				clearSubmissionState();
 				return;
 			}
 
@@ -113,11 +113,11 @@ export default function CheckoutClient() {
 			}
 
 			setCheckoutError(data.error || 'Payment was declined. Please try again.');
-			setIsProcessing(false);
+			clearSubmissionState();
 			setHasSubmitted(false);
 		} catch (error) {
 			setCheckoutError(`Charge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-			setIsProcessing(false);
+			clearSubmissionState();
 			setHasSubmitted(false);
 		} finally {
 			setGatewaylinxIframeUrl(null);
@@ -149,6 +149,7 @@ export default function CheckoutClient() {
 		...initialFormData,
 	});
 	const [isProcessing, setIsProcessing] = useState(false);
+	const submissionInProgressRef = useRef(false);
 	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const [showPromoInput, setShowPromoInput] = useState(false);
 	const [promoCode, setPromoCode] = useState('');
@@ -239,7 +240,7 @@ export default function CheckoutClient() {
 	useEffect(() => {
 		const onPageShow = (e: PageTransitionEvent) => {
 			if (e.persisted) {
-				setIsProcessing(false);
+				clearSubmissionState();
 				setHasSubmitted(false);
 			}
 		};
@@ -374,6 +375,11 @@ export default function CheckoutClient() {
 		};
 	};
 
+	const clearSubmissionState = () => {
+		submissionInProgressRef.current = false;
+		setIsProcessing(false);
+	};
+
 	const resetCheckoutState = () => {
 		setFormData({ ...initialFormData });
 		setShipToDifferentAddress(false);
@@ -388,14 +394,14 @@ export default function CheckoutClient() {
 		setPromoError(null);
 		setShowPromoInput(false);
 		setHasSubmitted(false);
-		setIsProcessing(false);
+		clearSubmissionState();
 		setPaymentMethod('etransfer');
 	};
 
 	// When we successfully create an order, we want to navigate away (confirmation page or external card provider)
 	// without triggering the "empty cart" redirect effect on this checkout page.
 	// Keeping hasSubmitted=true prevents the cart-empty guard from redirecting to /cart mid-navigation.
-	const resetCheckoutStateForExit = () => {
+	const resetCheckoutStateForExit = (keepSubmissionLoading = false) => {
 		setFormData({ ...initialFormData });
 		setShipToDifferentAddress(false);
 		setShippingAddress({ ...initialShippingAddress });
@@ -408,27 +414,32 @@ export default function CheckoutClient() {
 		setAppliedFreeShipping(false);
 		setPromoError(null);
 		setShowPromoInput(false);
-		setIsProcessing(false);
+		if (!keepSubmissionLoading) clearSubmissionState();
 		setPaymentMethod('etransfer');
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (submissionInProgressRef.current) return;
+		submissionInProgressRef.current = true;
+		setIsProcessing(true);
 		setHasSubmitted(true);
 		setCheckoutError(null);
 
 		if (!agreedToTerms) {
+			clearSubmissionState();
 			return;
 		}
 		if (hasInvalidPostalCodeFormat) {
 			setCheckoutError('Please enter a valid Canadian postal code (e.g. A1A 1A1).');
+			clearSubmissionState();
 			return;
 		}
 		if (paymentMethod === 'creditcard' && total > CREDIT_CARD_LIMIT) {
 			setCheckoutError('Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.');
+			clearSubmissionState();
 			return;
 		}
-		setIsProcessing(true);
 
 		try {
 			if (useCreditCard) {
@@ -461,12 +472,11 @@ export default function CheckoutClient() {
 						setGatewaylinxIframeUrl(data.redirectUrl);
 						setGatewaylinxOrderNumber(data.orderNumber);
 						setGatewaylinxConfirmationToken(data.confirmationToken ?? null);
-						setIsProcessing(false);
 						return;
 					} else {
 						// Use redirect mode (DigiPay)
 						clearCart();
-						resetCheckoutStateForExit();
+						resetCheckoutStateForExit(true);
 						window.location.href = data.redirectUrl;
 						return;
 					}
@@ -613,269 +623,131 @@ export default function CheckoutClient() {
 							)}
 							<form
 								onSubmit={handleSubmit}
+								aria-busy={isProcessing}
 								className='space-y-4'>
-								<div
-									className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
-									aria-hidden>
-									<label htmlFor='checkout-company'>Company</label>
-									<input
-										type='text'
-										id='checkout-company'
-										name='company'
-										tabIndex={-1}
-										autoComplete='off'
-										value={honeypotCompany}
-										onChange={(e) => setHoneypotCompany(e.target.value)}
-									/>
-								</div>
-
-								<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
-										<input
-											type='text'
-											value={formData.firstName}
-											onChange={(e) => {
-												setFormData({ ...formData, firstName: e.target.value });
-												if (checkoutError?.includes('First name')) setCheckoutError(null);
-											}}
-											onBlur={(e) => {
-												const capitalized = capitalizeWords(e.target.value);
-												if (capitalized !== e.target.value) {
-													setFormData((prev) => ({ ...prev, firstName: capitalized }));
-												}
-											}}
-											autoComplete='given-name'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required
-										/>
-										{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
-									</div>
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
-										<input
-											type='text'
-											value={formData.lastName}
-											onChange={(e) => {
-												setFormData({ ...formData, lastName: e.target.value });
-												if (checkoutError?.includes('Last name')) setCheckoutError(null);
-											}}
-											onBlur={(e) => {
-												const capitalized = capitalizeWords(e.target.value);
-												if (capitalized !== e.target.value) {
-													setFormData((prev) => ({ ...prev, lastName: capitalized }));
-												}
-											}}
-											autoComplete='family-name'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required
-										/>
-										{checkoutError && checkoutError.includes('Last name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
-									</div>
-								</div>
-
-								<div className='max-w-[200px]'>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>
-									<select
-										value={formData.country}
-										onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-										autoComplete='country-name'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										required>
-										<option value='Canada'>Canada</option>
-									</select>
-								</div>
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
-									<input
-										type='text'
-										value={formData.address}
-										onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-										onBlur={(e) => {
-											const capitalized = capitalizeWords(e.target.value);
-											if (capitalized !== e.target.value) {
-												setFormData((prev) => ({ ...prev, address: capitalized }));
-											}
-										}}
-										placeholder='House number and street name'
-										autoComplete='address-line1'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										required
-									/>
-								</div>
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
-									<input
-										type='text'
-										value={formData.addressLine2}
-										onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-										onBlur={(e) => {
-											const capitalized = capitalizeWords(e.target.value);
-											if (capitalized !== e.target.value) {
-												setFormData((prev) => ({ ...prev, addressLine2: capitalized }));
-											}
-										}}
-										placeholder='Apartment, suite, unit'
-										autoComplete='address-line2'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-									/>
-								</div>
-								<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
-										<input
-											type='text'
-											value={formData.city}
-											onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-											onBlur={(e) => {
-												const capitalized = capitalizeWords(e.target.value);
-												if (capitalized !== e.target.value) {
-													setFormData((prev) => ({ ...prev, city: capitalized }));
-												}
-											}}
-											autoComplete='address-level2'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required
-										/>
-									</div>
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
-										<select
-											value={formData.province}
-											onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-											autoComplete='address-level1'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required>
-											<option value='British Columbia'>British Columbia</option>
-											<option value='Alberta'>Alberta</option>
-											<option value='Manitoba'>Manitoba</option>
-											<option value='New Brunswick'>New Brunswick</option>
-											<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
-											<option value='Nova Scotia'>Nova Scotia</option>
-											<option value='Ontario'>Ontario</option>
-											<option value='Prince Edward Island'>Prince Edward Island</option>
-											<option value='Saskatchewan'>Saskatchewan</option>
-											<option value='Northwest Territories'>Northwest Territories</option>
-											<option value='Nunavut'>Nunavut</option>
-											<option value='Yukon'>Yukon</option>
-										</select>
-									</div>
-								</div>
-
-								<div className='max-w-[200px]'>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
-									<input
-										type='text'
-										value={formData.zipCode}
-										onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
-										onBlur={(e) => {
-											let v = e.target.value.toUpperCase().replace(/\s/g, '');
-											if (v.length >= 4 && !v.includes(' ')) {
-												v = v.slice(0, 3) + ' ' + v.slice(3);
-											}
-											if (v !== e.target.value) {
-												setFormData((prev) => ({ ...prev, zipCode: v }));
-											}
-										}}
-										autoComplete='postal-code'
-										placeholder=''
-										maxLength={7}
-										className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
-										required
-									/>
-									{billingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
-								</div>
-
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Email address *</label>
-									<input
-										type='email'
-										value={formData.email}
-										onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-										autoComplete='email'
-										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										required
-									/>
-									<p className='text-xs text-deep-tidal-teal-600 mt-1 flex items-center gap-1'>
-										<svg
-											className='w-3 h-3 inline'
-											fill='none'
-											stroke='currentColor'
-											viewBox='0 0 24 24'>
-											<path
-												strokeLinecap='round'
-												strokeLinejoin='round'
-												strokeWidth={1.5}
-												d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-											/>
-										</svg>
-										Your email is only used for order confirmation. Not shared with third parties.
-									</p>
-								</div>
-
-								<div className='flex items-start gap-2 text-sm text-deep-tidal-teal-800'>
-									<input
-										id='checkout-ship-different'
-										type='checkbox'
-										checked={shipToDifferentAddress}
-										onChange={(e) => setShipToDifferentAddress(e.target.checked)}
-										className='mt-1'
-										aria-describedby={shipToDifferentAddress ? 'shipping-address-fields' : undefined}
-									/>
-									<label htmlFor='checkout-ship-different'>Ship to a different address?</label>
-								</div>
-								{shipToDifferentAddress && (
+								<fieldset
+									disabled={isProcessing}
+									className='space-y-4'>
 									<div
-										id='shipping-address-fields'
-										className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
+										className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
+										aria-hidden>
+										<label htmlFor='checkout-company'>Company</label>
+										<input
+											type='text'
+											id='checkout-company'
+											name='company'
+											tabIndex={-1}
+											autoComplete='off'
+											value={honeypotCompany}
+											onChange={(e) => setHoneypotCompany(e.target.value)}
+										/>
+									</div>
+
+									<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
 											<input
 												type='text'
-												value={shippingAddress.address}
-												onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
+												value={formData.firstName}
+												onChange={(e) => {
+													setFormData({ ...formData, firstName: e.target.value });
+													if (checkoutError?.includes('First name')) setCheckoutError(null);
+												}}
 												onBlur={(e) => {
 													const capitalized = capitalizeWords(e.target.value);
 													if (capitalized !== e.target.value) {
-														setShippingAddress((prev) => ({ ...prev, address: capitalized }));
+														setFormData((prev) => ({ ...prev, firstName: capitalized }));
 													}
 												}}
-												placeholder='House number and street name'
-												autoComplete='shipping address-line1'
+												autoComplete='given-name'
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
+											{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
 										</div>
 										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
 											<input
 												type='text'
-												value={shippingAddress.addressLine2}
-												onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
+												value={formData.lastName}
+												onChange={(e) => {
+													setFormData({ ...formData, lastName: e.target.value });
+													if (checkoutError?.includes('Last name')) setCheckoutError(null);
+												}}
 												onBlur={(e) => {
 													const capitalized = capitalizeWords(e.target.value);
 													if (capitalized !== e.target.value) {
-														setShippingAddress((prev) => ({ ...prev, addressLine2: capitalized }));
+														setFormData((prev) => ({ ...prev, lastName: capitalized }));
 													}
 												}}
-												placeholder='Apartment, suite, unit, etc. (optional)'
-												autoComplete='shipping address-line2'
+												autoComplete='family-name'
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												required
 											/>
+											{checkoutError && checkoutError.includes('Last name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
 										</div>
+									</div>
+
+									<div className='max-w-[200px]'>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>
+										<select
+											value={formData.country}
+											onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+											autoComplete='country-name'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required>
+											<option value='Canada'>Canada</option>
+										</select>
+									</div>
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+										<input
+											type='text'
+											value={formData.address}
+											onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+											onBlur={(e) => {
+												const capitalized = capitalizeWords(e.target.value);
+												if (capitalized !== e.target.value) {
+													setFormData((prev) => ({ ...prev, address: capitalized }));
+												}
+											}}
+											placeholder='House number and street name'
+											autoComplete='address-line1'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required
+										/>
+									</div>
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+										<input
+											type='text'
+											value={formData.addressLine2}
+											onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+											onBlur={(e) => {
+												const capitalized = capitalizeWords(e.target.value);
+												if (capitalized !== e.target.value) {
+													setFormData((prev) => ({ ...prev, addressLine2: capitalized }));
+												}
+											}}
+											placeholder='Apartment, suite, unit'
+											autoComplete='address-line2'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										/>
+									</div>
+									<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 										<div>
 											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
 											<input
 												type='text'
-												value={shippingAddress.city}
-												onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+												value={formData.city}
+												onChange={(e) => setFormData({ ...formData, city: e.target.value })}
 												onBlur={(e) => {
 													const capitalized = capitalizeWords(e.target.value);
 													if (capitalized !== e.target.value) {
-														setShippingAddress((prev) => ({ ...prev, city: capitalized }));
+														setFormData((prev) => ({ ...prev, city: capitalized }));
 													}
 												}}
-												autoComplete='shipping address-level2'
+												autoComplete='address-level2'
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required
 											/>
@@ -883,9 +755,9 @@ export default function CheckoutClient() {
 										<div>
 											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
 											<select
-												value={shippingAddress.province}
-												onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
-												autoComplete='shipping address-level1'
+												value={formData.province}
+												onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+												autoComplete='address-level1'
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 												required>
 												<option value='British Columbia'>British Columbia</option>
@@ -902,122 +774,278 @@ export default function CheckoutClient() {
 												<option value='Yukon'>Yukon</option>
 											</select>
 										</div>
-										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
-											<input
-												type='text'
-												value={shippingAddress.zipCode}
-												onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
-												onBlur={(e) => {
-													let v = e.target.value.toUpperCase().replace(/\s/g, '');
-													if (v.length >= 4 && !v.includes(' ')) {
-														v = v.slice(0, 3) + ' ' + v.slice(3);
-													}
-													if (v !== e.target.value) {
-														setShippingAddress((prev) => ({ ...prev, zipCode: v }));
-													}
-												}}
-												autoComplete='shipping postal-code'
-												placeholder='A1A 1A1'
-												maxLength={7}
-												className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
-												required
-											/>
-											{shippingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
-										</div>
 									</div>
-								)}
-								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Order notes (optional)</label>
-									<textarea
-										value={formData.orderNotes}
-										onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
-										placeholder='Notes about your order, e.g. special notes for delivery.'
-										className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-									/>
-								</div>
 
-								<div className='pb-4 pt-0 border-b border-deep-tidal-teal/10'>
-									<div className='flex items-center gap-2 mb-2'>
-										<svg
-											className='w-5 h-5 text-deep-tidal-teal'
-											fill='none'
-											stroke='currentColor'
-											viewBox='0 0 24 24'>
-											<path
-												strokeLinecap='round'
-												strokeLinejoin='round'
-												strokeWidth={1.5}
-												d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-											/>
-										</svg>
-										<h3 className='font-semibold text-deep-tidal-teal-800'>Privacy Notice</h3>
-									</div>
-									<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
-										All information is encrypted and stored securely. We do not share your data with third parties. Payments are processed anonymously. Your identity
-										remains protected.
-									</p>
-								</div>
-								<div className='py-1'>
-									<label
-										htmlFor='checkout-terms'
-										className='flex items-start gap-3 cursor-pointer group'>
+									<div className='max-w-[200px]'>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
 										<input
-											id='checkout-terms'
-											type='checkbox'
-											checked={agreedToTerms}
-											onChange={(e) => setAgreedToTerms(e.target.checked)}
-											className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5 transition-colors'
+											type='text'
+											value={formData.zipCode}
+											onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+											onBlur={(e) => {
+												let v = e.target.value.toUpperCase().replace(/\s/g, '');
+												if (v.length >= 4 && !v.includes(' ')) {
+													v = v.slice(0, 3) + ' ' + v.slice(3);
+												}
+												if (v !== e.target.value) {
+													setFormData((prev) => ({ ...prev, zipCode: v }));
+												}
+											}}
+											autoComplete='postal-code'
+											placeholder=''
+											maxLength={7}
+											className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
 											required
 										/>
-										<span className='text-sm text-deep-tidal-teal-800 flex-1'>
-											I have read and agree to the{' '}
-											<button
-												type='button'
-												onClick={() => setShowTermsModal(true)}
-												className='text-deep-tidal-teal hover:text-eucalyptus underline font-medium transition-colors'>
-												Terms & Conditions
-											</button>
-										</span>
-									</label>
-									{!agreedToTerms && hasSubmitted && (
-										<p className='text-xs text-red-600 mt-2 ml-7 flex items-start gap-1.5'>
+										{billingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+									</div>
+
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Email address *</label>
+										<input
+											type='email'
+											value={formData.email}
+											onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+											autoComplete='email'
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required
+										/>
+										<p className='text-xs text-deep-tidal-teal-600 mt-1 flex items-center gap-1'>
 											<svg
-												className='w-3.5 h-3.5 mt-0.5 flex-shrink-0'
+												className='w-3 h-3 inline'
 												fill='none'
 												stroke='currentColor'
 												viewBox='0 0 24 24'>
 												<path
 													strokeLinecap='round'
 													strokeLinejoin='round'
-													strokeWidth={2}
-													d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+													strokeWidth={1.5}
+													d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
 												/>
 											</svg>
-											<span>You must agree to the terms and conditions to place your order</span>
+											Your email is only used for order confirmation. Not shared with third parties.
 										</p>
-									)}
-								</div>
-								<div className='relative group'>
-									<button
-										type='submit'
-										disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
-										className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
-										{isProcessing ? 'Processing...' : 'Place Order'}
-									</button>
-									{!agreedToTerms && !isProcessing && (
-										<div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-deep-tidal-teal-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap'>
-											Please agree to the Terms & Conditions
-											<div className='absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-deep-tidal-teal-800'></div>
+									</div>
+
+									<div className='flex items-start gap-2 text-sm text-deep-tidal-teal-800'>
+										<input
+											id='checkout-ship-different'
+											type='checkbox'
+											checked={shipToDifferentAddress}
+											onChange={(e) => setShipToDifferentAddress(e.target.checked)}
+											className='mt-1'
+											aria-describedby={shipToDifferentAddress ? 'shipping-address-fields' : undefined}
+										/>
+										<label htmlFor='checkout-ship-different'>Ship to a different address?</label>
+									</div>
+									{shipToDifferentAddress && (
+										<div
+											id='shipping-address-fields'
+											className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
+											<div>
+												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+												<input
+													type='text'
+													value={shippingAddress.address}
+													onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
+													onBlur={(e) => {
+														const capitalized = capitalizeWords(e.target.value);
+														if (capitalized !== e.target.value) {
+															setShippingAddress((prev) => ({ ...prev, address: capitalized }));
+														}
+													}}
+													placeholder='House number and street name'
+													autoComplete='shipping address-line1'
+													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+													required
+												/>
+											</div>
+											<div>
+												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+												<input
+													type='text'
+													value={shippingAddress.addressLine2}
+													onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
+													onBlur={(e) => {
+														const capitalized = capitalizeWords(e.target.value);
+														if (capitalized !== e.target.value) {
+															setShippingAddress((prev) => ({ ...prev, addressLine2: capitalized }));
+														}
+													}}
+													placeholder='Apartment, suite, unit, etc. (optional)'
+													autoComplete='shipping address-line2'
+													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												/>
+											</div>
+											<div>
+												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
+												<input
+													type='text'
+													value={shippingAddress.city}
+													onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+													onBlur={(e) => {
+														const capitalized = capitalizeWords(e.target.value);
+														if (capitalized !== e.target.value) {
+															setShippingAddress((prev) => ({ ...prev, city: capitalized }));
+														}
+													}}
+													autoComplete='shipping address-level2'
+													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+													required
+												/>
+											</div>
+											<div>
+												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
+												<select
+													value={shippingAddress.province}
+													onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
+													autoComplete='shipping address-level1'
+													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+													required>
+													<option value='British Columbia'>British Columbia</option>
+													<option value='Alberta'>Alberta</option>
+													<option value='Manitoba'>Manitoba</option>
+													<option value='New Brunswick'>New Brunswick</option>
+													<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
+													<option value='Nova Scotia'>Nova Scotia</option>
+													<option value='Ontario'>Ontario</option>
+													<option value='Prince Edward Island'>Prince Edward Island</option>
+													<option value='Saskatchewan'>Saskatchewan</option>
+													<option value='Northwest Territories'>Northwest Territories</option>
+													<option value='Nunavut'>Nunavut</option>
+													<option value='Yukon'>Yukon</option>
+												</select>
+											</div>
+											<div>
+												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
+												<input
+													type='text'
+													value={shippingAddress.zipCode}
+													onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+													onBlur={(e) => {
+														let v = e.target.value.toUpperCase().replace(/\s/g, '');
+														if (v.length >= 4 && !v.includes(' ')) {
+															v = v.slice(0, 3) + ' ' + v.slice(3);
+														}
+														if (v !== e.target.value) {
+															setShippingAddress((prev) => ({ ...prev, zipCode: v }));
+														}
+													}}
+													autoComplete='shipping postal-code'
+													placeholder='A1A 1A1'
+													maxLength={7}
+													className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
+													required
+												/>
+												{shippingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+											</div>
 										</div>
 									)}
-								</div>
+									<div>
+										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Order notes (optional)</label>
+										<textarea
+											value={formData.orderNotes}
+											onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
+											placeholder='Notes about your order, e.g. special notes for delivery.'
+											className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+										/>
+									</div>
+
+									<div className='pb-4 pt-0 border-b border-deep-tidal-teal/10'>
+										<div className='flex items-center gap-2 mb-2'>
+											<svg
+												className='w-5 h-5 text-deep-tidal-teal'
+												fill='none'
+												stroke='currentColor'
+												viewBox='0 0 24 24'>
+												<path
+													strokeLinecap='round'
+													strokeLinejoin='round'
+													strokeWidth={1.5}
+													d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
+												/>
+											</svg>
+											<h3 className='font-semibold text-deep-tidal-teal-800'>Privacy Notice</h3>
+										</div>
+										<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
+											All information is encrypted and stored securely. We do not share your data with third parties. Payments are processed anonymously. Your identity
+											remains protected.
+										</p>
+									</div>
+									<div className='py-1'>
+										<label
+											htmlFor='checkout-terms'
+											className='flex items-start gap-3 cursor-pointer group'>
+											<input
+												id='checkout-terms'
+												type='checkbox'
+												checked={agreedToTerms}
+												onChange={(e) => setAgreedToTerms(e.target.checked)}
+												className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5 transition-colors'
+												required
+											/>
+											<span className='text-sm text-deep-tidal-teal-800 flex-1'>
+												I have read and agree to the{' '}
+												<button
+													type='button'
+													onClick={() => setShowTermsModal(true)}
+													className='text-deep-tidal-teal hover:text-eucalyptus underline font-medium transition-colors'>
+													Terms & Conditions
+												</button>
+											</span>
+										</label>
+										{!agreedToTerms && hasSubmitted && (
+											<p className='text-xs text-red-600 mt-2 ml-7 flex items-start gap-1.5'>
+												<svg
+													className='w-3.5 h-3.5 mt-0.5 flex-shrink-0'
+													fill='none'
+													stroke='currentColor'
+													viewBox='0 0 24 24'>
+													<path
+														strokeLinecap='round'
+														strokeLinejoin='round'
+														strokeWidth={2}
+														d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+													/>
+												</svg>
+												<span>You must agree to the terms and conditions to place your order</span>
+											</p>
+										)}
+									</div>
+									<div className='relative group'>
+										<button
+											type='submit'
+											disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
+											aria-busy={isProcessing}
+											className='w-full min-h-[3rem] bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
+											<span className='inline-flex items-center justify-center gap-2'>
+												{isProcessing && (
+													<Loader2
+														className='h-5 w-5 animate-spin'
+														aria-hidden='true'
+													/>
+												)}
+												<span>{isProcessing ? (useCreditCard ? 'Preparing Secure Payment...' : 'Placing Order...') : 'Place Order'}</span>
+											</span>
+											{isProcessing && <span className='sr-only'>Checkout submission in progress. Please wait.</span>}
+										</button>
+										{!agreedToTerms && !isProcessing && (
+											<div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-deep-tidal-teal-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap'>
+												Please agree to the Terms & Conditions
+												<div className='absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-deep-tidal-teal-800'></div>
+											</div>
+										)}
+									</div>
+								</fieldset>
 							</form>
 						</div>
 					</div>
 
 					<div className='order-1 lg:order-2 lg:col-span-1'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md'>
+						<div
+							className={`bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
+							aria-busy={isProcessing}
+							aria-disabled={isProcessing}>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
 								<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Your order</h2>
 								<Link
@@ -1214,6 +1242,7 @@ export default function CheckoutClient() {
 												name='payment'
 												checked={paymentMethod === 'etransfer'}
 												onChange={() => setPaymentMethod('etransfer')}
+												disabled={isProcessing}
 											/>
 											E-Transfer (Interac)
 										</span>
@@ -1335,7 +1364,7 @@ export default function CheckoutClient() {
 												name='payment'
 												checked={paymentMethod === 'creditcard'}
 												onChange={() => setPaymentMethod('creditcard')}
-												disabled={isCreditCardDisabled}
+												disabled={isProcessing || isCreditCardDisabled}
 												className={isCreditCardDisabled ? 'opacity-50' : ''}
 											/>
 											<span className='text-deep-tidal-teal-800'>Credit Card</span>
