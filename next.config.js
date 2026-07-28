@@ -35,24 +35,28 @@ const nextConfig = {
 						key: 'X-Robots-Tag',
 						value: 'noindex, nofollow, noarchive, nosnippet, noimageindex',
 					},
-					{ key: 'X-Frame-Options', value: 'DENY' },
+					{ key: 'X-Frame-Options', value: isDev ? 'SAMEORIGIN' : 'DENY' },
 					{ key: 'X-Content-Type-Options', value: 'nosniff' },
 					{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-					// Content Security Policy
-					{
-						key: 'Content-Security-Policy',
-						value: [
-							"default-src 'self'",
-							"script-src 'self' 'unsafe-eval' 'unsafe-inline' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com", // Next.js requires unsafe-eval/inline in dev + Meta Pixel
-							"style-src 'self' 'unsafe-inline' fonts.googleapis.com", // For Tailwind CSS + Google Fonts
-							"img-src 'self' data: blob: www.facebook.com connect.facebook.net https://www.facebook.com https://connect.facebook.net", // Meta Pixel tracking
-							"font-src 'self' data: fonts.gstatic.com",
-							"connect-src 'self' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com", // Meta Pixel API calls
-							"frame-src 'self' https://api.pcivault.io", // Gatewaylinx iframe for inline mode
-							"frame-ancestors 'none'",
-							"form-action 'self'",
-						].join('; '),
-					},
+					// Content Security Policy - disabled in dev for browser preview
+					...(isDev
+						? []
+						: [
+								{
+									key: 'Content-Security-Policy',
+									value: [
+										"default-src 'self'",
+										"script-src 'self' 'unsafe-eval' 'unsafe-inline' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com",
+										"style-src 'self' 'unsafe-inline' fonts.googleapis.com",
+										"img-src 'self' data: blob: www.facebook.com connect.facebook.net https://www.facebook.com https://connect.facebook.net",
+										"font-src 'self' data: fonts.gstatic.com",
+										"connect-src 'self' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com",
+										"frame-src 'self' https://api.pcivault.io",
+										"frame-ancestors 'none'",
+										"form-action 'self'",
+									].join('; '),
+								},
+							]),
 					// Permissions Policy
 					{
 						key: 'Permissions-Policy',
