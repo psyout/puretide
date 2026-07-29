@@ -12,6 +12,7 @@ import CrossSellSection from './CrossSellSection';
 import FreeShippingProgress from './FreeShippingProgress';
 import CartItemDetails from './CartItemDetails';
 import type { Product } from '@/types/product';
+import { buildCartStockMap, hasInvalidCartQuantity, resolveCartItemStock } from '@/lib/cartStock';
 
 type CartClientProps = {
 	products: Product[];
@@ -25,22 +26,10 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	const totalSavings = cartItems.reduce((sum, item) => sum + Math.max(0, item.price - getItemPrice(item)) * item.quantity, 0);
 
 	// Create a map of product stock for quick lookup
-	const productStockMap = useMemo(() => {
-		const map = new Map<string, number>();
-		products.forEach((product) => {
-			map.set(product.id, Number(product.stock) || 0);
-			if (product.slug) {
-				map.set(product.slug, Number(product.stock) || 0);
-			}
-		});
-		return map;
-	}, [products]);
+	const productStockMap = useMemo(() => buildCartStockMap(products), [products]);
 
 	// Check if any cart item has invalid quantity (exceeds available stock)
-	const hasCartInvalidQuantity = cartItems.some((item) => {
-		const availableStock = productStockMap.get(item.id) || productStockMap.get(item.slug) || 0;
-		return item.quantity > availableStock;
-	});
+	const hasCartInvalidQuantity = hasInvalidCartQuantity(productStockMap, cartItems, stockUnavailable);
 
 	if (cartItems.length === 0) {
 		return (
@@ -96,7 +85,8 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-md'>
 							{cartItems.map((item, index) => {
-								const availableStock = productStockMap.get(item.id) || productStockMap.get(item.slug) || item.stock || 0;
+								const liveStock = resolveCartItemStock(productStockMap, item);
+								const availableStock = stockUnavailable ? Number(item.stock) || 0 : (liveStock ?? 0);
 								const isOutOfStock = availableStock <= 0;
 								const isLowStock = availableStock > 0 && availableStock <= 3;
 								const isAtStockLimit = item.quantity >= availableStock;
@@ -138,7 +128,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 												{/* Stock Status */}
 												{stockUnavailable ? (
-													<p className='text-xs text-deep-tidal-teal-500 mb-1.5'>Stock unavailable</p>
+													<p className='text-xs text-amber-700 mb-1.5'>Live stock check temporarily unavailable</p>
 												) : isOutOfStock ? (
 													<div className='flex items-center gap-1.5 text-xs text-red-600 font-medium mb-1.5'>
 														<span className='w-1.5 h-1.5 rounded-full bg-red-500' />
@@ -235,7 +225,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 												{/* Stock Status */}
 												{stockUnavailable ? (
-													<p className='text-sm text-deep-tidal-teal-500 mb-3'>Stock unavailable</p>
+													<p className='text-sm text-amber-700 mb-3'>Live stock check temporarily unavailable. Availability will be verified at checkout.</p>
 												) : isOutOfStock ? (
 													<div className='flex items-center gap-2 text-sm text-red-600 font-medium mb-3'>
 														<span className='w-2 h-2 rounded-full bg-red-500' />
