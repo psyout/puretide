@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleWrikeTaskCompletion } from '@/lib/wrikeShipping';
+import { completeFriendsFamilyOrder } from '@/lib/friendsFamilyOrderCompletion';
 import crypto from 'node:crypto';
 
 export const dynamic = 'force-dynamic';
@@ -15,8 +16,26 @@ type WrikeWebhookEvent = {
 	status?: string;
 	oldCustomStatusId?: string;
 	customStatusId?: string;
+	customFieldId?: string;
+	value?: string;
 	requestType?: string;
 };
+
+async function getWrikeOrderNumber(taskId: string): Promise<string> {
+	const apiToken = process.env.WRIKE_API_TOKEN;
+	if (!apiToken) return '';
+	const apiBase = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
+	const response = await fetch(`${apiBase}/tasks/${encodeURIComponent(taskId)}`, {
+		headers: { Authorization: `Bearer ${apiToken}` },
+	});
+	if (!response.ok) {
+		console.error(`[wrikeWebhook] Failed to load task ${taskId}: ${response.status}`);
+		return '';
+	}
+	const data = (await response.json()) as { data?: Array<{ title?: string }> };
+	const title = String(data.data?.[0]?.title ?? '');
+	return title.match(/Order #(\S+)/)?.[1]?.trim() ?? '';
+}
 
 function computeHmacSha256Hex(secret: string, data: string) {
 	return crypto.createHmac('sha256', secret).update(data).digest('hex');
@@ -107,6 +126,34 @@ export async function POST(request: NextRequest) {
 			if (!newStatus) continue;
 
 			console.log(`[wrikeWebhook] Task ${ev.taskId} status changed from ${oldStatus ?? 'unknown'} to ${newStatus}`);
+
+			const transferredStatusName = String(process.env.WRIKE_PAYMENT_TRANSFERRED_STATUS ?? 'Transferred')
+				.trim()
+				.toLowerCase();
+			const transferredStatusId = String(process.env.WRIKE_PAYMENT_TRANSFERRED_STATUS_ID ?? '').trim();
+			const isTransferred =
+				newStatus.trim().toLowerCase() === transferredStatusName || Boolean(transferredStatusId && ev.customStatusId === transferredStatusId);
+			if (isTransferred) {
+				const orderNumber = await getWrikeOrderNumber(ev.taskId);
+				if (!orderNumber) {
+					console.error(`[wrikeWebhook] Could not extract order number from transferred task ${ev.taskId}`);
+					failed += 1;
+					continue;
+				}
+				try {
+					const completion = await completeFriendsFamilyOrder(orderNumber, ev.taskId);
+					if (completion.ok) processed += 1;
+					else {
+						console.error(`[wrikeWebhook] Friends & Family completion skipped for #${orderNumber}: ${completion.error}`);
+						failed += 1;
+					}
+				} catch (error) {
+					console.error(`[wrikeWebhook] Friends & Family completion failed for #${orderNumber}:`, error);
+					failed += 1;
+				}
+				continue;
+			}
+
 			const result = await handleWrikeTaskCompletion({
 				taskId: ev.taskId,
 				oldStatus,

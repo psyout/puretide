@@ -131,6 +131,7 @@ export type RunFulfillmentResult = {
 
 export type RunFulfillmentOptions = {
 	paymentConfirmed?: boolean;
+	skipOrderTask?: boolean;
 };
 
 async function decrementGoogleSheetStock(orderNumber: string, items: FulfillmentOrder['cartItems']) {
@@ -250,25 +251,27 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		paymentPath?: 'manual' | 'bluepeak' | 'manual_friends_family';
 		cardFee?: number;
 	};
-	await createOrderTask({
-		orderNumber: order.orderNumber,
-		createdAt: order.createdAt,
-		customer: order.customer,
-		shipToDifferentAddress: order.shipToDifferentAddress,
-		shippingAddress: order.shippingAddress,
-		shippingMethod: order.shippingMethod,
-		paymentMethod: orderForWrike.paymentMethod ?? 'creditcard',
-		paymentPath: orderForWrike.paymentPath,
-		cardFee: orderForWrike.cardFee,
-		subtotal: order.subtotal,
-		shippingCost: order.shippingCost,
-		discountAmount: order.discountAmount,
-		promoCode: order.promoCode,
-		total: order.total,
-		cartItems: order.cartItems,
-		stockLevels,
-		totalCost,
-	});
+	if (!options.skipOrderTask) {
+		await createOrderTask({
+			orderNumber: order.orderNumber,
+			createdAt: order.createdAt,
+			customer: order.customer,
+			shipToDifferentAddress: order.shipToDifferentAddress,
+			shippingAddress: order.shippingAddress,
+			shippingMethod: order.shippingMethod,
+			paymentMethod: orderForWrike.paymentMethod ?? 'creditcard',
+			paymentPath: orderForWrike.paymentPath,
+			cardFee: orderForWrike.cardFee,
+			subtotal: order.subtotal,
+			shippingCost: order.shippingCost,
+			discountAmount: order.discountAmount,
+			promoCode: order.promoCode,
+			total: order.total,
+			cartItems: order.cartItems,
+			stockLevels,
+			totalCost,
+		});
+	}
 
 	await createClientTask({
 		email: order.customer.email,

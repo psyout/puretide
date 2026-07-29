@@ -15,6 +15,7 @@ import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
+import { createOrderTask } from '@/lib/wrike';
 import { decidePaymentPathWithFeatureFlag, getVerifiedFriendsFamilyEmailFromCookie } from '@/lib/friendsFamily';
 
 interface OrderPayload {
@@ -312,6 +313,42 @@ export async function POST(request: Request) {
 		const emailEnabled = String(process.env.ENABLE_EMAIL_NOTIFICATIONS ?? '').toLowerCase() !== 'false';
 		const wrikeEnabled = String(process.env.ENABLE_WRIKE_INTEGRATION ?? '').toLowerCase() === 'true';
 		const etProvider = (orderRecord as unknown as { etransfer?: { provider?: string } }).etransfer?.provider;
+		if (orderPayload.paymentMethod === 'etransfer' && paymentPath === 'manual_friends_family' && wrikeEnabled) {
+			void (async () => {
+				try {
+					const task = await createOrderTask({
+						orderNumber: orderRecord.orderNumber,
+						createdAt: orderRecord.createdAt,
+						customer: orderRecord.customer,
+						shipToDifferentAddress: orderRecord.shipToDifferentAddress,
+						shippingAddress: orderRecord.shippingAddress,
+						shippingMethod: orderRecord.shippingMethod,
+						paymentMethod: 'etransfer',
+						paymentPath: 'manual_friends_family',
+						cardFee: orderPayload.cardFee,
+						subtotal: orderRecord.subtotal,
+						shippingCost: orderRecord.shippingCost,
+						discountAmount: orderRecord.discountAmount,
+						promoCode: orderRecord.promoCode,
+						total: orderRecord.total,
+						cartItems: orderRecord.cartItems,
+					});
+					const wrikeTaskId = task && typeof task === 'object' && 'id' in task ? String(task.id) : '';
+					await upsertOrderInDb({
+						...(orderRecord as unknown as Record<string, unknown>),
+						wrikeTaskId: wrikeTaskId || undefined,
+						fulfillmentStatus: {
+							stockUpdated: false,
+							emailsSent: false,
+							clientSynced: false,
+							awaitingPayment: true,
+						},
+					});
+				} catch (err) {
+					console.error('[orders] Failed to create pending Friends & Family Wrike task', err);
+				}
+			})();
+		}
 		// Regular manual e-Transfers keep the existing immediate workflow. Friends &
 		// Family orders are fulfilled only after an admin confirms receipt of payment.
 		const shouldRunImmediateEtransferFulfillment = etProvider === 'manual' && paymentPath === 'manual';
