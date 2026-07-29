@@ -73,9 +73,9 @@ export default function CheckoutClient() {
 
 	const buildGatewaylinxConfirmationUrl = (orderNumber: string, extra?: Record<string, string>) => {
 		const params = new URLSearchParams({ orderNumber });
-		// Gatewaylinx orders do not need a single-use confirmation token. The order-confirmation
-		// page already allows token-less access for Gatewaylinx credit card orders, and using a
-		// token here causes "Link already used" errors if the customer refreshes.
+		if (gatewaylinxConfirmationToken) {
+			params.set('token', gatewaylinxConfirmationToken);
+		}
 		if (extra) {
 			for (const [key, value] of Object.entries(extra)) {
 				params.set(key, value);
@@ -152,6 +152,7 @@ export default function CheckoutClient() {
 	const submissionInProgressRef = useRef(false);
 	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const [showPromoInput, setShowPromoInput] = useState(false);
+	const [showOrderNotes, setShowOrderNotes] = useState(false);
 	const [promoCode, setPromoCode] = useState('');
 	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
 	const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
@@ -515,7 +516,7 @@ export default function CheckoutClient() {
 					const response = await fetch('/api/payments/etransfer/create', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ orderNumber, idempotencyKey: getOrCreateIdempotencyKey() }),
+						body: JSON.stringify({ orderNumber, confirmationToken, idempotencyKey: getOrCreateIdempotencyKey() }),
 					});
 					if (!response.ok) {
 						const data = await response.json().catch(() => ({}));
@@ -549,7 +550,7 @@ export default function CheckoutClient() {
 	// Show Gatewaylinx iframe for inline mode
 	if (gatewaylinxIframeUrl) {
 		return (
-			<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
+			<div className='fixed inset-0 bg-white/80 z-50 flex items-center justify-center p-4'>
 				<div
 					className='bg-white rounded-lg shadow-2xl w-full max-w-xl flex flex-col overflow-hidden p-10'
 					style={{ height: 'min(480px, 90vh)' }}>
@@ -603,293 +604,185 @@ export default function CheckoutClient() {
 				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>Checkout</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-					<div className='order-2 lg:order-1 lg:col-span-2'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 mb-6 shadow-md'>
-							<h2 className='text-xl font-bold mb-6 text-deep-tidal-teal-800'>Billing details</h2>
-							{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
-								<div
-									role='alert'
-									aria-live='assertive'
-									className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3'>
-									<p className='flex-1 text-red-800 text-sm'>{checkoutError}</p>
-									<button
-										type='button'
-										onClick={() => setCheckoutError(null)}
-										className='text-red-600 hover:text-red-800 font-bold text-md shrink-0 p-1'
-										aria-label='Dismiss'>
-										×
-									</button>
-								</div>
-							)}
-							<form
-								onSubmit={handleSubmit}
-								aria-busy={isProcessing}
-								className='space-y-4'>
-								<fieldset
-									disabled={isProcessing}
-									className='space-y-4'>
+					<div className='order-1 lg:order-1 lg:col-span-2'>
+						{/* Single container with separators */}
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-md'>
+							{/* Contact Information */}
+							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
+								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Contact Information</h2>
+								{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
 									<div
-										className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
-										aria-hidden>
-										<label htmlFor='checkout-company'>Company</label>
-										<input
-											type='text'
-											id='checkout-company'
-											name='company'
-											tabIndex={-1}
-											autoComplete='off'
-											value={honeypotCompany}
-											onChange={(e) => setHoneypotCompany(e.target.value)}
-										/>
+										role='alert'
+										aria-live='assertive'
+										className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3'>
+										<p className='flex-1 text-red-800 text-sm'>{checkoutError}</p>
+										<button
+											type='button'
+											onClick={() => setCheckoutError(null)}
+											className='text-red-600 hover:text-red-800 font-bold text-md shrink-0 p-1'
+											aria-label='Dismiss'>
+											×
+										</button>
 									</div>
-
-									<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
-											<input
-												type='text'
-												value={formData.firstName}
-												onChange={(e) => {
-													setFormData({ ...formData, firstName: e.target.value });
-													if (checkoutError?.includes('First name')) setCheckoutError(null);
-												}}
-												onBlur={(e) => {
-													const capitalized = capitalizeWords(e.target.value);
-													if (capitalized !== e.target.value) {
-														setFormData((prev) => ({ ...prev, firstName: capitalized }));
-													}
-												}}
-												autoComplete='given-name'
-												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-												required
+								)}
+								<div>
+									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Email Address *</label>
+									<input
+										type='email'
+										value={formData.email}
+										onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+										autoComplete='email'
+										className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal mb-1'
+										required
+									/>
+									<p className='text-xs text-deep-tidal-teal-600 mt-1 flex items-center gap-2'>
+										<svg
+											className='w-3 h-3 inline'
+											fill='none'
+											stroke='currentColor'
+											viewBox='0 0 24 24'>
+											<path
+												strokeLinecap='round'
+												strokeLinejoin='round'
+												strokeWidth={1.5}
+												d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
 											/>
-											{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
-										</div>
-										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
-											<input
-												type='text'
-												value={formData.lastName}
-												onChange={(e) => {
-													setFormData({ ...formData, lastName: e.target.value });
-													if (checkoutError?.includes('Last name')) setCheckoutError(null);
-												}}
-												onBlur={(e) => {
-													const capitalized = capitalizeWords(e.target.value);
-													if (capitalized !== e.target.value) {
-														setFormData((prev) => ({ ...prev, lastName: capitalized }));
-													}
-												}}
-												autoComplete='family-name'
-												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-												required
-											/>
-											{checkoutError && checkoutError.includes('Last name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
-										</div>
-									</div>
+										</svg>
+										Your email is only used for order confirmation.
+									</p>
+								</div>
+							</div>
 
-									<div className='max-w-[200px]'>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>
-										<select
-											value={formData.country}
-											onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-											autoComplete='country-name'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required>
-											<option value='Canada'>Canada</option>
-										</select>
-									</div>
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
-										<input
-											type='text'
-											value={formData.address}
-											onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-											onBlur={(e) => {
-												const capitalized = capitalizeWords(e.target.value);
-												if (capitalized !== e.target.value) {
-													setFormData((prev) => ({ ...prev, address: capitalized }));
-												}
-											}}
-											placeholder='House number and street name'
-											autoComplete='address-line1'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required
-										/>
-									</div>
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
-										<input
-											type='text'
-											value={formData.addressLine2}
-											onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-											onBlur={(e) => {
-												const capitalized = capitalizeWords(e.target.value);
-												if (capitalized !== e.target.value) {
-													setFormData((prev) => ({ ...prev, addressLine2: capitalized }));
-												}
-											}}
-											placeholder='Apartment, suite, unit'
-											autoComplete='address-line2'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										/>
-									</div>
-									<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
-											<input
-												type='text'
-												value={formData.city}
-												onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-												onBlur={(e) => {
-													const capitalized = capitalizeWords(e.target.value);
-													if (capitalized !== e.target.value) {
-														setFormData((prev) => ({ ...prev, city: capitalized }));
-													}
-												}}
-												autoComplete='address-level2'
-												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-												required
-											/>
-										</div>
-										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
-											<select
-												value={formData.province}
-												onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-												autoComplete='address-level1'
-												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-												required>
-												<option value='British Columbia'>British Columbia</option>
-												<option value='Alberta'>Alberta</option>
-												<option value='Manitoba'>Manitoba</option>
-												<option value='New Brunswick'>New Brunswick</option>
-												<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
-												<option value='Nova Scotia'>Nova Scotia</option>
-												<option value='Ontario'>Ontario</option>
-												<option value='Prince Edward Island'>Prince Edward Island</option>
-												<option value='Saskatchewan'>Saskatchewan</option>
-												<option value='Northwest Territories'>Northwest Territories</option>
-												<option value='Nunavut'>Nunavut</option>
-												<option value='Yukon'>Yukon</option>
-											</select>
-										</div>
-									</div>
-
-									<div className='max-w-[200px]'>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
-										<input
-											type='text'
-											value={formData.zipCode}
-											onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
-											onBlur={(e) => {
-												let v = e.target.value.toUpperCase().replace(/\s/g, '');
-												if (v.length >= 4 && !v.includes(' ')) {
-													v = v.slice(0, 3) + ' ' + v.slice(3);
-												}
-												if (v !== e.target.value) {
-													setFormData((prev) => ({ ...prev, zipCode: v }));
-												}
-											}}
-											autoComplete='postal-code'
-											placeholder=''
-											maxLength={7}
-											className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
-											required
-										/>
-										{billingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
-									</div>
-
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Email address *</label>
-										<input
-											type='email'
-											value={formData.email}
-											onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-											autoComplete='email'
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required
-										/>
-										<p className='text-xs text-deep-tidal-teal-600 mt-1 flex items-center gap-1'>
-											<svg
-												className='w-3 h-3 inline'
-												fill='none'
-												stroke='currentColor'
-												viewBox='0 0 24 24'>
-												<path
-													strokeLinecap='round'
-													strokeLinejoin='round'
-													strokeWidth={1.5}
-													d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-												/>
-											</svg>
-											Your email is only used for order confirmation. Not shared with third parties.
-										</p>
-									</div>
-
-									<div className='flex items-start gap-2 text-sm text-deep-tidal-teal-800'>
-										<input
-											id='checkout-ship-different'
-											type='checkbox'
-											checked={shipToDifferentAddress}
-											onChange={(e) => setShipToDifferentAddress(e.target.checked)}
-											className='mt-1'
-											aria-describedby={shipToDifferentAddress ? 'shipping-address-fields' : undefined}
-										/>
-										<label htmlFor='checkout-ship-different'>Ship to a different address?</label>
-									</div>
-									{shipToDifferentAddress && (
+							{/* Billing Details */}
+							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
+								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Billing Details</h2>
+								<form
+									onSubmit={handleSubmit}
+									aria-busy={isProcessing}
+									className='space-y-4'>
+									<fieldset
+										disabled={isProcessing}
+										className='space-y-4'>
 										<div
-											id='shipping-address-fields'
-											className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
+											className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
+											aria-hidden>
+											<label htmlFor='checkout-company'>Company</label>
+											<input
+												type='text'
+												id='checkout-company'
+												name='company'
+												tabIndex={-1}
+												autoComplete='off'
+												value={honeypotCompany}
+												onChange={(e) => setHoneypotCompany(e.target.value)}
+											/>
+										</div>
+
+										<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 											<div>
-												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
 												<input
 													type='text'
-													value={shippingAddress.address}
-													onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
+													value={formData.firstName}
+													onChange={(e) => {
+														setFormData({ ...formData, firstName: e.target.value });
+														if (checkoutError?.includes('First name')) setCheckoutError(null);
+													}}
 													onBlur={(e) => {
 														const capitalized = capitalizeWords(e.target.value);
 														if (capitalized !== e.target.value) {
-															setShippingAddress((prev) => ({ ...prev, address: capitalized }));
+															setFormData((prev) => ({ ...prev, firstName: capitalized }));
 														}
 													}}
-													placeholder='House number and street name'
-													autoComplete='shipping address-line1'
+													autoComplete='given-name'
 													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 													required
 												/>
+												{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
 											</div>
 											<div>
-												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
 												<input
 													type='text'
-													value={shippingAddress.addressLine2}
-													onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
+													value={formData.lastName}
+													onChange={(e) => {
+														setFormData({ ...formData, lastName: e.target.value });
+														if (checkoutError?.includes('Last name')) setCheckoutError(null);
+													}}
 													onBlur={(e) => {
 														const capitalized = capitalizeWords(e.target.value);
 														if (capitalized !== e.target.value) {
-															setShippingAddress((prev) => ({ ...prev, addressLine2: capitalized }));
+															setFormData((prev) => ({ ...prev, lastName: capitalized }));
 														}
 													}}
-													placeholder='Apartment, suite, unit, etc. (optional)'
-													autoComplete='shipping address-line2'
+													autoComplete='family-name'
 													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+													required
 												/>
+												{checkoutError && checkoutError.includes('Last name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
 											</div>
+										</div>
+
+										<div className='max-w-[200px]'>
+											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>
+											<select
+												value={formData.country}
+												onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+												autoComplete='country-name'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												required>
+												<option value='Canada'>Canada</option>
+											</select>
+										</div>
+										<div>
+											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+											<input
+												type='text'
+												value={formData.address}
+												onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+												onBlur={(e) => {
+													const capitalized = capitalizeWords(e.target.value);
+													if (capitalized !== e.target.value) {
+														setFormData((prev) => ({ ...prev, address: capitalized }));
+													}
+												}}
+												placeholder='House number and street name'
+												autoComplete='address-line1'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												required
+											/>
+										</div>
+										<div>
+											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+											<input
+												type='text'
+												value={formData.addressLine2}
+												onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+												onBlur={(e) => {
+													const capitalized = capitalizeWords(e.target.value);
+													if (capitalized !== e.target.value) {
+														setFormData((prev) => ({ ...prev, addressLine2: capitalized }));
+													}
+												}}
+												placeholder='Apartment, suite, unit'
+												autoComplete='address-line2'
+												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											/>
+										</div>
+										<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 											<div>
 												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
 												<input
 													type='text'
-													value={shippingAddress.city}
-													onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+													value={formData.city}
+													onChange={(e) => setFormData({ ...formData, city: e.target.value })}
 													onBlur={(e) => {
 														const capitalized = capitalizeWords(e.target.value);
 														if (capitalized !== e.target.value) {
-															setShippingAddress((prev) => ({ ...prev, city: capitalized }));
+															setFormData((prev) => ({ ...prev, city: capitalized }));
 														}
 													}}
-													autoComplete='shipping address-level2'
+													autoComplete='address-level2'
 													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 													required
 												/>
@@ -897,9 +790,9 @@ export default function CheckoutClient() {
 											<div>
 												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
 												<select
-													value={shippingAddress.province}
-													onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
-													autoComplete='shipping address-level1'
+													value={formData.province}
+													onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+													autoComplete='address-level1'
 													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 													required>
 													<option value='British Columbia'>British Columbia</option>
@@ -916,138 +809,454 @@ export default function CheckoutClient() {
 													<option value='Yukon'>Yukon</option>
 												</select>
 											</div>
-											<div>
-												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
-												<input
-													type='text'
-													value={shippingAddress.zipCode}
-													onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
-													onBlur={(e) => {
-														let v = e.target.value.toUpperCase().replace(/\s/g, '');
-														if (v.length >= 4 && !v.includes(' ')) {
-															v = v.slice(0, 3) + ' ' + v.slice(3);
-														}
-														if (v !== e.target.value) {
-															setShippingAddress((prev) => ({ ...prev, zipCode: v }));
-														}
-													}}
-													autoComplete='shipping postal-code'
-													placeholder='A1A 1A1'
-													maxLength={7}
-													className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
-													required
-												/>
-												{shippingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
-											</div>
 										</div>
-									)}
-									<div>
-										<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Order notes (optional)</label>
-										<textarea
-											value={formData.orderNotes}
-											onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
-											placeholder='Notes about your order, e.g. special notes for delivery.'
-											className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-										/>
-									</div>
 
-									<div className='pb-4 pt-0 border-b border-deep-tidal-teal/10'>
-										<div className='flex items-center gap-2 mb-2'>
+										<div className='max-w-[200px]'>
+											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
+											<input
+												type='text'
+												value={formData.zipCode}
+												onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+												onBlur={(e) => {
+													let v = e.target.value.toUpperCase().replace(/\s/g, '');
+													if (v.length >= 4 && !v.includes(' ')) {
+														v = v.slice(0, 3) + ' ' + v.slice(3);
+													}
+													if (v !== e.target.value) {
+														setFormData((prev) => ({ ...prev, zipCode: v }));
+													}
+												}}
+												autoComplete='postal-code'
+												placeholder=''
+												maxLength={7}
+												className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
+												required
+											/>
+											{billingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+										</div>
+
+										<div className='flex items-start gap-2 text-sm text-deep-tidal-teal-800'>
+											<input
+												id='checkout-ship-different'
+												type='checkbox'
+												checked={shipToDifferentAddress}
+												onChange={(e) => setShipToDifferentAddress(e.target.checked)}
+												className='mt-1'
+												aria-describedby={shipToDifferentAddress ? 'shipping-address-fields' : undefined}
+											/>
+											<label htmlFor='checkout-ship-different'>Ship to a different address?</label>
+										</div>
+										{shipToDifferentAddress && (
+											<div
+												id='shipping-address-fields'
+												className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
+												<div>
+													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+													<input
+														type='text'
+														value={shippingAddress.address}
+														onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })}
+														onBlur={(e) => {
+															const capitalized = capitalizeWords(e.target.value);
+															if (capitalized !== e.target.value) {
+																setShippingAddress((prev) => ({ ...prev, address: capitalized }));
+															}
+														}}
+														placeholder='House number and street name'
+														autoComplete='shipping address-line1'
+														className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+														required
+													/>
+												</div>
+												<div>
+													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+													<input
+														type='text'
+														value={shippingAddress.addressLine2}
+														onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
+														onBlur={(e) => {
+															const capitalized = capitalizeWords(e.target.value);
+															if (capitalized !== e.target.value) {
+																setShippingAddress((prev) => ({ ...prev, addressLine2: capitalized }));
+															}
+														}}
+														placeholder='Apartment, suite, unit, etc. (optional)'
+														autoComplete='shipping address-line2'
+														className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+													/>
+												</div>
+												<div>
+													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
+													<input
+														type='text'
+														value={shippingAddress.city}
+														onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+														onBlur={(e) => {
+															const capitalized = capitalizeWords(e.target.value);
+															if (capitalized !== e.target.value) {
+																setShippingAddress((prev) => ({ ...prev, city: capitalized }));
+															}
+														}}
+														autoComplete='shipping address-level2'
+														className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+														required
+													/>
+												</div>
+												<div>
+													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
+													<select
+														value={shippingAddress.province}
+														onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
+														autoComplete='shipping address-level1'
+														className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+														required>
+														<option value='British Columbia'>British Columbia</option>
+														<option value='Alberta'>Alberta</option>
+														<option value='Manitoba'>Manitoba</option>
+														<option value='New Brunswick'>New Brunswick</option>
+														<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
+														<option value='Nova Scotia'>Nova Scotia</option>
+														<option value='Ontario'>Ontario</option>
+														<option value='Prince Edward Island'>Prince Edward Island</option>
+														<option value='Saskatchewan'>Saskatchewan</option>
+														<option value='Northwest Territories'>Northwest Territories</option>
+														<option value='Nunavut'>Nunavut</option>
+														<option value='Yukon'>Yukon</option>
+													</select>
+												</div>
+												<div>
+													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
+													<input
+														type='text'
+														value={shippingAddress.zipCode}
+														onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+														onBlur={(e) => {
+															let v = e.target.value.toUpperCase().replace(/\s/g, '');
+															if (v.length >= 4 && !v.includes(' ')) {
+																v = v.slice(0, 3) + ' ' + v.slice(3);
+															}
+															if (v !== e.target.value) {
+																setShippingAddress((prev) => ({ ...prev, zipCode: v }));
+															}
+														}}
+														autoComplete='shipping postal-code'
+														placeholder='A1A 1A1'
+														maxLength={7}
+														className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
+														required
+													/>
+													{shippingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+												</div>
+											</div>
+										)}
+										<div>
+											{!showOrderNotes ? (
+												<button
+													type='button'
+													onClick={() => setShowOrderNotes(true)}
+													className='text-deep-tidal-teal-600 hover:text-deep-tidal-teal-800 text-sm'>
+													+ Add order notes (optional)
+												</button>
+											) : (
+												<>
+													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Order notes (optional)</label>
+													<textarea
+														value={formData.orderNotes}
+														onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
+														placeholder='Notes about your order, e.g. special notes for delivery.'
+														className='w-full min-h-[120px] bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+													/>
+												</>
+											)}
+										</div>
+									</fieldset>
+								</form>
+							</div>
+
+							{/* Shipping Section */}
+							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
+								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
+									<Truck className='w-5 h-5' />
+									Shipping
+								</h2>
+								<div className='text-xs text-deep-tidal-teal-600 mb-3'>
+									{(() => {
+										const zip = formData.zipCode.trim().toUpperCase();
+										const firstLetter = zip.charAt(0);
+										const isWestern = ['V', 'R', 'S', 'T'].includes(firstLetter);
+										if (!zip) return 'Enter your postal code to see shipping cost.';
+										if (shippingCost === 0) return 'Free shipping on orders over $300.';
+										return isWestern ? 'Western Canada (BC, AB, SK, MB)' : 'Eastern Canada (ON, QC, NB, NS, PE, NL)';
+									})()}
+								</div>
+								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
+									<span className='flex items-center gap-2'>
+										<input
+											type='radio'
+											name='shipping'
+											checked
+											readOnly
+											aria-label='Express Shipping'
+										/>
+										Express Shipping
+									</span>
+									<span className='text-md text-deep-tidal-teal-500'>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
+								</label>
+								<div className='mt-3 pt-3 border-t border-deep-tidal-teal/10'>
+									<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>
+										Not responsible for errant shipments due to incorrect addresses. Please double check your address is correct.
+									</p>
+								</div>
+							</div>
+
+							{/* Payment Section */}
+							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
+								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
+									<CreditCard className='w-5 h-5' />
+									Payment Method
+								</h2>
+								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 mb-3'>
+									<span className='flex items-center gap-2'>
+										<input
+											type='radio'
+											name='payment'
+											checked={paymentMethod === 'etransfer'}
+											onChange={() => setPaymentMethod('etransfer')}
+											disabled={isProcessing}
+										/>
+										E-Transfer (Interac)
+									</span>
+									<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
+								</label>
+								{FRIENDS_FAMILY_ENABLED && paymentMethod === 'etransfer' && (
+									<div className='border-t border-b pt-3 pb-4'>
+										<div className='flex items-start justify-between gap-4'>
+											<div>
+												<p className='text-sm font-semibold text-deep-tidal-teal-800'>Friends & Family verification</p>
+												<p className='text-xs text-deep-tidal-teal-700 mt-1'>
+													If you&apos;re eligible, you can verify your email to use the Friends & Family e-Transfer flow.
+												</p>
+												{friendsFamilyVerified && <p className='text-xs text-emerald-700 mt-2'>Verified session active.</p>}
+											</div>
+											<button
+												type='button'
+												onClick={() => {
+													setFriendsFamilyExpanded((v) => !v);
+													setFriendsFamilyError(null);
+													setFriendsFamilyMessage(null);
+												}}
+												className='text-sm font-semibold text-deep-tidal-teal hover:text-deep-tidal-teal-600'>
+												{friendsFamilyExpanded ? 'Hide' : 'Verify'}
+											</button>
+										</div>
+
+										{friendsFamilyExpanded && (
+											<div className='mt-4 space-y-3'>
+												{(friendsFamilyError || friendsFamilyMessage) && (
+													<div
+														className={`rounded-lg px-4 py-3 text-sm border ${
+															friendsFamilyError ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+														}`}>
+														{friendsFamilyError ?? friendsFamilyMessage}
+													</div>
+												)}
+												<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+													<button
+														type='button'
+														disabled={friendsFamilyStartLoading || !formData.email.trim()}
+														onClick={async () => {
+															setFriendsFamilyStartLoading(true);
+															setFriendsFamilyError(null);
+															setFriendsFamilyMessage(null);
+															setFriendsFamilyEligible(null);
+															try {
+																const response = await fetch('/api/friends-family/start', {
+																	method: 'POST',
+																	headers: { 'Content-Type': 'application/json' },
+																	body: JSON.stringify({ email: formData.email }),
+																});
+																const data = (await response.json()) as { ok?: boolean; message?: string; eligible?: boolean };
+																setFriendsFamilyMessage(data.message ?? 'If this email is eligible, a verification code has been sent.');
+																setFriendsFamilyEligible(data.eligible ?? false);
+															} catch (e) {
+																setFriendsFamilyMessage('If this email is eligible, a verification code has been sent.');
+																setFriendsFamilyEligible(false);
+															} finally {
+																setFriendsFamilyStartLoading(false);
+															}
+														}}
+														className='bg-deep-tidal-teal text-mineral-white font-semibold px-4 py-2 rounded-lg hover:bg-deep-tidal-teal-600 disabled:opacity-50'>
+														{friendsFamilyStartLoading ? 'Sending...' : 'Send code'}
+													</button>
+													{friendsFamilyEligible === true && (
+														<>
+															<input
+																type='text'
+																value={friendsFamilyCode}
+																onChange={(e) => setFriendsFamilyCode(e.target.value)}
+																placeholder='6-digit code'
+																inputMode='numeric'
+																className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+															/>
+															<button
+																type='button'
+																disabled={friendsFamilyVerifyLoading || !formData.email.trim() || friendsFamilyCode.trim().length !== 6}
+																onClick={async () => {
+																	setFriendsFamilyVerifyLoading(true);
+																	setFriendsFamilyError(null);
+																	setFriendsFamilyMessage(null);
+																	try {
+																		const response = await fetch('/api/friends-family/verify', {
+																			method: 'POST',
+																			headers: { 'Content-Type': 'application/json' },
+																			credentials: 'include',
+																			body: JSON.stringify({ email: formData.email, code: friendsFamilyCode }),
+																		});
+																		const data = (await response.json()) as { ok?: boolean; error?: string };
+																		if (!response.ok || !data.ok) {
+																			setFriendsFamilyError(data.error ?? 'Invalid verification code.');
+																			return;
+																		}
+																		setFriendsFamilyVerified(true);
+																		setFriendsFamilyMessage('Verification successful.');
+																		setFriendsFamilyCode('');
+																	} catch (e) {
+																		setFriendsFamilyError(e instanceof Error ? e.message : 'Failed to verify code.');
+																	} finally {
+																		setFriendsFamilyVerifyLoading(false);
+																	}
+																}}
+																className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50'>
+																{friendsFamilyVerifyLoading ? 'Verifying...' : 'Verify'}
+															</button>
+														</>
+													)}
+												</div>
+											</div>
+										)}
+									</div>
+								)}
+								<label className={`flex items-center justify-between gap-2 mt-3 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+									<span className='flex items-center gap-2'>
+										<input
+											type='radio'
+											name='payment'
+											checked={paymentMethod === 'creditcard'}
+											onChange={() => setPaymentMethod('creditcard')}
+											disabled={isProcessing || isCreditCardDisabled}
+											className={isCreditCardDisabled ? 'opacity-50' : ''}
+										/>
+										<span className='text-deep-tidal-teal-800'>Credit Card</span>
+									</span>
+									<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
+								</label>
+								{isCreditCardOverLimit && (
+									<div className='bg-red-50 border border-red-200 rounded-lg p-3'>
+										<p className='text-sm text-red-700 leading-relaxed'>
+											Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.
+										</p>
+									</div>
+								)}
+							</div>
+
+							{/* Terms & Place Order */}
+							<div>
+								<div className='pb-4 pt-0 border-b border-deep-tidal-teal/10 mb-4'>
+									<div className='flex items-center gap-2 mb-2'>
+										<svg
+											className='w-5 h-5 text-deep-tidal-teal'
+											fill='none'
+											stroke='currentColor'
+											viewBox='0 0 24 24'>
+											<path
+												strokeLinecap='round'
+												strokeLinejoin='round'
+												strokeWidth={1.5}
+												d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
+											/>
+										</svg>
+										<h3 className='font-semibold text-deep-tidal-teal-800'>Privacy Notice</h3>
+									</div>
+									<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
+										All information is encrypted and stored securely. We do not share your data with third parties. Payments are processed anonymously. Your identity
+										remains protected.
+									</p>
+								</div>
+								<div className='py-1'>
+									<label
+										htmlFor='checkout-terms'
+										className='flex items-start gap-3 cursor-pointer group'>
+										<input
+											id='checkout-terms'
+											type='checkbox'
+											checked={agreedToTerms}
+											onChange={(e) => setAgreedToTerms(e.target.checked)}
+											className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5 transition-colors'
+											required
+										/>
+										<span className='text-sm text-deep-tidal-teal-800 flex-1'>
+											I have read and agree to the{' '}
+											<button
+												type='button'
+												onClick={() => setShowTermsModal(true)}
+												className='text-deep-tidal-teal hover:text-eucalyptus underline font-medium transition-colors'>
+												Terms & Conditions
+											</button>
+										</span>
+									</label>
+									{!agreedToTerms && hasSubmitted && (
+										<p className='text-xs text-red-600 mt-2 ml-7 flex items-start gap-1.5'>
 											<svg
-												className='w-5 h-5 text-deep-tidal-teal'
+												className='w-3.5 h-3.5 mt-0.5 flex-shrink-0'
 												fill='none'
 												stroke='currentColor'
 												viewBox='0 0 24 24'>
 												<path
 													strokeLinecap='round'
 													strokeLinejoin='round'
-													strokeWidth={1.5}
-													d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
+													strokeWidth={2}
+													d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
 												/>
 											</svg>
-											<h3 className='font-semibold text-deep-tidal-teal-800'>Privacy Notice</h3>
-										</div>
-										<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
-											All information is encrypted and stored securely. We do not share your data with third parties. Payments are processed anonymously. Your identity
-											remains protected.
+											<span>You must agree to the terms and conditions to place your order</span>
 										</p>
-									</div>
-									<div className='py-1'>
-										<label
-											htmlFor='checkout-terms'
-											className='flex items-start gap-3 cursor-pointer group'>
-											<input
-												id='checkout-terms'
-												type='checkbox'
-												checked={agreedToTerms}
-												onChange={(e) => setAgreedToTerms(e.target.checked)}
-												className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5 transition-colors'
-												required
-											/>
-											<span className='text-sm text-deep-tidal-teal-800 flex-1'>
-												I have read and agree to the{' '}
-												<button
-													type='button'
-													onClick={() => setShowTermsModal(true)}
-													className='text-deep-tidal-teal hover:text-eucalyptus underline font-medium transition-colors'>
-													Terms & Conditions
-												</button>
-											</span>
-										</label>
-										{!agreedToTerms && hasSubmitted && (
-											<p className='text-xs text-red-600 mt-2 ml-7 flex items-start gap-1.5'>
-												<svg
-													className='w-3.5 h-3.5 mt-0.5 flex-shrink-0'
-													fill='none'
-													stroke='currentColor'
-													viewBox='0 0 24 24'>
-													<path
-														strokeLinecap='round'
-														strokeLinejoin='round'
-														strokeWidth={2}
-														d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
-													/>
-												</svg>
-												<span>You must agree to the terms and conditions to place your order</span>
-											</p>
-										)}
-									</div>
-									<div className='relative group'>
-										<button
-											type='submit'
-											disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
-											aria-busy={isProcessing}
-											className='w-full min-h-[3rem] bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors'>
-											<span className='inline-flex items-center justify-center gap-2'>
-												{isProcessing && (
-													<Loader2
-														className='h-5 w-5 animate-spin'
-														aria-hidden='true'
-													/>
-												)}
-												<span>{isProcessing ? (useCreditCard ? 'Preparing Secure Payment...' : 'Placing Order...') : 'Place Order'}</span>
-											</span>
-											{isProcessing && <span className='sr-only'>Checkout submission in progress. Please wait.</span>}
-										</button>
-										{!agreedToTerms && !isProcessing && (
-											<div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-deep-tidal-teal-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap'>
-												Please agree to the Terms & Conditions
-												<div className='absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-deep-tidal-teal-800'></div>
-											</div>
-										)}
-									</div>
-								</fieldset>
-							</form>
+									)}
+								</div>
+								<div className='relative group'>
+									<button
+										type='submit'
+										disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
+										aria-busy={isProcessing}
+										className='w-full min-h-[3rem] bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors mt-3'>
+										<span className='inline-flex items-center justify-center gap-2'>
+											{isProcessing && (
+												<Loader2
+													className='h-5 w-5 animate-spin'
+													aria-hidden='true'
+												/>
+											)}
+											<span>{isProcessing ? (useCreditCard ? 'Preparing Secure Payment...' : 'Placing Order...') : 'Place Order'}</span>
+										</span>
+										{isProcessing && <span className='sr-only'>Checkout submission in progress. Please wait.</span>}
+									</button>
+									{!agreedToTerms && !isProcessing && (
+										<div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-deep-tidal-teal-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap'>
+											Please agree to the Terms & Conditions
+											<div className='absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-deep-tidal-teal-800'></div>
+										</div>
+									)}
+								</div>
+							</div>
 						</div>
 					</div>
 
-					<div className='order-1 lg:order-2 lg:col-span-1'>
+					<div className='order-2 lg:order-2 lg:col-span-1'>
 						<div
 							className={`bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
 							aria-busy={isProcessing}
 							aria-disabled={isProcessing}>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
-								<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Your order</h2>
+								<h2 className='text-xl font-bold text-deep-tidal-teal-800'>Order Summary</h2>
 								<Link
 									href='/cart'
 									className='text-sm font-semibold text-deep-tidal-teal hover:text-deep-tidal-teal-600 transition-colors flex items-center gap-1'>
@@ -1066,6 +1275,7 @@ export default function CheckoutClient() {
 									<span className='text-sm font-semibold underline'>Edit Cart</span>
 								</Link>
 							</div>
+
 							<div className='mb-4'>
 								{cartItems.map((item, index) => (
 									<div
@@ -1096,57 +1306,34 @@ export default function CheckoutClient() {
 											</p>
 										</div>
 
-										{/* Quantity Controls */}
-										<div className='flex items-center'>
-											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
-												<button
-													type='button'
-													onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1)}
-													className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
-													aria-label={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}>
-													{item.quantity === 1 ? <Trash2 className='w-4 h-4 text-red-500' /> : <Minus className='w-4 h-4' />}
-												</button>
-												<span className='min-w-[1.75rem] px-1.5 py-1 text-center text-sm font-medium text-deep-tidal-teal-800 border-x border-deep-tidal-teal/10'>
-													{item.quantity}
-												</span>
-												<button
-													type='button'
-													onClick={() => {
-														const stock = Number(item.stock) || 0;
-														const maxQuantity = stock > 0 ? Math.min(stock, 99) : 99;
-														updateQuantity(item.id, item.quantity + 1, maxQuantity);
-													}}
-													className='p-1.5 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/10 transition-colors'
-													aria-label='Increase quantity'>
-													<Plus className='w-4 h-4' />
-												</button>
-											</div>
-										</div>
+										{/* Quantity Display */}
+										<div className='text-sm text-deep-tidal-teal-600'>Qty: {item.quantity}</div>
 									</div>
 								))}
 							</div>
 
-							<div className='py-4'>
-								{!showPromoInput ? (
-									<button
-										onClick={() => setShowPromoInput(true)}
-										className='flex items-center gap-2 text-deep-tidal-teal-800 hover:text-deep-tidal-teal transition-colors group'>
-										<svg
-											className='w-5 h-5 transition-transform group-hover:scale-110'
-											fill='none'
-											stroke='currentColor'
-											viewBox='0 0 24 24'>
-											<path
-												strokeLinecap='round'
-												strokeLinejoin='round'
-												strokeWidth={1.5}
-												d='M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z'
-											/>
-										</svg>
-										<span className='text-md font-bold underline decoration-1 underline-offset-4'>Enter a promo code</span>
-									</button>
-								) : (
-									<div className='space-y-2 animate-in fade-in slide-in-from-top-2 duration-300'>
+							{/* Promo Code */}
+							<div className='mb-4 border-t border-deep-tidal-teal/10 pt-4'>
+								<button
+									type='button'
+									onClick={() => setShowPromoInput(!showPromoInput)}
+									className='flex items-center justify-between text-sm text-deep-tidal-teal-800 hover:text-deep-tidal-teal w-full'>
+									<span>Have a promo code?</span>
+									<svg
+										className={`w-4 h-4 transition-transform ${showPromoInput ? 'rotate-180' : ''}`}
+										fill='none'
+										stroke='currentColor'
+										viewBox='0 0 24 24'>
+										<path
+											strokeLinecap='round'
+											strokeLinejoin='round'
+											strokeWidth={2}
+											d='M19 9l-7 7-7-7'
+										/>
+									</svg>
+								</button>
+								{showPromoInput && (
+									<div className='space-y-2 mt-2 animate-in fade-in slide-in-from-top-2 duration-300'>
 										<div className='flex gap-2'>
 											<input
 												type='text'
@@ -1154,27 +1341,15 @@ export default function CheckoutClient() {
 												onChange={(e) => setPromoCode(e.target.value)}
 												placeholder='Promo code'
 												disabled={isVerifyingPromo || promoApplied}
-												className='flex-1 bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
+												className='flex-1 bg-white border border-black/10 rounded px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
 											/>
 											<button
 												type='button'
 												onClick={handleApplyPromo}
 												disabled={isVerifyingPromo || promoApplied || !promoCode.trim()}
-												className='bg-deep-tidal-teal text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-deep-tidal-teal-900 transition-colors disabled:opacity-50 cursor-pointer'>
+												className='bg-deep-tidal-teal text-white px-4 py-2 rounded font-bold text-sm hover:bg-deep-tidal-teal-600 transition-colors disabled:opacity-50 cursor-pointer'>
 												{isVerifyingPromo ? '...' : promoApplied ? 'Applied' : 'Apply'}
 											</button>
-											{promoApplied && (
-												<button
-													onClick={() => {
-														setAppliedDiscount(0);
-														setAppliedFreeShipping(false);
-														setAppliedPromoCode(null);
-														setPromoCode('');
-													}}
-													className='text-xs text-red-500 underline'>
-													Remove
-												</button>
-											)}
 										</div>
 										{promoError && <p className='text-xs text-red-500 font-medium'>{promoError}</p>}
 										{(appliedDiscount > 0 || appliedFreeShipping) && (
@@ -1188,7 +1363,7 @@ export default function CheckoutClient() {
 								)}
 							</div>
 
-							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm'>
+							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm flex flex-col gap-3'>
 								<div className='flex justify-between'>
 									<span className='text-deep-tidal-teal-700 text-[15px]'>Subtotal</span>
 									<span className='text-deep-tidal-teal-500 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
@@ -1199,185 +1374,9 @@ export default function CheckoutClient() {
 										<span className='text-lg'>-${discountAmount.toFixed(2)}</span>
 									</div>
 								)}
-								<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2'>
-									<h4 className='text-sm font-semibold text-deep-tidal-teal-700 flex items-center gap-2'>
-										<Truck className='w-4 h-4' />
-										Shipping
-									</h4>
-									<div className='text-xs text-deep-tidal-teal-600 mb-2'>
-										{(() => {
-											const zip = formData.zipCode.trim().toUpperCase();
-											const firstLetter = zip.charAt(0);
-											const isWestern = ['V', 'R', 'S', 'T'].includes(firstLetter);
-											if (!zip) return 'Enter your postal code to see shipping cost.';
-											if (shippingCost === 0) return 'Free shipping on orders over $400.';
-											return isWestern ? 'Western Canada (BC, AB, SK, MB)' : 'Eastern Canada (ON, QC, NB, NS, PE, NL)';
-										})()}
-									</div>
-									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
-										<span className='flex items-center gap-2'>
-											<input
-												type='radio'
-												name='shipping'
-												checked
-												readOnly
-												aria-label='Express Shipping'
-											/>
-											Express Shipping
-										</span>
-										<span className='text-md text-deep-tidal-teal-500'>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
-									</label>
-								</div>
-
-								{/* Payment Method */}
-								<div className='border-t border-deep-tidal-teal/10 pt-3 space-y-2'>
-									<h4 className='text-sm font-semibold text-deep-tidal-teal-800 flex items-center gap-2'>
-										<CreditCard className='w-4 h-4' />
-										Payment Method
-									</h4>
-									<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
-										<span className='flex items-center gap-2'>
-											<input
-												type='radio'
-												name='payment'
-												checked={paymentMethod === 'etransfer'}
-												onChange={() => setPaymentMethod('etransfer')}
-												disabled={isProcessing}
-											/>
-											E-Transfer (Interac)
-										</span>
-										<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
-									</label>
-									{FRIENDS_FAMILY_ENABLED && paymentMethod === 'etransfer' && (
-										<div className='border-t border-b pt-3 pb-4'>
-											<div className='flex items-start justify-between gap-4'>
-												<div>
-													<p className='text-sm font-semibold text-deep-tidal-teal-800'>Friends & Family verification</p>
-													<p className='text-xs text-deep-tidal-teal-700 mt-1'>
-														If you’re eligible, you can verify your email to use the Friends & Family e-Transfer flow.
-													</p>
-													{friendsFamilyVerified && <p className='text-xs text-emerald-700 mt-2'>Verified session active.</p>}
-												</div>
-												<button
-													type='button'
-													onClick={() => {
-														setFriendsFamilyExpanded((v) => !v);
-														setFriendsFamilyError(null);
-														setFriendsFamilyMessage(null);
-													}}
-													className='text-sm font-semibold text-deep-tidal-teal hover:text-deep-tidal-teal-600'>
-													{friendsFamilyExpanded ? 'Hide' : 'Verify'}
-												</button>
-											</div>
-
-											{friendsFamilyExpanded && (
-												<div className='mt-4 space-y-3'>
-													{(friendsFamilyError || friendsFamilyMessage) && (
-														<div
-															className={`rounded-lg px-4 py-3 text-sm border ${
-																friendsFamilyError ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-															}`}>
-															{friendsFamilyError ?? friendsFamilyMessage}
-														</div>
-													)}
-													<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-														<button
-															type='button'
-															disabled={friendsFamilyStartLoading || !formData.email.trim()}
-															onClick={async () => {
-																setFriendsFamilyStartLoading(true);
-																setFriendsFamilyError(null);
-																setFriendsFamilyMessage(null);
-																setFriendsFamilyEligible(null);
-																try {
-																	const response = await fetch('/api/friends-family/start', {
-																		method: 'POST',
-																		headers: { 'Content-Type': 'application/json' },
-																		body: JSON.stringify({ email: formData.email }),
-																	});
-																	const data = (await response.json()) as { ok?: boolean; message?: string; eligible?: boolean };
-																	setFriendsFamilyMessage(data.message ?? 'If this email is eligible, a verification code has been sent.');
-																	setFriendsFamilyEligible(data.eligible ?? false);
-																} catch (e) {
-																	setFriendsFamilyMessage('If this email is eligible, a verification code has been sent.');
-																	setFriendsFamilyEligible(false);
-																} finally {
-																	setFriendsFamilyStartLoading(false);
-																}
-															}}
-															className='bg-deep-tidal-teal text-mineral-white font-semibold px-4 py-2 rounded-lg hover:bg-deep-tidal-teal-600 disabled:opacity-50'>
-															{friendsFamilyStartLoading ? 'Sending...' : 'Send code'}
-														</button>
-														{friendsFamilyEligible === true && (
-															<>
-																<input
-																	type='text'
-																	value={friendsFamilyCode}
-																	onChange={(e) => setFriendsFamilyCode(e.target.value)}
-																	placeholder='6-digit code'
-																	inputMode='numeric'
-																	className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
-																/>
-																<button
-																	type='button'
-																	disabled={friendsFamilyVerifyLoading || !formData.email.trim() || friendsFamilyCode.trim().length !== 6}
-																	onClick={async () => {
-																		setFriendsFamilyVerifyLoading(true);
-																		setFriendsFamilyError(null);
-																		setFriendsFamilyMessage(null);
-																		try {
-																			const response = await fetch('/api/friends-family/verify', {
-																				method: 'POST',
-																				headers: { 'Content-Type': 'application/json' },
-																				credentials: 'include',
-																				body: JSON.stringify({ email: formData.email, code: friendsFamilyCode }),
-																			});
-																			const data = (await response.json()) as { ok?: boolean; error?: string };
-																			if (!response.ok || !data.ok) {
-																				setFriendsFamilyError(data.error ?? 'Invalid verification code.');
-																				return;
-																			}
-																			setFriendsFamilyVerified(true);
-																			setFriendsFamilyMessage('Verification successful.');
-																			setFriendsFamilyCode('');
-																		} catch (e) {
-																			setFriendsFamilyError(e instanceof Error ? e.message : 'Failed to verify code.');
-																		} finally {
-																			setFriendsFamilyVerifyLoading(false);
-																		}
-																	}}
-																	className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50'>
-																	{friendsFamilyVerifyLoading ? 'Verifying...' : 'Verify'}
-																</button>
-															</>
-														)}
-													</div>
-												</div>
-											)}
-										</div>
-									)}
-									{/* Credit Card - Hidden for now - Add Flex, remove Hidden */}
-									<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-										<span className='flex items-center gap-2'>
-											<input
-												type='radio'
-												name='payment'
-												checked={paymentMethod === 'creditcard'}
-												onChange={() => setPaymentMethod('creditcard')}
-												disabled={isProcessing || isCreditCardDisabled}
-												className={isCreditCardDisabled ? 'opacity-50' : ''}
-											/>
-											<span className='text-deep-tidal-teal-800'>Credit Card</span>
-										</span>
-										<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
-									</label>
-									{isCreditCardOverLimit && (
-										<div className='bg-red-50 border border-red-200 rounded-lg p-3'>
-											<p className='text-sm text-red-700 leading-relaxed'>
-												Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.
-											</p>
-										</div>
-									)}
+								<div className='border-tpt-4 flex justify-between'>
+									<span className='text-deep-tidal-teal-700'>Shipping</span>
+									<span className='text-deep-tidal-teal-500 font-semibold'>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
 								</div>
 
 								{/* Card Fee */}
@@ -1392,19 +1391,6 @@ export default function CheckoutClient() {
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>
-
-								{/* Notices */}
-								<div className='mt-6 pt-2 border-t border-deep-tidal-teal/10 space-y-3'>
-									<div className='pt-3'>
-										<h4 className='text-sm font-semibold text-deep-tidal-teal-700 mb-1 flex items-center gap-2'>
-											<Truck className='w-4 h-4' />
-											Shipping disclaimer
-										</h4>
-										<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>
-											Not responsible for errant shipments due to incorrect addresses. Please double check your address is correct.
-										</p>
-									</div>
-								</div>
 							</div>
 						</div>
 					</div>
@@ -1413,7 +1399,7 @@ export default function CheckoutClient() {
 
 			{/* Terms & Conditions Modal */}
 			{showTermsModal && (
-				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
+				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 mb-3'>
 					<div className='bg-white rounded-xl max-w-3xl w-full max-h-[80vh] overflow-hidden shadow-2xl'>
 						<div className='p-6 border-b border-gray-200 flex items-center justify-between'>
 							<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Terms & Conditions</h2>

@@ -9,11 +9,7 @@ function getDiscountedPrice(price: number, quantity: number): number {
 	return price;
 }
 
-function computeTotals(params: {
-	cartItems: { price: number; quantity: number }[];
-	appliedDiscount?: number;
-	appliedFreeShipping?: boolean;
-}) {
+function computeTotals(params: { cartItems: { price: number; quantity: number }[]; appliedDiscount?: number; appliedFreeShipping?: boolean }) {
 	const { cartItems, appliedDiscount = 0, appliedFreeShipping = false } = params;
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
 	const discountAmount = Number((subtotalRaw * (appliedDiscount / 100)).toFixed(2));
@@ -28,20 +24,20 @@ function computeTotals(params: {
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-test('free shipping applies when subtotal after discounts > 400', () => {
+test('free shipping applies when subtotal after discounts > 300', () => {
 	const result = computeTotals({
 		cartItems: [{ price: 100, quantity: 5 }], // 500 raw
 		appliedDiscount: 10, // 10% off => 50 discount => 450 after discounts
 	});
-	assert.strictEqual(result.shippingCost, 0, 'Expected free shipping when > 400 after discounts');
+	assert.strictEqual(result.shippingCost, 0, 'Expected free shipping when > 300 after discounts');
 });
 
-test('shipping charged when subtotal after discounts <= 400', () => {
+test('shipping charged when subtotal after discounts <= 300', () => {
 	const result = computeTotals({
-		cartItems: [{ price: 100, quantity: 5 }], // 500 raw
-		appliedDiscount: 20, // 20% off => 100 discount => 400 after discounts
+		cartItems: [{ price: 100, quantity: 4 }], // 400 raw
+		appliedDiscount: 25, // 25% off => 100 discount => 300 after discounts
 	});
-	assert.strictEqual(result.shippingCost, getEffectiveShippingCost(), 'Expected shipping cost when exactly 400 after discounts');
+	assert.strictEqual(result.shippingCost, getEffectiveShippingCost(), 'Expected shipping cost when exactly 300 after discounts');
 });
 
 test('promo free shipping overrides threshold', () => {
@@ -60,5 +56,5 @@ test('volume discounts affect free shipping threshold', () => {
 	});
 	// Simplified: this test assumes computeTotals uses raw subtotal; in real code, volume pricing replaces subtotal
 	// Here we just verify threshold logic with given numbers
-	assert.strictEqual(result.shippingCost, 0, 'Expected free shipping with volume discount bringing subtotal over 400');
+	assert.strictEqual(result.shippingCost, 0, 'Expected free shipping with volume discount bringing subtotal over 300');
 });

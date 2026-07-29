@@ -180,6 +180,16 @@ jobs:
             if [ -d public ]; then mv public .deploy/previous-public; fi
             mv .deploy/next .next
             mv .deploy/public public
+
+            # PM2 runs Next's standalone server. It serves static assets relative
+            # to .next/standalone, so mirror the activated build assets there
+            # before restarting it. Without this, the homepage can load while
+            # its content-hashed CSS/JS files return 404.
+            rm -rf .next/standalone/.next/static .next/standalone/public
+            mkdir -p .next/standalone/.next
+            cp -R .next/static .next/standalone/.next/static
+            cp -R public .next/standalone/public
+
             cp package.json .deploy/package.json
             cp package-lock.json .deploy/package-lock.json
 

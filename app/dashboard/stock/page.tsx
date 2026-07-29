@@ -88,6 +88,12 @@ export default function StockDashboardPage() {
 	const [labelsLoading, setLabelsLoading] = useState(false);
 	const [labelsError, setLabelsError] = useState<string | null>(null);
 	const [labelsOkMessage, setLabelsOkMessage] = useState<string | null>(null);
+	const [operationsHealth, setOperationsHealth] = useState<{
+		dueRetryJobs: number;
+		failedRetryJobs: number;
+		jobs: Array<{ id: string; orderSession: string; status: string; attempts: number; nextRunAt: string; lastError: string | null }>;
+	} | null>(null);
+	const [operationsHealthError, setOperationsHealthError] = useState<string | null>(null);
 
 	const [clients, setClients] = useState<Array<Record<string, unknown>>>([]);
 	const [clientsLoading, setClientsLoading] = useState(false);
@@ -229,6 +235,39 @@ export default function StockDashboardPage() {
 				if (!cancelled) setPromoCodesError(e instanceof Error ? e.message : 'Failed to load promo codes.');
 			} finally {
 				if (!cancelled) setPromoCodesLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [activeTab]);
+
+	useEffect(() => {
+		if (activeTab !== 'labels') return;
+		let cancelled = false;
+		setOperationsHealthError(null);
+		(async () => {
+			try {
+				const response = await fetch('/api/dashboard/operations-health', { credentials: 'include' });
+				const data = (await response.json()) as {
+					ok?: boolean;
+					dueRetryJobs?: number;
+					failedRetryJobs?: number;
+					jobs?: Array<{ id: string; orderSession: string; status: string; attempts: number; nextRunAt: string; lastError: string | null }>;
+					error?: string;
+				};
+				if (cancelled) return;
+				if (!response.ok || !data.ok) {
+					setOperationsHealthError(data.error ?? 'Failed to load operations health.');
+					return;
+				}
+				setOperationsHealth({
+					dueRetryJobs: data.dueRetryJobs ?? 0,
+					failedRetryJobs: data.failedRetryJobs ?? 0,
+					jobs: data.jobs ?? [],
+				});
+			} catch (e) {
+				if (!cancelled) setOperationsHealthError(e instanceof Error ? e.message : 'Failed to load operations health.');
 			}
 		})();
 		return () => {
@@ -651,6 +690,12 @@ export default function StockDashboardPage() {
 								<p className='text-sm text-[#7a7a7a] mb-4'>Generate and attach yesterday’s Avery 5162 sheet to Wrike, ready to download and print.</p>
 								{labelsError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{labelsError}</div>}
 								{labelsOkMessage && <div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{labelsOkMessage}</div>}
+								{operationsHealthError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{operationsHealthError}</div>}
+								{operationsHealth && (
+									<div className={`rounded-lg border px-4 py-3 text-sm mb-4 ${operationsHealth.dueRetryJobs || operationsHealth.failedRetryJobs ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+										<strong>Fulfillment recovery:</strong> {operationsHealth.dueRetryJobs} due retry job{operationsHealth.dueRetryJobs === 1 ? '' : 's'} and {operationsHealth.failedRetryJobs} failed job{operationsHealth.failedRetryJobs === 1 ? '' : 's'} in recent history.
+									</div>
+								)}
 								<button
 									onClick={handleGenerateDailyLabels}
 									disabled={labelsLoading}

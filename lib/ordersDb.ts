@@ -650,6 +650,28 @@ export async function getPendingRetryJobs(): Promise<RetryJob[]> {
 	return jobs;
 }
 
+export async function getRecentRetryJobs(limit: number = 20): Promise<RetryJob[]> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT * FROM retry_jobs ORDER BY updated_at DESC LIMIT ?');
+	stmt.bind([Math.max(1, Math.min(limit, 100))]);
+	const jobs: RetryJob[] = [];
+	while (stmt.step()) {
+		const row = stmt.getAsObject() as Record<string, unknown>;
+		jobs.push({
+			id: String(row.id),
+			session: String(row.session),
+			attempts: Number(row.attempts),
+			nextRunAt: String(row.next_run_at),
+			createdAt: String(row.created_at),
+			updatedAt: String(row.updated_at),
+			lastError: row.last_error ? String(row.last_error) : undefined,
+			status: row.status as RetryJobStatus,
+		});
+	}
+	stmt.free();
+	return jobs;
+}
+
 export type FriendsFamilyAllowlistEntry = {
 	email: string;
 	isActive: boolean;

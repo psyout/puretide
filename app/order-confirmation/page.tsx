@@ -85,22 +85,12 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	const isAllowed = orderNumberParam ? verifyOrderConfirmationToken(orderNumberParam, token?.trim()) : false;
 	let order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
 
-	// Gatewaylinx credit card orders: allow token-less access to show the pending/paid state.
-	// Token security guards e-transfer payment instructions (bank details). Credit card orders
-	// have no sensitive payment instructions to protect, so showing payment status is safe.
-	let isGatewaylinxFallback = false;
-	if (!order && orderNumberParam) {
-		const fallbackOrder = await getOrderByNumber(orderNumberParam);
-		if (fallbackOrder && fallbackOrder.paymentMethod === 'creditcard' && (fallbackOrder as unknown as Record<string, unknown>).paymentProvider === 'gatewaylinx') {
-			order = fallbackOrder;
-			isGatewaylinxFallback = true;
-		}
-	}
-
 	// Additional security: If token is valid and order exists, mark it as accessed.
-	// This prevents the same token from being used multiple times.
-	// Skipped for Gatewaylinx fallback (no token present in that path).
-	if (isAllowed && order && token && !isGatewaylinxFallback) {
+	// Gatewaylinx uses the signed token too, but its confirmation URL may be revisited after
+	// an iframe payment flow, so it remains refreshable while still requiring possession of it.
+	const isRefreshableGatewaylinxOrder =
+		order?.paymentMethod === 'creditcard' && (order as unknown as Record<string, unknown>).paymentProvider === 'gatewaylinx';
+	if (isAllowed && order && token && !isRefreshableGatewaylinxOrder) {
 		// Check if this token was already used
 		if ((order as unknown as Record<string, unknown>).tokenAccessedAt) {
 			// Token was already used, show security message
@@ -756,10 +746,11 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						</div>
 					</div>
 
-					<OrderConfirmationSurvey
-						orderNumber={orderNumber}
-						customerEmail={confirmedOrder.customer.email}
-					/>
+			<OrderConfirmationSurvey
+				orderNumber={orderNumber}
+				customerEmail={confirmedOrder.customer.email}
+				confirmationToken={token ?? ''}
+			/>
 
 					<div className='mt-8 pt-6 border-t border-deep-tidal-teal/10 text-xs text-deep-tidal-teal-600 space-y-2'>
 						<p>Your personal data will be used to process your order, support your experience on this website, and for other purposes described in our privacy policy.</p>

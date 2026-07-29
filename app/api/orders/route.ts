@@ -105,12 +105,12 @@ export async function POST(request: Request) {
 		if (idemKey) {
 			const cached = await getCachedOrder(idemKey);
 			if (cached) {
-				const token = createOrderConfirmationToken(cached.orderNumber);
+				const confirmationToken = createOrderConfirmationToken(cached.orderNumber);
 				return NextResponse.json({
 					ok: true,
 					orderNumber: cached.orderNumber,
 					orderId: cached.orderId,
-					token,
+					confirmationToken,
 				});
 			}
 		}

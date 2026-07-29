@@ -3,12 +3,14 @@ import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { bluepeakCreateCheckout } from '@/lib/bluepeak';
 import { buildSafeApiError } from '@/lib/apiError';
 import { BluepeakApiError } from '@/lib/bluepeak';
+import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 type Body = {
 	orderNumber: string;
+	confirmationToken: string;
 	idempotencyKey?: string;
 };
 
@@ -28,7 +30,9 @@ export async function POST(request: Request) {
 
 		const body = (await request.json()) as Body;
 		const orderNumber = String(body.orderNumber ?? '').trim();
-		if (!orderNumber) return NextResponse.json({ ok: false, error: 'Missing orderNumber.' }, { status: 400 });
+		if (!orderNumber || !verifyOrderConfirmationToken(orderNumber, body.confirmationToken)) {
+			return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
+		}
 
 		console.info(
 			JSON.stringify({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendMail } from '@/lib/email';
 import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
 import { google } from 'googleapis';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -156,6 +157,10 @@ The Pure Tide Team`;
 
 export async function POST(request: NextRequest) {
 	try {
+		const { allowed } = checkRateLimit(request, 'newsletter-subscribe', 5, 60 * 60 * 1000);
+		if (!allowed) {
+			return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+		}
 		const body = await request.json();
 		const { email } = body;
 
@@ -191,7 +196,7 @@ export async function POST(request: NextRequest) {
 		// Check if email is already subscribed
 		const alreadySubscribed = await isEmailAlreadySubscribed(sheets, email);
 		if (alreadySubscribed) {
-			return NextResponse.json({ error: 'This email has already subscribed' }, { status: 409 });
+			return NextResponse.json({ success: true, message: 'If this address is eligible, a welcome email will arrive shortly.' });
 		}
 
 		// Get the promo code

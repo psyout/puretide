@@ -170,7 +170,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													{isDiscounted && <p className='text-xs text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</p>}
 												</div>
 												{isDiscounted && (
-													<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-0.5 rounded'>
+													<span className='inline-block w-fit text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-0.5 rounded'>
 														You save ${savings.toFixed(2)}
 													</span>
 												)}
@@ -178,7 +178,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										</div>
 
 										{/* Mobile: Quantity and Remove Row */}
-										<div className='md:hidden flex items-center justify-between mb-2'>
+										<div className='md:hidden flex items-center justify-start gap-3 mb-2'>
 											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
 												<button
 													onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, availableStock)}
@@ -202,14 +202,6 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 												className='text-xs text-red-600 hover:text-red-700 font-medium transition-colors whitespace-nowrap'>
 												Remove
 											</button>
-										</div>
-
-										{/* Mobile: Product Details Disclosure */}
-										<div className='md:hidden border-t border-deep-tidal-teal/10 pt-2'>
-											<CartItemDetails
-												description={item.description}
-												details={item.details}
-											/>
 										</div>
 
 										{/* Mobile: Invalid quantity warning */}
@@ -246,8 +238,21 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 											{/* Desktop: Center Section - Product Information */}
 											<div className='flex-1 min-w-0 flex flex-col'>
-												{/* Product Name */}
-												<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
+												{/* Product Header: Name + Price */}
+												<div className='flex items-start justify-between gap-6'>
+													<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
+													<div className='flex-shrink-0 flex flex-col items-end justify-start w-28'>
+														<p className='text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
+														{isDiscounted && (
+															<>
+																<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
+																<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-1 rounded'>
+																	You save ${savings.toFixed(2)}
+																</span>
+															</>
+														)}
+													</div>
+												</div>
 												{item.subtitle && <p className='text-sm text-deep-tidal-teal-600 mb-3'>{item.subtitle}</p>}
 
 												{/* Stock Status */}
@@ -299,6 +304,14 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													</button>
 												</div>
 
+												{/* Product Details: Desktop/Tablet only, collapsed by default */}
+												<div className='border-t border-deep-tidal-teal/10 pt-3 hidden'>
+													<CartItemDetails
+														description={item.description}
+														details={item.details}
+													/>
+												</div>
+
 												{/* Invalid quantity warning */}
 												{hasInvalidQuantity && (
 													<div className='mt-2 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2'>
@@ -309,27 +322,6 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													</div>
 												)}
 											</div>
-
-											{/* Desktop: Right Section - Pricing */}
-											<div className='flex-shrink-0 flex flex-col items-end justify-start w-28'>
-												<p className='text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
-												{isDiscounted && (
-													<>
-														<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
-														<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-1 rounded'>
-															You save ${savings.toFixed(2)}
-														</span>
-													</>
-												)}
-											</div>
-										</div>
-
-										{/* Desktop: Product Details - Full Width */}
-										<div className='hidden md:block border-t border-deep-tidal-teal/10 pt-3'>
-											<CartItemDetails
-												description={item.description}
-												details={item.details}
-											/>
 										</div>
 									</div>
 								);

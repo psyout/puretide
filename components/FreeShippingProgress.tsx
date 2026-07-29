@@ -1,12 +1,11 @@
 'use client';
 
 import { Package } from 'lucide-react';
+import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
 type FreeShippingProgressProps = {
 	subtotal: number;
 };
-
-const FREE_SHIPPING_THRESHOLD = 300;
 
 export default function FreeShippingProgress({ subtotal }: FreeShippingProgressProps) {
 	const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);

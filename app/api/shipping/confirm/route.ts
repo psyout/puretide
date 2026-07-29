@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { triggerShippingConfirmationManually } from '@/lib/wrikeShipping';
+import { requireDashboardAuth } from '@/lib/dashboardAuth';
 
 export async function POST(request: NextRequest) {
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
+
 	try {
 		const body = await request.json();
 		const { orderNumber, trackingNumber } = body;
@@ -40,6 +44,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
+
 	return NextResponse.json({
 		endpoint: 'Manual shipping confirmation trigger',
 		usage: 'POST with { orderNumber: string, trackingNumber: string }',

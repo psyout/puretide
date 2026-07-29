@@ -331,6 +331,7 @@ export async function POST(request: Request) {
 			ok: true,
 			redirectUrl: sessionResult.redirectUrl,
 			orderNumber,
+			confirmationToken: confirmationToken ?? null,
 		});
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'creditcard:create' });

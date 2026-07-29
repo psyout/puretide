@@ -1,7 +1,11 @@
 import { sendMail } from '@/lib/email';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireDashboardAuth } from '@/lib/dashboardAuth';
 
 export async function POST(request: NextRequest) {
+  const authError = requireDashboardAuth(request);
+  if (authError) return authError;
+
   try {
     const { email } = await request.json();
     

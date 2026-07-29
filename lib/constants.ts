@@ -4,7 +4,7 @@ export const SHIPPING_COSTS = {
 	eastern: 30.0,
 } as const;
 
-export const FREE_SHIPPING_THRESHOLD = 400;
+export const FREE_SHIPPING_THRESHOLD = 300;
 
 /** Set NEXT_PUBLIC_DISABLE_SHIPPING_FEE=true in .env to zero shipping for real card test; remove or set false for production. */
 export const DISABLE_SHIPPING_FEE_FOR_TEST = process.env.NEXT_PUBLIC_DISABLE_SHIPPING_FEE === 'true';

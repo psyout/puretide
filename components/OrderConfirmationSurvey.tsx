@@ -6,6 +6,7 @@ import { type SurveyData } from './HowDidYouHearSurvey';
 interface OrderConfirmationSurveyProps {
 	orderNumber: string;
 	customerEmail: string;
+	confirmationToken: string;
 }
 
 const surveyOptions = [
@@ -17,7 +18,7 @@ const surveyOptions = [
 	{ value: 'other' as const, label: 'Other' },
 ];
 
-export default function OrderConfirmationSurvey({ orderNumber, customerEmail }: OrderConfirmationSurveyProps) {
+export default function OrderConfirmationSurvey({ orderNumber, customerEmail, confirmationToken }: OrderConfirmationSurveyProps) {
 	const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
 	const [otherText, setOtherText] = useState('');
 	const [isSubmitted, setIsSubmitted] = useState(false);
@@ -44,6 +45,7 @@ export default function OrderConfirmationSurvey({ orderNumber, customerEmail }: 
 				body: JSON.stringify({
 					orderNumber,
 					customerEmail,
+					confirmationToken,
 					surveyData,
 				}),
 			});

@@ -14,7 +14,7 @@ export default function CartItemDetails({ description, details }: CartItemDetail
 	const content = details || description;
 
 	return (
-		<div>
+		<div className='hidden md:block'>
 			<button
 				type='button'
 				onClick={() => setIsOpen(!isOpen)}

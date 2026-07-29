@@ -1,23 +1,49 @@
 import { NextResponse } from 'next/server';
 import { readSheetClients, upsertSheetClient } from '@/lib/stockSheet';
+import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 import { sendMail } from '@/lib/email';
+import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 interface SurveyRequest {
 	orderNumber: string;
 	customerEmail: string;
+	confirmationToken: string;
 	surveyData: {
 		choice: 'search' | 'social' | 'friends' | 'ai' | 'ads' | 'other';
 		otherText?: string;
 	};
 }
 
+const SURVEY_CHOICES = new Set(['search', 'social', 'friends', 'ai', 'ads', 'other']);
+
+function escapeHtml(value: string): string {
+	return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char);
+}
+
 export async function POST(request: Request) {
 	try {
 		const body: SurveyRequest = await request.json();
-		const { orderNumber, customerEmail, surveyData } = body;
+		const { orderNumber, customerEmail, confirmationToken, surveyData } = body;
 
-		if (!customerEmail || !surveyData) {
+		const { allowed } = checkRateLimit(request, 'survey', 10, 60 * 60 * 1000);
+		if (!allowed) {
+			return NextResponse.json({ ok: false, error: 'Too many requests. Please try again later.' }, { status: 429 });
+		}
+
+		if (!orderNumber || !customerEmail || !surveyData || !verifyOrderConfirmationToken(String(orderNumber).trim(), confirmationToken)) {
+			return NextResponse.json({ ok: false, error: 'Invalid survey request' }, { status: 401 });
+		}
+		if (!SURVEY_CHOICES.has(surveyData.choice)) {
 			return NextResponse.json({ ok: false, error: 'Missing required fields' }, { status: 400 });
+		}
+		const order = await getOrderByOrderNumberFromDb(String(orderNumber).trim());
+		const orderCustomer = order ? ((order as Record<string, unknown>).customer as Record<string, unknown> | undefined) : undefined;
+		const orderEmail = String(orderCustomer?.email ?? '')
+			.trim()
+			.toLowerCase();
+		if (!order || !orderEmail || orderEmail !== String(customerEmail).trim().toLowerCase()) {
+			return NextResponse.json({ ok: false, error: 'Invalid survey request' }, { status: 401 });
 		}
 
 		// Find existing client by email
@@ -29,7 +55,8 @@ export async function POST(request: Request) {
 		}
 
 		// Format survey data
-		const formattedSurveyData = surveyData.choice === 'other' && surveyData.otherText ? `Other: ${surveyData.otherText}` : surveyData.choice;
+		const otherText = String(surveyData.otherText ?? '').trim().slice(0, 500);
+		const formattedSurveyData = surveyData.choice === 'other' && otherText ? `Other: ${otherText}` : surveyData.choice;
 
 		// Update client with survey data
 		const clientPayload = {
@@ -60,10 +87,10 @@ export async function POST(request: Request) {
 		].join('\n');
 		const html = [
 			`<p><strong>How did you hear about us (survey submission)</strong></p>`,
-			`<p><strong>Order:</strong> ${orderNumber}</p>`,
-			`<p><strong>Customer name:</strong> ${customerName || '(unknown)'}</p>`,
-			`<p><strong>Customer email:</strong> ${customerEmail}</p>`,
-			`<p><strong>Response:</strong> ${formattedSurveyData}</p>`,
+			`<p><strong>Order:</strong> ${escapeHtml(String(orderNumber))}</p>`,
+			`<p><strong>Customer name:</strong> ${escapeHtml(customerName || '(unknown)')}</p>`,
+			`<p><strong>Customer email:</strong> ${escapeHtml(String(customerEmail))}</p>`,
+			`<p><strong>Response:</strong> ${escapeHtml(formattedSurveyData)}</p>`,
 		].join('');
 
 		const emailResult = await sendMail({
