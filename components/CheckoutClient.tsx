@@ -657,6 +657,7 @@ export default function CheckoutClient() {
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
 								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Billing Details</h2>
 								<form
+									id='checkout-form'
 									onSubmit={handleSubmit}
 									aria-busy={isProcessing}
 									className='space-y-4'>
@@ -1108,11 +1109,16 @@ export default function CheckoutClient() {
 																	headers: { 'Content-Type': 'application/json' },
 																	body: JSON.stringify({ email: formData.email }),
 																});
-																const data = (await response.json()) as { ok?: boolean; message?: string; eligible?: boolean };
+																const data = (await response.json()) as { ok?: boolean; message?: string; error?: string; eligible?: boolean };
+																if (!response.ok || data.ok === false) {
+																	setFriendsFamilyError(data.error ?? 'We could not send the verification email. Please try again.');
+																	setFriendsFamilyEligible(false);
+																	return;
+																}
 																setFriendsFamilyMessage(data.message ?? 'If this email is eligible, a verification code has been sent.');
 																setFriendsFamilyEligible(data.eligible ?? false);
 															} catch (e) {
-																setFriendsFamilyMessage('If this email is eligible, a verification code has been sent.');
+																setFriendsFamilyError(e instanceof Error ? e.message : 'We could not send the verification email. Please try again.');
 																setFriendsFamilyEligible(false);
 															} finally {
 																setFriendsFamilyStartLoading(false);
@@ -1283,6 +1289,7 @@ export default function CheckoutClient() {
 								<div className='relative group'>
 									<button
 										type='submit'
+										form='checkout-form'
 										disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
 										aria-busy={isProcessing}
 										className='w-full min-h-[3rem] bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors mt-3'>

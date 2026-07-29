@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 				<p>If you did not request this code, you can safely ignore this email.</p>
 			</div>
 		`;
-			void sendMail({
+			const emailResult = await sendMail({
 				to: email,
 				subject,
 				text,
@@ -49,6 +49,22 @@ export async function POST(request: Request) {
 				from: 'orders@puretide.ca',
 				smtpPrefix: 'ORDER',
 			});
+			if (!emailResult.sent) {
+				console.error(
+					JSON.stringify({
+						label: 'friends-family:start:email-failed',
+						error: emailResult.error ?? 'Unknown email delivery error',
+					}),
+				);
+				return NextResponse.json(
+					{
+						ok: false,
+						error: 'We could not send the verification email. Please try again in a moment.',
+						eligible: false,
+					},
+					{ status: 502 },
+				);
+			}
 		}
 
 		return NextResponse.json({ ok: true, message: result.message, eligible: result.eligible });
