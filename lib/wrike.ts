@@ -238,9 +238,16 @@ ${order.customer.orderNotes ? `<hr><h4>Internal Notes</h4><p>${order.customer.or
 	try {
 		// Add default tracking number placeholder (PGCA) to make it easier to add actual number later
 		const trackingNumberFieldId = process.env.WRIKE_TRACKING_NUMBER_FIELD_ID;
-		const customFields = trackingNumberFieldId ? [{ id: trackingNumberFieldId, value: 'PGCA' }] : undefined;
+		const paymentStatusFieldId = process.env.WRIKE_PAYMENT_STATUS_FIELD_ID;
+		const customFields: CustomFieldInput[] = [];
+		if (trackingNumberFieldId) customFields.push({ id: trackingNumberFieldId, value: 'PGCA' });
+		if (paymentStatusFieldId && order.paymentPath === 'manual_friends_family') {
+			customFields.push({ id: paymentStatusFieldId, value: 'Awaiting transfer' });
+		}
 
-		const task = await createTask(config.ordersFolderId, title, description, config.apiToken, { customFields });
+		const task = await createTask(config.ordersFolderId, title, description, config.apiToken, {
+			customFields: customFields.length > 0 ? customFields : undefined,
+		});
 		if (task) {
 			console.log('Wrike order task created:', task.id);
 			await createOrderSubtasks(task.id, config.ordersFolderId, config.apiToken);

@@ -118,8 +118,7 @@ const envSchema = z.object({
 	// Wrike Order custom fields (for shipping)
 	WRIKE_TRACKING_NUMBER_FIELD_ID: z.string().optional(),
 	WRIKE_WEBHOOK_SECRET: z.string().optional(),
-	WRIKE_PAYMENT_TRANSFERRED_STATUS: z.string().optional(),
-	WRIKE_PAYMENT_TRANSFERRED_STATUS_ID: z.string().optional(),
+	WRIKE_PAYMENT_STATUS_FIELD_ID: z.string().optional(),
 
 	// Feature flags
 	ETRANSFER_PROVIDER: z.enum(['manual', 'bluepeak']).default('manual'),

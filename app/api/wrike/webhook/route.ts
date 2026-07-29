@@ -41,6 +41,17 @@ function computeHmacSha256Hex(secret: string, data: string) {
 	return crypto.createHmac('sha256', secret).update(data).digest('hex');
 }
 
+function parseWrikeCustomFieldValue(value: string | undefined): string {
+	const raw = String(value ?? '').trim();
+	if (!raw) return '';
+	try {
+		const parsed = JSON.parse(raw);
+		return typeof parsed === 'string' ? parsed.trim() : String(parsed ?? '').trim();
+	} catch {
+		return raw.replace(/^"|"$/g, '').trim();
+	}
+}
+
 export async function POST(request: NextRequest) {
 	try {
 		const rawBody = await request.text();
@@ -118,25 +129,16 @@ export async function POST(request: NextRequest) {
 		let failed = 0;
 
 		for (const ev of events) {
-			if (ev?.eventType !== 'TaskStatusChanged') continue;
 			if (!ev.taskId) continue;
 
-			const oldStatus = ev.oldStatus;
-			const newStatus = ev.status;
-			if (!newStatus) continue;
+			if (ev.eventType === 'TaskCustomFieldChanged') {
+				const paymentStatusFieldId = String(process.env.WRIKE_PAYMENT_STATUS_FIELD_ID ?? '').trim();
+				const paymentStatusValue = parseWrikeCustomFieldValue(ev.value).toLowerCase();
+				if (!paymentStatusFieldId || ev.customFieldId !== paymentStatusFieldId || paymentStatusValue !== 'transferred') continue;
 
-			console.log(`[wrikeWebhook] Task ${ev.taskId} status changed from ${oldStatus ?? 'unknown'} to ${newStatus}`);
-
-			const transferredStatusName = String(process.env.WRIKE_PAYMENT_TRANSFERRED_STATUS ?? 'Transferred')
-				.trim()
-				.toLowerCase();
-			const transferredStatusId = String(process.env.WRIKE_PAYMENT_TRANSFERRED_STATUS_ID ?? '').trim();
-			const isTransferred =
-				newStatus.trim().toLowerCase() === transferredStatusName || Boolean(transferredStatusId && ev.customStatusId === transferredStatusId);
-			if (isTransferred) {
 				const orderNumber = await getWrikeOrderNumber(ev.taskId);
 				if (!orderNumber) {
-					console.error(`[wrikeWebhook] Could not extract order number from transferred task ${ev.taskId}`);
+					console.error(`[wrikeWebhook] Could not extract order number from payment-transferred task ${ev.taskId}`);
 					failed += 1;
 					continue;
 				}
@@ -154,6 +156,12 @@ export async function POST(request: NextRequest) {
 				continue;
 			}
 
+			if (ev?.eventType !== 'TaskStatusChanged') continue;
+			const oldStatus = ev.oldStatus;
+			const newStatus = ev.status;
+			if (!newStatus) continue;
+
+			console.log(`[wrikeWebhook] Task ${ev.taskId} status changed from ${oldStatus ?? 'unknown'} to ${newStatus}`);
 			const result = await handleWrikeTaskCompletion({
 				taskId: ev.taskId,
 				oldStatus,
