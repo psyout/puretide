@@ -86,7 +86,8 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-md'>
 							{cartItems.map((item, index) => {
 								const liveStock = resolveCartItemStock(productStockMap, item);
-								const availableStock = stockUnavailable ? Number(item.stock) || 0 : (liveStock ?? 0);
+								const storedStock = Number(item.stock) || 0;
+								const availableStock = stockUnavailable ? storedStock : (liveStock ?? storedStock);
 								const isOutOfStock = availableStock <= 0;
 								const isLowStock = availableStock > 0 && availableStock <= 3;
 								const isAtStockLimit = item.quantity >= availableStock;
@@ -127,9 +128,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 												{item.subtitle && <p className='text-[0.85rem] text-deep-tidal-teal-600 mb-1.5'>{item.subtitle}</p>}
 
 												{/* Stock Status */}
-												{stockUnavailable ? (
-													<p className='text-xs text-amber-700 mb-1.5'>Live stock check temporarily unavailable</p>
-												) : isOutOfStock ? (
+												{isOutOfStock ? (
 													<div className='flex items-center gap-1.5 text-xs text-red-600 font-medium mb-1.5'>
 														<span className='w-1.5 h-1.5 rounded-full bg-red-500' />
 														<span>Out of Stock</span>
@@ -224,9 +223,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 												{item.subtitle && <p className='text-sm text-deep-tidal-teal-600 mb-3'>{item.subtitle}</p>}
 
 												{/* Stock Status */}
-												{stockUnavailable ? (
-													<p className='text-sm text-amber-700 mb-3'>Live stock check temporarily unavailable. Availability will be verified at checkout.</p>
-												) : isOutOfStock ? (
+												{isOutOfStock ? (
 													<div className='flex items-center gap-2 text-sm text-red-600 font-medium mb-3'>
 														<span className='w-2 h-2 rounded-full bg-red-500' />
 														<span>Out of Stock</span>

@@ -29,12 +29,11 @@ export function hasInvalidCartQuantity(
 	items: Array<Pick<CartItem, 'id' | 'slug' | 'name' | 'stock' | 'quantity'>>,
 	stockUnavailable: boolean,
 ): boolean {
-	// A temporary inventory outage must not turn every unknown item into zero stock.
-	// The order API still performs the authoritative stock check before accepting payment.
-	if (stockUnavailable) return false;
-
 	return items.some((item) => {
-		const availableStock = resolveCartItemStock(stockMap, item);
-		return availableStock == null || item.quantity > availableStock;
+		// Each cart item stores the stock snapshot from the product selection. If a
+		// page-level refresh fails, keep using that valid snapshot instead of zero.
+		const storedStock = Number(item.stock);
+		const availableStock = stockUnavailable ? storedStock : (resolveCartItemStock(stockMap, item) ?? storedStock);
+		return !Number.isFinite(availableStock) || availableStock <= 0 || item.quantity > availableStock;
 	});
 }

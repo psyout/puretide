@@ -31,9 +31,10 @@ test('cart stock resolves a selected variant instead of parent stock', () => {
 	assert.equal(hasInvalidCartQuantity(stockMap, [variantCartItem], false), false);
 });
 
-test('inventory outage does not treat every cart item as zero stock', () => {
+test('inventory refresh failure uses the stock snapshot stored with the cart item', () => {
 	const stockMap = new Map<string, number>();
 	assert.equal(hasInvalidCartQuantity(stockMap, [variantCartItem], true), false);
+	assert.equal(hasInvalidCartQuantity(stockMap, [{ ...variantCartItem, quantity: 9 }], true), true);
 });
 
 test('available inventory still blocks genuinely excessive quantities', () => {
