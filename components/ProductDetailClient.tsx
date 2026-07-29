@@ -121,12 +121,12 @@ export default function ProductDetailClient({ product, description, details, has
 				<div className='text-3xl font-bold text-deep-tidal-teal-700 mt-8'>
 					<span className='text-deep-tidal-teal-700 text-[1.75rem] font-light'>C</span>${displayPrice.toFixed(2)}
 				</div>
-				<div className='flex items-center gap-3 text-sm text-deep-tidal-teal-600'>
+				<div className='flex flex-row xs:flex-col items-start gap-3 text-xs md:text-sm text-deep-tidal-teal-600 sm:flex-row sm:items-center sm:gap-3'>
 					<span className='flex items-center gap-1'>
 						<CreditCard className='w-4 h-4' />
-						+5% card fee
+						5% fee when paying by card
 					</span>
-					<span className='text-deep-tidal-teal-300'>•</span>
+					<span className='hidden text-deep-tidal-teal-300 sm:inline'>•</span>
 					<span className='flex items-center gap-1 text-emerald-600'>
 						<Truck className='w-4 h-4' />
 						{`Free shipping over $${FREE_SHIPPING_THRESHOLD}`}
@@ -172,33 +172,47 @@ export default function ProductDetailClient({ product, description, details, has
 				</fieldset>
 			)}
 
+			{/* Stock status and purchase actions */}
+			{!stockUnavailable && !isSoldOut && !allVariantsSoldOut && (
+				<p className={`mb-4 flex items-center gap-2 text-sm font-semibold ${displayStock <= 3 ? 'text-amber-700' : 'text-emerald-700'}`}>
+					<span className={`h-2 w-2 rounded-full ${displayStock <= 3 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+					{displayStock <= 3 ? `Only ${displayStock} remaining` : 'In stock and ready to ship'}
+				</p>
+			)}
+
+			{stockUnavailable && (
+				<div className='bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6'>
+					<p
+						className='text-sm text-amber-800'
+						role='alert'>
+						<strong>Inventory System Offline:</strong> Real-time stock data is temporarily unavailable. Please try again later or contact us for availability before placing an order.
+					</p>
+				</div>
+			)}
+
+			<div className='mb-6'>
+				<ProductActions product={productForActions} />
+			</div>
+
 			{/* COA */}
 			{hasCoaFile && (
-				<div className='mb-6'>
+				<div className='mb-5'>
 					<Link
 						href={`/coa/${matchingCoaFile}`}
 						target='_blank'
 						rel='noopener noreferrer'
-						className='group flex w-full items-center gap-2 rounded-lg bg-gradient-to-br from-deep-tidal-teal to-deep-tidal-teal-800 px-4 py-3 text-mineral-white shadow-lg shadow-deep-tidal-teal/20 transition-all duration-200 hover:shadow-xl  hover:shadow-deep-tidal-teal/25 md:px-6'>
-						<span className='flex h-10 w-10 shrink-0 items-center justify-center  text-mineral-white'>
-							<FileBadge className='h-8 w-8 stroke-[1.5]' />
+						className='group flex w-full items-center gap-3 rounded-xl border border-deep-tidal-teal/15 bg-white px-4 py-3 text-deep-tidal-teal-800 shadow-sm transition-all duration-200 hover:border-deep-tidal-teal/35 hover:shadow-md'>
+						<span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'>
+							<FileBadge className='h-5 w-5 stroke-[1.5]' />
 						</span>
 						<span className='min-w-0 flex-1'>
-							<span className='block text-lg font-bold leading-tight tracking-tight'>View COA</span>
-							<span className='block text-sm font-medium text-mineral-white/85'>Certificate of Analysis</span>
+							<span className='block text-sm font-bold leading-tight'>View lab certificate</span>
+							<span className='mt-0.5 block text-xs font-medium text-deep-tidal-teal-600'>Certificate of Analysis (COA)</span>
 						</span>
-						<ChevronRight className='h-8 w-8 shrink-0' />
+						<ChevronRight className='h-5 w-5 shrink-0' />
 					</Link>
 				</div>
 			)}
-
-			{/* Details & Description (accordion) */}
-			<div className='mb-6'>
-				<ProductTabs
-					description={description}
-					details={details}
-				/>
-			</div>
 
 			{/* Discount Table */}
 			{product.slug !== 'bacteriostatic-water' && (
@@ -238,42 +252,36 @@ export default function ProductDetailClient({ product, description, details, has
 				</div>
 			)}
 
-			{/* Disclaimers */}
-			<div className='mb-6 grid grid-cols-1 divide-y divide-deep-tidal-teal/15 rounded-2xl bg-gradient-to-br from-deep-tidal-teal/5 to-eucalyptus-50/80 p-4 xl:grid-cols-2 xl:divide-x xl:divide-y-0 xl:divide-deep-tidal-teal/20 xl:p-5'>
-							<div className='flex items-center gap-3 pb-4 xl:pr-6 xl:pb-0'>
-					<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
-						<FlaskConical className='h-6 w-6' />
-					</span>
-					<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
-						<strong className='font-bold text-md'>For research use only.</strong> Not intended for human or animal consumption.
-					</p>
-				</div>
-				<div className='flex items-center gap-3 pt-4 xl:pl-6 xl:pt-0'>
-					<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
-						<Truck className='h-6 w-6' />
-					</span>
-					<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
-						<strong className='font-bold text-md'>Not responsible for shipments</strong> to incorrect addresses. Please double check before placing your order.
-					</p>
-				</div>
+			{/* Supporting product information */}
+			<div className='mb-6'>
+				<ProductTabs
+					description={description}
+					details={details}
+				/>
 			</div>
 
-			{/* Stock Unavailable Warning */}
-			{stockUnavailable && (
-				<div className='bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6'>
-					<p
-						className='text-sm text-amber-800'
-						role='alert'>
-						<strong>Inventory System Offline:</strong> Real-time stock data is temporarily unavailable. Please try again later or contact us for availability before placing an order.
-					</p>
+			{/* Research and delivery notice */}
+			<div className='mb-8 md:mb-10'>
+				<p className='mb-2 text-xs font-bold uppercase tracking-wider text-deep-tidal-teal-600'>Important information</p>
+				<div className='grid grid-cols-1 divide-y divide-deep-tidal-teal/15 rounded-2xl bg-gradient-to-br from-deep-tidal-teal/5 to-eucalyptus-50/80 p-4 xl:grid-cols-2 xl:divide-x xl:divide-y-0 xl:divide-deep-tidal-teal/20 xl:p-5'>
+					<div className='flex items-center gap-3 pb-4 xl:pr-6 xl:pb-0'>
+						<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
+							<FlaskConical className='h-6 w-6' />
+						</span>
+						<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
+							<strong className='font-bold text-md'>For research use only.</strong> Not intended for human or animal consumption.
+						</p>
+					</div>
+					<div className='flex items-center gap-3 pt-4 xl:pl-6 xl:pt-0'>
+						<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
+							<Truck className='h-6 w-6' />
+						</span>
+						<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
+							<strong className='font-bold text-md'>Not responsible for shipments</strong> to incorrect addresses. Please double check before placing your order.
+						</p>
+					</div>
 				</div>
-			)}
-
-			{/* Actions */}
-							<div className='mb-8 md:mb-10'>
-								<ProductActions product={productForActions} />
-							</div>
-
+			</div>
 		</>
 	);
 }

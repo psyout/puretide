@@ -86,7 +86,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 				<div className='overflow-hidden'>
 					<div className='grid grid-cols-1 md:grid-cols-[minmax(0,40%)_minmax(0,60%)]'>
-						<div className='p-0 md:col-start-2 lg:p-10'>
+						<div className='p-0 md:col-start-2 md:p-6 lg:p-10'>
 							{/* Mobile Image Container */}
 							<div className='relative p-4 flex items-center justify-center mb-4 md:hidden'>
 								{hasCoaFile && (
@@ -110,7 +110,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 						{/* Desktop Image Container */}
 						<div className='hidden md:col-start-1 md:row-start-1 md:flex md:min-h-[660px] md:items-start md:justify-center md:p-6 lg:min-h-[720px] lg:p-10'>
-							<div className='relative w-full max-w-sm bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 px-4 py-16 flex justify-center items-start rounded-xl'>
+							<div className='relative mt-6 w-full max-w-sm bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 px-4 py-16 flex justify-center items-start rounded-xl'>
 								{hasCoaFile && (
 									<div className='absolute left-4 top-4 z-10'>
 										<TestidesBadge />
