@@ -312,7 +312,9 @@ export async function POST(request: Request) {
 		const emailEnabled = String(process.env.ENABLE_EMAIL_NOTIFICATIONS ?? '').toLowerCase() !== 'false';
 		const wrikeEnabled = String(process.env.ENABLE_WRIKE_INTEGRATION ?? '').toLowerCase() === 'true';
 		const etProvider = (orderRecord as unknown as { etransfer?: { provider?: string } }).etransfer?.provider;
-		const shouldRunImmediateEtransferFulfillment = etProvider === 'manual';
+		// Regular manual e-Transfers keep the existing immediate workflow. Friends &
+		// Family orders are fulfilled only after an admin confirms receipt of payment.
+		const shouldRunImmediateEtransferFulfillment = etProvider === 'manual' && paymentPath === 'manual';
 		if (orderPayload.paymentMethod === 'etransfer' && shouldRunImmediateEtransferFulfillment && (emailEnabled || wrikeEnabled)) {
 			void (async () => {
 				try {

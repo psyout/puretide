@@ -55,6 +55,8 @@ export default function StockDashboardPage() {
 	const [trackingEmailLoading, setTrackingEmailLoading] = useState(false);
 	const [trackingEmailError, setTrackingEmailError] = useState<string | null>(null);
 	const [trackingEmailOkMessage, setTrackingEmailOkMessage] = useState<string | null>(null);
+	const [completingOrderNumber, setCompletingOrderNumber] = useState<string | null>(null);
+	const [orderActionMessage, setOrderActionMessage] = useState<string | null>(null);
 
 	const handleSendTrackingEmail = async (orderNumber: string) => {
 		setTrackingEmailLoading(true);
@@ -77,6 +79,35 @@ export default function StockDashboardPage() {
 			setTrackingEmailError(e instanceof Error ? e.message : 'Failed to send tracking email.');
 		} finally {
 			setTrackingEmailLoading(false);
+		}
+	};
+
+	const handleCompleteFriendsFamilyOrder = async (orderNumber: string) => {
+		if (!window.confirm(`Confirm that payment for order #${orderNumber} was received? This will decrement stock and send confirmation emails.`)) return;
+
+		setCompletingOrderNumber(orderNumber);
+		setOrdersError(null);
+		setOrderActionMessage(null);
+		try {
+			const response = await fetch('/api/dashboard/orders', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ orderNumber }),
+			});
+			const data = (await response.json()) as { ok?: boolean; message?: string; error?: string; order?: Record<string, unknown> };
+			if (!response.ok || !data.ok) {
+				setOrdersError(data.error ?? 'Failed to complete the order.');
+				return;
+			}
+			if (data.order) {
+				setOrders((current) => current.map((order) => (String(order.orderNumber ?? order.id) === orderNumber ? data.order! : order)));
+			}
+			setOrderActionMessage(data.message ?? `Order #${orderNumber} marked paid and fulfilled.`);
+		} catch (e) {
+			setOrdersError(e instanceof Error ? e.message : 'Failed to complete the order.');
+		} finally {
+			setCompletingOrderNumber(null);
 		}
 	};
 
@@ -713,6 +744,9 @@ export default function StockDashboardPage() {
 								{trackingEmailOkMessage && (
 									<div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{trackingEmailOkMessage}</div>
 								)}
+								{orderActionMessage && (
+									<div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{orderActionMessage}</div>
+								)}
 								{ordersLoading ? (
 									<div className='text-[#6a6a6a] py-8'>Loading orders...</div>
 								) : orders.length === 0 ? (
@@ -746,6 +780,8 @@ export default function StockDashboardPage() {
 																? 'E-Transfer'
 																: String(order.paymentMethod ?? '-');
 													const orderNumber = String(order.orderNumber ?? order.id ?? '-');
+													const isPendingFriendsFamily =
+														order.paymentMethod === 'etransfer' && order.paymentPath === 'manual_friends_family' && order.paymentStatus === 'pending';
 													return (
 														<tr
 															key={String(order.id)}
@@ -756,13 +792,24 @@ export default function StockDashboardPage() {
 															<td className='py-4 pr-6'>{date}</td>
 															<td className='py-4 pr-6'>{payment}</td>
 															<td className='py-4 pr-6'>
-																<button
-																	type='button'
-																	onClick={() => handleSendTrackingEmail(orderNumber)}
-																	disabled={trackingEmailLoading || orderNumber === '-'}
-																	className='px-3 py-1.5 rounded-lg border border-black/10 text-sm font-semibold text-[#2f2f2f] hover:bg-[#f4f4f7] disabled:opacity-50'>
-																	{trackingEmailLoading ? 'Sending...' : 'Send tracking email'}
-																</button>
+																<div className='flex flex-wrap gap-2'>
+																	{isPendingFriendsFamily && (
+																		<button
+																			type='button'
+																			onClick={() => handleCompleteFriendsFamilyOrder(orderNumber)}
+																			disabled={completingOrderNumber !== null || orderNumber === '-'}
+																			className='px-3 py-1.5 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 disabled:opacity-50'>
+																			{completingOrderNumber === orderNumber ? 'Completing...' : 'Mark paid & fulfill'}
+																		</button>
+																	)}
+																	<button
+																		type='button'
+																		onClick={() => handleSendTrackingEmail(orderNumber)}
+																		disabled={trackingEmailLoading || orderNumber === '-'}
+																		className='px-3 py-1.5 rounded-lg border border-black/10 text-sm font-semibold text-[#2f2f2f] hover:bg-[#f4f4f7] disabled:opacity-50'>
+																		{trackingEmailLoading ? 'Sending...' : 'Send tracking email'}
+																	</button>
+																</div>
 															</td>
 															<td className='py-4 pl-6 text-right'>${Number(order.total ?? 0).toFixed(2)}</td>
 														</tr>
