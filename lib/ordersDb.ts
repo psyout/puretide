@@ -1,5 +1,5 @@
 import initSqlJs from 'sql.js';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 
 export type StoredOrder = Record<string, unknown>;
@@ -271,7 +271,9 @@ function normalizeOrder(order: StoredOrder): StoredOrder {
 function persistDb(db: SqlJsDatabase): void {
 	mkdirSync(path.dirname(DB_PATH), { recursive: true });
 	const data = db.export();
-	writeFileSync(DB_PATH, Buffer.from(data));
+	const temporaryPath = `${DB_PATH}.${process.pid}.tmp`;
+	writeFileSync(temporaryPath, Buffer.from(data), { mode: 0o600 });
+	renameSync(temporaryPath, DB_PATH);
 }
 
 async function getDb(): Promise<SqlJsDatabase> {
@@ -279,10 +281,13 @@ async function getDb(): Promise<SqlJsDatabase> {
 	if (globalThis.__ordersDbInit) return globalThis.__ordersDbInit;
 
 	globalThis.__ordersDbInit = (async () => {
-		const SQL = await initSqlJs();
+		const wasmPath = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+		const SQL = await initSqlJs({
+			locateFile: (file) => (file === 'sql-wasm.wasm' ? wasmPath : path.join(path.dirname(wasmPath), file)),
+		});
 		let db: SqlJsDatabase;
 
-		if (existsSync(DB_PATH)) {
+		if (existsSync(DB_PATH) && statSync(DB_PATH).size > 0) {
 			const buffer = readFileSync(DB_PATH);
 			db = new SQL.Database(buffer);
 		} else {
@@ -410,7 +415,11 @@ async function getDb(): Promise<SqlJsDatabase> {
 
 		globalThis.__ordersDb = db;
 		return db;
-	})();
+	})().catch((error) => {
+		// A transient initialization error must not poison this process forever.
+		globalThis.__ordersDbInit = undefined;
+		throw error;
+	});
 
 	return globalThis.__ordersDbInit;
 }

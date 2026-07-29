@@ -444,7 +444,7 @@ export default function CheckoutClient() {
 
 		try {
 			if (useCreditCard) {
-				const response = await fetch('/api/digipay/create', {
+				const response = await fetch('/api/creditcard/create', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(buildPayload()),

@@ -22,6 +22,11 @@ const nextConfig = {
 		optimizePackageImports: ['lucide-react'],
 		// Prevents MODULE_NOT_FOUND vendor-chunks errors with googleapis
 		serverComponentsExternalPackages: ['googleapis', 'sql.js'],
+		// sql.js loads its WebAssembly binary at runtime, so Next cannot discover it
+		// from the JavaScript import alone. Keep it in every standalone server trace.
+		outputFileTracingIncludes: {
+			'/*': ['./node_modules/sql.js/dist/sql-wasm.wasm'],
+		},
 	},
 	// Security & privacy: block indexing (keep under the radar) + harden headers
 	async headers() {

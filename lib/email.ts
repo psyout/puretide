@@ -96,7 +96,6 @@ export type SendMailOptions = {
 export async function sendMail(options: SendMailOptions): Promise<{ sent: boolean; error?: string }> {
 	const smtpPrefix = options.smtpPrefix ?? 'ORDER';
 	const config = getSmtpConfig(smtpPrefix);
-	const defaultFrom = options.from ?? config?.from ?? 'info@puretide.ca';
 
 	// Check SMTP configuration
 	if (!config) {
@@ -111,7 +110,7 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 	const transporter = createTransporter(config);
 	const from = options.from ?? config.from;
 	try {
-		await transporter.sendMail({
+		const info = await transporter.sendMail({
 			from,
 			to: options.to,
 			subject: options.subject,
@@ -120,6 +119,14 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			replyTo: options.replyTo ?? config.replyTo ?? config.from,
 			bcc: options.bcc,
 		});
+		const accepted = (info.accepted ?? []).map(String).map((address) => address.toLowerCase());
+		const recipient = options.to.trim().toLowerCase();
+		if (!accepted.includes(recipient)) {
+			const rejected = (info.rejected ?? []).map(String).join(', ') || options.to;
+			const error = `SMTP server did not accept recipient: ${rejected}`;
+			console.error(`❌ Zoho Mail SMTP delivery rejected for ${options.to}: ${error}`);
+			return { sent: false, error };
+		}
 		console.log(`✅ Email sent via Zoho Mail SMTP to ${options.to}`);
 		return { sent: true };
 	} catch (err) {
@@ -133,5 +140,7 @@ export async function sendMail(options: SendMailOptions): Promise<{ sent: boolea
 			console.error(`   💡 Check SMTP_USER and SMTP_PASS in .env file`);
 		}
 		return { sent: false, error: message };
+	} finally {
+		transporter.close();
 	}
 }

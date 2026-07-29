@@ -96,7 +96,7 @@ privacy-shop/
 ### Backend (API routes)
 
 - **Orders**: `POST /api/orders` stores orders and triggers side-effects (emails, stock sync, notifications)
-- **Payments (credit card)**: `POST /api/digipay/create` generates a DigiPay redirect URL and persists the order
+- **Payments (credit card)**: `POST /api/creditcard/create` uses the configured card provider, generates a payment URL, and persists the order
 - **Operational concerns**: rate limiting, idempotency caching, and environment validation are enforced server-side
 
 ### Data & Integrations

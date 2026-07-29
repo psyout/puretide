@@ -354,7 +354,7 @@ export async function POST(request: Request) {
 
 		// IMPORTANT: For e-transfer orders, fulfillment (emails, stock decrement, Wrike) must only
 		// happen after payment is confirmed via webhook. This route only stores the order.
-		// Credit card orders are created via /api/digipay/create.
+		// Credit card orders are created via /api/creditcard/create.
 
 		return response;
 	} catch (error) {

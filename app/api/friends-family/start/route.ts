@@ -46,7 +46,6 @@ export async function POST(request: Request) {
 				subject,
 				text,
 				html,
-				from: 'orders@puretide.ca',
 				smtpPrefix: 'ORDER',
 			});
 			if (!emailResult.sent) {

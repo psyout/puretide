@@ -96,7 +96,13 @@ export async function POST(request: Request) {
 		if (idemKey) {
 			const cached = await getCachedDigipay(idemKey);
 			if (cached) {
-				return json({ ok: true, redirectUrl: cached.redirectUrl, orderNumber: cached.orderNumber });
+				const cachedToken = createOrderConfirmationToken(cached.orderNumber);
+				return json({
+					ok: true,
+					redirectUrl: cached.redirectUrl,
+					orderNumber: cached.orderNumber,
+					confirmationToken: cachedToken ?? null,
+				});
 			}
 		}
 

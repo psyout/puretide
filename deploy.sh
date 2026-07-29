@@ -22,6 +22,11 @@ if [[ ! -d .next/standalone ]]; then
   exit 1
 fi
 
+if [[ ! -f .next/standalone/node_modules/sql.js/dist/sql-wasm.wasm ]]; then
+  echo "Error: sql.js WASM is missing from the standalone build."
+  exit 1
+fi
+
 echo "Cleaning old build artifacts on VPS..."
 # Stop only the managed PM2 app to reduce deploy blast radius
 # Preserve data/ (orders.sqlite, optional orders.json) - only remove app artifacts
