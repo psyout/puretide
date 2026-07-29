@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
-import { CreditCard, Lock, AlertCircle } from 'lucide-react';
-import { ENABLE_CREDIT_CARD } from '@/lib/constants';
+import { Lock, AlertCircle, PackageCheck, ShieldCheck } from 'lucide-react';
 import CrossSellSection from './CrossSellSection';
 import FreeShippingProgress from './FreeShippingProgress';
 import CartItemDetails from './CartItemDetails';
@@ -20,10 +19,10 @@ type CartClientProps = {
 };
 
 export default function CartClient({ products, stockUnavailable }: CartClientProps) {
-	const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, getItemPrice, paymentMethod, setPaymentMethod } = useCart();
+	const { cartItems, removeFromCart, updateQuantity, getTotal, getItemPrice } = useCart();
 	const router = useRouter();
-	const [showClearConfirm, setShowClearConfirm] = useState(false);
 	const total = getTotal();
+	const totalSavings = cartItems.reduce((sum, item) => sum + Math.max(0, item.price - getItemPrice(item)) * item.quantity, 0);
 
 	// Create a map of product stock for quick lookup
 	const productStockMap = useMemo(() => {
@@ -42,11 +41,6 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 		const availableStock = productStockMap.get(item.id) || productStockMap.get(item.slug) || 0;
 		return item.quantity > availableStock;
 	});
-
-	// Credit card payment limit
-	const CREDIT_CARD_LIMIT = 500;
-	const creditCardChargeTotal = total * 1.05;
-	const isCreditCardDisabled = creditCardChargeTotal > CREDIT_CARD_LIMIT;
 
 	if (cartItems.length === 0) {
 		return (
@@ -93,9 +87,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
 					← Back to Products
 				</Link>
-				<h1 className='text-3xl font-bold mb-6 text-deep-tidal-teal-800'>
-					Your cart, <span className='italic font-thin'>reviewed</span>
-				</h1>
+				<h1 className='text-3xl font-bold mb-6 text-deep-tidal-teal-800'>Your Cart</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='lg:col-span-2'>
@@ -141,8 +133,8 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 											{/* Product Info */}
 											<div className='flex-1 min-w-0 flex flex-col'>
 												{/* Product Name */}
-												<h3 className='text-sm sm:text-base font-bold text-deep-tidal-teal-800 mb-0.5 line-clamp-2 leading-tight'>{item.name}</h3>
-												{item.subtitle && <p className='text-xs text-deep-tidal-teal-600 mb-1.5'>{item.subtitle}</p>}
+												<h3 className='text-md sm:text-base font-bold text-deep-tidal-teal-800 mb-0.5 line-clamp-2 leading-tight'>{item.name}</h3>
+												{item.subtitle && <p className='text-[0.85rem] text-deep-tidal-teal-600 mb-1.5'>{item.subtitle}</p>}
 
 												{/* Stock Status */}
 												{stockUnavailable ? (
@@ -215,7 +207,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										)}
 
 										{/* Desktop: Main Row - Image | Info | Pricing */}
-										<div className='hidden md:flex gap-6 items-start'>
+										<div className='hidden md:grid md:grid-cols-[9rem_minmax(0,1fr)_9rem] gap-6 items-start'>
 											{/* Desktop: Left Section - Product Image */}
 											<Link
 												href={`/product/${item.slug || item.id}`}
@@ -238,21 +230,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 											{/* Desktop: Center Section - Product Information */}
 											<div className='flex-1 min-w-0 flex flex-col'>
-												{/* Product Header: Name + Price */}
-												<div className='flex items-start justify-between gap-6'>
-													<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
-													<div className='flex-shrink-0 flex flex-col items-end justify-start w-28'>
-														<p className='text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
-														{isDiscounted && (
-															<>
-																<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
-																<span className='inline-block text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-1 rounded'>
-																	You save ${savings.toFixed(2)}
-																</span>
-															</>
-														)}
-													</div>
-												</div>
+												<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
 												{item.subtitle && <p className='text-sm text-deep-tidal-teal-600 mb-3'>{item.subtitle}</p>}
 
 												{/* Stock Status */}
@@ -322,6 +300,19 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													</div>
 												)}
 											</div>
+
+											{/* Price is its own grid column so discount details never push product information down. */}
+											<div className='flex min-w-0 flex-col items-end justify-start text-right'>
+												<p className='text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
+												{isDiscounted && (
+													<>
+														<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
+														<span className='whitespace-nowrap text-xs font-medium bg-eucalyptus/50 text-deep-tidal-teal-600 px-2 py-1 rounded'>
+															You save ${savings.toFixed(2)}
+														</span>
+													</>
+												)}
+											</div>
 										</div>
 									</div>
 								);
@@ -332,7 +323,9 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 					<div className='lg:col-span-1'>
 						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md'>
 							<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
-							<div className='space-y-2 mb-2'>
+							<div
+								className='space-y-2 mb-3'
+								aria-live='polite'>
 								{cartItems.map((item) => (
 									<div
 										key={item.id}
@@ -344,103 +337,50 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 									</div>
 								))}
 							</div>
-							{/* Payment Method */}
-							<div className='border-t border-deep-tidal-teal/10 pt-3 mb-3 space-y-2'>
-								<h3 className='text-sm font-semibold text-deep-tidal-teal-800 flex items-center gap-2'>
-									<CreditCard className='w-4 h-4' />
-									Payment Method
-								</h3>
-								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 cursor-pointer'>
-									<span className='flex items-center gap-2 text-[0.9rem]'>
-										<input
-											type='radio'
-											name='cart-payment'
-											checked={paymentMethod === 'etransfer'}
-											onChange={() => setPaymentMethod('etransfer')}
-											className='rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal'
-										/>
-										E-Transfer (Interac)
-									</span>
-									<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
-								</label>
-								{/* Credit Card - Hidden for now - Add Flex, remove Hidden */}
-								<label className={`flex items-center justify-between gap-2 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-									<span className='flex items-center gap-2'>
-										<input
-											type='radio'
-											name='cart-payment'
-											checked={paymentMethod === 'creditcard'}
-											onChange={() => setPaymentMethod('creditcard')}
-											disabled={isCreditCardDisabled}
-											className={`rounded-full border-deep-tidal-teal/30 text-deep-tidal-teal ${isCreditCardDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-										/>
-										<span className='text-deep-tidal-teal-800 text-[0.9rem]'>Credit Card</span>
-									</span>
-									<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
-								</label>
-							</div>
-							{paymentMethod === 'creditcard' && isCreditCardDisabled && (
-								<div className='bg-red-50 border border-red-200 rounded-lg p-3 mb-2'>
-									<p className='text-sm text-red-700 leading-relaxed'>
-										Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.
-									</p>
-								</div>
-							)}
-							{paymentMethod === 'creditcard' && (
-								<div className='flex justify-between text-sm text-deep-tidal-teal-600 mb-2'>
-									<span>Est. card fee (5%)</span>
-									<span>${(total * 0.05).toFixed(2)}</span>
-								</div>
-							)}
-							<div className='border-b border-deep-tidal-teal/10 pb-3 mb-3 space-y-2'>
+							<div className='border-t border-deep-tidal-teal/10 pt-3 pb-3 mb-1 space-y-2'>
+								{totalSavings > 0 && (
+									<div className='flex justify-between text-sm font-semibold text-emerald-700'>
+										<span>You save</span>
+										<span>−${totalSavings.toFixed(2)}</span>
+									</div>
+								)}
 								<div className='flex justify-between text-lg font-bold'>
-									<span className='text-deep-tidal-teal-800'>{paymentMethod === 'creditcard' ? 'Est. total' : 'Total'}</span>
-									<span className='text-deep-tidal-teal'>${(paymentMethod === 'creditcard' ? total * 1.05 : total).toFixed(2)}</span>
+									<span className='text-deep-tidal-teal-800'>Subtotal</span>
+									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>
-								{paymentMethod === 'creditcard' && <p className='text-xs text-deep-tidal-teal-600 mt-2'>Shipping and final total confirmed at checkout.</p>}
+								<p className='text-xs text-deep-tidal-teal-600'>Shipping and payment fees, if applicable, are confirmed at checkout.</p>
 							</div>
-							{/* Cross-sell section */}
-							<CrossSellSection />
 							<button
 								onClick={() => {
-									if (paymentMethod === 'creditcard' && creditCardChargeTotal > 500) {
-										alert('Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.');
-										return;
-									}
 									if (hasCartInvalidQuantity) {
 										alert('Please update your quantities to match available stock before proceeding to checkout.');
 										return;
 									}
 									router.push('/checkout');
 								}}
-								className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded transition-colors mb-4 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+								className='w-full min-h-14 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
 								disabled={hasCartInvalidQuantity}>
-								<span className='flex items-center gap-2 uppercase text-sm'>
-									<Lock size={18} /> Secure Checkout
+								<span className='flex items-center gap-2 text-base'>
+									<Lock size={18} /> Continue to Checkout
 								</span>
 							</button>
+							<div className='mt-4 grid grid-cols-2 gap-2 text-xs text-deep-tidal-teal-700'>
+								<span className='flex items-center gap-1.5'>
+									<ShieldCheck className='h-4 w-4 shrink-0' />
+									Secure payment
+								</span>
+								<span className='flex items-center justify-end gap-1.5 text-right'>
+									<PackageCheck className='h-4 w-4 shrink-0' />
+									Discreet packaging
+								</span>
+							</div>
+							<div className='mt-5 border-t border-deep-tidal-teal/10 pt-5'>
+								<CrossSellSection />
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-			{paymentMethod === 'creditcard' && !ENABLE_CREDIT_CARD && (
-				<div className='fixed inset-0 z-50 bg-black/45 p-4 flex items-center justify-center'>
-					<div className='w-full max-w-md rounded-xl bg-mineral-white shadow-2xl ui-border p-6'>
-						<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>Credit Card Notice</h3>
-						<p className='text-sm text-deep-tidal-teal-700 leading-relaxed'>
-							Credit card payments are temporarily unavailable. Please use e-transfer as an alternative payment method at checkout. Secure card processing will be available soon.
-						</p>
-						<div className='mt-5 flex justify-end'>
-							<button
-								type='button'
-								onClick={() => setPaymentMethod('etransfer')}
-								className='px-4 py-2 rounded bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 transition-colors font-semibold'>
-								Got it
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
 		</div>
 	);
 }

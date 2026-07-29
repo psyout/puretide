@@ -7,6 +7,7 @@ import ProductTabs from '@/components/ProductTabs';
 import { ChevronRight, CreditCard, FileBadge, FlaskConical, Truck } from 'lucide-react';
 import { iconMap } from '@/lib/productIcons';
 import Link from 'next/link';
+import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
 interface ProductDetailClientProps {
 	product: Product;
@@ -128,7 +129,7 @@ export default function ProductDetailClient({ product, description, details, has
 					<span className='text-deep-tidal-teal-300'>•</span>
 					<span className='flex items-center gap-1 text-emerald-600'>
 						<Truck className='w-4 h-4' />
-						Free shipping over $400
+						{`Free shipping over $${FREE_SHIPPING_THRESHOLD}`}
 					</span>
 				</div>
 			</div>

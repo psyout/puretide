@@ -98,17 +98,20 @@ export default function HeroClient({ slides }: HeroClientProps) {
 						) : null}
 					</div>
 				))}
+				<div className='absolute inset-0 z-[2] bg-gradient-to-b from-black/20 via-black/10 to-black/20 sm:bg-black/5' />
 			</div>
 
 			{/* Text overlay */}
-			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-16 sm:px-6 text-center text-pretty'>
-				<div className='mb-3 lg:mb-6'>
+			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-6 pb-20 sm:px-6 sm:pb-0 text-center text-pretty'>
+				<div className='mb-4 lg:mb-6'>
 					<LogoHorizontal
-						className='h-28 sm:h-32 md:h-36 lg:h-40 w-auto mx-auto drop-shadow-2xl'
+						className='h-24 sm:h-32 md:h-36 lg:h-40 w-auto mx-auto drop-shadow-2xl'
 						fillColor='fill-white drop-shadow-xl/50'
 					/>
 				</div>
-				<p className='text-white text-lg sm:text-xl md:text-2xl lg:text-1xl max-w-[80%] sm:max-w-lg lg:max-w-2xl mx-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] font-matimo h-[220px] sm:h-[200px] lg:h-[180px]'>
+				<p
+					className='min-h-36 max-w-sm text-base leading-relaxed text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)] sm:h-[200px] sm:max-w-lg sm:text-xl md:text-2xl lg:h-[180px] lg:max-w-2xl lg:text-xl'
+					aria-live='polite'>
 					{currentSlide.description}
 				</p>
 			</div>
@@ -116,7 +119,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			{/* Navigation arrows */}
 			<button
 				onClick={goToPrevious}
-				className='absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-deep-tidal-teal/70 hover:bg-deep-tidal-teal-600 backdrop-blur-sm rounded-full p-3 transition-all duration-300 group'
+				className='absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 transform rounded-full bg-deep-tidal-teal/70 p-3 backdrop-blur-sm transition-all duration-300 hover:bg-deep-tidal-teal-600 sm:block group'
 				aria-label='Previous slide'>
 				<svg
 					className='w-6 h-6 text-white group-hover:scale-110 transition-transform'
@@ -133,7 +136,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			</button>
 			<button
 				onClick={goToNext}
-				className='absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-deep-tidal-teal/70 hover:bg-deep-tidal-teal-600 backdrop-blur-sm rounded-full p-3 transition-all duration-300 group'
+				className='absolute right-4 top-1/2 z-20 hidden -translate-y-1/2 transform rounded-full bg-deep-tidal-teal/70 p-3 backdrop-blur-sm transition-all duration-300 hover:bg-deep-tidal-teal-600 sm:block group'
 				aria-label='Next slide'>
 				<svg
 					className='w-6 h-6 text-white group-hover:scale-110 transition-transform'
@@ -150,7 +153,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			</button>
 
 			{/* Navigation dots */}
-			<div className='absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex gap-3'>
+			<div className='absolute bottom-8 left-1/2 z-20 hidden -translate-x-1/2 transform gap-3 sm:flex'>
 				{slides.map((_, index) => (
 					<button
 						key={index}
@@ -159,6 +162,32 @@ export default function HeroClient({ slides }: HeroClientProps) {
 						aria-label={`Go to slide ${index + 1}`}
 					/>
 				))}
+			</div>
+
+			<div className='absolute bottom-7 left-1/2 z-20 flex -translate-x-1/2 items-center gap-4 sm:hidden'>
+				<button
+					onClick={goToPrevious}
+					className='flex h-11 w-11 items-center justify-center rounded-full bg-deep-tidal-teal/80 text-white backdrop-blur-sm'
+					aria-label='Previous slide'>
+					<span aria-hidden='true'>←</span>
+				</button>
+				<div className='flex items-center gap-2'>
+					{slides.map((_, index) => (
+						<button
+							key={index}
+							onClick={() => goToSlide(index)}
+							className={`h-2.5 rounded-full transition-all duration-300 ${index === currentIndex ? 'w-7 bg-white' : 'w-2.5 bg-white/55'}`}
+							aria-label={`Go to slide ${index + 1}`}
+							aria-current={index === currentIndex ? 'true' : undefined}
+						/>
+					))}
+				</div>
+				<button
+					onClick={goToNext}
+					className='flex h-11 w-11 items-center justify-center rounded-full bg-deep-tidal-teal/80 text-white backdrop-blur-sm'
+					aria-label='Next slide'>
+					<span aria-hidden='true'>→</span>
+				</button>
 			</div>
 		</section>
 	);

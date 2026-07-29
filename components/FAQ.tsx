@@ -58,7 +58,7 @@ export default function FAQ() {
 		},
 		{
 			q: 'How long does shipping take within Canada?',
-			a: 'We ship from within Canada. Most domestic orders arrive within 3 to 7 business days depending on your location. Orders over $400 qualify for free shipping. All transactions are processed discreetly. Packaging is plain with no identifying product information on the outside.',
+			a: 'We ship from within Canada. Most domestic orders arrive within 3 to 7 business days depending on your location. Orders over $300 qualify for free shipping. All transactions are processed discreetly. Packaging is plain with no identifying product information on the outside.',
 		},
 		{
 			q: 'What is the difference between a peptide stack and individual compounds?',

@@ -59,7 +59,10 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 					transition={{ duration: 0.8, ease: 'easeOut' }}
 					className={`border-b border-deep-tidal-teal/10 pb-3 mb-5 space-y-2 ${className} overflow-hidden`}>
 					<div className='flex items-center justify-between mb-4'>
-						<h3 className='text-[0.9rem] font-regular text-deep-tidal-teal-800 flex items-center gap-2'>Did you get yout Bacteriostatic Water?</h3>
+						<div>
+							<h3 className='text-sm font-semibold text-deep-tidal-teal-800'>You may also need</h3>
+							<p className='mt-0.5 text-xs text-deep-tidal-teal-600'>Frequently added for peptide reconstitution</p>
+						</div>
 						<button
 							onClick={() => setShouldHide(true)}
 							className='text-deep-tidal-teal-400 bg-deep-tidal-teal/10 hover:text-deep-tidal-teal-600 transition-colors p-1 rounded hover:bg-deep-tidal-teal/10'
@@ -97,7 +100,14 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 								{/* Product Info */}
 								<div className='flex-1 min-w-0'>
 									<div className='flex items-start justify-between gap-2'>
-										<div className='flex-1'>{product.description && <p className='text-xs text-deep-tidal-teal-600 mt-1 line-clamp-2'>{product.description}</p>}</div>
+										<div className='flex-1'>
+											<Link
+												href={`/product/${product.slug}`}
+												className='text-sm font-semibold text-deep-tidal-teal-800 hover:text-deep-tidal-teal'>
+												{product.name}
+											</Link>
+											{product.description && <p className='text-xs text-deep-tidal-teal-600 mt-1 line-clamp-2'>{product.description}</p>}
+										</div>
 										{product.savings && (
 											<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white flex-shrink-0'>{product.savings}</span>
 										)}
@@ -119,7 +129,6 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 							</div>
 						))}
 					</motion.div>
-					<p className='text-xs text-deep-tidal-teal-500 mt-3 italic'>Perfect for your peptide reconstitution</p>
 				</motion.div>
 			)}
 		</AnimatePresence>

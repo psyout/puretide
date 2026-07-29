@@ -20,8 +20,6 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 	const { addToCart } = useCart();
 	const router = useRouter();
 	const [isNavigating, setIsNavigating] = useState(false);
-	const [showActions, setShowActions] = useState(false);
-	const [isMobile, setIsMobile] = useState(false);
 	const [hasReportedImageLoaded, setHasReportedImageLoaded] = useState(false);
 	const variants = product.variants || [];
 	const hasVariants = variants.length > 1;
@@ -50,14 +48,6 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 
 	// Default variant for quick add
 	const defaultVariant = hasVariants ? variants.find((v) => v.stock > 0) || variants[0] : null;
-
-	useEffect(() => {
-		const m = window.matchMedia('(max-width: 767px)');
-		setIsMobile(m.matches);
-		const fn = () => setIsMobile(m.matches);
-		m.addEventListener('change', fn);
-		return () => m.removeEventListener('change', fn);
-	}, []);
 
 	useEffect(() => {
 		setHasReportedImageLoaded(false);
@@ -127,13 +117,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 
 			<Link
 				href={`/product/${product.slug}`}
-				className='flex flex-1 min-h-0 flex-col'
-				onClick={(e) => {
-					if (isMobile && !showActions) {
-						e.preventDefault();
-						setShowActions(true);
-					}
-				}}>
+				className='flex flex-1 min-h-0 flex-col'>
 				{/* Image – framed area with even padding */}
 				<div className='m-4 md:m-5 rounded-lg bg-eucalyptus-50/60 flex justify-center items-center min-h-[10rem] md:min-h-[12rem]'>
 					{hasProductImage(product.image) ? (
@@ -215,15 +199,9 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 				</div>
 			</Link>
 
-			{/* Mobile: buttons only on tap (same as desktop hover) */}
-			<div
-				className={`absolute inset-0 md:hidden flex items-center justify-center gap-1 bg-white/40 transition-opacity duration-300 ${showActions ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'}`}
-				onClick={() => setShowActions(false)}>
-				<div
-					onClick={(e) => e.stopPropagation()}
-					className='flex items-center gap-1'>
-					{actionButtons}
-				</div>
+			{/* Mobile: actions stay visible so the card and buttons behave predictably. */}
+			<div className='grid grid-cols-2 gap-2 border-t border-deep-tidal-teal/10 p-3 md:hidden'>
+				{actionButtons}
 			</div>
 
 			{/* Desktop: buttons only on hover (overlay) */}

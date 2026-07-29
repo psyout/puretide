@@ -680,7 +680,7 @@ export default function CheckoutClient() {
 
 										<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 											<div>
-												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>First name *</label>
+												<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>First name *</label>
 												<input
 													type='text'
 													value={formData.firstName}
@@ -701,7 +701,7 @@ export default function CheckoutClient() {
 												{checkoutError && checkoutError.includes('First name') && <p className='mt-1.5 text-red-700 text-xs'>{checkoutError}</p>}
 											</div>
 											<div>
-												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Last name *</label>
+												<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Last name *</label>
 												<input
 													type='text'
 													value={formData.lastName}
@@ -724,7 +724,7 @@ export default function CheckoutClient() {
 										</div>
 
 										<div className='max-w-[200px]'>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Country / Region *</label>
+											<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Country / Region *</label>
 											<select
 												value={formData.country}
 												onChange={(e) => setFormData({ ...formData, country: e.target.value })}
@@ -735,7 +735,7 @@ export default function CheckoutClient() {
 											</select>
 										</div>
 										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+											<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Street address *</label>
 											<input
 												type='text'
 												value={formData.address}
@@ -753,7 +753,7 @@ export default function CheckoutClient() {
 											/>
 										</div>
 										<div>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+											<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
 											<input
 												type='text'
 												value={formData.addressLine2}
@@ -771,7 +771,7 @@ export default function CheckoutClient() {
 										</div>
 										<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 											<div>
-												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
+												<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Town / City *</label>
 												<input
 													type='text'
 													value={formData.city}
@@ -788,7 +788,7 @@ export default function CheckoutClient() {
 												/>
 											</div>
 											<div>
-												<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
+												<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Province *</label>
 												<select
 													value={formData.province}
 													onChange={(e) => setFormData({ ...formData, province: e.target.value })}
@@ -812,7 +812,7 @@ export default function CheckoutClient() {
 										</div>
 
 										<div className='max-w-[200px]'>
-											<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
+											<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Postal code *</label>
 											<input
 												type='text'
 												value={formData.zipCode}
@@ -851,7 +851,7 @@ export default function CheckoutClient() {
 												id='shipping-address-fields'
 												className='space-y-4 rounded-lg bg-mineral-white border border-black/10 p-4'>
 												<div>
-													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Street address *</label>
+													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Street address *</label>
 													<input
 														type='text'
 														value={shippingAddress.address}
@@ -869,7 +869,7 @@ export default function CheckoutClient() {
 													/>
 												</div>
 												<div>
-													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
+													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Apartment, suite, unit, etc.</label>
 													<input
 														type='text'
 														value={shippingAddress.addressLine2}
@@ -886,7 +886,7 @@ export default function CheckoutClient() {
 													/>
 												</div>
 												<div>
-													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Town / City *</label>
+													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Town / City *</label>
 													<input
 														type='text'
 														value={shippingAddress.city}
@@ -903,7 +903,7 @@ export default function CheckoutClient() {
 													/>
 												</div>
 												<div>
-													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Province *</label>
+													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Province *</label>
 													<select
 														value={shippingAddress.province}
 														onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
@@ -925,7 +925,7 @@ export default function CheckoutClient() {
 													</select>
 												</div>
 												<div>
-													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Postal code *</label>
+													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Postal code *</label>
 													<input
 														type='text'
 														value={shippingAddress.zipCode}
@@ -954,12 +954,12 @@ export default function CheckoutClient() {
 												<button
 													type='button'
 													onClick={() => setShowOrderNotes(true)}
-													className='text-deep-tidal-teal-600 hover:text-deep-tidal-teal-800 text-sm'>
+													className='text-deep-tidal-teal-600 hover:text-deep-tidal-teal-800 text-[0.9rem]'>
 													+ Add order notes (optional)
 												</button>
 											) : (
 												<>
-													<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Order notes (optional)</label>
+													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Order notes (optional)</label>
 													<textarea
 														value={formData.orderNotes}
 														onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
@@ -975,7 +975,7 @@ export default function CheckoutClient() {
 
 							{/* Shipping Section */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
+								<h2 className='text-lg font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
 									<Truck className='w-5 h-5' />
 									Shipping
 								</h2>
@@ -1011,25 +1011,58 @@ export default function CheckoutClient() {
 
 							{/* Payment Section */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
+								<h2 className='text-lg font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
 									<CreditCard className='w-5 h-5' />
 									Payment Method
 								</h2>
-								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800 mb-3'>
-									<span className='flex items-center gap-2'>
-										<input
-											type='radio'
-											name='payment'
-											checked={paymentMethod === 'etransfer'}
-											onChange={() => setPaymentMethod('etransfer')}
-											disabled={isProcessing}
-										/>
-										E-Transfer (Interac)
-									</span>
-									<span className='text-sm text-deep-tidal-teal-500'>No fee</span>
-								</label>
+								<div className='space-y-3'>
+									<label
+										className={`block cursor-pointer rounded-xl border p-4 transition-all ${
+											paymentMethod === 'etransfer'
+												? 'border-deep-tidal-teal bg-eucalyptus-50/70 shadow-sm ring-1 ring-deep-tidal-teal/15'
+												: 'border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
+										}`}>
+										<span className='flex items-start gap-3'>
+											<input
+												type='radio'
+												name='payment'
+												checked={paymentMethod === 'etransfer'}
+												onChange={() => setPaymentMethod('etransfer')}
+												disabled={isProcessing}
+												className='mt-1 h-4 w-4 accent-deep-tidal-teal'
+											/>
+											<span className='min-w-0 flex-1'>
+												<span className='flex items-center justify-between gap-3'>
+													<span className='font-semibold text-deep-tidal-teal-900'>Interac e-Transfer</span>
+													<span className='shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'>No fee</span>
+												</span>
+												<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
+													Place your order first, then send the transfer from your banking app using the instructions on the next screen.
+												</span>
+											</span>
+										</span>
+									</label>
+									{paymentMethod === 'etransfer' && (
+										<div
+											className='rounded-xl border border-deep-tidal-teal/10 bg-deep-tidal-teal/[0.035] px-4 py-3'
+											role='status'>
+											<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
+											<ol className='mt-2 space-y-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
+												<li>
+													<span className='font-semibold'>1.</span> We&apos;ll show the secure auto-deposit email and your order number.
+												</li>
+												<li>
+													<span className='font-semibold'>2.</span> Send the exact total and include your order number in the Interac message.
+												</li>
+												<li>
+													<span className='font-semibold'>3.</span> Your order begins processing after the transfer is confirmed.
+												</li>
+											</ol>
+										</div>
+									)}
+								</div>
 								{FRIENDS_FAMILY_ENABLED && paymentMethod === 'etransfer' && (
-									<div className='border-t border-b pt-3 pb-4'>
+									<div className='mt-3 border-t border-b pt-3 pb-4'>
 										<div className='flex items-start justify-between gap-4'>
 											<div>
 												<p className='text-sm font-semibold text-deep-tidal-teal-800'>Friends & Family verification</p>
@@ -1136,22 +1169,47 @@ export default function CheckoutClient() {
 										)}
 									</div>
 								)}
-								<label className={`flex items-center justify-between gap-2 mt-3 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-									<span className='flex items-center gap-2'>
+								<label
+									className={`mt-3 block rounded-xl border p-4 transition-all ${
+										isCreditCardDisabled
+											? 'cursor-not-allowed border-deep-tidal-teal/10 bg-slate-50 opacity-60'
+											: paymentMethod === 'creditcard'
+												? 'cursor-pointer border-deep-tidal-teal bg-eucalyptus-50/70 shadow-sm ring-1 ring-deep-tidal-teal/15'
+												: 'cursor-pointer border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
+									}`}>
+									<span className='flex items-start gap-3'>
 										<input
 											type='radio'
 											name='payment'
 											checked={paymentMethod === 'creditcard'}
 											onChange={() => setPaymentMethod('creditcard')}
 											disabled={isProcessing || isCreditCardDisabled}
-											className={isCreditCardDisabled ? 'opacity-50' : ''}
+											className='mt-1 h-4 w-4 accent-deep-tidal-teal'
 										/>
-										<span className='text-deep-tidal-teal-800'>Credit Card</span>
+										<span className='min-w-0 flex-1'>
+											<span className='flex items-center justify-between gap-3'>
+												<span className='font-semibold text-deep-tidal-teal-900'>Credit card</span>
+												<span className='shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900'>+5% fee</span>
+											</span>
+											<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
+												Continue to our secure payment page after checkout to enter your card details.
+											</span>
+										</span>
 									</span>
-									<span className='text-sm text-deep-tidal-teal-500'>+5% fee</span>
 								</label>
+								{paymentMethod === 'creditcard' && !isCreditCardDisabled && (
+									<div
+										className='mt-3 rounded-xl border border-deep-tidal-teal/10 bg-deep-tidal-teal/[0.035] px-4 py-3'
+										role='status'>
+										<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
+										<p className='mt-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
+											You&apos;ll continue to an encrypted card form to complete payment. The 5% processing fee is included in the order total shown here. Card
+											payments are limited to $500 per transaction.
+										</p>
+									</div>
+								)}
 								{isCreditCardOverLimit && (
-									<div className='bg-red-50 border border-red-200 rounded-lg p-3'>
+									<div className='mt-3 bg-red-50 border border-red-200 rounded-lg p-3'>
 										<p className='text-sm text-red-700 leading-relaxed'>
 											Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.
 										</p>
@@ -1235,7 +1293,15 @@ export default function CheckoutClient() {
 													aria-hidden='true'
 												/>
 											)}
-											<span>{isProcessing ? (useCreditCard ? 'Preparing Secure Payment...' : 'Placing Order...') : 'Place Order'}</span>
+											<span>
+												{isProcessing
+													? useCreditCard
+														? 'Preparing Secure Payment...'
+														: 'Placing Order...'
+													: useCreditCard
+														? 'Continue to Secure Card Payment'
+														: 'Place Order & View Transfer Instructions'}
+											</span>
 										</span>
 										{isProcessing && <span className='sr-only'>Checkout submission in progress. Please wait.</span>}
 									</button>

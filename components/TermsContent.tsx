@@ -60,7 +60,7 @@ export default function TermsContent() {
 						subject to customs processing.
 					</li>
 					<li>
-						<strong>Free Shipping:</strong> Free shipping on orders over $400 CAD.
+						<strong>Free Shipping:</strong> Free shipping on orders over $300 CAD.
 					</li>
 					<li>
 						<strong>International Orders:</strong> Customers are responsible for verifying local regulations and covering any customs fees, duties, or taxes. Pure Tide is not liable
