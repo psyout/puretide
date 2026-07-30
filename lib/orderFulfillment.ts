@@ -141,16 +141,11 @@ export type RunFulfillmentOptions = {
 };
 
 async function decrementGoogleSheetStock(orderNumber: string, items: FulfillmentOrder['cartItems']) {
-	const enabled = String(process.env.ENABLE_SHEET_SYNC ?? '').toLowerCase() !== 'false';
-	if (!enabled) {
-		console.warn(JSON.stringify({ label: 'fulfillment:sheets:skipped', orderNumber, reason: 'ENABLE_SHEET_SYNC=false' }));
-		return;
-	}
-
 	console.log(JSON.stringify({ label: 'fulfillment:sheets:start', orderNumber, items: items.map((i) => ({ id: i.id, qty: i.quantity })) }));
 
 	const products = await readSheetProducts();
 	const byId = new Map(products.map((p) => [p.id, p] as const));
+	const expectedStockById = new Map<string, number>();
 
 	for (const item of items) {
 		const product = byId.get(String(item.id));
@@ -171,6 +166,7 @@ async function decrementGoogleSheetStock(orderNumber: string, items: Fulfillment
 		const qty = Number(item.quantity ?? 0);
 		const next = Math.max(0, prev - qty);
 		product.stock = next;
+		expectedStockById.set(product.id, next);
 
 		console.log(
 			JSON.stringify({
@@ -186,7 +182,32 @@ async function decrementGoogleSheetStock(orderNumber: string, items: Fulfillment
 	}
 
 	await writeSheetProducts(products);
-	console.log(JSON.stringify({ label: 'fulfillment:sheets:success', orderNumber }));
+
+	const savedProducts = await readSheetProducts();
+	const savedById = new Map(savedProducts.map((product) => [product.id, product] as const));
+	for (const [productId, expectedStock] of Array.from(expectedStockById.entries())) {
+		const savedStock = savedById.get(productId)?.stock;
+		if (savedStock !== expectedStock) {
+			console.error(
+				JSON.stringify({
+					label: 'fulfillment:sheets:verification_failed',
+					orderNumber,
+					productId,
+					expectedStock,
+					savedStock: savedStock ?? null,
+				}),
+			);
+			throw new Error(`Google Sheets stock verification failed for product ${productId}`);
+		}
+	}
+
+	console.log(
+		JSON.stringify({
+			label: 'fulfillment:sheets:success',
+			orderNumber,
+			verifiedStock: Array.from(expectedStockById, ([productId, stock]) => ({ productId, stock })),
+		}),
+	);
 }
 
 export async function runFulfillment(order: FulfillmentOrder, options: RunFulfillmentOptions = {}): Promise<RunFulfillmentResult> {
