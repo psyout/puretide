@@ -62,7 +62,7 @@ async function createWebhook() {
 		const secret = process.env.WRIKE_WEBHOOK_SECRET;
 		const body = {
 			hookUrl: webhookUrl,
-			events: ['TaskStatusChanged'],
+			events: ['TaskStatusChanged', 'TaskCustomFieldChanged'],
 			recursive: true,
 		};
 		if (secret) {

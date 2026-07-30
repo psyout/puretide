@@ -29,6 +29,12 @@ export type FulfillmentOrder = {
 		zipCode: string;
 	};
 	shippingMethod: 'express';
+	paymentMethod?: 'etransfer' | 'creditcard';
+	paymentPath?: 'manual' | 'bluepeak' | 'manual_friends_family';
+	etransfer?: {
+		provider?: string;
+		depositEmail?: string;
+	};
 	subtotal: number;
 	shippingCost: number;
 	discountAmount?: number;
@@ -51,7 +57,7 @@ export type EmailStatus = {
 };
 
 function getOrderNotificationRecipient() {
-	return process.env.ORDER_NOTIFICATION_EMAIL ?? DEFAULT_ORDER_NOTIFICATION_EMAIL;
+	return DEFAULT_ORDER_NOTIFICATION_EMAIL;
 }
 
 export async function updateWrikeStock(items: FulfillmentOrder['cartItems']): Promise<Array<{ name: string; stock: number; cost: number }>> {
@@ -190,12 +196,14 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 	const paymentConfirmed = options.paymentConfirmed ?? true;
 	const etransfer = (order as Record<string, unknown>).etransfer as Record<string, unknown> | undefined;
 	const etransferProvider = typeof etransfer?.provider === 'string' ? (etransfer.provider === 'bluepeak' ? 'bluepeak' : 'manual') : undefined;
+	const paymentRecipientEmail = typeof etransfer?.depositEmail === 'string' ? etransfer.depositEmail : undefined;
 	const emailData = buildOrderEmails({
 		orderNumber: order.orderNumber,
 		createdAt: order.createdAt,
 		paymentMethod: paymentMethod === 'creditcard' ? 'creditcard' : 'etransfer',
 		paymentConfirmed,
 		etransferProvider,
+		paymentRecipientEmail,
 		paymentPath,
 		customer: order.customer,
 		shipToDifferentAddress: order.shipToDifferentAddress,
@@ -261,6 +269,8 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 			shippingMethod: order.shippingMethod,
 			paymentMethod: orderForWrike.paymentMethod ?? 'creditcard',
 			paymentPath: orderForWrike.paymentPath,
+			paymentRecipientEmail,
+			paymentConfirmed,
 			cardFee: orderForWrike.cardFee,
 			subtotal: order.subtotal,
 			shippingCost: order.shippingCost,

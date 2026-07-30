@@ -325,6 +325,7 @@ export async function POST(request: Request) {
 						shippingMethod: orderRecord.shippingMethod,
 						paymentMethod: 'etransfer',
 						paymentPath: 'manual_friends_family',
+						paymentConfirmed: false,
 						cardFee: orderPayload.cardFee,
 						subtotal: orderRecord.subtotal,
 						shippingCost: orderRecord.shippingCost,

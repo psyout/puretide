@@ -1,202 +1,208 @@
-# Privacy Shop - Anonymous E-Commerce
+# Pure Tide Store
 
-A privacy-focused e-commerce platform built with Next.js, designed to be hosted on Orange Website Island for maximum protection and anonymity.
+Pure Tide's production e-commerce application. It is built with Next.js 14 and includes the public storefront, checkout and payment flows, inventory-backed product data, order fulfillment, customer email, and an authenticated operations dashboard.
+
+The application is intended for self-hosted deployment with Next.js standalone output.
 
 ## Features
 
-- 🔒 **Privacy First**: No tracking scripts, no external analytics, no data collection
-- 🛒 **Full E-Commerce**: Product catalog, shopping cart, and checkout flow
-- 🎨 **Modern UI**: Beautiful, responsive design with dark theme
-- ⚡ **Fast**: Built with Next.js 14 and React 18
-- 🔐 **Anonymous**: Designed for untraceable transactions
+- Responsive product catalog, product details, cart, checkout, and order confirmation
+- E-transfer and credit-card payment flows
+- Server-side price, promotion, inventory, address, and customer validation
+- Idempotent order creation and rate-limited public endpoints
+- Google Sheets-backed products, stock, promotions, and client data
+- SQLite-backed order persistence using `sql.js`
+- Zoho SMTP order, shipping, contact, and stock-alert emails
+- Wrike order tasks, fulfillment workflows, and Avery 5162 shipping labels
+- Authenticated operations dashboard for orders, stock, promotions, clients, and labels
+- Friends-and-family checkout flow with email verification
 
-## Privacy Features
+## Privacy and Security
 
-- No external tracking scripts
-- No Google Analytics or similar services
-- No third-party cookies
-- Referrer policy set to "no-referrer"
-- Robots meta tags set to prevent indexing
-- All data stored locally (client-side only)
-- No telemetry collection
+The site minimizes unnecessary data collection, but it is not an anonymous or client-only application. Order, customer, payment-status, and fulfillment data are processed server-side and shared with configured service providers as required to complete orders.
 
-## Getting Started
+- No Google Analytics
+- Optional Meta Pixel integration when configured
+- Cart contents persist locally in the customer's browser
+- Orders persist in the server-side order database
+- CSP, HSTS in production, clickjacking protection, and restrictive permissions headers
+- Search-engine indexing disabled with `X-Robots-Tag`
+- Cookie-based dashboard sessions enforced by middleware
+- API-key and secret protection for operational endpoints
 
-### Installation
+Review the application's configuration and applicable privacy obligations before deploying it.
+
+## Technology
+
+- Next.js 14 App Router and React 18
+- TypeScript
+- Tailwind CSS
+- Framer Motion and Lucide React
+- Google APIs
+- `sql.js`
+- Nodemailer
+- Zod
+
+## Project Structure
+
+```text
+privacy-shop/
+├── app/                  # Pages, layouts, and API routes
+│   ├── api/              # Storefront, payment, webhook, cron, and dashboard APIs
+│   ├── cart/             # Cart
+│   ├── checkout/         # Checkout
+│   ├── dashboard/        # Operations dashboard and login
+│   ├── order-confirmation/
+│   └── product/
+├── components/           # Storefront and dashboard UI
+├── context/              # Browser cart state
+├── docs/                 # Email and integration notes
+├── lib/                  # Domain logic and external integrations
+├── scripts/              # Operations, diagnostics, migrations, and maintenance
+├── tests/                # Node test suite
+└── types/                # Shared TypeScript declarations
+```
+
+## Architecture
+
+### Storefront and checkout
+
+The App Router renders server components by default, with client components for the interactive cart and checkout. `context/CartContext.tsx` persists cart state in `localStorage`.
+
+Checkout requests are recalculated and validated on the server. The server does not trust product prices, discounts, shipping costs, or totals supplied by the browser. An idempotency key reduces duplicate order submissions.
+
+### Orders and fulfillment
+
+`POST /api/orders` validates the customer, cart, inventory, promotion, shipping, and payment path before persisting the order. Fulfillment logic coordinates order status, stock updates, emails, and Wrike tasks. Retry cron routes handle recoverable background failures.
+
+Orders are stored in a SQLite database managed through `sql.js`. Products, inventory, promotions, and client records are sourced from Google Sheets and cached by the application.
+
+### Payments
+
+The application supports:
+
+- E-transfer order creation and confirmation webhooks
+- DigiPay credit-card checkout and postbacks
+- GatewayLinx credit-card checkout and postbacks
+
+The active card provider is selected through server and public environment variables. Provider credentials and webhook secrets must never be committed.
+
+### Operations
+
+The dashboard is available under `/dashboard` and protected by a signed, HTTP-only session cookie. It exposes operational views for stock, orders, clients, promotions, fulfillment health, tracking emails, and shipping labels.
+
+Wrike integration can create order and client tasks, track fulfillment, and attach generated Avery 5162 label documents.
+
+## Local Development
+
+Requirements:
+
+- Node.js 20 or a compatible current LTS release
+- npm
+- Environment credentials for each integration you intend to exercise
+
+Install dependencies and start the development server:
 
 ```bash
 npm install
-```
-
-### Development
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Build for Production
+Some storefront features can render without every integration configured, but checkout and operational routes require their corresponding credentials.
+
+## Validation
+
+Run the automated tests:
+
+```bash
+npm test
+```
+
+Build the production application:
+
+```bash
+npm run build
+```
+
+Email and integration-specific diagnostic scripts are available under `scripts/`. Many of them contact live services or mutate operational data; inspect a script and its required environment variables before running it.
+
+## Configuration
+
+Configuration is environment-driven. Major groups include:
+
+- Google Sheets product and inventory access
+- SMTP sender credentials
+- DigiPay or GatewayLinx payment credentials
+- Wrike API and folder identifiers
+- Dashboard, cron, webhook, and orders API secrets
+- Promotion, friends-and-family, and storefront feature flags
+
+Use deployment secrets or a local uncommitted environment file. Do not put real credentials in source control.
+
+### Email
+
+Zoho Mail is the primary SMTP service used for order confirmations, shipping updates, contact submissions, and low-stock alerts.
+
+```dotenv
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=orders@example.com
+SMTP_PASS=replace-with-a-secret
+SMTP_FROM=orders@example.com
+```
+
+Related setup notes:
+
+- [Zoho migration](docs/MIGRATION-TO-ZOHO.md)
+- [Mac Mail configuration](docs/MAC-MAIL-ZOHO-CONFIG.md)
+- [Email migration guide](docs/EMAIL-MIGRATION-GUIDE.md)
+
+## Shipping Labels
+
+The application can generate Avery 5162 `.docx` sheets from order data and attach them to Wrike.
+
+```dotenv
+WRIKE_API_TOKEN=replace-with-a-secret
+WRIKE_ORDERS_FOLDER_ID=replace-with-an-id
+WRIKE_LABELS_FOLDER_ID=replace-with-an-id
+CRON_SECRET=replace-with-a-secret
+```
+
+Labels can be generated from the dashboard or through the protected cron routes:
+
+- `POST /api/cron/daily-labels`
+- `POST /api/cron/afternoon-labels`
+- `POST /api/cron/labels-range`
+
+Send `CRON_SECRET` through the `x-cron-secret` header or a bearer authorization header.
+
+Example:
+
+```cron
+5 6 * * * curl -fsS -X POST "https://YOUR_DOMAIN/api/cron/daily-labels" -H "x-cron-secret: $CRON_SECRET" >/dev/null
+```
+
+## Deployment
+
+`next.config.js` enables `output: 'standalone'`. A production deployment must include:
+
+- `.next/standalone`
+- `.next/static`
+- `public`
+- Runtime environment variables and writable persistent storage for the order database
+
+Build and start locally with:
 
 ```bash
 npm run build
 npm start
 ```
 
-## Deployment to Orange Website Island
-
-1. Build the project: `npm run build`
-2. Upload the `.next` folder and all project files to your Orange Website hosting
-3. Configure your server to run Next.js (or use static export if preferred)
-4. Ensure HTTPS is enabled for secure connections
-
-## Project Structure
-
-```
-privacy-shop/
-├── app/              # Next.js app directory
-│   ├── cart/         # Shopping cart page
-│   ├── checkout/     # Checkout page
-│   ├── product/      # Product detail pages
-│   └── page.tsx      # Home page
-├── components/       # React components
-├── context/          # React context (Cart)
-├── lib/              # Utilities and data
-├── types/            # TypeScript types
-└── public/           # Static assets
-```
-
-## Technologies
-
-- **Next.js 14** - React framework
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **React Context** - State management
-- **Zoho Mail** - Email service (SMTP)
-
-## Architecture Overview
-
-### Frontend
-
-- **Routing/layout**: Next.js App Router (`app/`)
-- **Components**: React Server Components by default, with client components used for interactive areas like cart/checkout
-- **UI**:
-     - Tailwind CSS for styling
-     - `lucide-react` for icons
-     - `framer-motion` for animations
-
-### Cart & Checkout
-
-- **Cart state**: client-side (`context/CartContext.tsx`) persisted in `localStorage`
-- **Checkout UI/logic**: `components/CheckoutClient.tsx`
-     - Calculates shipping, discounts, and fees
-     - Uses an idempotency key to reduce duplicate submits
-     - Supports e-transfer and credit card flows
-
-### Backend (API routes)
-
-- **Orders**: `POST /api/orders` stores orders and triggers side-effects (emails, stock sync, notifications)
-- **Payments (credit card)**: `POST /api/creditcard/create` uses the configured card provider, generates a payment URL, and persists the order
-- **Operational concerns**: rate limiting, idempotency caching, and environment validation are enforced server-side
-
-### Data & Integrations
-
-- **Order persistence**: SQLite-backed storage via `sql.js` (see `lib/ordersDb.ts`)
-- **Inventory/promo source of truth**: Google Sheets via `googleapis` (see `lib/stockSheet.ts` and `lib/sheetCache.ts`)
-- **Work management**: optional Wrike integration for creating order/client tasks
-
-### Security & Deployment
-
-- **Security headers**: CSP, HSTS (prod), `X-Robots-Tag: noindex` configured in `next.config.js`
-- **Dashboard auth**: middleware-enforced cookie-based session (`middleware.ts`)
-- **Deployment output**: `output: 'standalone'` in `next.config.js` for smaller deploy footprint
-
-## Email Configuration
-
-This application uses **Zoho Mail** for all email functionality:
-
-- Order confirmations
-- Contact form submissions
-- Low stock alerts
-
-### Setup Email
-
-1. **Create Zoho Mail account** - See [docs/MIGRATION-TO-ZOHO.md](docs/MIGRATION-TO-ZOHO.md)
-2. **Configure DNS records** - MX, SPF, DKIM, DMARC
-3. **Update .env file** with Zoho SMTP credentials:
-
-```bash
-SMTP_HOST=smtp.zoho.com
-SMTP_PORT=465
-SMTP_SECURE=true
-SMTP_USER=orders@puretide.ca
-SMTP_PASS=your_zoho_password
-SMTP_FROM=orders@puretide.ca
-```
-
-4. **Test email system:**
-
-```bash
-node scripts/test-zoho-smtp.mjs
-node scripts/test-zoho-complete.mjs
-```
-
-### Email Documentation
-
-- **[docs/MIGRATION-TO-ZOHO.md](docs/MIGRATION-TO-ZOHO.md)** - Migration details and Zoho setup context
-- **[docs/MAC-MAIL-ZOHO-CONFIG.md](docs/MAC-MAIL-ZOHO-CONFIG.md)** - Mac Mail configuration
-- **[docs/EMAIL-MIGRATION-GUIDE.md](docs/EMAIL-MIGRATION-GUIDE.md)** - Email system notes
-
-### Benefits
-
-- ✅ Professional business email
-- ✅ No blacklist issues (clean IP reputation)
-- ✅ High deliverability (99%+)
-- ✅ Send AND receive emails
-- ✅ IMAP/SMTP access for Mac Mail
-
-## Daily Avery 5162 Shipping Labels (Wrike)
-
-This project can generate a daily Avery 5162 (.docx) label sheet for yesterday’s orders and attach it to Wrike for printing.
-
-### Configuration
-
-Set these environment variables:
-
-```bash
-WRIKE_API_TOKEN=...
-WRIKE_ORDERS_FOLDER_ID=...
-WRIKE_LABELS_FOLDER_ID=MQAAAAEIm8GW
-CRON_SECRET=...
-```
-
-### Generate/attach manually (Dashboard)
-
-- Go to `/dashboard/login` and sign in with `DASHBOARD_SECRET`
-- Open the **Labels** tab
-- Click **Generate yesterday labels (attach to Wrike)**
-
-### Automated every morning (Self-hosted cron)
-
-Use your server crontab to call the cron endpoint daily.
-
-Endpoint:
-
-- `POST /api/cron/daily-labels`
-- Secured with `CRON_SECRET` (send as `x-cron-secret` header or `Authorization: Bearer ...`)
-
-Example crontab (runs at 06:05 server local time):
-
-```cron
-5 6 * * * curl -fsS -X POST "https://YOUR_DOMAIN/api/cron/daily-labels" -H "x-cron-secret: $CRON_SECRET" >/dev/null
-```
-
-If you need to backfill a specific day:
-
-```bash
-curl -fsS -X POST "https://YOUR_DOMAIN/api/cron/daily-labels?date=2026-04-19" -H "x-cron-secret: $CRON_SECRET"
-```
+Production deployments must use HTTPS, preserve the database across releases, restrict dashboard and operational secrets, and configure authenticated webhooks for the selected payment provider.
 
 ## License
 
-Private - For use on Orange Website Island hosting only.
+Private and proprietary.

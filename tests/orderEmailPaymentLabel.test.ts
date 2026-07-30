@@ -30,8 +30,7 @@ test('admin email shows credit card payment method', () => {
 		...baseOrder,
 		paymentMethod: 'creditcard',
 	});
-	assert.match(result.admin.text, /Payment method: Credit card/);
-	assert.match(result.admin.html, /Payment method:<\/strong> Credit card/);
+	assert.match(result.admin.html, /Method:<\/strong> Credit card/);
 });
 
 test('admin email shows regular Interac e-Transfer payment method', () => {
@@ -40,8 +39,8 @@ test('admin email shows regular Interac e-Transfer payment method', () => {
 		paymentMethod: 'etransfer',
 		paymentPath: 'manual',
 	});
-	assert.match(result.admin.text, /Payment method: Interac e-Transfer/);
-	assert.match(result.admin.html, /Payment method:<\/strong> Interac e-Transfer/);
+	assert.match(result.admin.text, /Method: Interac e-Transfer/);
+	assert.match(result.admin.html, /Method:<\/strong> Interac e-Transfer/);
 });
 
 test('admin email shows Friends & Family Interac e-Transfer payment method', () => {
@@ -50,8 +49,10 @@ test('admin email shows Friends & Family Interac e-Transfer payment method', () 
 		paymentMethod: 'etransfer',
 		paymentPath: 'manual_friends_family',
 	});
-	assert.match(result.admin.text, /Payment method: Friends & Family Interac e-Transfer/);
-	assert.match(result.admin.html, /Payment method:<\/strong> Friends &amp; Family Interac e-Transfer/);
+	assert.match(result.admin.text, /Customer type: Family & Friends/);
+	assert.match(result.admin.text, /Pipeline: Manual Interac/);
+	assert.match(result.admin.text, /Payment recipient email: orders@puretide\.ca/);
+	assert.doesNotMatch(result.admin.text, /BluePeak/);
 });
 
 test('admin email shows BluePeak Interac e-Transfer payment method', () => {
@@ -59,7 +60,10 @@ test('admin email shows BluePeak Interac e-Transfer payment method', () => {
 		...baseOrder,
 		paymentMethod: 'etransfer',
 		paymentPath: 'bluepeak',
+		paymentRecipientEmail: 'checkout-123@etransfercanada.ca',
 	});
-	assert.match(result.admin.text, /Payment method: Interac e-Transfer \(BluePeak\)/);
-	assert.match(result.admin.html, /Payment method:<\/strong> Interac e-Transfer \(BluePeak\)/);
+	assert.match(result.admin.text, /Customer type: Regular Customer/);
+	assert.match(result.admin.text, /Processor: BluePeak/);
+	assert.match(result.admin.text, /Payment recipient email: checkout-123@etransfercanada\.ca/);
+	assert.doesNotMatch(result.admin.text, /Payment recipient email: orders@puretide\.ca/);
 });

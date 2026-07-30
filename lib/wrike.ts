@@ -5,6 +5,7 @@ import axios from 'axios';
 import sharp from 'sharp';
 import { AlignmentType, Document, HeightRule, ImageRun, Packer, Paragraph, TabStopType, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { generateAvery5160DocxSheets } from '@/lib/wrikeDailyLabels';
+import { getOrderPaymentPresentation } from '@/lib/orderPaymentPresentation';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -144,6 +145,8 @@ type OrderData = {
 	shippingMethod: 'express';
 	paymentMethod: 'etransfer' | 'creditcard';
 	paymentPath?: 'manual' | 'bluepeak' | 'manual_friends_family';
+	paymentRecipientEmail?: string;
+	paymentConfirmed?: boolean;
 	cardFee?: number;
 	subtotal: number;
 	shippingCost: number;
@@ -178,6 +181,12 @@ export async function createOrderTask(order: OrderData) {
 	const title = `Order #${order.orderNumber} - ${order.customer.firstName} ${order.customer.lastName}`;
 
 	const shippingAddr = order.shipToDifferentAddress && order.shippingAddress ? order.shippingAddress : order.customer;
+	const payment = getOrderPaymentPresentation({
+		paymentMethod: order.paymentMethod,
+		paymentPath: order.paymentPath,
+		depositEmail: order.paymentRecipientEmail,
+	});
+	const paymentConfirmed = order.paymentMethod === 'creditcard' || order.paymentConfirmed !== false;
 
 	const itemsList = order.cartItems.map((item) => `<li>${item.name} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`).join('');
 
@@ -200,36 +209,40 @@ export async function createOrderTask(order: OrderData) {
 			: '';
 
 	const description = `
-<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-	<div style="font-size:20px; font-weight:900; margin:0 0 6px 0;">Order #${order.orderNumber}</div>
-	<div style="font-size:14px; margin:0 0 10px 0;"><b>Date:</b> ${new Date(order.createdAt).toLocaleString('en-CA')}</div>
-	<hr>
-	<h4>Customer Information</h4>
-	<p style="margin:0 0 10px 0;">
-		<b>👤 Name:</b> ${order.customer.firstName} ${order.customer.lastName}<br>
-		<b>✉️ Email:</b> ${order.customer.email}<br>
-	</p>
-	<h4>Customer Type</h4>
-	<p style="margin:0 0 10px 0;"><b>${order.paymentPath === 'manual_friends_family' ? '👥 Family & Friends' : '👤 Regular Customer'}</b></p>
-	<h4>Shipping Address</h4>
-	<p style="margin:0 0 10px 0;">
-		<b>🚚 SHIP TO:</b><br>
-		${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}<br>
-		${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}
-	</p>
-</div>
+<h3>${paymentConfirmed ? 'PAID · ' : 'AWAITING PAYMENT · '}Order #${order.orderNumber}</h3>
+<p><b>Date:</b> ${new Date(order.createdAt).toLocaleString('en-CA')}</p>
+<hr>
+<h4>Order Overview</h4>
+<p><b>Status:</b> ${paymentConfirmed ? 'Payment confirmed' : 'Awaiting payment'}<br>
+<b>Customer type:</b> ${payment.customerType}</p>
+<h4>Shipping Address</h4>
+<p><b>🚚 SHIP TO:</b><br>
+${order.customer.firstName} ${order.customer.lastName}<br>
+${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}<br>
+${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}<br>
+${order.customer.country}</p>
+<h4>Customer Contact</h4>
+<p><b>✉️ Email:</b> ${order.customer.email}</p>
 <hr>
 <h4>Order Items</h4>
 <ul>${itemsList}</ul>
-<hr>
-<h4>Payment Method</h4>
-<p><b>${order.paymentMethod === 'creditcard' ? '💳 Credit Card' : order.paymentPath === 'manual_friends_family' ? '🏦 Family & Friends E-Transfer' : '🏦 E-Transfer (Interac)'}</b></p>
 <hr>
 <h4>Order Summary</h4>
 <p>
 Subtotal: $${order.subtotal.toFixed(2)}<br>
 Shipping (${order.shippingMethod}): $${order.shippingCost.toFixed(2)}<br>
 ${order.cardFee ? `Card Fee (5%): $${order.cardFee.toFixed(2)}<br>` : ''}${order.discountAmount ? `Discount${order.promoCode ? ` (${order.promoCode})` : ''}: -$${order.discountAmount.toFixed(2)}<br>` : ''}<b>Total: $${order.total.toFixed(2)}</b>
+</p>
+<hr>
+<h4>Payment</h4>
+<p>
+<b>Status:</b> ${paymentConfirmed ? 'Confirmed' : 'Awaiting payment'}<br>
+<b>Method:</b> ${payment.method}<br>
+${payment.pipeline ? `<b>${payment.pipeline === 'BluePeak' ? 'Processor' : 'Pipeline'}:</b> ${payment.pipeline}<br>` : ''}
+<b>Customer type:</b> ${payment.customerType}<br>
+${payment.pipeline === 'Manual Interac' ? '<b>Auto-deposit:</b> Enabled<br><b>Security question:</b> Not required<br>' : ''}
+${payment.paymentRecipientEmail ? `<b>Payment recipient email:</b> ${payment.paymentRecipientEmail}<br>` : ''}
+${order.paymentMethod === 'etransfer' ? `<b>Expected memo:</b> ${order.orderNumber}` : ''}
 </p>
 ${financialSection}
 ${order.customer.orderNotes ? `<hr><h4>Internal Notes</h4><p>${order.customer.orderNotes}</p>` : ''}
