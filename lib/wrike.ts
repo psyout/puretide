@@ -30,23 +30,23 @@ function getWrikeConfig(): WrikeConfig | null {
 type CustomFieldInput = { id: string; value: string };
 
 async function createTask(folderId: string, title: string, description: string, apiToken: string, options?: { customFields?: CustomFieldInput[]; superTaskId?: string }) {
-	const body: Record<string, unknown> = { title, description, status: 'Active' };
+	const body = new URLSearchParams({ title, description, status: 'Active' });
 	const customFields = options?.customFields;
 	if (Array.isArray(customFields) && customFields.length > 0) {
-		body.customFields = customFields;
+		body.set('customFields', JSON.stringify(customFields));
 	}
 	const superTaskId = options?.superTaskId;
 	if (superTaskId) {
-		body.superTasks = [superTaskId];
+		body.set('superTasks', JSON.stringify([superTaskId]));
 	}
 	const url = superTaskId ? `${WRIKE_API_BASE}/tasks` : `${WRIKE_API_BASE}/folders/${folderId}/tasks`;
 	const response = await fetch(url, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${apiToken}`,
-			'Content-Type': 'application/json',
+			'Content-Type': 'application/x-www-form-urlencoded',
 		},
-		body: JSON.stringify(body),
+		body,
 	});
 
 	if (!response.ok) {
@@ -98,17 +98,17 @@ async function getTask(taskId: string, apiToken: string): Promise<{ id: string; 
 }
 
 async function updateTask(taskId: string, updates: { title?: string; description?: string; customFields?: CustomFieldInput[] }, apiToken: string): Promise<unknown> {
-	const body: Record<string, unknown> = {};
-	if (updates.title !== undefined) body.title = updates.title;
-	if (updates.description !== undefined) body.description = updates.description;
-	if (Array.isArray(updates.customFields) && updates.customFields.length > 0) body.customFields = updates.customFields;
+	const body = new URLSearchParams();
+	if (updates.title !== undefined) body.set('title', updates.title);
+	if (updates.description !== undefined) body.set('description', updates.description);
+	if (Array.isArray(updates.customFields) && updates.customFields.length > 0) body.set('customFields', JSON.stringify(updates.customFields));
 	const response = await fetch(`${WRIKE_API_BASE}/tasks/${taskId}`, {
 		method: 'PUT',
 		headers: {
 			Authorization: `Bearer ${apiToken}`,
-			'Content-Type': 'application/json',
+			'Content-Type': 'application/x-www-form-urlencoded',
 		},
-		body: JSON.stringify(body),
+		body,
 	});
 	if (!response.ok) {
 		const error = await response.text();
