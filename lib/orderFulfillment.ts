@@ -138,6 +138,8 @@ export type RunFulfillmentResult = {
 export type RunFulfillmentOptions = {
 	paymentConfirmed?: boolean;
 	skipOrderTask?: boolean;
+	sendCustomerEmail?: boolean;
+	sendAdminEmail?: boolean;
 };
 
 async function decrementGoogleSheetStock(orderNumber: string, items: FulfillmentOrder['cartItems']) {
@@ -210,6 +212,53 @@ async function decrementGoogleSheetStock(orderNumber: string, items: Fulfillment
 	);
 }
 
+export async function sendPendingManualEtransferNotifications(order: FulfillmentOrder): Promise<RunFulfillmentResult> {
+	const emailData = buildOrderEmails({
+		orderNumber: order.orderNumber,
+		createdAt: order.createdAt,
+		paymentMethod: 'etransfer',
+		paymentConfirmed: false,
+		etransferProvider: 'manual',
+		paymentPath: order.paymentPath,
+		customer: order.customer,
+		shipToDifferentAddress: order.shipToDifferentAddress,
+		shippingAddress: order.shippingAddress,
+		shippingMethod: order.shippingMethod,
+		subtotal: order.subtotal,
+		shippingCost: order.shippingCost,
+		discountAmount: order.discountAmount,
+		promoCode: order.promoCode,
+		total: order.total,
+		cartItems: order.cartItems.map((item) => ({
+			id: item.id,
+			name: item.name,
+			price: item.price,
+			quantity: item.quantity,
+		})),
+	});
+	const customerReplyTo = `${order.customer.firstName} ${order.customer.lastName} <${order.customer.email}>`;
+	const customerResult = await sendMail({
+		to: order.customer.email,
+		from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
+		subject: emailData.customer.subject,
+		text: emailData.customer.text,
+		html: emailData.customer.html,
+		replyTo: customerReplyTo,
+	});
+	const adminResult = await sendMail({
+		to: getOrderNotificationRecipient(),
+		from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
+		subject: emailData.admin.subject,
+		text: emailData.admin.text,
+		html: emailData.admin.html,
+		replyTo: customerReplyTo,
+	});
+	return {
+		emailStatus: customerResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: customerResult.error },
+		adminEmailStatus: adminResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminResult.error },
+	};
+}
+
 export async function runFulfillment(order: FulfillmentOrder, options: RunFulfillmentOptions = {}): Promise<RunFulfillmentResult> {
 	console.log(JSON.stringify({ label: 'fulfillment:start', orderNumber: order.orderNumber }));
 	const paymentMethod = (order as Record<string, unknown>).paymentMethod as 'etransfer' | 'creditcard' | undefined;
@@ -246,27 +295,32 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 	const adminRecipient = getOrderNotificationRecipient();
 	const customerReplyTo = `${order.customer.firstName} ${order.customer.lastName} <${order.customer.email}>`;
 
-	const emailResult = await sendMail({
-		to: order.customer.email,
-		from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
-		subject: emailData.customer.subject,
-		text: emailData.customer.text,
-		html: emailData.customer.html,
-		replyTo: customerReplyTo,
-	});
+	let emailStatus: EmailStatus = { sent: false, skipped: true };
+	let adminEmailStatus: EmailStatus = { sent: false, skipped: true };
 
-	const adminEmailResult = await sendMail({
-		to: adminRecipient,
-		from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
-		subject: emailData.admin.subject,
-		text: emailData.admin.text,
-		html: emailData.admin.html,
-		replyTo: customerReplyTo,
-	});
+	if (options.sendCustomerEmail !== false) {
+		const emailResult = await sendMail({
+			to: order.customer.email,
+			from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
+			subject: emailData.customer.subject,
+			text: emailData.customer.text,
+			html: emailData.customer.html,
+			replyTo: customerReplyTo,
+		});
+		emailStatus = emailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: emailResult.error };
+	}
 
-	const emailStatus: EmailStatus = emailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: emailResult.error };
-
-	const adminEmailStatus: EmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
+	if (options.sendAdminEmail !== false) {
+		const adminEmailResult = await sendMail({
+			to: adminRecipient,
+			from: process.env.ORDER_FROM ?? 'orders@puretide.ca',
+			subject: emailData.admin.subject,
+			text: emailData.admin.text,
+			html: emailData.admin.html,
+			replyTo: customerReplyTo,
+		});
+		adminEmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
+	}
 
 	const stockLevels = await updateWrikeStock(order.cartItems);
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleWrikeTaskCompletion } from '@/lib/wrikeShipping';
-import { completeFriendsFamilyOrder } from '@/lib/friendsFamilyOrderCompletion';
+import { completeManualEtransferOrder } from '@/lib/friendsFamilyOrderCompletion';
 import crypto from 'node:crypto';
 
 export const dynamic = 'force-dynamic';
@@ -143,14 +143,14 @@ export async function POST(request: NextRequest) {
 					continue;
 				}
 				try {
-					const completion = await completeFriendsFamilyOrder(orderNumber, ev.taskId);
+					const completion = await completeManualEtransferOrder(orderNumber, ev.taskId);
 					if (completion.ok) processed += 1;
 					else {
-						console.error(`[wrikeWebhook] Friends & Family completion skipped for #${orderNumber}: ${completion.error}`);
+						console.error(`[wrikeWebhook] Manual e-transfer completion skipped for #${orderNumber}: ${completion.error}`);
 						failed += 1;
 					}
 				} catch (error) {
-					console.error(`[wrikeWebhook] Friends & Family completion failed for #${orderNumber}:`, error);
+					console.error(`[wrikeWebhook] Manual e-transfer completion failed for #${orderNumber}:`, error);
 					failed += 1;
 				}
 				continue;

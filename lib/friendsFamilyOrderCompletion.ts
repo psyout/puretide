@@ -1,16 +1,20 @@
 import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
 
-export type FriendsFamilyCompletionResult =
+export type ManualEtransferCompletionResult =
 	| { ok: true; alreadyCompleted: boolean; order: Record<string, unknown> }
 	| { ok: false; error: string };
 
-export async function completeFriendsFamilyOrder(orderNumberRaw: string, expectedWrikeTaskId?: string): Promise<FriendsFamilyCompletionResult> {
+export function isManualEtransferOrder(order: Pick<FulfillmentOrder, 'paymentMethod' | 'paymentPath'>): boolean {
+	return order.paymentMethod === 'etransfer' && (order.paymentPath === 'manual' || order.paymentPath === 'manual_friends_family');
+}
+
+export async function completeManualEtransferOrder(orderNumberRaw: string, expectedWrikeTaskId?: string): Promise<ManualEtransferCompletionResult> {
 	const orderNumber = String(orderNumberRaw ?? '').trim();
 	const order = await getOrderByOrderNumberFromDb(orderNumber);
 	if (!order) return { ok: false, error: 'Order not found.' };
-	if (order.paymentMethod !== 'etransfer' || order.paymentPath !== 'manual_friends_family') {
-		return { ok: false, error: 'Order is not a Friends & Family e-Transfer order.' };
+	if (!isManualEtransferOrder(order as Pick<FulfillmentOrder, 'paymentMethod' | 'paymentPath'>)) {
+		return { ok: false, error: 'Order is not a manual e-Transfer order.' };
 	}
 	if (expectedWrikeTaskId && order.wrikeTaskId && String(order.wrikeTaskId) !== expectedWrikeTaskId) {
 		return { ok: false, error: 'Wrike task does not match this order.' };
@@ -45,9 +49,9 @@ export async function completeFriendsFamilyOrder(orderNumberRaw: string, expecte
 			const result = await runFulfillment(order as FulfillmentOrder, {
 				paymentConfirmed: true,
 				skipOrderTask: Boolean(order.wrikeTaskId),
+				sendAdminEmail: false,
 			});
 			emailStatus = result.emailStatus;
-			adminEmailStatus = result.adminEmailStatus;
 		}
 
 		const paidAt = new Date().toISOString();

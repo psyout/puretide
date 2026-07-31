@@ -14,7 +14,7 @@ import { getIdempotencyKey, getCachedOrder, setCachedOrder } from '@/lib/idempot
 import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
-import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
+import { sendPendingManualEtransferNotifications, type FulfillmentOrder } from '@/lib/orderFulfillment';
 import { createOrderTask } from '@/lib/wrike';
 import { decidePaymentPathWithFeatureFlag, getVerifiedFriendsFamilyEmailFromCookie } from '@/lib/friendsFamily';
 
@@ -312,11 +312,24 @@ export async function POST(request: Request) {
 
 		const emailEnabled = String(process.env.ENABLE_EMAIL_NOTIFICATIONS ?? '').toLowerCase() !== 'false';
 		const wrikeEnabled = String(process.env.ENABLE_WRIKE_INTEGRATION ?? '').toLowerCase() === 'true';
-		const etProvider = (orderRecord as unknown as { etransfer?: { provider?: string } }).etransfer?.provider;
-		if (orderPayload.paymentMethod === 'etransfer' && paymentPath === 'manual_friends_family' && wrikeEnabled) {
+		const isManualEtransfer =
+			orderPayload.paymentMethod === 'etransfer' && (paymentPath === 'manual' || paymentPath === 'manual_friends_family');
+		if (isManualEtransfer && (emailEnabled || wrikeEnabled)) {
 			void (async () => {
 				try {
-					const task = await createOrderTask({
+					const fulfillmentOrder = {
+						...(orderRecord as unknown as Record<string, unknown>),
+						paymentMethod: 'etransfer',
+						cardFee: orderPayload.cardFee,
+					} as unknown as FulfillmentOrder;
+					const pendingEmailResult = emailEnabled
+						? await sendPendingManualEtransferNotifications(fulfillmentOrder)
+						: {
+								emailStatus: { sent: false, skipped: true },
+								adminEmailStatus: { sent: false, skipped: true },
+							};
+					const task = wrikeEnabled
+						? await createOrderTask({
 						orderNumber: orderRecord.orderNumber,
 						createdAt: orderRecord.createdAt,
 						customer: orderRecord.customer,
@@ -324,7 +337,7 @@ export async function POST(request: Request) {
 						shippingAddress: orderRecord.shippingAddress,
 						shippingMethod: orderRecord.shippingMethod,
 						paymentMethod: 'etransfer',
-						paymentPath: 'manual_friends_family',
+						paymentPath,
 						paymentConfirmed: false,
 						cardFee: orderPayload.cardFee,
 						subtotal: orderRecord.subtotal,
@@ -333,7 +346,8 @@ export async function POST(request: Request) {
 						promoCode: orderRecord.promoCode,
 						total: orderRecord.total,
 						cartItems: orderRecord.cartItems,
-					});
+							})
+						: null;
 					const wrikeTaskId = task && typeof task === 'object' && 'id' in task ? String(task.id) : '';
 					await upsertOrderInDb({
 						...(orderRecord as unknown as Record<string, unknown>),
@@ -344,56 +358,18 @@ export async function POST(request: Request) {
 							clientSynced: false,
 							awaitingPayment: true,
 						},
+						emailStatus: pendingEmailResult.emailStatus,
+						adminEmailStatus: pendingEmailResult.adminEmailStatus,
 					});
 				} catch (err) {
-					console.error('[orders] Failed to create pending Friends & Family Wrike task', err);
-				}
-			})();
-		}
-		// Regular manual e-Transfers keep the existing immediate workflow. Friends &
-		// Family orders are fulfilled only after an admin confirms receipt of payment.
-		const shouldRunImmediateEtransferFulfillment = etProvider === 'manual' && paymentPath === 'manual';
-		if (orderPayload.paymentMethod === 'etransfer' && shouldRunImmediateEtransferFulfillment && (emailEnabled || wrikeEnabled)) {
-			void (async () => {
-				try {
-					const fulfillmentOrder = {
-						...(orderRecord as unknown as Record<string, unknown>),
-						paymentMethod: 'etransfer',
-						cardFee: orderPayload.cardFee,
-					} as unknown as FulfillmentOrder;
-
-					const result = await runFulfillment(fulfillmentOrder, { paymentConfirmed: false });
-					await upsertOrderInDb({
-						...(orderRecord as unknown as Record<string, unknown>),
-						fulfillmentStatus: {
-							stockUpdated: true,
-							emailsSent: Boolean(result.emailStatus.sent && result.adminEmailStatus.sent),
-							clientSynced: false,
-						},
-						emailStatus: result.emailStatus,
-						adminEmailStatus: result.adminEmailStatus,
-					});
-				} catch (err) {
-					console.error('[orders] e-Transfer fulfillment failed', err);
-					try {
-						await upsertOrderInDb({
-							...(orderRecord as unknown as Record<string, unknown>),
-							fulfillmentStatus: {
-								stockUpdated: false,
-								emailsSent: false,
-								clientSynced: false,
-								failedAt: new Date().toISOString(),
-							},
-						});
-					} catch (persistErr) {
-						console.error('[orders] Failed to persist fulfillment failure status', persistErr);
-					}
+					console.error('[orders] Failed to create pending manual e-transfer Wrike task', err);
 				}
 			})();
 		}
 
 		// IMPORTANT: For e-transfer orders, fulfillment (emails, stock decrement, Wrike) must only
-		// happen after payment is confirmed via webhook. This route only stores the order.
+		// happen after payment is confirmed. Manual payments are confirmed through the
+		// Wrike "Transferred" status; BluePeak payments are confirmed via webhook.
 		// Credit card orders are created via /api/creditcard/create.
 
 		return response;

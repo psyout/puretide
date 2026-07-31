@@ -43,6 +43,31 @@ test('admin email shows regular Interac e-Transfer payment method', () => {
 	assert.match(result.admin.html, /Method:<\/strong> Interac e-Transfer/);
 });
 
+test('pending manual e-transfer customer email contains complete payment instructions', () => {
+	const result = buildOrderEmails({
+		...baseOrder,
+		paymentMethod: 'etransfer',
+		paymentPath: 'manual',
+		paymentConfirmed: false,
+	});
+	assert.equal(result.customer.subject, 'Order #ABC123 - e-Transfer payment instructions');
+	assert.match(result.customer.text, /Recipient Email: orders@puretide\.ca/);
+	assert.match(result.customer.text, /Memo\/Message: ABC123/);
+	assert.match(result.customer.text, /Total: \$115\.00/);
+});
+
+test('confirmed manual e-transfer customer email confirms payment without repeating transfer instructions', () => {
+	const result = buildOrderEmails({
+		...baseOrder,
+		paymentMethod: 'etransfer',
+		paymentPath: 'manual',
+		paymentConfirmed: true,
+	});
+	assert.equal(result.customer.subject, 'Order #ABC123 - Payment received');
+	assert.match(result.customer.text, /confirmed your Interac e-Transfer payment/);
+	assert.doesNotMatch(result.customer.text, /Recipient Email:/);
+});
+
 test('admin email shows Friends & Family Interac e-Transfer payment method', () => {
 	const result = buildOrderEmails({
 		...baseOrder,

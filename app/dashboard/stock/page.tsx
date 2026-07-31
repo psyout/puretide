@@ -780,8 +780,10 @@ export default function StockDashboardPage() {
 																? 'E-Transfer'
 																: String(order.paymentMethod ?? '-');
 													const orderNumber = String(order.orderNumber ?? order.id ?? '-');
-													const isPendingFriendsFamily =
-														order.paymentMethod === 'etransfer' && order.paymentPath === 'manual_friends_family' && order.paymentStatus === 'pending';
+													const isPendingManualEtransfer =
+														order.paymentMethod === 'etransfer' &&
+														(order.paymentPath === 'manual' || order.paymentPath === 'manual_friends_family') &&
+														order.paymentStatus === 'pending';
 													return (
 														<tr
 															key={String(order.id)}
@@ -793,7 +795,7 @@ export default function StockDashboardPage() {
 															<td className='py-4 pr-6'>{payment}</td>
 															<td className='py-4 pr-6'>
 																<div className='flex flex-wrap gap-2'>
-																	{isPendingFriendsFamily && (
+																	{isPendingManualEtransfer && (
 																		<button
 																			type='button'
 																			onClick={() => handleCompleteFriendsFamilyOrder(orderNumber)}

@@ -166,6 +166,10 @@ type OrderData = {
 	totalCost?: number;
 };
 
+export function shouldSetAwaitingTransferStatus(order: Pick<OrderData, 'paymentMethod' | 'paymentConfirmed'>): boolean {
+	return order.paymentMethod === 'etransfer' && order.paymentConfirmed === false;
+}
+
 export async function createOrderTask(order: OrderData) {
 	const config = getWrikeConfig();
 	if (!config) {
@@ -254,7 +258,7 @@ ${order.customer.orderNotes ? `<hr><h4>Internal Notes</h4><p>${order.customer.or
 		const paymentStatusFieldId = process.env.WRIKE_PAYMENT_STATUS_FIELD_ID;
 		const customFields: CustomFieldInput[] = [];
 		if (trackingNumberFieldId) customFields.push({ id: trackingNumberFieldId, value: 'PGCA' });
-		if (paymentStatusFieldId && order.paymentPath === 'manual_friends_family') {
+		if (paymentStatusFieldId && shouldSetAwaitingTransferStatus(order)) {
 			customFields.push({ id: paymentStatusFieldId, value: 'Awaiting transfer' });
 		}
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
 import { listOrdersFromDb } from '@/lib/ordersDb';
 import { buildSafeApiError } from '@/lib/apiError';
-import { completeFriendsFamilyOrder } from '@/lib/friendsFamilyOrderCompletion';
+import { completeManualEtransferOrder } from '@/lib/friendsFamilyOrderCompletion';
 
 export async function GET(request: Request) {
 	const authError = requireDashboardAuth(request);
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: 'Order number is required.' }, { status: 400 });
 		}
 
-		const result = await completeFriendsFamilyOrder(orderNumber);
+		const result = await completeManualEtransferOrder(orderNumber);
 		if (!result.ok) {
 			return NextResponse.json({ ok: false, error: result.error }, { status: result.error === 'Order not found.' ? 404 : 409 });
 		}
