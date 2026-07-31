@@ -58,7 +58,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
           DASHBOARD_SECRET: ci-placeholder-dashboard-secret
           ORDER_CONFIRMATION_SECRET: ci-placeholder-order-confirmation-secret
-          NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED: true
+          NEXT_PUBLIC_ETRANSFER_PROVIDER: manual
+          NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED: false
 
       - name: Sanity check standalone output
         shell: bash
@@ -165,6 +166,29 @@ jobs:
             test -f .deploy/next/BUILD_ID
             test -f .env
             test -d data
+
+            echo 'Updating manual e-transfer environment flags...'
+            cp .env \".env.backup.\$(date +%Y%m%d_%H%M%S)\"
+            if grep -q '^ETRANSFER_PROVIDER=' .env; then
+              sed -i 's/^ETRANSFER_PROVIDER=.*/ETRANSFER_PROVIDER=manual/' .env
+            else
+              printf '\nETRANSFER_PROVIDER=manual\n' >> .env
+            fi
+            if grep -q '^NEXT_PUBLIC_ETRANSFER_PROVIDER=' .env; then
+              sed -i 's/^NEXT_PUBLIC_ETRANSFER_PROVIDER=.*/NEXT_PUBLIC_ETRANSFER_PROVIDER=manual/' .env
+            else
+              printf 'NEXT_PUBLIC_ETRANSFER_PROVIDER=manual\n' >> .env
+            fi
+            if grep -q '^FRIENDS_FAMILY_ENABLED=' .env; then
+              sed -i 's/^FRIENDS_FAMILY_ENABLED=.*/FRIENDS_FAMILY_ENABLED=false/' .env
+            else
+              printf 'FRIENDS_FAMILY_ENABLED=false\n' >> .env
+            fi
+            if grep -q '^NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED=' .env; then
+              sed -i 's/^NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED=.*/NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED=false/' .env
+            else
+              printf 'NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED=false\n' >> .env
+            fi
 
             echo 'Verifying staged CSS assets...'
             test -d .deploy/next/static/css
