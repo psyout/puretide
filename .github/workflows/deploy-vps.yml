@@ -149,6 +149,7 @@ jobs:
           # --exclude keeps this from touching the static/ dir populated above.
           rsync -az --delete --exclude='static' -e "$SSH" .next/ "${SSH_TARGET}:${VPS_PATH}/.deploy/next/"
           rsync -az --delete -e "$SSH" public/ "${SSH_TARGET}:${VPS_PATH}/.deploy/public/"
+          rsync -az --delete -e "$SSH" ops/ "${SSH_TARGET}:${VPS_PATH}/.deploy/ops/"
           rsync -az -e "$SSH" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/.deploy/"
 
       - name: Activate build, restart PM2, and health-check
@@ -204,6 +205,17 @@ jobs:
             if [ -d public ]; then mv public .deploy/previous-public; fi
             mv .deploy/next .next
             mv .deploy/public public
+            rm -rf ops
+            mv .deploy/ops ops
+            chmod 700 ops/run-cron.sh
+            install -m 0644 ops/puretide.cron /etc/cron.d/puretide
+            if systemctl list-unit-files crond.service --no-legend 2>/dev/null | grep -q crond; then
+              systemctl enable --now crond
+              systemctl is-active --quiet crond
+            else
+              systemctl enable --now cron
+              systemctl is-active --quiet cron
+            fi
 
             # PM2 runs Next's standalone server. It serves static assets relative
             # to .next/standalone, so mirror the activated build assets there

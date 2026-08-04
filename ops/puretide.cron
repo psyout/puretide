@@ -1,0 +1,7 @@
+CRON_TZ=America/Vancouver
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 6 * * * root /var/www/puretide/ops/run-cron.sh daily-labels >> /var/log/wrike-labels-cron.log 2>&1
+0 16 * * * root /var/www/puretide/ops/run-cron.sh afternoon-labels >> /var/log/wrike-labels-cron.log 2>&1
+*/5 * * * * root /var/www/puretide/ops/run-cron.sh shipping-automation >> /var/log/shipping-automation.log 2>&1

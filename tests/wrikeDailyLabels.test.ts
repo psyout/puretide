@@ -1,0 +1,39 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { parseLabelFromOrderDescription } from '@/lib/wrikeDailyLabels';
+
+test('parses current Wrike-normalized shipping section without a separate Name field', () => {
+	const description = [
+		'<h3>PAID · Order #123</h3><br>',
+		'<b>Date:</b> 2026-08-03, 8:12:00 a.m.<br>',
+		'<h4>Shipping Address</h4><br>',
+		'<b>🚚 SHIP TO:</b><br>',
+		'Jane Example<br>',
+		'12-345 Main Street<br>',
+		'Vancouver, BC V6B 1A1<br>',
+		'Canada<br>',
+		'<h4>Customer Contact</h4><br>',
+		'<b>✉️ Email:</b> jane@example.test<br>',
+	].join('');
+
+	assert.deepEqual(parseLabelFromOrderDescription(description), {
+		name: 'Jane Example',
+		lines: ['12-345 Main Street', 'Vancouver, BC', 'V6B 1A1', 'Canada'],
+	});
+});
+
+test('continues to parse legacy Wrike descriptions with an explicit Name field', () => {
+	const description = [
+		'<b>👤 Name:</b> John Example<br>',
+		'<h4>Shipping Address</h4><br>',
+		'<b>🚚 SHIP TO:</b><br>',
+		'99 Legacy Road<br>',
+		'Victoria, BC V8V 1A1<br>',
+		'<h4>Order Items</h4>',
+	].join('');
+
+	assert.deepEqual(parseLabelFromOrderDescription(description), {
+		name: 'John Example',
+		lines: ['99 Legacy Road', 'Victoria, BC', 'V8V 1A1'],
+	});
+});

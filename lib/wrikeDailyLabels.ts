@@ -93,11 +93,17 @@ function stripNonAddressLines(lines: string[]): string[] {
 }
 
 export function parseLabelFromOrderDescription(html: string): Label | null {
-	const nameMatch = String(html).match(/<b>\s*Name:\s*<\/b>\s*([^<]+?)\s*<br\s*\/?\s*>/i);
+	const source = String(html);
+	const nameMatch = source.match(/<b>[^<]*\bName:\s*<\/b>\s*([^<]+?)(?:<br\s*\/?\s*>|<\/p>)/i);
 	const name = nameMatch ? stripHtml(nameMatch[1]).trim() : '';
 
-	const shippingMatch = String(html).match(/<h4>\s*Shipping Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
-	const billingMatch = String(html).match(/<h4>\s*Billing Address\s*<\/h4>\s*<p>([\s\S]*?)<\/p>/i);
+	// Wrike normalizes submitted HTML and commonly replaces <p> wrappers with
+	// <br> elements. Select a section by its heading instead of depending on a
+	// specific wrapper so both the submitted and API-returned forms work.
+	const sectionAfterHeading = (heading: string): RegExpMatchArray | null =>
+		source.match(new RegExp(`<h[1-6][^>]*>\\s*${heading}\\s*<\\/h[1-6]>([\\s\\S]*?)(?=<h[1-6][^>]*>|<hr\\b|$)`, 'i'));
+	const shippingMatch = sectionAfterHeading('Shipping Address');
+	const billingMatch = sectionAfterHeading('Billing Address');
 	const match = shippingMatch || billingMatch;
 
 	let lines: string[] = [];
@@ -136,6 +142,14 @@ export function parseLabelFromOrderDescription(html: string): Label | null {
 		return { name: inferredName || 'Recipient', lines };
 	}
 
+	let recipientName = name;
+	// The current order description puts the recipient as the first line of the
+	// Shipping Address section instead of in a separate Name field.
+	if (!recipientName && shippingMatch && lines.length >= 2) {
+		recipientName = lines.shift() ?? '';
+	}
+	if (!recipientName || lines.length === 0) return null;
+
 	const unitPattern = /^(unit|apt|apartment|suite|ste|#\s*)\s*([^\s]+(?:\s+[^\s]+)*)/i;
 	const addressLines: string[] = [];
 	let i = 0;
@@ -166,7 +180,7 @@ export function parseLabelFromOrderDescription(html: string): Label | null {
 		}
 	}
 
-	return { name: name || 'Recipient', lines: addressLines };
+	return { name: recipientName, lines: addressLines };
 }
 
 export async function generateAvery5160DocxSheets(labels: Label[], outputPath: string): Promise<void> {

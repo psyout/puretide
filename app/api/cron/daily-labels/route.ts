@@ -28,9 +28,13 @@ function parseIsoDateOnly(s: string | null): Date | null {
 	if (!s) return null;
 	const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})$/);
 	if (!m) return null;
-	const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+	const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
 	if (Number.isNaN(d.getTime())) return null;
 	return d;
+}
+
+function formatLocalDateOnly(date: Date): string {
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 export async function POST(request: Request) {
@@ -66,7 +70,9 @@ export async function POST(request: Request) {
 			base = y;
 		}
 
-		const isoDate = base.toISOString().slice(0, 10);
+		// Keep the lock/run key on the same local calendar date used by the label
+		// generator. toISOString() can move midnight to the previous UTC date.
+		const isoDate = formatLocalDateOnly(base);
 
 		console.log('[cron:daily-labels] start', {
 			requestedDate: requested ? requested.toISOString().slice(0, 10) : null,
@@ -76,8 +82,17 @@ export async function POST(request: Request) {
 		// Check for existing run (distributed lock via database)
 		const existingRun = await getLabelGenerationRun('daily', isoDate);
 		if (existingRun && existingRun.status === 'running') {
-			console.warn('[cron:daily-labels] skipping: already running', { runId: existingRun.id, startedAt: existingRun.startedAt });
-			return NextResponse.json({ ok: false, error: 'Label generation already in progress for this date', runId: existingRun.id }, { status: 409 });
+			const ageMs = Date.now() - new Date(existingRun.startedAt).getTime();
+			if (Number.isFinite(ageMs) && ageMs < 15 * 60 * 1000) {
+				console.warn('[cron:daily-labels] skipping: already running', { runId: existingRun.id, startedAt: existingRun.startedAt });
+				return NextResponse.json({ ok: false, error: 'Label generation already in progress for this date', runId: existingRun.id }, { status: 409 });
+			}
+			await updateLabelGenerationRun(existingRun.id, {
+				status: 'failed',
+				completedAt: new Date().toISOString(),
+				errorMessage: 'Stale label-generation lock expired after 15 minutes.',
+			});
+			console.warn('[cron:daily-labels] expired stale run', { runId: existingRun.id, startedAt: existingRun.startedAt });
 		}
 
 		// Create new run record
@@ -113,7 +128,10 @@ export async function POST(request: Request) {
 
 		console.log('[cron:daily-labels] done', { ...result, runId: run.id, completedAt });
 
-		return NextResponse.json({ ...result, runId: run.id }, { status: 200 });
+		// An order that cannot be parsed is an operational failure, not an empty
+		// sales day. Return a failing status so cron monitoring surfaces it.
+		const status = !result.ok && result.reason === 'no-labels' && (result.ordersConsidered ?? 0) > 0 ? 422 : 200;
+		return NextResponse.json({ ...result, runId: run.id }, { status });
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to generate daily labels.', error, logLabel: 'cron:daily-labels:post' });
 		console.error('[cron:daily-labels] failed', { errorId: safe.errorId, message: safe.message, runId: run?.id });
