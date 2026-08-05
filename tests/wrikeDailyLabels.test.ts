@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseLabelFromOrderDescription } from '@/lib/wrikeDailyLabels';
+import { getWrikeTaskBusinessDate, parseLabelFromOrderDescription } from '@/lib/wrikeDailyLabels';
+
+test('assigns late-evening UTC orders to their Vancouver business date', () => {
+	assert.equal(
+		getWrikeTaskBusinessDate({
+			createdDate: '2026-08-05T02:12:50Z',
+			description: '<b>Date:</b> 2026-08-05, 3:12:45 a.m.<br>',
+		}),
+		'2026-08-04',
+	);
+});
 
 test('parses current Wrike-normalized shipping section without a separate Name field', () => {
 	const description = [

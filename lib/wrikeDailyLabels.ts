@@ -20,6 +20,29 @@ type WrikeAttachment = {
 	name?: string;
 };
 
+function formatDateInVancouver(date: Date): string {
+	const parts = new Intl.DateTimeFormat('en-CA', {
+		timeZone: 'America/Vancouver',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+	}).formatToParts(date);
+	const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+	return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
+export function getWrikeTaskBusinessDate(task: Pick<WrikeTask, 'createdDate' | 'description'>): string | null {
+	// createdDate is an unambiguous UTC instant. Order descriptions are rendered
+	// in the VPS timezone and can cross a calendar boundary relative to
+	// Vancouver (for example, 7 PM Vancouver appears as the next day on the VPS).
+	if (task.createdDate) {
+		const created = new Date(task.createdDate);
+		if (!Number.isNaN(created.getTime())) return formatDateInVancouver(created);
+	}
+	const described = parseOrderDateFromOrderDescription(task.description ?? '');
+	return described ? formatIsoDateOnlyLocal(described) : null;
+}
+
 function parseOrderDateFromOrderDescription(html: string): Date | null {
 	if (!html) return null;
 	// Match both <p>Date:...</p> and <b>Date:</b> formats
@@ -373,17 +396,11 @@ async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string,
 		if (!nextPageToken) break;
 	}
 
-	// Prefer explicit order date embedded in the task description; fallback to Wrike task createdDate.
+	const startDate = formatIsoDateOnlyLocal(start);
+	const endDate = formatIsoDateOnlyLocal(end);
 	return allTasks.filter((t) => {
-		const desc = t?.description ?? '';
-		const orderDate = parseOrderDateFromOrderDescription(desc);
-		if (orderDate) {
-			const day = startOfLocalDay(orderDate);
-			return day >= start && day <= end;
-		}
-		const created = t?.createdDate ? new Date(t.createdDate) : null;
-		if (!created) return false;
-		return created >= start && created <= end;
+		const businessDate = getWrikeTaskBusinessDate(t);
+		return businessDate !== null && businessDate >= startDate && businessDate <= endDate;
 	});
 }
 

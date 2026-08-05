@@ -212,9 +212,15 @@ export async function createOrderTask(order: OrderData) {
 	`.trim()
 			: '';
 
+	const orderDateVancouver = new Intl.DateTimeFormat('en-CA', {
+		timeZone: 'America/Vancouver',
+		dateStyle: 'medium',
+		timeStyle: 'medium',
+	}).format(new Date(order.createdAt));
+
 	const description = `
 <h3>${paymentConfirmed ? 'PAID · ' : 'AWAITING PAYMENT · '}Order #${order.orderNumber}</h3>
-<p><b>Date:</b> ${new Date(order.createdAt).toLocaleString('en-CA')}</p>
+<p><b>Date:</b> ${orderDateVancouver}</p>
 <hr>
 <h4>Order Overview</h4>
 <p><b>Status:</b> ${paymentConfirmed ? 'Payment confirmed' : 'Awaiting payment'}<br>
