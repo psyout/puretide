@@ -209,6 +209,9 @@ jobs:
             mv .deploy/ops ops
             chmod 700 ops/run-cron.sh
             install -m 0644 ops/puretide.cron /etc/cron.d/puretide
+            # Remove the pre-managed copies to prevent every job running twice.
+            ((crontab -l 2>/dev/null || true) | grep -vE 'puretide\.ca/api/cron/(daily-labels|afternoon-labels|shipping-automation)' || true) > .deploy/root-crontab
+            crontab .deploy/root-crontab
             if systemctl list-unit-files crond.service --no-legend 2>/dev/null | grep -q crond; then
               systemctl enable --now crond
               systemctl is-active --quiet crond
