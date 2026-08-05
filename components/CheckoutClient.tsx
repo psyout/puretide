@@ -1,6 +1,7 @@
 'use client';
 
 import { useCart } from '@/context/CartContext';
+import { readStoredCartPromo, storeCartPromo } from '@/lib/cartPromo';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
@@ -219,6 +220,16 @@ export default function CheckoutClient() {
 	}, [cartItems.length, hasSubmitted, router]);
 
 	useEffect(() => {
+		const storedPromo = readStoredCartPromo();
+		if (!storedPromo) return;
+		setPromoCode(storedPromo.code);
+		setAppliedPromoCode(storedPromo.code);
+		setAppliedDiscount(storedPromo.discount);
+		setAppliedFreeShipping(storedPromo.freeShipping);
+		setShowPromoInput(true);
+	}, []);
+
+	useEffect(() => {
 		if (!FRIENDS_FAMILY_ENABLED) return;
 		let cancelled = false;
 		(async () => {
@@ -264,19 +275,24 @@ export default function CheckoutClient() {
 
 			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
 			if (data.ok) {
-				setAppliedDiscount(Number(data.discount ?? 0));
-				setAppliedFreeShipping(Boolean(data.freeShipping));
+				const discount = Number(data.discount ?? 0);
+				const freeShipping = Boolean(data.freeShipping);
+				setAppliedDiscount(discount);
+				setAppliedFreeShipping(freeShipping);
 				setAppliedPromoCode(normalizedCode);
 				setPromoError(null);
+				storeCartPromo({ code: normalizedCode, discount, freeShipping });
 			} else {
 				setPromoError(data.error || 'Invalid code');
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
 				setAppliedPromoCode(null);
+				storeCartPromo(null);
 			}
 		} catch (error) {
 			setPromoError('Failed to verify code');
 			setAppliedPromoCode(null);
+			storeCartPromo(null);
 		} finally {
 			setIsVerifyingPromo(false);
 		}
@@ -299,9 +315,12 @@ export default function CheckoutClient() {
 				});
 				const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
 				if (data.ok) {
-					setAppliedDiscount(Number(data.discount ?? 0));
-					setAppliedFreeShipping(Boolean(data.freeShipping));
+					const discount = Number(data.discount ?? 0);
+					const freeShipping = Boolean(data.freeShipping);
+					setAppliedDiscount(discount);
+					setAppliedFreeShipping(freeShipping);
 					setPromoError(null);
+					storeCartPromo({ code: appliedPromoCode, discount, freeShipping });
 					return;
 				}
 
@@ -309,6 +328,7 @@ export default function CheckoutClient() {
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
 				setAppliedPromoCode(null);
+				storeCartPromo(null);
 			} catch (error) {
 				if (error instanceof DOMException && error.name === 'AbortError') {
 					return;
@@ -317,6 +337,7 @@ export default function CheckoutClient() {
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
 				setAppliedPromoCode(null);
+				storeCartPromo(null);
 			} finally {
 				setIsVerifyingPromo(false);
 			}
@@ -394,6 +415,7 @@ export default function CheckoutClient() {
 		setAppliedFreeShipping(false);
 		setPromoError(null);
 		setShowPromoInput(false);
+		storeCartPromo(null);
 		setHasSubmitted(false);
 		clearSubmissionState();
 		setPaymentMethod('etransfer');
@@ -415,6 +437,7 @@ export default function CheckoutClient() {
 		setAppliedFreeShipping(false);
 		setPromoError(null);
 		setShowPromoInput(false);
+		storeCartPromo(null);
 		if (!keepSubmissionLoading) clearSubmissionState();
 		setPaymentMethod('etransfer');
 	};

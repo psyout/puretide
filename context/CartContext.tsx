@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, CartItem } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
+import { CART_PROMO_STORAGE_KEY } from '@/lib/cartPromo';
 
 export type PaymentMethod = 'etransfer' | 'creditcard';
 
@@ -157,6 +158,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 			}
 			try {
 				sessionStorage.removeItem(CART_STORAGE_KEY);
+				sessionStorage.removeItem(CART_PROMO_STORAGE_KEY);
 			} catch {
 				// ignore
 			}

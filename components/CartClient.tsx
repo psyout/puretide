@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -13,6 +13,7 @@ import FreeShippingProgress from './FreeShippingProgress';
 import CartItemDetails from './CartItemDetails';
 import type { Product } from '@/types/product';
 import { buildCartStockMap, hasInvalidCartQuantity, resolveCartItemStock } from '@/lib/cartStock';
+import { readStoredCartPromo, storeCartPromo } from '@/lib/cartPromo';
 
 type CartClientProps = {
 	products: Product[];
@@ -23,7 +24,63 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	const { cartItems, removeFromCart, updateQuantity, getTotal, getItemPrice } = useCart();
 	const router = useRouter();
 	const total = getTotal();
+	const rawTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 	const totalSavings = cartItems.reduce((sum, item) => sum + Math.max(0, item.price - getItemPrice(item)) * item.quantity, 0);
+	const [showPromoInput, setShowPromoInput] = useState(true);
+	const [promoCode, setPromoCode] = useState('');
+	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+	const [appliedDiscount, setAppliedDiscount] = useState(0);
+	const [appliedFreeShipping, setAppliedFreeShipping] = useState(false);
+	const [promoError, setPromoError] = useState<string | null>(null);
+	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
+	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
+	const summarySubtotal = promoApplied ? rawTotal : total;
+	const promoDiscountAmount = Number((summarySubtotal * (appliedDiscount / 100)).toFixed(2));
+	const summaryTotal = Number((summarySubtotal - promoDiscountAmount).toFixed(2));
+
+	useEffect(() => {
+		const storedPromo = readStoredCartPromo();
+		if (!storedPromo) return;
+		setPromoCode(storedPromo.code);
+		setAppliedPromoCode(storedPromo.code);
+		setAppliedDiscount(storedPromo.discount);
+		setAppliedFreeShipping(storedPromo.freeShipping);
+		setShowPromoInput(true);
+	}, []);
+
+	const handleApplyPromo = async () => {
+		if (!promoCode.trim()) return;
+		setIsVerifyingPromo(true);
+		setPromoError(null);
+		try {
+			const normalizedCode = promoCode.trim().toUpperCase();
+			const response = await fetch('/api/promo/verify', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ code: normalizedCode, subtotal: rawTotal }),
+			});
+			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
+			if (!data.ok) {
+				setPromoError(data.error || 'Invalid code');
+				setAppliedPromoCode(null);
+				setAppliedDiscount(0);
+				setAppliedFreeShipping(false);
+				storeCartPromo(null);
+				return;
+			}
+			const discount = Number(data.discount ?? 0);
+			const freeShipping = Boolean(data.freeShipping);
+			setPromoCode(normalizedCode);
+			setAppliedPromoCode(normalizedCode);
+			setAppliedDiscount(discount);
+			setAppliedFreeShipping(freeShipping);
+			storeCartPromo({ code: normalizedCode, discount, freeShipping });
+		} catch {
+			setPromoError('Failed to verify code');
+		} finally {
+			setIsVerifyingPromo(false);
+		}
+	};
 
 	// Create a map of product stock for quick lookup
 	const productStockMap = useMemo(() => buildCartStockMap(products), [products]);
@@ -320,12 +377,12 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										<span className='text-deep-tidal-teal-700 text-[0.9rem]'>
 											{item.name} × {item.quantity}
 										</span>
-										<span className='text-deep-tidal-teal-800 font-semibold'>${(getItemPrice(item) * item.quantity).toFixed(2)}</span>
+										<span className='text-deep-tidal-teal-800 font-semibold'>${((promoApplied ? item.price : getItemPrice(item)) * item.quantity).toFixed(2)}</span>
 									</div>
 								))}
 							</div>
 							<div className='border-t border-deep-tidal-teal/10 pt-3 pb-3 mb-1 space-y-2'>
-								{totalSavings > 0 && (
+								{totalSavings > 0 && !promoApplied && (
 									<div className='flex justify-between text-sm font-semibold text-emerald-700'>
 										<span>You save</span>
 										<span>−${totalSavings.toFixed(2)}</span>
@@ -333,9 +390,76 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 								)}
 								<div className='flex justify-between text-lg font-bold'>
 									<span className='text-deep-tidal-teal-800'>Subtotal</span>
-									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
+									<span className='text-deep-tidal-teal'>${summaryTotal.toFixed(2)}</span>
 								</div>
-								<p className='text-xs text-deep-tidal-teal-600'>Shipping and payment fees, if applicable, are confirmed at checkout.</p>
+								{appliedDiscount > 0 && (
+									<div className='flex justify-between text-sm font-semibold text-emerald-700'>
+										<span>Promo discount ({appliedDiscount}%)</span>
+										<span>−${promoDiscountAmount.toFixed(2)}</span>
+									</div>
+								)}
+								<p className='text-xs text-deep-tidal-teal-600'>Shipping and payment fees, if applicable, are confirmed at checkout only.</p>
+							</div>
+							<div className='mb-4 border-y border-deep-tidal-teal/10 py-4'>
+								<button
+									type='button'
+									onClick={() => setShowPromoInput((shown) => !shown)}
+									aria-expanded={showPromoInput}
+									className='flex w-full items-center justify-between text-sm text-deep-tidal-teal-800 hover:text-deep-tidal-teal'>
+									<span>Have a promo code?</span>
+									<svg
+										className={`h-4 w-4 transition-transform ${showPromoInput ? 'rotate-180' : ''}`}
+										fill='none'
+										stroke='currentColor'
+										viewBox='0 0 24 24'
+										aria-hidden='true'>
+										<path
+											strokeLinecap='round'
+											strokeLinejoin='round'
+											strokeWidth={2}
+											d='M19 9l-7 7-7-7'
+										/>
+									</svg>
+								</button>
+								{showPromoInput && (
+									<div className='mt-3 space-y-2'>
+										<div className='flex gap-2'>
+											<input
+												type='text'
+												value={promoCode}
+												onChange={(event) => setPromoCode(event.target.value)}
+												onKeyDown={(event) => {
+													if (event.key === 'Enter') void handleApplyPromo();
+												}}
+												placeholder='Promo code'
+												autoCapitalize='characters'
+												disabled={isVerifyingPromo || promoApplied}
+												className='min-w-0 flex-1 rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm uppercase text-deep-tidal-teal-800 outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-60'
+											/>
+											<button
+												type='button'
+												onClick={() => void handleApplyPromo()}
+												disabled={isVerifyingPromo || promoApplied || !promoCode.trim()}
+												className='rounded-lg bg-deep-tidal-teal px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-50'>
+												{isVerifyingPromo ? 'Applying…' : promoApplied ? 'Applied' : 'Apply'}
+											</button>
+										</div>
+										{promoError && (
+											<p
+												className='text-xs font-medium text-red-600'
+												role='alert'>
+												{promoError}
+											</p>
+										)}
+										{promoApplied && (
+											<p
+												className='text-xs font-semibold text-emerald-700'
+												role='status'>
+												Promo applied{appliedFreeShipping ? ' with free shipping' : ''}.
+											</p>
+										)}
+									</div>
+								)}
 							</div>
 							<button
 								onClick={() => {
