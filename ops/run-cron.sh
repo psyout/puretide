@@ -18,11 +18,11 @@ fi
 echo "$(date -Is) $JOB start"
 case "$JOB" in
 	daily-labels|afternoon-labels)
-		/usr/bin/curl --fail-with-body --show-error --silent --retry 3 --retry-all-errors --max-time 180 \
+		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
 			-X POST "http://127.0.0.1:3000/api/cron/$JOB" -H "x-cron-secret: $CRON_SECRET"
 		;;
 	shipping-automation)
-		/usr/bin/curl --fail-with-body --show-error --silent --retry 3 --retry-all-errors --max-time 180 \
+		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
 			"http://127.0.0.1:3000/api/cron/shipping-automation" -H "Authorization: Bearer $CRON_SECRET"
 		;;
 	*)
