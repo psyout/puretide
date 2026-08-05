@@ -1040,13 +1040,14 @@ export default function CheckoutClient() {
 									Payment Method
 								</h2>
 								<div className='space-y-3'>
-									<label
-										className={`block cursor-pointer rounded-xl border p-4 transition-all ${
+									<div
+										className={`overflow-hidden rounded-xl border transition-all ${
 											paymentMethod === 'etransfer'
-												? 'border-deep-tidal-teal bg-eucalyptus-50/70 shadow-sm ring-1 ring-deep-tidal-teal/15'
+												? 'border-2 border-deep-tidal-teal bg-white'
 												: 'border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
 										}`}>
-										<span className='flex items-start gap-3'>
+										<label className='block cursor-pointer p-4'>
+											<span className='flex items-start gap-3'>
 											<input
 												type='radio'
 												name='payment'
@@ -1055,7 +1056,7 @@ export default function CheckoutClient() {
 												disabled={isProcessing}
 												className='mt-1 h-4 w-4 accent-deep-tidal-teal'
 											/>
-											<span className='min-w-0 flex-1'>
+												<span className='min-w-0 flex-1'>
 												<span className='flex items-center justify-between gap-3'>
 													<span className='font-semibold text-deep-tidal-teal-900'>Interac e-Transfer</span>
 													<span className='shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'>No fee</span>
@@ -1063,12 +1064,12 @@ export default function CheckoutClient() {
 												<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
 													Place your order first, then send the transfer from your banking app using the instructions on the next screen.
 												</span>
+												</span>
 											</span>
-										</span>
-									</label>
-									{paymentMethod === 'etransfer' && (
-										<div
-											className='rounded-xl border border-deep-tidal-teal/10 bg-deep-tidal-teal/[0.035] px-4 py-3'
+										</label>
+										{paymentMethod === 'etransfer' && (
+											<div
+												className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
 											role='status'>
 											<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
 											<ol className='mt-2 space-y-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
@@ -1082,8 +1083,9 @@ export default function CheckoutClient() {
 													<span className='font-semibold'>3.</span> Your order begins processing after the transfer is confirmed.
 												</li>
 											</ol>
-										</div>
-									)}
+											</div>
+										)}
+									</div>
 								</div>
 								{FRIENDS_FAMILY_ENABLED && paymentMethod === 'etransfer' && (
 									<div className='mt-3 border-t border-b pt-3 pb-4'>
@@ -1198,15 +1200,16 @@ export default function CheckoutClient() {
 										)}
 									</div>
 								)}
-								<label
-									className={`mt-3 block rounded-xl border p-4 transition-all ${
+								<div
+									className={`mt-3 overflow-hidden rounded-xl border transition-all ${
 										isCreditCardDisabled
 											? 'cursor-not-allowed border-deep-tidal-teal/10 bg-slate-50 opacity-60'
 											: paymentMethod === 'creditcard'
-												? 'cursor-pointer border-deep-tidal-teal bg-eucalyptus-50/70 shadow-sm ring-1 ring-deep-tidal-teal/15'
+														? 'cursor-pointer border-2 border-deep-tidal-teal bg-white'
 												: 'cursor-pointer border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
 									}`}>
-									<span className='flex items-start gap-3'>
+									<label className={`block p-4 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+										<span className='flex items-start gap-3'>
 										<input
 											type='radio'
 											name='payment'
@@ -1215,7 +1218,7 @@ export default function CheckoutClient() {
 											disabled={isProcessing || isCreditCardDisabled}
 											className='mt-1 h-4 w-4 accent-deep-tidal-teal'
 										/>
-										<span className='min-w-0 flex-1'>
+											<span className='min-w-0 flex-1'>
 											<span className='flex items-center justify-between gap-3'>
 												<span className='font-semibold text-deep-tidal-teal-900'>Credit card</span>
 												<span className='shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900'>+5% fee</span>
@@ -1223,20 +1226,21 @@ export default function CheckoutClient() {
 											<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
 												Continue to our secure payment page after checkout to enter your card details.
 											</span>
+											</span>
 										</span>
-									</span>
-								</label>
-								{paymentMethod === 'creditcard' && !isCreditCardDisabled && (
-									<div
-										className='mt-3 rounded-xl border border-deep-tidal-teal/10 bg-deep-tidal-teal/[0.035] px-4 py-3'
+									</label>
+									{paymentMethod === 'creditcard' && !isCreditCardDisabled && (
+										<div
+											className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
 										role='status'>
 										<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
 										<p className='mt-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
 											You&apos;ll continue to an encrypted card form to complete payment. The 5% processing fee is included in the order total shown here. Card
 											payments are limited to $500 per transaction.
 										</p>
-									</div>
-								)}
+										</div>
+									)}
+								</div>
 								{isCreditCardOverLimit && (
 									<div className='mt-3 bg-red-50 border border-red-200 rounded-lg p-3'>
 										<p className='text-sm text-red-700 leading-relaxed'>
