@@ -58,7 +58,8 @@ export async function POST(request: Request) {
 		const dateParam = url.searchParams.get('date');
 		const requested = parseIsoDateOnly(dateParam);
 
-		// Default: yesterday (local server time, DST-safe)
+		// The morning batch is named for the date on which its 6 AM Vancouver
+		// window starts. At 6 AM today, process yesterday 6 AM through today 6 AM.
 		let base: Date;
 		if (requested) {
 			base = requested;

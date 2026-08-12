@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getWrikeTaskBusinessDate, parseLabelFromOrderDescription } from '@/lib/wrikeDailyLabels';
+import { getDailyLabelWindow, getWrikeTaskBusinessDate, parseLabelFromOrderDescription } from '@/lib/wrikeDailyLabels';
+
+test('morning label window runs from 6 AM to 6 AM in Vancouver', () => {
+	const { start, end } = getDailyLabelWindow(new Date(2026, 7, 10));
+	assert.equal(start.toISOString(), '2026-08-10T13:00:00.000Z');
+	assert.equal(end.toISOString(), '2026-08-11T13:00:00.000Z');
+});
+
+test('morning label window remains Vancouver-local across daylight-saving changes', () => {
+	const { start, end } = getDailyLabelWindow(new Date(2026, 10, 1));
+	assert.equal(start.toISOString(), '2026-11-01T14:00:00.000Z');
+	assert.equal(end.toISOString(), '2026-11-02T14:00:00.000Z');
+});
 
 test('assigns late-evening UTC orders to their Vancouver business date', () => {
 	assert.equal(

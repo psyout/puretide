@@ -396,12 +396,46 @@ async function fetchTasksInFolderByDateRange(folderId: string, apiToken: string,
 		if (!nextPageToken) break;
 	}
 
-	const startDate = formatIsoDateOnlyLocal(start);
-	const endDate = formatIsoDateOnlyLocal(end);
 	return allTasks.filter((t) => {
-		const businessDate = getWrikeTaskBusinessDate(t);
-		return businessDate !== null && businessDate >= startDate && businessDate <= endDate;
+		if (!t.createdDate) return false;
+		const created = new Date(t.createdDate);
+		return !Number.isNaN(created.getTime()) && created >= start && created < end;
 	});
+}
+
+function vancouverDateTimeToInstant(date: Date, hour: number): Date {
+	const year = date.getFullYear();
+	const month = date.getMonth();
+	const day = date.getDate();
+	const desiredAsUtc = Date.UTC(year, month, day, hour, 0, 0, 0);
+	let candidate = new Date(desiredAsUtc);
+	for (let attempt = 0; attempt < 3; attempt += 1) {
+		const parts = new Intl.DateTimeFormat('en-CA', {
+			timeZone: 'America/Vancouver',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hourCycle: 'h23',
+		}).formatToParts(candidate);
+		const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+		const representedAsUtc = Date.UTC(value('year'), value('month') - 1, value('day'), value('hour'), value('minute'), value('second'));
+		const correction = desiredAsUtc - representedAsUtc;
+		if (correction === 0) break;
+		candidate = new Date(candidate.getTime() + correction);
+	}
+	return candidate;
+}
+
+export function getDailyLabelWindow(date: Date): { start: Date; end: Date } {
+	const nextDate = new Date(date);
+	nextDate.setDate(nextDate.getDate() + 1);
+	return {
+		start: vancouverDateTimeToInstant(date, 6),
+		end: vancouverDateTimeToInstant(nextDate, 6),
+	};
 }
 
 function getLabelsTaskStatus(): string | null {
@@ -618,9 +652,8 @@ function fillLabelsToFullSheets(labels: Label[]): Label[] {
 
 export async function generateAndAttachDailyLabels(params: { apiToken: string; ordersFolderId: string; labelsFolderId: string; date: Date }): Promise<DailyLabelsResult> {
 	const date = params.date;
-	const start = startOfLocalDay(date);
-	const end = endOfLocalDay(date);
-	const isoDate = formatIsoDateOnlyLocal(start);
+	const { start, end } = getDailyLabelWindow(date);
+	const isoDate = formatIsoDateOnlyLocal(date);
 
 	console.log('[wrikeDailyLabels] generateAndAttachDailyLabels:start', { isoDate, start: start.toISOString(), end: end.toISOString() });
 
