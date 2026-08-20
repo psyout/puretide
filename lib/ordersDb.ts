@@ -492,6 +492,91 @@ export async function getOrderBySessionFromDb(session: string): Promise<StoredOr
 	return parseOrderJson(row.order_json);
 }
 
+export type PaidFulfillmentClaim = {
+	paidAt: string;
+	source: 'creditcard_charge' | 'creditcard_webhook';
+	transactionId?: string;
+	amountReceived?: number;
+};
+
+export async function updatePendingOrderIfPending(orderNumber: string, updates: StoredOrder): Promise<StoredOrder | null> {
+	const db = await getDb();
+	const select = db.prepare('SELECT order_json FROM orders WHERE order_number = ? AND payment_status = ? LIMIT 1');
+	select.bind([orderNumber, 'pending']);
+	if (!select.step()) {
+		select.free();
+		return null;
+	}
+
+	const row = select.getAsObject() as { order_json: string };
+	select.free();
+	const updatedOrder = normalizeOrder({ ...parseOrderJson(row.order_json), ...updates });
+	const now = new Date().toISOString();
+	db.run(
+		`UPDATE orders
+		 SET payment_status = ?, order_json = ?, updated_at = ?
+		 WHERE order_number = ? AND payment_status = ?`,
+		[String(updatedOrder.paymentStatus), JSON.stringify(updatedOrder), now, orderNumber, 'pending'],
+	);
+	const changesResult = db.exec('SELECT changes() AS count');
+	const changedRows = Number(changesResult[0]?.values[0]?.[0] ?? 0);
+	if (changedRows !== 1) {
+		return null;
+	}
+
+	persistDb(db);
+	return updatedOrder;
+}
+
+/**
+ * Atomically moves a pending order to paid and grants the caller permission to
+ * run fulfillment. Credit-card approval can arrive through both the synchronous
+ * charge response and the provider webhook; only the first caller may proceed.
+ */
+export async function claimPaidOrderForFulfillment(orderNumber: string, claim: PaidFulfillmentClaim): Promise<StoredOrder | null> {
+	const db = await getDb();
+	const select = db.prepare('SELECT order_json FROM orders WHERE order_number = ? AND payment_status = ? LIMIT 1');
+	select.bind([orderNumber, 'pending']);
+	if (!select.step()) {
+		select.free();
+		return null;
+	}
+
+	const row = select.getAsObject() as { order_json: string };
+	select.free();
+	const current = parseOrderJson(row.order_json);
+	const claimedOrder: StoredOrder = {
+		...current,
+		paymentStatus: 'paid',
+		paidAt: claim.paidAt,
+		paymentCompletion: {
+			source: claim.source,
+			transactionId: claim.transactionId,
+			amountReceived: claim.amountReceived,
+			claimedAt: claim.paidAt,
+		},
+	};
+	const now = new Date().toISOString();
+
+	// There is intentionally no await between the read and conditional update.
+	// sql.js executes this synchronously, so concurrent request handlers cannot
+	// both change the same pending order to paid in this process.
+	db.run(
+		`UPDATE orders
+		 SET payment_status = ?, order_json = ?, updated_at = ?
+		 WHERE order_number = ? AND payment_status = ?`,
+		['paid', JSON.stringify(claimedOrder), now, orderNumber, 'pending'],
+	);
+	const changesResult = db.exec('SELECT changes() AS count');
+	const changedRows = Number(changesResult[0]?.values[0]?.[0] ?? 0);
+	if (changedRows !== 1) {
+		return null;
+	}
+
+	persistDb(db);
+	return claimedOrder;
+}
+
 export async function upsertOrderInDb(order: StoredOrder): Promise<StoredOrder> {
 	const db = await getDb();
 	const normalized = normalizeOrder(order);

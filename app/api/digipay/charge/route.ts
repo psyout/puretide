@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getPaymentProvider } from '@/lib/paymentProvider';
-import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
+import { claimPaidOrderForFulfillment, getOrderByOrderNumberFromDb, updatePendingOrderIfPending, upsertOrderInDb } from '@/lib/ordersDb';
 import { getGatewaylinxConfig, validateEnv } from '@/lib/env';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
 import { createRetryJobForOrder } from '@/lib/retryJobs';
-import { validateOrderStateTransition, type OrderPaymentStatus } from '@/lib/orderComputation';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -18,21 +17,23 @@ type ChargeResult = {
 	error?: string;
 };
 
-async function markOrderPaidAfterCharge(order: Record<string, unknown>, orderNumber: string, transactionId?: string) {
-	if (order.paymentStatus === 'paid') {
-		return;
-	}
-	if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'paid')) {
-		return;
-	}
-
+async function markOrderPaidAfterCharge(orderNumber: string, transactionId?: string) {
 	const gatewaylinxConfig = getGatewaylinxConfig();
 	const paidAt = new Date().toISOString();
+	const claimedOrder = await claimPaidOrderForFulfillment(orderNumber, {
+		paidAt,
+		source: 'creditcard_charge',
+		transactionId,
+	});
+	if (!claimedOrder) {
+		console.log(JSON.stringify({ label: 'digipay:charge:already_claimed', orderNumber, transactionId }));
+		return;
+	}
 
 	if (gatewaylinxConfig?.dryRunFulfillment) {
-		const existingOrderJson = (order.order_json as Record<string, unknown>) || {};
+		const existingOrderJson = (claimedOrder.order_json as Record<string, unknown>) || {};
 		await upsertOrderInDb({
-			...order,
+			...claimedOrder,
 			paymentStatus: 'paid',
 			paidAt,
 			order_json: {
@@ -57,7 +58,7 @@ async function markOrderPaidAfterCharge(order: Record<string, unknown>, orderNum
 	let adminEmailStatus: { sent: boolean; skipped: boolean; error?: string };
 	let fulfillmentFailed = false;
 	try {
-		const fulfillmentResult = await runFulfillment(order as FulfillmentOrder);
+		const fulfillmentResult = await runFulfillment(claimedOrder as FulfillmentOrder);
 		emailStatus = fulfillmentResult.emailStatus;
 		adminEmailStatus = fulfillmentResult.adminEmailStatus;
 	} catch (fulfillError) {
@@ -74,7 +75,7 @@ async function markOrderPaidAfterCharge(order: Record<string, unknown>, orderNum
 	}
 
 	await upsertOrderInDb({
-		...order,
+		...claimedOrder,
 		paymentStatus: 'paid',
 		paidAt,
 		fulfillmentStatus: fulfillmentFailed
@@ -87,7 +88,7 @@ async function markOrderPaidAfterCharge(order: Record<string, unknown>, orderNum
 			: {
 					stockUpdated: true,
 					emailsSent: Boolean(emailStatus?.sent && adminEmailStatus?.sent),
-					clientSynced: (order.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
+					clientSynced: (claimedOrder.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
 				},
 		emailStatus,
 		adminEmailStatus,
@@ -129,15 +130,20 @@ export async function POST(request: Request) {
 		}
 
 		if (result.indeterminate) {
-			await upsertOrderInDb({
-				...orderRecord,
+			const pendingOrder = await updatePendingOrderIfPending(orderNumber, {
 				paymentStatus: 'pending',
 				gatewaylinxCharge: {
 					indeterminate: true,
 					error: result.error ?? null,
 					updatedAt: new Date().toISOString(),
 				},
-			} as Record<string, unknown>);
+			});
+			if (!pendingOrder) {
+				const latestOrder = await getOrderByOrderNumberFromDb(orderNumber);
+				if (latestOrder?.paymentStatus === 'paid') {
+					return NextResponse.json({ success: true, order_id: result.order_id });
+				}
+			}
 			return NextResponse.json({
 				success: false,
 				indeterminate: true,
@@ -146,20 +152,23 @@ export async function POST(request: Request) {
 		}
 
 		if (result.success) {
-			await markOrderPaidAfterCharge(orderRecord, orderNumber, result.order_id);
+			await markOrderPaidAfterCharge(orderNumber, result.order_id);
 			return NextResponse.json({ success: true, order_id: result.order_id });
 		}
 
-		if (orderRecord.paymentStatus !== 'paid' && validateOrderStateTransition(orderRecord.paymentStatus as OrderPaymentStatus, 'failed')) {
-			await upsertOrderInDb({
-				...orderRecord,
-				paymentStatus: 'failed',
-				paymentFailure: {
-					reason: 'charge_declined',
-					error: result.error ?? null,
-					updatedAt: new Date().toISOString(),
-				},
-			} as Record<string, unknown>);
+		const failedOrder = await updatePendingOrderIfPending(orderNumber, {
+			paymentStatus: 'failed',
+			paymentFailure: {
+				reason: 'charge_declined',
+				error: result.error ?? null,
+				updatedAt: new Date().toISOString(),
+			},
+		});
+		if (!failedOrder) {
+			const latestOrder = await getOrderByOrderNumberFromDb(orderNumber);
+			if (latestOrder?.paymentStatus === 'paid') {
+				return NextResponse.json({ success: true, order_id: result.order_id });
+			}
 		}
 
 		return NextResponse.json({ success: false, error: result.error ?? 'Payment was declined.' });

@@ -30,6 +30,25 @@ export default function PromoBannerWrapper({ enabled = false, message, cta }: Pr
 		setIsCollapsed(subscribed === 'true');
 	}, []);
 
+	useEffect(() => {
+		if (!isMounted || !topStackRef.current) return;
+
+		const topStack = topStackRef.current;
+		const updateHeaderHeight = () => {
+			document.documentElement.style.setProperty('--site-header-height', `${Math.ceil(topStack.getBoundingClientRect().height)}px`);
+		};
+
+		updateHeaderHeight();
+		const resizeObserver = new ResizeObserver(updateHeaderHeight);
+		resizeObserver.observe(topStack);
+		window.addEventListener('resize', updateHeaderHeight);
+
+		return () => {
+			resizeObserver.disconnect();
+			window.removeEventListener('resize', updateHeaderHeight);
+		};
+	}, [enabled, isCollapsed, isMounted]);
+
 	if (!isMounted) {
 		return <Header />;
 	}

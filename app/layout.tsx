@@ -5,6 +5,7 @@ import Script from 'next/script';
 import './globals.css';
 import { Providers } from './providers';
 import MetaPixelPageView from '@/components/MetaPixelPageView';
+import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
 	title: 'Pure Tide Wellness - Advanced Peptide Formulations',
@@ -67,11 +68,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 					`}
 				</Script>
 			</head>
-			<body className={`${matimo.variable} antialiased`}>
+			<body className={`${matimo.variable} min-h-screen antialiased`}>
 				<Suspense fallback={null}>
 					<MetaPixelPageView />
 				</Suspense>
 				<Providers>{children}</Providers>
+				<Footer />
 			</body>
 		</html>
 	);

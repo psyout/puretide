@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getOrderBySessionFromDb, upsertOrderInDb } from '@/lib/ordersDb';
+import { claimPaidOrderForFulfillment, getOrderBySessionFromDb, updatePendingOrderIfPending, upsertOrderInDb } from '@/lib/ordersDb';
 import { runFulfillment, type FulfillmentOrder } from '@/lib/orderFulfillment';
 import { createRetryJobForOrder } from '@/lib/retryJobs';
-import { validateOrderStateTransition, type OrderPaymentStatus } from '@/lib/orderComputation';
 import { getPaymentProvider } from '@/lib/paymentProvider';
 import { getGatewaylinxConfig } from '@/lib/env';
 import { validateEnv } from '@/lib/env';
@@ -72,11 +71,7 @@ export async function POST(request: Request) {
 						receivedAmount: result.amountReceived,
 					}),
 				);
-				if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'failed')) {
-					return json({ ok: true, message: 'Order already processed' });
-				}
-				await upsertOrderInDb({
-					...order,
+				const failedOrder = await updatePendingOrderIfPending(result.orderNumber, {
 					paymentStatus: 'failed',
 					paymentFailure: {
 						reason: 'amount_mismatch',
@@ -84,7 +79,10 @@ export async function POST(request: Request) {
 						receivedAmount: result.amountReceived,
 						updatedAt: new Date().toISOString(),
 					},
-				} as Record<string, unknown>);
+				});
+				if (!failedOrder) {
+					return json({ ok: true, message: 'Order already processed' });
+				}
 				return json({ ok: false, error: 'Amount mismatch' }, { status: 400 });
 			}
 		}
@@ -92,13 +90,23 @@ export async function POST(request: Request) {
 		console.log(JSON.stringify({ label: 'creditcard:webhook:approved', orderNumber: result.orderNumber, amountReceived: result.amountReceived }));
 
 		const paidAt = new Date().toISOString();
+		const claimedOrder = await claimPaidOrderForFulfillment(result.orderNumber, {
+			paidAt,
+			source: 'creditcard_webhook',
+			transactionId: result.transactionId,
+			amountReceived: result.amountReceived,
+		});
+		if (!claimedOrder) {
+			console.log(JSON.stringify({ label: 'creditcard:webhook:already_claimed', orderNumber: result.orderNumber, transactionId: result.transactionId }));
+			return json({ ok: true, message: 'Order already processed' });
+		}
 
 		// Gatewaylinx dry-run fulfillment mode
 		if (isGatewaylinx && gatewaylinxConfig.dryRunFulfillment) {
 			console.log(JSON.stringify({ label: 'creditcard:webhook:dry_run', orderNumber: result.orderNumber }));
 
 			// Store additive dry-run audit marker in order_json
-			const existingOrderJson = ((order as Record<string, unknown>).order_json as Record<string, unknown>) || {};
+			const existingOrderJson = (claimedOrder.order_json as Record<string, unknown>) || {};
 			const gatewaylinxAudit = {
 				dryRunApprovedAt: paidAt,
 				transactionId: result.transactionId,
@@ -108,7 +116,7 @@ export async function POST(request: Request) {
 
 			// Mark as paid for frontend confirmation, but skip fulfillment
 			await upsertOrderInDb({
-				...order,
+				...claimedOrder,
 				paymentStatus: 'paid',
 				paidAt,
 				order_json: {
@@ -134,7 +142,7 @@ export async function POST(request: Request) {
 		let adminEmailStatus: { sent: boolean; skipped: boolean; error?: string };
 		let fulfillmentFailed = false;
 		try {
-			const fulfillmentResult = await runFulfillment(order as FulfillmentOrder);
+			const fulfillmentResult = await runFulfillment(claimedOrder as FulfillmentOrder);
 			emailStatus = fulfillmentResult.emailStatus;
 			adminEmailStatus = fulfillmentResult.adminEmailStatus;
 		} catch (fulfillError) {
@@ -160,14 +168,8 @@ export async function POST(request: Request) {
 			console.warn(`[creditcard:webhook] Order ${result.orderNumber} admin email not sent: ${adminEmailStatus.skipped ? 'SMTP not configured' : (adminEmailStatus.error ?? 'unknown')}`);
 		}
 
-		// Validate state transition before marking as paid
-		if (!validateOrderStateTransition(order.paymentStatus as OrderPaymentStatus, 'paid')) {
-			console.warn(JSON.stringify({ label: 'creditcard:webhook:invalid_transition', orderNumber: result.orderNumber, from: order.paymentStatus, to: 'paid' }));
-			return json({ ok: true, message: 'Order already processed' });
-		}
-
 		await upsertOrderInDb({
-			...order,
+			...claimedOrder,
 			paymentStatus: 'paid',
 			paidAt,
 			fulfillmentStatus: fulfillmentFailed
@@ -177,11 +179,11 @@ export async function POST(request: Request) {
 						clientSynced: false,
 						failedAt: paidAt,
 					}
-				: {
-						stockUpdated: true,
-						emailsSent: Boolean(emailStatus?.sent && adminEmailStatus?.sent),
-						clientSynced: (order.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
-					},
+					: {
+							stockUpdated: true,
+							emailsSent: Boolean(emailStatus?.sent && adminEmailStatus?.sent),
+							clientSynced: (claimedOrder.fulfillmentStatus as { clientSynced?: boolean } | undefined)?.clientSynced ?? false,
+						},
 			emailStatus,
 			adminEmailStatus,
 		} as Record<string, unknown>);

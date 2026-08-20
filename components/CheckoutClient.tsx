@@ -44,6 +44,7 @@ export default function CheckoutClient() {
 	const [gatewaylinxOrderNumber, setGatewaylinxOrderNumber] = useState<string | null>(null);
 	const [gatewaylinxConfirmationToken, setGatewaylinxConfirmationToken] = useState<string | null>(null);
 	const iframeRef = useRef<HTMLIFrameElement>(null);
+	const gatewaylinxChargeInFlightRef = useRef(false);
 
 	// Handle Gatewaylinx iframe postMessage
 	useEffect(() => {
@@ -86,6 +87,8 @@ export default function CheckoutClient() {
 	};
 
 	const handleGatewaylinxCharge = async (orderNumber: string, token: string, reference: string) => {
+		if (gatewaylinxChargeInFlightRef.current) return;
+		gatewaylinxChargeInFlightRef.current = true;
 		try {
 			const response = await fetch('/api/digipay/charge', {
 				method: 'POST',
@@ -121,6 +124,7 @@ export default function CheckoutClient() {
 			clearSubmissionState();
 			setHasSubmitted(false);
 		} finally {
+			gatewaylinxChargeInFlightRef.current = false;
 			setGatewaylinxIframeUrl(null);
 			setGatewaylinxOrderNumber(null);
 			setGatewaylinxConfirmationToken(null);
@@ -152,7 +156,7 @@ export default function CheckoutClient() {
 	const [isProcessing, setIsProcessing] = useState(false);
 	const submissionInProgressRef = useRef(false);
 	const [hasSubmitted, setHasSubmitted] = useState(false);
-	const [showPromoInput, setShowPromoInput] = useState(false);
+	const [showPromoInput, setShowPromoInput] = useState(true);
 	const [showOrderNotes, setShowOrderNotes] = useState(false);
 	const [promoCode, setPromoCode] = useState('');
 	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
@@ -1042,47 +1046,45 @@ export default function CheckoutClient() {
 								<div className='space-y-3'>
 									<div
 										className={`overflow-hidden rounded-xl border transition-all ${
-											paymentMethod === 'etransfer'
-												? 'border-2 border-deep-tidal-teal bg-white'
-												: 'border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
+											paymentMethod === 'etransfer' ? 'border-2 border-deep-tidal-teal bg-white' : 'border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
 										}`}>
 										<label className='block cursor-pointer p-4'>
 											<span className='flex items-start gap-3'>
-											<input
-												type='radio'
-												name='payment'
-												checked={paymentMethod === 'etransfer'}
-												onChange={() => setPaymentMethod('etransfer')}
-												disabled={isProcessing}
-												className='mt-1 h-4 w-4 accent-deep-tidal-teal'
-											/>
+												<input
+													type='radio'
+													name='payment'
+													checked={paymentMethod === 'etransfer'}
+													onChange={() => setPaymentMethod('etransfer')}
+													disabled={isProcessing}
+													className='mt-1 h-4 w-4 accent-deep-tidal-teal'
+												/>
 												<span className='min-w-0 flex-1'>
-												<span className='flex items-center justify-between gap-3'>
-													<span className='font-semibold text-deep-tidal-teal-900'>Interac e-Transfer</span>
-													<span className='shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'>No fee</span>
-												</span>
-												<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
-													Place your order first, then send the transfer from your banking app using the instructions on the next screen.
-												</span>
+													<span className='flex items-center justify-between gap-3'>
+														<span className='font-semibold text-deep-tidal-teal-900'>Interac e-Transfer</span>
+														<span className='shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'>No fee</span>
+													</span>
+													<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
+														Place your order first, then send the transfer from your banking app using the instructions on the next screen.
+													</span>
 												</span>
 											</span>
 										</label>
 										{paymentMethod === 'etransfer' && (
 											<div
 												className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
-											role='status'>
-											<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
-											<ol className='mt-2 space-y-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
-												<li>
-													<span className='font-semibold'>1.</span> We&apos;ll show the secure auto-deposit email and your order number.
-												</li>
-												<li>
-													<span className='font-semibold'>2.</span> Send the exact total and include your order number in the Interac message.
-												</li>
-												<li>
-													<span className='font-semibold'>3.</span> Your order begins processing after the transfer is confirmed.
-												</li>
-											</ol>
+												role='status'>
+												<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
+												<ol className='mt-2 space-y-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
+													<li>
+														<span className='font-semibold'>1.</span> We&apos;ll show the secure auto-deposit email and your order number.
+													</li>
+													<li>
+														<span className='font-semibold'>2.</span> Send the exact total and include your order number in the Interac message.
+													</li>
+													<li>
+														<span className='font-semibold'>3.</span> Your order begins processing after the transfer is confirmed.
+													</li>
+												</ol>
 											</div>
 										)}
 									</div>
@@ -1205,39 +1207,39 @@ export default function CheckoutClient() {
 										isCreditCardDisabled
 											? 'cursor-not-allowed border-deep-tidal-teal/10 bg-slate-50 opacity-60'
 											: paymentMethod === 'creditcard'
-														? 'cursor-pointer border-2 border-deep-tidal-teal bg-white'
+												? 'cursor-pointer border-2 border-deep-tidal-teal bg-white'
 												: 'cursor-pointer border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
 									}`}>
 									<label className={`block p-4 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
 										<span className='flex items-start gap-3'>
-										<input
-											type='radio'
-											name='payment'
-											checked={paymentMethod === 'creditcard'}
-											onChange={() => setPaymentMethod('creditcard')}
-											disabled={isProcessing || isCreditCardDisabled}
-											className='mt-1 h-4 w-4 accent-deep-tidal-teal'
-										/>
+											<input
+												type='radio'
+												name='payment'
+												checked={paymentMethod === 'creditcard'}
+												onChange={() => setPaymentMethod('creditcard')}
+												disabled={isProcessing || isCreditCardDisabled}
+												className='mt-1 h-4 w-4 accent-deep-tidal-teal'
+											/>
 											<span className='min-w-0 flex-1'>
-											<span className='flex items-center justify-between gap-3'>
-												<span className='font-semibold text-deep-tidal-teal-900'>Credit card</span>
-												<span className='shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900'>+5% fee</span>
-											</span>
-											<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
-												Continue to our secure payment page after checkout to enter your card details.
-											</span>
+												<span className='flex items-center justify-between gap-3'>
+													<span className='font-semibold text-deep-tidal-teal-900'>Credit card</span>
+													<span className='shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900'>+5% fee</span>
+												</span>
+												<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
+													Continue to our secure payment page after checkout to enter your card details.
+												</span>
 											</span>
 										</span>
 									</label>
 									{paymentMethod === 'creditcard' && !isCreditCardDisabled && (
 										<div
 											className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
-										role='status'>
-										<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
-										<p className='mt-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
-											You&apos;ll continue to an encrypted card form to complete payment. The 5% processing fee is included in the order total shown here. Card
-											payments are limited to $500 per transaction.
-										</p>
+											role='status'>
+											<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
+											<p className='mt-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
+												You&apos;ll continue to an encrypted card form to complete payment. The 5% processing fee is included in the order total shown here. Card
+												payments are limited to $500 per transaction.
+											</p>
 										</div>
 									)}
 								</div>

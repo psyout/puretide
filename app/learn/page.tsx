@@ -26,7 +26,6 @@ export default function EducationPage() {
 			<FAQ />
 			<Disclaimer />
 			<CTABanner />
-			<Footer />
 		</div>
 	);
 }
@@ -830,38 +829,5 @@ function CTABanner() {
 				</a>
 			</div>
 		</section>
-	);
-}
-
-function Footer() {
-	return (
-		<footer className='bg-[#0e191d] px-10 py-9'>
-			<div className=' mx-auto flex flex-col md:flex-row items-center justify-between flex-wrap gap-4'>
-				<span className='text-[11px] font-medium tracking-[0.1em] uppercase text-white/25'>© 2026 PureTide Peptides. All rights reserved.</span>
-				<ul className='flex gap-7 list-none'>
-					<li>
-						<a
-							href='https://puretide.ca/privacy'
-							className='text-[11px] font-medium tracking-[0.1em] uppercase text-white/25 no-underline transition-colors hover:text-white/50'>
-							Privacy
-						</a>
-					</li>
-					<li>
-						<a
-							href='https://puretide.ca/terms'
-							className='text-[11px] font-medium tracking-[0.1em] uppercase text-white/25 no-underline transition-colors hover:text-white/50'>
-							Terms
-						</a>
-					</li>
-					<li>
-						<a
-							href='https://puretide.ca/#contact'
-							className='text-[11px] font-medium tracking-[0.1em] uppercase text-white/25 no-underline transition-colors hover:text-white/50'>
-							Contact
-						</a>
-					</li>
-				</ul>
-			</div>
-		</footer>
 	);
 }

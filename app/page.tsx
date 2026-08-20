@@ -1,6 +1,5 @@
 import ProductGrid from '@/components/ProductGrid';
 import Hero from '@/components/Hero';
-import Footer from '@/components/Footer';
 import About from '@/components/About';
 import Contact from '@/components/Contact';
 import PromotionModal from '@/components/PromotionModal';
@@ -34,7 +33,6 @@ export default async function Home() {
 
 			<Contact />
 
-			<Footer />
 		</div>
 	);
 }

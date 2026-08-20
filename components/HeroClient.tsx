@@ -52,7 +52,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 	const currentSlide = slides[currentIndex];
 
 	return (
-		<section className='relative w-full h-[100svh] sm:h-screen overflow-hidden'>
+		<section className='relative h-[100svh] w-full overflow-hidden'>
 			{/* Background image/video slider */}
 			<div className='absolute inset-0 w-full h-full'>
 				{slides.map((slide, index) => (
@@ -102,24 +102,29 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			</div>
 
 			{/* Text overlay */}
-			<div className='relative z-10 h-full flex flex-col items-center justify-center mx-auto max-w-7xl px-6 pb-20 sm:px-6 sm:pb-0 text-center text-pretty'>
-				<div className='mb-4 lg:mb-6'>
-					<LogoHorizontal
-						className='h-24 sm:h-32 md:h-36 lg:h-40 w-auto mx-auto drop-shadow-2xl'
-						fillColor='fill-white drop-shadow-xl/50'
-					/>
+			<div
+				className='absolute inset-x-0 bottom-0 z-10 flex items-center justify-center'
+				style={{ top: 'var(--site-header-height, 3.75rem)' }}>
+				<div className='mx-auto flex max-w-7xl flex-col items-center px-6 text-center text-pretty'>
+					<div className='mb-4 lg:mb-6'>
+						<LogoHorizontal
+							className='mx-auto h-24 w-auto drop-shadow-2xl sm:h-28 md:h-32 lg:h-36'
+							fillColor='fill-white drop-shadow-xl/50'
+						/>
+					</div>
+					<p
+						className='flex min-h-36 max-w-sm items-center justify-center text-base leading-relaxed text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)] sm:min-h-48 sm:max-w-lg sm:text-xl md:text-2xl lg:min-h-[5.25rem] lg:max-w-2xl lg:text-xl'
+						aria-live='polite'>
+						{currentSlide.description}
+					</p>
 				</div>
-				<p
-					className='min-h-36 max-w-sm text-base leading-relaxed text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)] sm:h-[200px] sm:max-w-lg sm:text-xl md:text-2xl lg:h-[180px] lg:max-w-2xl lg:text-xl'
-					aria-live='polite'>
-					{currentSlide.description}
-				</p>
 			</div>
 
 			{/* Navigation arrows */}
 			<button
 				onClick={goToPrevious}
 				className='absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 transform rounded-full bg-deep-tidal-teal/70 p-3 backdrop-blur-sm transition-all duration-300 hover:bg-deep-tidal-teal-600 sm:block group'
+				style={{ top: 'calc((100% + var(--site-header-height, 3.75rem)) / 2)' }}
 				aria-label='Previous slide'>
 				<svg
 					className='w-6 h-6 text-white group-hover:scale-110 transition-transform'
@@ -137,6 +142,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			<button
 				onClick={goToNext}
 				className='absolute right-4 top-1/2 z-20 hidden -translate-y-1/2 transform rounded-full bg-deep-tidal-teal/70 p-3 backdrop-blur-sm transition-all duration-300 hover:bg-deep-tidal-teal-600 sm:block group'
+				style={{ top: 'calc((100% + var(--site-header-height, 3.75rem)) / 2)' }}
 				aria-label='Next slide'>
 				<svg
 					className='w-6 h-6 text-white group-hover:scale-110 transition-transform'
