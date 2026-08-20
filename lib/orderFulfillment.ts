@@ -3,7 +3,7 @@ import { sendLowStockAlert, sendMail } from '@/lib/email';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 import { createOrderTask, createClientTask } from '@/lib/wrike';
 import { decrementStock, getProductInventory, getProductsBelowReorderPoint } from '@/lib/wrikeProducts';
-import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
+import { readSheetProducts, upsertSheetClient, writeSheetProducts } from '@/lib/stockSheet';
 
 export type FulfillmentOrder = {
 	orderNumber: string;
@@ -358,7 +358,7 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		});
 	}
 
-	await createClientTask({
+	const clientRecord = {
 		email: order.customer.email,
 		firstName: order.customer.firstName,
 		lastName: order.customer.lastName,
@@ -370,7 +370,12 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		orderTotal: order.total,
 		lastOrderDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
 		productsPurchased: order.cartItems.map((item) => item.name),
-	});
+		discountAmount: order.discountAmount,
+		promoCode: order.promoCode,
+	};
+
+	await createClientTask(clientRecord);
+	await upsertSheetClient(clientRecord);
 
 	// Final step: update Google Sheets stock (source of truth)
 	await decrementGoogleSheetStock(order.orderNumber, order.cartItems);

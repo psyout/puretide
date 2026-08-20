@@ -496,7 +496,7 @@ export const readSheetClients = async (): Promise<ClientRecord[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'Clients!A:M',
+			range: 'Clients!A:N',
 		});
 		const rows = response.data.values ?? [];
 		if (rows.length <= 1) return [];
@@ -516,6 +516,7 @@ export const readSheetClients = async (): Promise<ClientRecord[]> => {
 			lastOrderDate: (row[10] ?? '').trim(),
 			products: (row[11] ?? '').split(', ').filter(Boolean),
 			howDidYouHear: (row[12] ?? '').trim(),
+			discount: (row[13] ?? '').trim(),
 		}));
 	} catch (error) {
 		reportSheetsError('Error reading clients from sheet', error);
@@ -592,7 +593,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 };
 
 // Client tracking
-const CLIENT_HEADERS = ['Email', 'First Name', 'Last Name', 'Address', 'City', 'Province', 'Zip', 'Country', 'Orders', 'Total Spent', 'Last Order', 'Products', 'How Did You Hear'] as const;
+const CLIENT_HEADERS = ['Email', 'First Name', 'Last Name', 'Address', 'City', 'Province', 'Zip', 'Country', 'Orders', 'Total Spent', 'Last Order', 'Products', 'How Did You Hear', 'Discount'] as const;
 
 type ClientRecord = {
 	email: string;
@@ -608,9 +609,28 @@ type ClientRecord = {
 	lastOrderDate: string;
 	products: string[];
 	howDidYouHear?: string;
+	discount?: string;
 };
 
-export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount' | 'totalSpent' | 'products'> & { orderTotal: number; productsPurchased: string[]; howDidYouHear?: string }) => {
+type SheetClientUpsert = Omit<ClientRecord, 'ordersCount' | 'totalSpent' | 'products' | 'discount'> & {
+	orderTotal: number;
+	productsPurchased: string[];
+	howDidYouHear?: string;
+	discountAmount?: number;
+	promoCode?: string;
+	recordOrder?: boolean;
+};
+
+export const formatClientDiscount = ({ discountAmount, promoCode }: Pick<SheetClientUpsert, 'discountAmount' | 'promoCode'>): string => {
+	const code = promoCode?.trim() ?? '';
+	const amount = Number(discountAmount ?? 0);
+	if (!code && amount <= 0) return '';
+	if (!code) return `-$${amount.toFixed(2)}`;
+	if (amount <= 0) return code;
+	return `${code} (-$${amount.toFixed(2)})`;
+};
+
+export const upsertSheetClient = async (client: SheetClientUpsert) => {
 	if (!SHEET_ID) return;
 
 	try {
@@ -630,20 +650,30 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 			});
 			await sheets.spreadsheets.values.update({
 				spreadsheetId: SHEET_ID,
-				range: 'Clients!A1:M1',
+				range: 'Clients!A1:N1',
 				valueInputOption: 'RAW',
 				requestBody: { values: [[...CLIENT_HEADERS]] },
 			});
 		}
 
+		// Add the new column to an existing Clients tab without moving any data.
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: 'Clients!N1',
+			valueInputOption: 'RAW',
+			requestBody: { values: [[CLIENT_HEADERS[13]]] },
+		});
+
 		// Read existing clients
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'Clients!A:M',
+			range: 'Clients!A:N',
 		});
 
 		const rows = response.data.values ?? [];
 		const existingIndex = rows.findIndex((row: string[], i: number) => i > 0 && row[0]?.toLowerCase() === client.email.toLowerCase());
+		const currentDiscount = formatClientDiscount(client);
+		const shouldRecordOrder = client.recordOrder !== false;
 
 		if (existingIndex > 0) {
 			// Update existing client
@@ -652,7 +682,9 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 			const prevTotal = parseNumber(existingRow[9] ?? '0');
 			const prevProducts = (existingRow[11] ?? '').split(', ').filter(Boolean);
 			const prevHowDidYouHear = (existingRow[12] ?? '').trim();
-			const allProducts = Array.from(new Set([...prevProducts, ...client.productsPurchased]));
+			const prevDiscounts = (existingRow[13] ?? '').trim();
+			const allProducts = shouldRecordOrder ? Array.from(new Set([...prevProducts, ...client.productsPurchased])) : prevProducts;
+			const discounts = shouldRecordOrder && currentDiscount ? [prevDiscounts, currentDiscount].filter(Boolean).join('; ') : prevDiscounts;
 
 			const updatedRow = [
 				client.email,
@@ -663,16 +695,17 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 				client.province,
 				client.zipCode,
 				client.country,
-				String(prevOrders + 1),
-				(prevTotal + client.orderTotal).toFixed(2),
-				client.lastOrderDate,
+				String(prevOrders + (shouldRecordOrder ? 1 : 0)),
+				(prevTotal + (shouldRecordOrder ? client.orderTotal : 0)).toFixed(2),
+				shouldRecordOrder ? client.lastOrderDate : (existingRow[10] ?? ''),
 				allProducts.join(', '),
 				client.howDidYouHear || prevHowDidYouHear,
+				discounts,
 			];
 
 			await sheets.spreadsheets.values.update({
 				spreadsheetId: SHEET_ID,
-				range: `Clients!A${existingIndex + 1}:M${existingIndex + 1}`,
+				range: `Clients!A${existingIndex + 1}:N${existingIndex + 1}`,
 				valueInputOption: 'RAW',
 				requestBody: { values: [updatedRow] },
 			});
@@ -692,11 +725,12 @@ export const upsertSheetClient = async (client: Omit<ClientRecord, 'ordersCount'
 				client.lastOrderDate,
 				client.productsPurchased.join(', '),
 				client.howDidYouHear ?? '',
+				currentDiscount,
 			];
 
 			await sheets.spreadsheets.values.append({
 				spreadsheetId: SHEET_ID,
-				range: 'Clients!A:M',
+				range: 'Clients!A:N',
 				valueInputOption: 'RAW',
 				insertDataOption: 'INSERT_ROWS',
 				requestBody: { values: [newRow] },

@@ -72,6 +72,7 @@ export async function POST(request: Request) {
 			lastOrderDate: existingClient.lastOrderDate,
 			productsPurchased: existingClient.products,
 			howDidYouHear: formattedSurveyData,
+			recordOrder: false,
 		};
 
 		await upsertSheetClient(clientPayload);
