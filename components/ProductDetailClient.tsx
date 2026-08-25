@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { Product, ProductVariant } from '@/types/product';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
@@ -8,6 +8,7 @@ import { ChevronRight, CreditCard, FileBadge, FlaskConical, Truck } from 'lucide
 import { iconMap } from '@/lib/productIcons';
 import Link from 'next/link';
 import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { GA_CURRENCY, toAnalyticsItem, trackEvent } from '@/lib/analytics';
 
 interface ProductDetailClientProps {
 	product: Product;
@@ -60,6 +61,11 @@ export default function ProductDetailClient({ product, description, details, has
 		}
 		return product;
 	}, [product, currentVariant]);
+
+	useEffect(() => {
+		const item = toAnalyticsItem(productForActions);
+		trackEvent('view_item', { currency: GA_CURRENCY, value: item.price, items: [item] });
+	}, [productForActions]);
 
 	return (
 		<>
@@ -255,9 +261,21 @@ export default function ProductDetailClient({ product, description, details, has
 			{/* Supporting product information */}
 			<div className='mb-6'>
 				<ProductTabs
+					productSlug={product.slug}
 					description={description}
 					details={details}
 				/>
+			</div>
+
+			<div className='mb-10 pl-3 border-l-4 border-deep-tidal-teal-500 tracking-wide'>
+				<h2 className='text-lg font-bold tracking-tight'>Important: Research Use Only</h2>
+				<p className='text-sm text-deep-tidal-teal-700 mt-2'>
+					All compounds sold by Pure Tide are intended exclusively for laboratory and bench-research applications and are not for human or veterinary use. Nothing on this website should
+					be interpreted as medical, dietary, diagnostic, or therapeutic advice. Unless otherwise stated, Pure Tide products may be an investigational compounds and have not received
+					regulatory approval from Health Canada, the U.S. FDA, the EMA, or any equivalent body at this writing. Research information is provided solely for scientific and educational
+					reference. Pure Tide does not provide dosing, administration, or application instructions. Purchasers are responsible for compliance with all applicable laws, regulations, and
+					laboratory safety standards.
+				</p>
 			</div>
 
 			{/* Research and delivery notice */}
