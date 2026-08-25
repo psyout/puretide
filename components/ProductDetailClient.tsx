@@ -261,7 +261,6 @@ export default function ProductDetailClient({ product, description, details, has
 			{/* Supporting product information */}
 			<div className='mb-6'>
 				<ProductTabs
-					productSlug={product.slug}
 					description={description}
 					details={details}
 				/>
