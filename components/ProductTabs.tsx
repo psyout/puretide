@@ -2,20 +2,36 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import { parseProductDescription } from '@/lib/productDescription';
 
 type ProductInfoProps = {
+	productSlug: string;
 	description: string;
 	details?: string;
 };
 
-export default function ProductTabs({ description, details }: ProductInfoProps) {
+export default function ProductTabs({ productSlug, description, details }: ProductInfoProps) {
 	const [detailsOpen, setDetailsOpen] = useState(false);
+	const { copy, ctas } = parseProductDescription(description, productSlug);
 
 	return (
 		<div className='space-y-5 text-deep-tidal-teal-800'>
 			<section className='border-t border-deep-tidal-teal/10 pt-5'>
 				<h2 className='mb-2 text-lg font-bold tracking-tight'>About this product</h2>
-				<p className='text-[0.95rem] leading-6 text-deep-tidal-teal-700 text-pretty'>{description}</p>
+				{copy && <p className='text-[0.95rem] leading-6 text-deep-tidal-teal-700 text-pretty'>{copy}</p>}
+				{ctas.map((cta) => (
+					<p
+						key={cta.href}
+						className='mt-3 text-[0.95rem] leading-6 text-deep-tidal-teal-700'>
+						Also available in{' '}
+						<Link
+							href={cta.href}
+							className='font-semibold text-deep-tidal-teal underline decoration-deep-tidal-teal/40 underline-offset-4 transition-colors hover:text-eucalyptus'>
+							{cta.label}
+						</Link>
+					</p>
+				))}
 			</section>
 
 			{details && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import LogoHorizontal from './LogoHorizotal';
 
@@ -10,7 +10,7 @@ type HeroSlide = {
 		src: string;
 		poster: string;
 	};
-	description: string;
+	description: React.ReactNode;
 };
 
 type HeroClientProps = {
@@ -115,7 +115,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 					<p
 						className='flex min-h-36 max-w-sm items-center justify-center text-base leading-relaxed text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)] sm:min-h-48 sm:max-w-lg sm:text-xl md:text-2xl lg:min-h-[5.25rem] lg:max-w-2xl lg:text-xl'
 						aria-live='polite'>
-						{currentSlide.description}
+						<span>{currentSlide.description}</span>
 					</p>
 				</div>
 			</div>

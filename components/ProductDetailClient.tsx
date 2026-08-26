@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { Product, ProductVariant } from '@/types/product';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
@@ -8,7 +8,6 @@ import { ChevronRight, CreditCard, FileBadge, FlaskConical, Truck } from 'lucide
 import { iconMap } from '@/lib/productIcons';
 import Link from 'next/link';
 import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import { GA_CURRENCY, toAnalyticsItem, trackEvent } from '@/lib/analytics';
 
 interface ProductDetailClientProps {
 	product: Product;
@@ -37,6 +36,7 @@ export default function ProductDetailClient({ product, description, details, has
 	const displayMg = currentVariant?.label ?? product.mg;
 	const displayStock = currentVariant?.stock ?? product.stock;
 	const isSoldOut = displayStock <= 0 || product.status === 'stock-out';
+	const isPreOrder = product.slug === 'cartalax' || product.slug === 'dsip';
 
 	// For variant products, check if all variants are sold out
 	const allVariantsSoldOut = hasVariants && variants.every((v) => v.stock <= 0);
@@ -61,11 +61,6 @@ export default function ProductDetailClient({ product, description, details, has
 		}
 		return product;
 	}, [product, currentVariant]);
-
-	useEffect(() => {
-		const item = toAnalyticsItem(productForActions);
-		trackEvent('view_item', { currency: GA_CURRENCY, value: item.price, items: [item] });
-	}, [productForActions]);
 
 	return (
 		<>
@@ -179,10 +174,18 @@ export default function ProductDetailClient({ product, description, details, has
 			)}
 
 			{/* Stock status and purchase actions */}
-			{!stockUnavailable && !isSoldOut && !allVariantsSoldOut && (
+			{!isPreOrder && !stockUnavailable && !isSoldOut && !allVariantsSoldOut && (
 				<p className={`mb-4 flex items-center gap-2 text-sm font-semibold ${displayStock <= 3 ? 'text-amber-700' : 'text-emerald-700'}`}>
 					<span className={`h-2 w-2 rounded-full ${displayStock <= 3 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
 					{displayStock <= 3 ? `Only ${displayStock} remaining` : 'In stock and ready to ship'}
+				</p>
+			)}
+			{isPreOrder && (
+				<p className='mb-4 flex items-center gap-2 text-sm font-semibold text-amber-600'>
+					<span className='h-2 w-2 rounded-full bg-amber-500' />
+					<span>
+						<strong>Pre-Order:</strong> This product ships in approximately 1 week
+					</span>
 				</p>
 			)}
 
@@ -261,13 +264,14 @@ export default function ProductDetailClient({ product, description, details, has
 			{/* Supporting product information */}
 			<div className='mb-6'>
 				<ProductTabs
+					productSlug={product.slug}
 					description={description}
 					details={details}
 				/>
 			</div>
 
-			<div className='mb-10 pl-3 border-l-4 border-deep-tidal-teal-500 tracking-wide'>
-				<h2 className='text-lg font-bold tracking-tight'>Important: Research Use Only</h2>
+			<div className='mb-10 pl-3 border-l-4 border-b-1 border-r-1 border-t-1 border-deep-tidal-teal-500 tracking-wide mt-1 pt-3 pr-3 pb-3 '>
+				<h2 className='text-md font-bold tracking-tight'>Important: Research Use Only</h2>
 				<p className='text-sm text-deep-tidal-teal-700 mt-2'>
 					All compounds sold by Pure Tide are intended exclusively for laboratory and bench-research applications and are not for human or veterinary use. Nothing on this website should
 					be interpreted as medical, dietary, diagnostic, or therapeutic advice. Unless otherwise stated, Pure Tide products may be an investigational compounds and have not received
@@ -279,7 +283,6 @@ export default function ProductDetailClient({ product, description, details, has
 
 			{/* Research and delivery notice */}
 			<div className='mb-8 md:mb-10'>
-				<p className='mb-2 text-xs font-bold uppercase tracking-wider text-deep-tidal-teal-600'>Important information</p>
 				<div className='grid grid-cols-1 divide-y divide-deep-tidal-teal/15 rounded-2xl bg-gradient-to-br from-deep-tidal-teal/5 to-eucalyptus-50/80 p-4 xl:grid-cols-2 xl:divide-x xl:divide-y-0 xl:divide-deep-tidal-teal/20 xl:p-5'>
 					<div className='flex items-center gap-3 pb-4 xl:pr-6 xl:pb-0'>
 						<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>

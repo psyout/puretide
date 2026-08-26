@@ -1,6 +1,7 @@
 import HeroClient from './HeroClient';
 
 const ENABLE_HERO_VIDEO = true;
+const SHOW_THIRD_HERO_SLIDE = false;
 
 const slides = [
 	{
@@ -11,17 +12,30 @@ const slides = [
 					poster: '/hero/hero-2-poster.jpg',
 				}
 			: undefined,
-		description: 'Peptide-powered formulations designed to support vitality, performance, and balance. Clean compounds, precise protocols, and rigorous third-party testing in Canada.',
+		description: (
+			<>
+				<strong>The Pure Tide Promise:</strong>{' '}
+				Science-backed. Designed with transparency at every step. Proudly Canadian.
+			</>
+		),
 	},
 	{
 		backgroundImage: '/hero/hero-1.webp',
-		description:
-			'Unlock your potential with GMP grade purity. Our commitment to quality ensures every compound is third-party tested in Canada and held to the highest standards of stability and integrity.',
+		description: (
+			<>
+				<strong>Quality You Can Verify:</strong>{' '}
+				Third-party tested in Canada. GMP-grade standards. COAs for every batch.
+			</>
+		),
 	},
-	{
-		backgroundImage: '/hero/hero-4.webp',
-		description: 'Science-informed wellness, refined. Thoughtfully sourced peptides studied for recovery, clarity, and longevity.',
-	},
+	...(SHOW_THIRD_HERO_SLIDE
+		? [
+				{
+					backgroundImage: '/hero/hero-4.webp',
+					description: 'Science-informed wellness, refined. Thoughtfully sourced peptides studied for recovery, clarity, and longevity.',
+				},
+			]
+		: []),
 ];
 
 export default function Hero() {
