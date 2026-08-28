@@ -1,13 +1,21 @@
 import ProductGrid from '@/components/ProductGrid';
+import ProductGridAlternative from '@/components/ProductGridAlternative';
 import Hero from '@/components/Hero';
 import About from '@/components/About';
+import AboutAlternative from '@/components/AboutAlternative';
 import Contact from '@/components/Contact';
+import ContactAlternative from '@/components/ContactAlternative';
 import PromotionModal from '@/components/PromotionModal';
 import PromoBannerWrapper from '@/components/PromoBannerWrapper';
 import { getCachedActivePromotionCampaign } from '@/lib/sheetCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+// Keep both approaches available while the new About direction is being evaluated.
+const USE_ALTERNATIVE_ABOUT = true;
+const USE_ALTERNATIVE_CONTACT = true;
+const USE_ALTERNATIVE_PRODUCT_GRID = true;
 
 export default async function Home() {
 	const promoModalEnabled = String(process.env.PROMO_MODAL_ENABLED ?? '').toLowerCase() === 'true';
@@ -26,12 +34,12 @@ export default async function Home() {
 			<Hero />
 
 			<main>
-				<ProductGrid />
+				{USE_ALTERNATIVE_PRODUCT_GRID ? <ProductGridAlternative /> : <ProductGrid />}
 			</main>
 
-			<About />
+			{USE_ALTERNATIVE_ABOUT ? <AboutAlternative /> : <About />}
 
-			<Contact />
+			{USE_ALTERNATIVE_CONTACT ? <ContactAlternative /> : <Contact />}
 
 		</div>
 	);

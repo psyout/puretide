@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import localFont from 'next/font/local';
 import Script from 'next/script';
 import './globals.css';
 import { Providers } from './providers';
@@ -11,17 +10,6 @@ export const metadata: Metadata = {
 	title: 'Pure Tide Wellness - Advanced Peptide Formulations',
 	description: 'Advanced peptide formulations for optimal health and wellness, delivered to your doorstep.',
 };
-
-const matimo = localFont({
-	src: [
-		{ path: '../public/fonts/matimo-regular-webfont.woff2', weight: '400', style: 'normal' },
-		{ path: '../public/fonts/matimo-medium-webfont.woff2', weight: '500', style: 'normal' },
-		{ path: '../public/fonts/matimo-semibold-webfont.woff2', weight: '600', style: 'normal' },
-		{ path: '../public/fonts/matimo-bold-webfont.woff2', weight: '700', style: 'normal' },
-	],
-	variable: '--font-matimo',
-	display: 'swap',
-});
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
@@ -68,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 					`}
 				</Script>
 			</head>
-			<body className={`${matimo.variable} min-h-screen antialiased`}>
+			<body className='min-h-screen antialiased'>
 				<Suspense fallback={null}>
 					<MetaPixelPageView />
 				</Suspense>

@@ -12,7 +12,7 @@ const config: Config = {
 				'3xl': ['1.75rem', { lineHeight: '1.4' }],
 			},
 			fontFamily: {
-				matimo: ['var(--font-matimo)'],
+				outfit: ['Outfit', 'sans-serif'],
 			},
 			colors: {
 				background: 'var(--background)',

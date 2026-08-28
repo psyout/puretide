@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -63,7 +63,7 @@ html {
 body {
 	color: var(--foreground);
 	background: var(--background);
-	font-family: var(--font-matimo);
+	font-family: 'Outfit', sans-serif;
 }
 
 h1,
@@ -72,7 +72,7 @@ h3,
 h4,
 h5,
 h6 {
-	font-family: var(--font-matimo);
+	font-family: 'Outfit', sans-serif;
 }
 
 p {

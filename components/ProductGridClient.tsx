@@ -78,9 +78,12 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 	return (
 		<div
 			id='products'
-			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] bg-cover bg-no-repeat pt-4 pb-24 scroll-mt-10'
-			style={{ backgroundImage: "url('/background/products-bg.webp')" }}>
-			<div className='absolute inset-0 bg-white/70' />
+			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] pt-4 pb-24 scroll-mt-10'
+			style={{
+				backgroundColor: 'var(--color-primary, #f5f7f8)',
+				backgroundImage: 'linear-gradient(#dde8ed 1px, transparent 1px), linear-gradient(90deg, #dde8ed 1px, transparent 1px)',
+				backgroundSize: '32px 32px',
+			}}>
 			<div className='relative mx-auto max-w-7xl px-6'>
 				<div className='mb-5 mt-20'>
 					<div className='text-center'>

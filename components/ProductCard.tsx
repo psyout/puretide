@@ -119,7 +119,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 				href={`/product/${product.slug}`}
 				className='flex flex-1 min-h-0 flex-col'>
 				{/* Image – framed area with even padding */}
-				<div className='m-4 md:m-5 rounded-lg bg-eucalyptus-50/60 flex justify-center items-center min-h-[10rem] md:min-h-[12rem]'>
+				<div className='m-4 md:m-5 rounded-lg flex justify-center items-center min-h-[10rem] md:min-h-[12rem]'>
 					{hasProductImage(product.image) ? (
 						<div className='relative w-56 h-56 md:w-52 md:h-52'>
 							<Image
@@ -200,9 +200,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 			</Link>
 
 			{/* Mobile: actions stay visible so the card and buttons behave predictably. */}
-			<div className='grid grid-cols-2 gap-2 border-t border-deep-tidal-teal/10 p-3 md:hidden'>
-				{actionButtons}
-			</div>
+			<div className='grid grid-cols-2 gap-2 border-t border-deep-tidal-teal/10 p-3 md:hidden'>{actionButtons}</div>
 
 			{/* Desktop: buttons only on hover (overlay) */}
 			<div className='absolute inset-0 bg-white/40 opacity-0 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 hidden md:block' />

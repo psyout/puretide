@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 
-export default function ContactForm() {
+type ContactFormProps = {
+	variant?: 'default' | 'editorial';
+};
+
+export default function ContactForm({ variant = 'default' }: ContactFormProps) {
 	const [formData, setFormData] = useState({
 		name: '',
 		email: '',
@@ -84,12 +88,23 @@ export default function ContactForm() {
 		}
 	};
 
+	const isEditorial = variant === 'editorial';
+	const fieldClassName = isEditorial
+		? 'w-full rounded-xl border border-deep-tidal-teal-800/15 bg-white/80 px-4 py-3 text-deep-tidal-teal-800 outline-none transition focus:border-deep-tidal-teal focus:ring-4 focus:ring-deep-tidal-teal/10'
+		: 'w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal';
+
 	return (
-		<div className='bg-mineral-white  backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'>
-			<h3 className='text-2xl font-bold text-deep-tidal-teal-800 mb-6'>Send us a Message</h3>
+		<div className={isEditorial ? 'p-7 sm:p-10 lg:p-12' : 'bg-mineral-white backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'}>
+			<div className={isEditorial ? 'mb-9' : 'mb-6'}>
+				{isEditorial && <p className='mb-3 text-xs font-bold uppercase tracking-[0.2em] text-deep-tidal-teal-500'>Send a note</p>}
+				<h3 className={isEditorial ? 'text-3xl font-bold tracking-[-0.03em] text-deep-tidal-teal-800 sm:text-4xl' : 'text-2xl font-bold text-deep-tidal-teal-800'}>
+					{isEditorial ? 'How can we help?' : 'Send us a Message'}
+				</h3>
+				{isEditorial && <p className='mt-3 max-w-lg text-sm leading-relaxed text-deep-tidal-teal-700/70'>Tell us what you are curious about and our team will point you in the right direction.</p>}
+			</div>
 			<form
 				onSubmit={handleSubmit}
-				className='space-y-6'>
+				className={isEditorial ? 'space-y-5' : 'space-y-6'}>
 				<div
 					className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
 					aria-hidden>
@@ -115,7 +130,7 @@ export default function ContactForm() {
 						id='name'
 						value={formData.name}
 						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+						className={fieldClassName}
 						maxLength={100}
 						required
 					/>
@@ -131,7 +146,7 @@ export default function ContactForm() {
 						id='email'
 						value={formData.email}
 						onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+						className={fieldClassName}
 						required
 					/>
 				</div>
@@ -146,7 +161,7 @@ export default function ContactForm() {
 						value={formData.message}
 						onChange={(e) => setFormData({ ...formData, message: e.target.value })}
 						rows={6}
-						className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal resize-none'
+						className={`${fieldClassName} resize-none`}
 						maxLength={2000}
 						required
 					/>
@@ -159,7 +174,9 @@ export default function ContactForm() {
 				<button
 					type='submit'
 					disabled={isSubmitting}
-					className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-70 disabled:cursor-not-allowed'>
+					className={isEditorial
+						? 'flex min-h-14 w-full items-center justify-center rounded-2xl bg-deep-tidal-teal-800 px-6 py-3 font-semibold text-mineral-white shadow-[0_18px_40px_-24px_rgba(10,32,39,0.8)] transition-colors hover:bg-deep-tidal-teal-700 disabled:cursor-not-allowed disabled:opacity-70'
+						: 'w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-70 disabled:cursor-not-allowed'}>
 					{isSubmitting ? 'Sending...' : 'Send Message'}
 				</button>
 			</form>
