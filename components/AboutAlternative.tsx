@@ -56,18 +56,6 @@ export default function AboutAlternative() {
 							<span className='block font-medium text-deep-tidal-teal'> never complicated.</span>
 						</h2>
 					</div>
-
-					<div className='max-w-md lg:justify-self-end'>
-						<p className='text-lg font-medium leading-relaxed text-deep-tidal-teal-700/80'>
-							Pure Tide brings research, purity, and practical guidance together—so evidence-based wellness fits naturally into real life.
-						</p>
-						<a
-							href='#products'
-							className='mt-8 inline-flex items-center gap-2 border-b border-deep-tidal-teal-700 pb-1 text-sm font-bold text-deep-tidal-teal-800 transition-colors hover:border-deep-tidal-teal hover:text-deep-tidal-teal'>
-							Explore our approach
-							<ArrowDownRight className='h-4 w-4' />
-						</a>
-					</div>
 				</div>
 
 				<div className='grid gap-8 pt-14 lg:grid-cols-[0.72fr_1.28fr] lg:gap-8 lg:pt-20'>
@@ -78,10 +66,13 @@ export default function AboutAlternative() {
 						/>
 						<div className='relative flex h-full flex-col'>
 							<div className='flex h-12 w-12 items-center justify-center rounded-full bg-eucalyptus text-deep-tidal-teal-800'>
-								<Check className='h-6 w-6' strokeWidth={2.5} />
+								<Check
+									className='h-6 w-6'
+									strokeWidth={2.5}
+								/>
 							</div>
 							<p className='mt-16 max-w-sm text-2xl font-bold leading-snug tracking-tight sm:text-3xl lg:mt-auto'>
-								“Every detail is considered—from research and sourcing to how wellness fits into your day.”
+								“Everything is taken into account, from your research to your wellness routine”
 							</p>
 							<div className='mt-10 flex items-center gap-3 border-t border-deep-tidal-teal/10 pt-6 text-sm font-semibold text-deep-tidal-teal-700'>
 								<span className='h-2 w-2 rounded-full bg-eucalyptus' />
@@ -104,7 +95,10 @@ export default function AboutAlternative() {
 										<p className='mt-3 max-w-xl text-base font-medium leading-relaxed text-deep-tidal-teal-700/70 sm:text-lg'>{principle.body}</p>
 									</div>
 									<div className='flex h-12 w-12 items-center justify-center rounded-full border border-deep-tidal-teal-800/15 text-deep-tidal-teal transition-colors group-hover:border-deep-tidal-teal group-hover:bg-white/60'>
-										<Icon className='h-5 w-5' strokeWidth={1.8} />
+										<Icon
+											className='h-5 w-5'
+											strokeWidth={1.8}
+										/>
 									</div>
 								</article>
 							);
@@ -115,9 +109,6 @@ export default function AboutAlternative() {
 				<div className='mt-20 border-t border-deep-tidal-teal/10 pt-14 lg:mt-24 lg:pt-16'>
 					<div className='mb-10 grid gap-5 lg:grid-cols-[0.72fr_1.28fr] lg:gap-20'>
 						<p className='text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>Our philosophy</p>
-						<h3 className='max-w-2xl text-3xl font-bold leading-tight tracking-[-0.03em] text-deep-tidal-teal-800 sm:text-4xl'>
-							The thinking behind our standard.
-						</h3>
 					</div>
 
 					<div className='grid gap-6 lg:grid-cols-3'>
