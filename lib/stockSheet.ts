@@ -13,7 +13,7 @@ const SHEET_NAME = process.env.GOOGLE_SHEET_NAME;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-const HEADERS = ['slug', 'name', 'subtitle', 'description', 'details', 'price', 'total stock', 'jay stock', 'marcus stock', 'category', 'mg', 'purity', 'image', 'icons', 'status'] as const;
+const HEADERS = ['slug', 'name', 'subtitle', 'description', 'details', 'price', 'total stock', 'jay stock', 'marcus stock', 'category', 'mg', 'purity', 'image', 'icons', 'status', 'coa file'] as const;
 type HeaderKey = (typeof HEADERS)[number];
 const REQUIRED_HEADERS: Array<HeaderKey> = ['slug', 'name', 'description', 'details', 'price', 'category'];
 
@@ -250,6 +250,7 @@ export const readSheetProducts = async (): Promise<Product[]> => {
 					category: String(row.category ?? '').trim(),
 					mg: String(row.mg ?? '').trim() || undefined,
 					purity: String(row.purity ?? '').trim() || undefined,
+					coaFile: String(row['coa file'] ?? '').trim() || undefined,
 					icons: row.icons
 						? row.icons
 								.split(',')
@@ -576,6 +577,7 @@ export const writeSheetProducts = async (items: Product[]) => {
 					product.image,
 					(product.icons ?? []).join(', '),
 					product.status ?? 'published',
+					product.coaFile ?? '',
 				];
 			}),
 		];

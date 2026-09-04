@@ -11,6 +11,7 @@ import ProductDetailClient from '@/components/ProductDetailClient';
 import { BadgeCheck, FlaskConical, PackageCheck, ShieldCheck } from 'lucide-react';
 import fs from 'fs';
 import path from 'path';
+import { resolveProductCoaFile } from '@/lib/productCoa';
 
 type ProductPageProps = {
 	params: { id: string };
@@ -59,13 +60,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
 		notFound();
 	}
 
-	// Check if COA PDF exists for this product (match first 3 letters)
+	// The spreadsheet explicitly selects the COA. Never infer it from the slug:
+	// products with similar slugs may require different certificates.
 	const coaDir = path.join(process.cwd(), 'public', 'coa');
 	const coaFiles = fs.readdirSync(coaDir).filter((file) => file.endsWith('.pdf'));
-	const matchingCoaFile = coaFiles.find((file) => {
-		const fileSlug = file.replace('puretide-coa-', '').replace('.pdf', '');
-		return fileSlug.startsWith(product.slug.slice(0, 3));
-	});
+	const matchingCoaFile = resolveProductCoaFile(product.coaFile, coaFiles);
 	const hasCoaFile = !!matchingCoaFile;
 
 	const promoBannerEnabled = String(process.env.NEXT_PUBLIC_PROMO_BANNER_ENABLED ?? '').toLowerCase() === 'true';

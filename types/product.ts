@@ -19,6 +19,7 @@ export interface Product {
 	category: string;
 	mg?: string;
 	purity?: string;
+	coaFile?: string;
 	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
 	cost?: number;
 	supplier?: string;
