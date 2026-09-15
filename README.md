@@ -171,6 +171,8 @@ npm run test:zoho:inventory
 
 Stock writes require an additional `ZohoInventory.inventoryadjustments.CREATE` OAuth scope, `ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID`, and an explicit `ZOHO_INVENTORY_WRITE_ENABLED=true`. Keep writes disabled until a controlled checkout test is approved. The website dashboard intentionally refuses product edits while Zoho is selected, because those changes belong in Zoho Inventory.
 
+The catalog is cached for five minutes, item details are refreshed every six hours, and successful catalog reads are persisted to `data/zoho-products-cache.json`. Concurrent requests share one refresh, and a stale persisted catalog is used if Zoho is temporarily unavailable or rate-limited. These defaults keep normal usage below the Free-plan API allowance without additional environment variables. The intervals can be overridden with `ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS`, `ZOHO_INVENTORY_DETAIL_CACHE_TTL_MS`, and `ZOHO_INVENTORY_CACHE_PATH` if needed.
+
 ### Email
 
 Zoho Mail is the primary SMTP service used for order confirmations, shipping updates, contact submissions, and low-stock alerts.

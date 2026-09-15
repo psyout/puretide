@@ -1,4 +1,6 @@
 import type { Product } from '@/types/product';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 type ZohoCustomField = {
 	label?: string;
@@ -59,6 +61,63 @@ export type StockDeductionItem = {
 };
 
 let cachedAccessToken: { value: string; expiresAt: number } | null = null;
+type ProductCatalogCache = { products: Product[]; refreshedAt: number; expiresAt: number };
+type ItemDetailCache = { item: ZohoInventoryItem; expiresAt: number };
+
+let cachedProductCatalog: ProductCatalogCache | null = null;
+let pendingProductCatalogRead: Promise<Product[]> | null = null;
+let persistentCatalogLoaded = false;
+const cachedItemDetails = new Map<string, ItemDetailCache>();
+
+const DEFAULT_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+const DEFAULT_ITEM_DETAIL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+const positiveDuration = (value: unknown, fallback: number) => {
+	const parsed = Number(value);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const getCatalogCacheTtlMs = () => positiveDuration(process.env.ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS, DEFAULT_CATALOG_CACHE_TTL_MS);
+const getItemDetailCacheTtlMs = () => positiveDuration(process.env.ZOHO_INVENTORY_DETAIL_CACHE_TTL_MS, DEFAULT_ITEM_DETAIL_CACHE_TTL_MS);
+const getPersistentCachePath = () => process.env.ZOHO_INVENTORY_CACHE_PATH?.trim() || path.join(process.cwd(), 'data', 'zoho-products-cache.json');
+
+const cloneProducts = (products: Product[]) =>
+	products.map((product) => ({
+		...product,
+		...(product.icons ? { icons: [...product.icons] } : {}),
+		...(product.variants ? { variants: product.variants.map((variant) => ({ ...variant })) } : {}),
+	}));
+
+async function loadPersistentCatalog() {
+	if (persistentCatalogLoaded) return;
+	persistentCatalogLoaded = true;
+	try {
+		const payload = JSON.parse(await readFile(getPersistentCachePath(), 'utf8')) as { refreshedAt?: unknown; products?: unknown };
+		const refreshedAt = Number(payload.refreshedAt);
+		if (!Number.isFinite(refreshedAt) || !Array.isArray(payload.products) || payload.products.length === 0) return;
+		cachedProductCatalog = {
+			products: payload.products as Product[],
+			refreshedAt,
+			expiresAt: refreshedAt + getCatalogCacheTtlMs(),
+		};
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+			console.warn(JSON.stringify({ label: 'zoho:catalog_cache:load_failed', message: error instanceof Error ? error.message : String(error) }));
+		}
+	}
+}
+
+async function persistCatalog(cache: ProductCatalogCache) {
+	try {
+		const cachePath = getPersistentCachePath();
+		await mkdir(path.dirname(cachePath), { recursive: true });
+		const temporaryPath = `${cachePath}.${process.pid}.tmp`;
+		await writeFile(temporaryPath, JSON.stringify({ version: 1, refreshedAt: cache.refreshedAt, products: cache.products }), { mode: 0o600 });
+		await rename(temporaryPath, cachePath);
+	} catch (error) {
+		console.warn(JSON.stringify({ label: 'zoho:catalog_cache:persist_failed', message: error instanceof Error ? error.message : String(error) }));
+	}
+}
 
 const canonicalize = (value: unknown) =>
 	String(value ?? '')
@@ -244,7 +303,7 @@ async function zohoRequest<T extends ZohoApiResponse>(path: string, init?: Reque
 	return payload;
 }
 
-export async function readZohoProducts(): Promise<Product[]> {
+async function refreshZohoProducts(): Promise<Product[]> {
 	const websiteItems: ZohoInventoryItem[] = [];
 	for (let page = 1; page <= 100; page += 1) {
 		const response = await zohoRequest<ZohoItemsResponse>('items', undefined, { page: String(page), per_page: '200' });
@@ -264,12 +323,17 @@ export async function readZohoProducts(): Promise<Product[]> {
 			batch.map(async (summary) => {
 				const itemId = asTrimmedString(summary.item_id);
 				if (!itemId) throw new Error(`Zoho item ${getCustomField(summary, 'Website Slug')} is missing its Item ID.`);
-				const response = await zohoRequest<ZohoItemResponse>(`items/${encodeURIComponent(itemId)}`);
-				if (!response.item) throw new Error(`Zoho Inventory returned no details for item ${itemId}.`);
+				let detail = cachedItemDetails.get(itemId);
+				if (!detail || detail.expiresAt <= Date.now()) {
+					const response = await zohoRequest<ZohoItemResponse>(`items/${encodeURIComponent(itemId)}`);
+					if (!response.item) throw new Error(`Zoho Inventory returned no details for item ${itemId}.`);
+					detail = { item: response.item, expiresAt: Date.now() + getItemDetailCacheTtlMs() };
+					cachedItemDetails.set(itemId, detail);
+				}
 				return {
+					...detail.item,
 					...summary,
-					...response.item,
-					custom_fields: [...(response.item.custom_fields ?? []), ...(summary.custom_fields ?? [])],
+					custom_fields: [...(summary.custom_fields ?? []), ...(detail.item.custom_fields ?? [])],
 				};
 			}),
 		);
@@ -284,6 +348,46 @@ export async function readZohoProducts(): Promise<Product[]> {
 		const rightOrder = right.displayOrder ?? Number.MAX_SAFE_INTEGER;
 		return leftOrder - rightOrder;
 	});
+}
+
+export async function readZohoProducts(): Promise<Product[]> {
+	await loadPersistentCatalog();
+	if (cachedProductCatalog && cachedProductCatalog.expiresAt > Date.now()) return cloneProducts(cachedProductCatalog.products);
+	if (pendingProductCatalogRead) return cloneProducts(await pendingProductCatalogRead);
+
+	pendingProductCatalogRead = (async () => {
+		try {
+			const products = await refreshZohoProducts();
+			const refreshedAt = Date.now();
+			cachedProductCatalog = { products, refreshedAt, expiresAt: refreshedAt + getCatalogCacheTtlMs() };
+			await persistCatalog(cachedProductCatalog);
+			return products;
+		} catch (error) {
+			if (cachedProductCatalog?.products.length) {
+				console.warn(
+					JSON.stringify({
+						label: 'zoho:catalog_cache:using_stale',
+						refreshedAt: new Date(cachedProductCatalog.refreshedAt).toISOString(),
+						message: error instanceof Error ? error.message : String(error),
+					}),
+				);
+				return cachedProductCatalog.products;
+			}
+			throw error;
+		} finally {
+			pendingProductCatalogRead = null;
+		}
+	})();
+
+	return cloneProducts(await pendingProductCatalogRead);
+}
+
+export function resetZohoInventoryCacheForTests() {
+	cachedAccessToken = null;
+	cachedProductCatalog = null;
+	pendingProductCatalogRead = null;
+	persistentCatalogLoaded = false;
+	cachedItemDetails.clear();
 }
 
 export function isZohoInventoryWriteEnabled() {
@@ -331,4 +435,16 @@ export async function decrementZohoStock(orderNumber: string, items: StockDeduct
 			line_items: lineItems,
 		}),
 	});
+
+	if (cachedProductCatalog) {
+		const quantities = new Map(items.map((item) => [asTrimmedString(item.id), Number(item.quantity)]));
+		cachedProductCatalog = {
+			...cachedProductCatalog,
+			products: cachedProductCatalog.products.map((product) => {
+				const quantity = quantities.get(product.slug);
+				return quantity ? { ...product, stock: Math.max(0, product.stock - quantity) } : product;
+			}),
+		};
+		await persistCatalog(cachedProductCatalog);
+	}
 }
