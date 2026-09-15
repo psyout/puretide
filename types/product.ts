@@ -8,6 +8,8 @@ export interface ProductVariant {
 export interface Product {
 	id: string;
 	slug: string;
+	zohoItemId?: string;
+	sku?: string;
 	name: string;
 	subtitle?: string;
 	description: string;
@@ -21,6 +23,7 @@ export interface Product {
 	purity?: string;
 	coaFile?: string;
 	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
+	displayOrder?: number;
 	cost?: number;
 	supplier?: string;
 	supplierSku?: string;
@@ -41,6 +44,8 @@ export interface PromoCode {
 	discount: number; // percentage, e.g., 10 for 10%
 	minimumSubtotal?: number;
 	freeShipping?: boolean;
+	/** Product IDs eligible for the discount. Empty/omitted means no products. */
+	productIds?: string[];
 	active: boolean;
 }
 

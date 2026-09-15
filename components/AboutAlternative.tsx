@@ -1,20 +1,17 @@
-import { ArrowDownRight, Check, FlaskConical, Leaf, Waves } from 'lucide-react';
+import { Check, FlaskConical, HeartPulse, Leaf, ShieldCheck, Waves } from 'lucide-react';
 
 const principles = [
 	{
-		number: '01',
 		title: 'Scientific integrity',
 		body: 'We bridge advanced peptide research and everyday routines with a clear, evidence-led approach.',
 		icon: FlaskConical,
 	},
 	{
-		number: '02',
 		title: 'Purposeful performance',
-		body: 'High-purity, stable peptides and considered protocols—built to make informed wellness feel approachable.',
+		body: 'High purity, stable peptides and considered protocols built to make informed wellness feel approachable.',
 		icon: Leaf,
 	},
 	{
-		number: '03',
 		title: 'Long-term vitality',
 		body: 'Clean application, practical guidance, and thoughtful details designed to support consistent progress.',
 		icon: Waves,
@@ -25,14 +22,17 @@ const approach = [
 	{
 		title: 'Precision Wellness, Refined.',
 		body: 'Pure Tide blends scientific precision with everyday vitality. Each protocol is built to feel effortless while staying rooted in research and real-world performance.',
+		icon: HeartPulse,
 	},
 	{
 		title: 'Nature-Inspired. Science-Refined.',
 		body: 'Powered by peptides and guided by scientific research, our formulations prioritize purity, stability, and evidence-based application.',
+		icon: Leaf,
 	},
 	{
 		title: 'Clean. Calm. Confident.',
-		body: 'From formulation to design, every detail is intentional — wellness without overwhelm, performance without compromise.',
+		body: 'From formulation to design, every detail is intentional, wellness without overwhelm, performance without compromise.',
+		icon: ShieldCheck,
 	},
 ];
 
@@ -46,7 +46,7 @@ export default function AboutAlternative() {
 				<div className='grid items-end gap-10 border-b border-deep-tidal-teal-800/15 pb-14 lg:grid-cols-[1.35fr_0.65fr] lg:gap-20 lg:pb-20'>
 					<div>
 						<p className='mb-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
-							<span className='h-px w-10 bg-deep-tidal-teal-500' />
+							<span className='h-px w-3 bg-deep-tidal-teal-500' />
 							About Pure Tide
 						</p>
 						<h2
@@ -87,9 +87,8 @@ export default function AboutAlternative() {
 
 							return (
 								<article
-									key={principle.number}
-									className='group grid gap-5 py-8 first:pt-0 last:pb-0 sm:grid-cols-[3rem_1fr_auto] sm:items-start sm:gap-6'>
-									<span className='text-sm font-bold tracking-[0.12em] text-deep-tidal-teal-500'>{principle.number}</span>
+									key={principle.title}
+									className='group grid gap-5 py-8 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-6'>
 									<div>
 										<h3 className='text-2xl font-bold tracking-tight text-deep-tidal-teal-800 sm:text-3xl'>{principle.title}</h3>
 										<p className='mt-3 max-w-xl text-base font-medium leading-relaxed text-deep-tidal-teal-700/70 sm:text-lg'>{principle.body}</p>
@@ -112,15 +111,24 @@ export default function AboutAlternative() {
 					</div>
 
 					<div className='grid gap-6 lg:grid-cols-3'>
-						{approach.map((item, index) => (
-							<article
-								key={item.title}
-								className='rounded-lg bg-mineral-white p-8 shadow-md ui-border sm:p-10'>
-								<span className='mb-10 block text-xs font-bold tracking-[0.16em] text-deep-tidal-teal-500'>0{index + 1}</span>
-								<h4 className='text-2xl font-bold leading-tight tracking-[-0.02em] text-deep-tidal-teal-800'>{item.title}</h4>
-								<p className='mt-5 text-base font-medium leading-relaxed text-deep-tidal-teal-700/70'>{item.body}</p>
-							</article>
-						))}
+						{approach.map((item) => {
+							const Icon = item.icon;
+
+							return (
+								<article
+									key={item.title}
+									className='rounded-lg bg-mineral-white p-8 shadow-md ui-border sm:p-10'>
+									<div className='mb-10 flex h-12 w-12 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
+										<Icon
+											className='h-6 w-6'
+											strokeWidth={1.8}
+										/>
+									</div>
+									<h4 className='text-2xl font-bold leading-tight tracking-[-0.02em] text-deep-tidal-teal-800'>{item.title}</h4>
+									<p className='mt-5 text-base font-medium leading-relaxed text-deep-tidal-teal-700/70'>{item.body}</p>
+								</article>
+							);
+						})}
 					</div>
 				</div>
 			</div>

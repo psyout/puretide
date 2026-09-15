@@ -4,6 +4,7 @@ export type StoredCartPromo = {
 	code: string;
 	discount: number;
 	freeShipping: boolean;
+	productIds?: string[];
 };
 
 export function readStoredCartPromo(): StoredCartPromo | null {
@@ -17,6 +18,7 @@ export function readStoredCartPromo(): StoredCartPromo | null {
 			code: parsed.code.trim().toUpperCase(),
 			discount: Number(parsed.discount) || 0,
 			freeShipping: Boolean(parsed.freeShipping),
+			productIds: Array.isArray(parsed.productIds) ? parsed.productIds.map(String) : undefined,
 		};
 	} catch {
 		return null;

@@ -475,7 +475,7 @@ export default function StockDashboardPage() {
 		setExpandedId((prev) => (prev === id ? null : id));
 	};
 
-	const handlePromoChange = (index: number, field: keyof PromoCode, value: string | number | boolean) => {
+	const handlePromoChange = (index: number, field: keyof PromoCode, value: string | number | boolean | string[]) => {
 		setPromoCodes((prev) => {
 			const next = [...prev];
 			next[index] = { ...next[index], [field]: value };
@@ -485,7 +485,7 @@ export default function StockDashboardPage() {
 	};
 
 	const handleAddPromo = () => {
-		setPromoCodes((prev) => [...prev, { code: '', discount: 0, freeShipping: false, active: true }]);
+		setPromoCodes((prev) => [...prev, { code: '', discount: 10, freeShipping: false, productIds: [], active: true }]);
 		setPromoCodesDirty(true);
 	};
 
@@ -871,6 +871,21 @@ export default function StockDashboardPage() {
 													className='w-20 px-3 py-2 border border-black/10 rounded text-sm'
 												/>
 												<span className='text-[#6a6a6a] text-sm'>% off</span>
+												<label className='flex min-w-56 flex-col gap-1 text-sm'>
+													<span className='text-[#6a6a6a]'>Discounted products</span>
+													<select
+														multiple
+														value={promo.productIds ?? []}
+														onChange={(e) => handlePromoChange(i, 'productIds', Array.from(e.target.selectedOptions, (option) => option.value))}
+														className='min-h-24 px-3 py-2 border border-black/10 rounded bg-white text-sm'>
+														{rows.map((product) => (
+															<option key={product.id} value={product.id}>
+																{product.name}{product.mg ? ` – ${product.mg}` : ''}
+															</option>
+														))}
+													</select>
+													<span className='text-xs text-[#6a6a6a]'>Blank = no product discount. Use Cmd/Ctrl-click for multiple.</span>
+												</label>
 												<label className='flex items-center gap-2'>
 													<input
 														type='checkbox'

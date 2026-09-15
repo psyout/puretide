@@ -27,7 +27,7 @@ export default function ContactAlternative() {
 							<div>
 								<p className='text-xs font-bold uppercase tracking-[0.22em] text-deep-tidal-teal-600'>A real conversation</p>
 								<h3 className='mt-4 max-w-sm text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl'>Clear answers, handled with care.</h3>
-								<p className='mt-5 max-w-sm leading-relaxed text-deep-tidal-teal-700/65'>Every message is read by our team—not routed through a generic support loop.</p>
+								<p className='mt-1 max-w-sm leading-relaxed text-deep-tidal-teal-700/65'>Every message is read by our team, not routed through a generic support loop.</p>
 							</div>
 
 							<div className='mt-12 space-y-7 lg:mt-auto'>
@@ -66,7 +66,7 @@ export default function ContactAlternative() {
 					<ContactForm variant='editorial' />
 				</div>
 
-				<div className='mt-6 flex items-start gap-3 px-2 text-sm leading-relaxed text-deep-tidal-teal-700/65'>
+				<div className='mt-6 hidden items-start gap-3 px-2 text-sm leading-relaxed text-deep-tidal-teal-700/65'>
 					<LockKeyhole
 						className='mt-0.5 h-4 w-4 shrink-0 text-deep-tidal-teal-600'
 						strokeWidth={1.8}

@@ -10,7 +10,8 @@ The application is intended for self-hosted deployment with Next.js standalone o
 - E-transfer and credit-card payment flows
 - Server-side price, promotion, inventory, address, and customer validation
 - Idempotent order creation and rate-limited public endpoints
-- Google Sheets-backed products, stock, promotions, and client data
+- Selectable Zoho Inventory or Google Sheets product and stock catalog
+- Google Sheets-backed promotions, clients, and Friends & Family access
 - SQLite-backed order persistence using `sql.js`
 - Zoho SMTP order, shipping, contact, and stock-alert emails
 - Wrike order tasks, fulfillment workflows, and Avery 5162 shipping labels
@@ -75,7 +76,7 @@ Checkout requests are recalculated and validated on the server. The server does 
 
 `POST /api/orders` validates the customer, cart, inventory, promotion, shipping, and payment path before persisting the order. Fulfillment logic coordinates order status, stock updates, emails, and Wrike tasks. Retry cron routes handle recoverable background failures.
 
-Orders are stored in a SQLite database managed through `sql.js`. Products, inventory, promotions, and client records are sourced from Google Sheets and cached by the application.
+Orders are stored in a SQLite database managed through `sql.js`. Products and inventory can be sourced from Zoho Inventory, while promotions, client records, and Friends & Family access continue to use Google Sheets. Product reads are cached by the application.
 
 ### Payments
 
@@ -132,7 +133,8 @@ Email and integration-specific diagnostic scripts are available under `scripts/`
 
 Configuration is environment-driven. Major groups include:
 
-- Google Sheets product and inventory access
+- Zoho Inventory product and stock access
+- Google Sheets promotions, clients, and Friends & Family access
 - SMTP sender credentials
 - DigiPay or GatewayLinx payment credentials
 - Wrike API and folder identifiers
@@ -140,6 +142,34 @@ Configuration is environment-driven. Major groups include:
 - Promotion, friends-and-family, and storefront feature flags
 
 Use deployment secrets or a local uncommitted environment file. Do not put real credentials in source control.
+
+### Zoho Inventory catalog
+
+The integration uses each item's `Website Slug` as the website product ID. Only items with a slug are loaded, and only items whose `Website Status` is `published` are purchasable. Zoho-only/internal items can be omitted from the website by leaving the slug blank or using a non-published status.
+
+For a read-only local test, add the following to `.env.local`:
+
+```dotenv
+PRODUCT_SOURCE=zoho
+ZOHO_INVENTORY_WRITE_ENABLED=false
+ZOHO_INVENTORY_ORGANIZATION_ID=replace-with-your-organization-id
+ZOHO_INVENTORY_CLIENT_ID=replace-with-your-client-id
+ZOHO_INVENTORY_CLIENT_SECRET=replace-with-your-client-secret
+ZOHO_INVENTORY_REFRESH_TOKEN=replace-with-your-refresh-token
+
+# Use the matching Zoho data center when the account is not hosted in the US.
+# Canada examples:
+ZOHO_ACCOUNTS_BASE_URL=https://accounts.zohocloud.ca
+ZOHO_INVENTORY_API_BASE_URL=https://www.zohoapis.ca/inventory/v1
+```
+
+The local diagnostic is read-only and prints a catalog summary without printing credentials:
+
+```bash
+npm run test:zoho:inventory
+```
+
+Stock writes require an additional `ZohoInventory.inventoryadjustments.CREATE` OAuth scope, `ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID`, and an explicit `ZOHO_INVENTORY_WRITE_ENABLED=true`. Keep writes disabled until a controlled checkout test is approved. The website dashboard intentionally refuses product edits while Zoho is selected, because those changes belong in Zoho Inventory.
 
 ### Email
 

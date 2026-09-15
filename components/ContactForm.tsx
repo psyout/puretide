@@ -94,13 +94,13 @@ export default function ContactForm({ variant = 'default' }: ContactFormProps) {
 		: 'w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal';
 
 	return (
-		<div className={isEditorial ? 'p-7 sm:p-10 lg:p-12' : 'bg-mineral-white backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'}>
+		<div className={isEditorial ? ' sm:p-10 lg:p-12' : 'bg-mineral-white backdrop-blur-sm rounded-lg p-6 shadow-md ui-border'}>
 			<div className={isEditorial ? 'mb-9' : 'mb-6'}>
 				{isEditorial && <p className='mb-3 text-xs font-bold uppercase tracking-[0.2em] text-deep-tidal-teal-500'>Send a note</p>}
 				<h3 className={isEditorial ? 'text-3xl font-bold tracking-[-0.03em] text-deep-tidal-teal-800 sm:text-4xl' : 'text-2xl font-bold text-deep-tidal-teal-800'}>
 					{isEditorial ? 'How can we help?' : 'Send us a Message'}
 				</h3>
-				{isEditorial && <p className='mt-3 max-w-lg text-sm leading-relaxed text-deep-tidal-teal-700/70'>Tell us what you are curious about and our team will point you in the right direction.</p>}
+				{isEditorial && <p className='max-w-lg text-md leading-relaxed text-deep-tidal-teal-700/70'>What are you curious about? We’ll guide you.</p>}
 			</div>
 			<form
 				onSubmit={handleSubmit}
@@ -174,9 +174,11 @@ export default function ContactForm({ variant = 'default' }: ContactFormProps) {
 				<button
 					type='submit'
 					disabled={isSubmitting}
-					className={isEditorial
-						? 'flex min-h-14 w-full items-center justify-center rounded-2xl bg-deep-tidal-teal-800 px-6 py-3 font-semibold text-mineral-white shadow-[0_18px_40px_-24px_rgba(10,32,39,0.8)] transition-colors hover:bg-deep-tidal-teal-700 disabled:cursor-not-allowed disabled:opacity-70'
-						: 'w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-70 disabled:cursor-not-allowed'}>
+					className={
+						isEditorial
+							? 'flex min-h-14 w-full items-center justify-center rounded-2xl bg-deep-tidal-teal-800 px-6 py-3 font-semibold text-mineral-white shadow-[0_18px_40px_-24px_rgba(10,32,39,0.8)] transition-colors hover:bg-deep-tidal-teal-700 disabled:cursor-not-allowed disabled:opacity-70'
+							: 'w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-70 disabled:cursor-not-allowed'
+					}>
 					{isSubmitting ? 'Sending...' : 'Send Message'}
 				</button>
 			</form>

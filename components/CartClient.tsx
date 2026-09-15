@@ -31,11 +31,16 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
 	const [appliedDiscount, setAppliedDiscount] = useState(0);
 	const [appliedFreeShipping, setAppliedFreeShipping] = useState(false);
+	const [appliedProductIds, setAppliedProductIds] = useState<string[]>([]);
 	const [promoError, setPromoError] = useState<string | null>(null);
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
 	const summarySubtotal = promoApplied ? rawTotal : total;
-	const promoDiscountAmount = Number((summarySubtotal * (appliedDiscount / 100)).toFixed(2));
+	const promoEligibleSubtotal = cartItems.reduce(
+		(sum, item) => (appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
+		0,
+	);
+	const promoDiscountAmount = Number((promoEligibleSubtotal * (appliedDiscount / 100)).toFixed(2));
 	const summaryTotal = Number((summarySubtotal - promoDiscountAmount).toFixed(2));
 
 	useEffect(() => {
@@ -45,6 +50,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 		setAppliedPromoCode(storedPromo.code);
 		setAppliedDiscount(storedPromo.discount);
 		setAppliedFreeShipping(storedPromo.freeShipping);
+		setAppliedProductIds(storedPromo.productIds ?? []);
 		setShowPromoInput(true);
 	}, []);
 
@@ -57,26 +63,34 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 			const response = await fetch('/api/promo/verify', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ code: normalizedCode, subtotal: rawTotal }),
+				body: JSON.stringify({ code: normalizedCode, subtotal: rawTotal, cartItems: cartItems.map(({ id, price, quantity }) => ({ id, price, quantity })) }),
 			});
-			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
+			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; productIds?: string[]; error?: string };
 			if (!data.ok) {
 				setPromoError(data.error || 'Invalid code');
 				setAppliedPromoCode(null);
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
+				setAppliedProductIds([]);
 				storeCartPromo(null);
 				return;
 			}
 			const discount = Number(data.discount ?? 0);
 			const freeShipping = Boolean(data.freeShipping);
+			const productIds = Array.isArray(data.productIds) ? data.productIds.map(String) : [];
 			setPromoCode(normalizedCode);
 			setAppliedPromoCode(normalizedCode);
 			setAppliedDiscount(discount);
 			setAppliedFreeShipping(freeShipping);
-			storeCartPromo({ code: normalizedCode, discount, freeShipping });
+			setAppliedProductIds(productIds);
+			storeCartPromo({ code: normalizedCode, discount, freeShipping, productIds });
 		} catch {
 			setPromoError('Failed to verify code');
+			setAppliedPromoCode(null);
+			setAppliedDiscount(0);
+			setAppliedFreeShipping(false);
+			setAppliedProductIds([]);
+			storeCartPromo(null);
 		} finally {
 			setIsVerifyingPromo(false);
 		}

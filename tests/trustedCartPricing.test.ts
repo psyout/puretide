@@ -21,3 +21,10 @@ test('returns error when item does not map to a trusted product', () => {
 	const result = normalizeCartItemsWithTrustedPrices(cartItems, products);
 	assert.equal(result.ok, false);
 });
+
+test('returns error when a trusted product is not published', () => {
+	const products: Product[] = [{ id: 'sample', slug: 'sample', name: 'Sample', description: 'x', price: 55, stock: 10, image: '', category: 'cat', status: 'draft' }];
+	const cartItems = [{ id: 'sample', price: 55, quantity: 1, name: 'Sample', image: '', description: '' }];
+	const result = normalizeCartItemsWithTrustedPrices(cartItems, products);
+	assert.equal(result.ok, false);
+});

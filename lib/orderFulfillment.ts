@@ -4,6 +4,8 @@ import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/con
 import { createOrderTask, createClientTask } from '@/lib/wrike';
 import { decrementStock, getProductInventory, getProductsBelowReorderPoint } from '@/lib/wrikeProducts';
 import { readSheetProducts, upsertSheetClient, writeSheetProducts } from '@/lib/stockSheet';
+import { isZohoProductSource, readProducts } from '@/lib/productCatalog';
+import { decrementZohoStock } from '@/lib/zohoInventory';
 
 export type FulfillmentOrder = {
 	orderNumber: string;
@@ -128,6 +130,20 @@ export async function updateWrikeStock(items: FulfillmentOrder['cartItems']): Pr
 		console.error('[orderFulfillment] Failed to update Wrike stock', error);
 		return [];
 	}
+}
+
+async function getZohoStockSnapshot(items: FulfillmentOrder['cartItems']): Promise<Array<{ name: string; stock: number; cost: number }>> {
+	const products = await readProducts();
+	const bySlug = new Map(products.map((product) => [product.slug, product] as const));
+	return items.map((item) => {
+		const product = bySlug.get(String(item.id));
+		if (!product) throw new Error(`Zoho product not found for website slug: ${String(item.id)}`);
+		return {
+			name: item.name,
+			stock: Math.max(0, product.stock - item.quantity),
+			cost: Number(product.cost ?? 0),
+		};
+	});
 }
 
 export type RunFulfillmentResult = {
@@ -322,7 +338,8 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		adminEmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
 	}
 
-	const stockLevels = await updateWrikeStock(order.cartItems);
+	// Wrike can still receive order tasks, but Zoho owns product stock when selected.
+	const stockLevels = isZohoProductSource() ? await getZohoStockSnapshot(order.cartItems) : await updateWrikeStock(order.cartItems);
 
 	const totalCost = stockLevels.reduce((sum, item) => {
 		const cartItem = order.cartItems.find((ci) => ci.name === item.name);
@@ -377,8 +394,13 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 	await createClientTask(clientRecord);
 	await upsertSheetClient(clientRecord);
 
-	// Final step: update Google Sheets stock (source of truth)
-	await decrementGoogleSheetStock(order.orderNumber, order.cartItems);
+	// Final step: update the configured inventory source. Zoho writes remain opt-in
+	// so local checkout testing cannot alter live inventory accidentally.
+	if (isZohoProductSource()) {
+		await decrementZohoStock(order.orderNumber, order.cartItems);
+	} else {
+		await decrementGoogleSheetStock(order.orderNumber, order.cartItems);
+	}
 
 	return { emailStatus, adminEmailStatus };
 }

@@ -1,5 +1,5 @@
 import type { Product } from '@/types/product';
-import { readSheetProducts } from '@/lib/stockSheet';
+import { readProducts } from '@/lib/productCatalog';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
 
@@ -428,7 +428,7 @@ export async function syncNewProductsFromSheets(sheetProducts: Product[]): Promi
 
 export async function getProductsBelowReorderPoint(): Promise<ProductInventory[]> {
 	const allInventory = await getAllProductInventory();
-	const sheetProducts = await readSheetProducts();
+	const sheetProducts = await readProducts();
 
 	// Create a map of product status for quick lookup
 	const productStatusMap = new Map<string, boolean>();

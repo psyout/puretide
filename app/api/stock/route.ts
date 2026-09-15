@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readSheetProducts, writeSheetProducts } from '@/lib/stockSheet';
+import { isZohoProductSource, readProducts, writeProducts } from '@/lib/productCatalog';
 import { validateStockItems } from '@/lib/stockValidation';
 import { sendLowStockAlert } from '@/lib/email';
 import { getAllProductInventory, syncNewProductsFromSheets } from '@/lib/wrikeProducts';
@@ -26,11 +26,11 @@ export async function GET(request: Request) {
 		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
 	}
 	try {
-		const catalogProducts = await readSheetProducts();
+		const catalogProducts = await readProducts();
 
 		const wrikeInventory = await getAllProductInventory();
 
-		if (wrikeInventory.length > 0) {
+		if (!isZohoProductSource() && wrikeInventory.length > 0) {
 			await syncNewProductsFromSheets(catalogProducts);
 		}
 
@@ -39,10 +39,11 @@ export async function GET(request: Request) {
 		const mergedProducts = catalogProducts.map((product) => {
 			const inventory = inventoryMap.get(product.id);
 			if (inventory) {
+				const zohoIsSource = isZohoProductSource();
 				return {
 					...product,
-					stock: inventory.stock,
-					cost: inventory.cost,
+					stock: zohoIsSource ? product.stock : inventory.stock,
+					cost: zohoIsSource ? product.cost : inventory.cost,
 					supplier: inventory.supplier,
 					supplierSku: inventory.supplierSku,
 					reorderPoint: inventory.reorderPoint,
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
 		}
 		const items = validation.items;
 
-		await writeSheetProducts(items);
+		await writeProducts(items);
 
 		const lowStock = items.filter((item) => item.status === 'published' && Number(item.stock) <= LOW_STOCK_THRESHOLD);
 

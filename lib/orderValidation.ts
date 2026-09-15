@@ -89,6 +89,19 @@ export function validateShippingAddress(addr: ShippingAddressInput | null | unde
 
 export type CartItemForStock = { id: string; name?: string; quantity: number };
 
+type StockProduct = {
+	id: string;
+	slug?: string;
+	stock: number;
+	name?: string;
+	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
+	variants?: Array<{ key: string; stock: number }>;
+};
+
+function isWebsiteSellable(product: StockProduct) {
+	return (product.status ?? 'published') === 'published';
+}
+
 function normalizeKey(value: string) {
 	return String(value ?? '')
 		.trim()
@@ -97,9 +110,9 @@ function normalizeKey(value: string) {
 }
 
 function resolveProductForCartItem(
-	products: Array<{ id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> }>,
+	products: StockProduct[],
 	item: CartItemForStock,
-): { product: { id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> } | null; resolvedId: string } {
+): { product: StockProduct | null; resolvedId: string } {
 	const itemId = String(item.id);
 
 	// 1) Canonical: exact match by product id/slug
@@ -125,12 +138,12 @@ function resolveProductForCartItem(
 
 export async function validateStockAvailability(
 	cartItems: CartItemForStock[],
-	getProducts: () => Promise<Array<{ id: string; slug?: string; stock: number; name?: string; variants?: Array<{ key: string; stock: number }> }>>,
+	getProducts: () => Promise<StockProduct[]>,
 ): Promise<string | null> {
 	let products = await getProducts();
-	// Fallback to base products if Google Sheet returns empty or fails
+	// Keep legacy static products available only if the configured catalog is empty.
 	if (!products || products.length === 0) {
-		console.warn('[validateStockAvailability] Google Sheet returned empty, using fallback products');
+		console.warn('[validateStockAvailability] Product catalog returned empty, using fallback products');
 		products = fallbackProducts;
 	}
 	for (const item of cartItems) {
@@ -143,6 +156,7 @@ export async function validateStockAvailability(
 		const product = resolved.product;
 
 		if (product) {
+			if (!isWebsiteSellable(product)) return `Product "${product.name ?? product.id}" is not available.`;
 			// Regular product found - use its total stock
 			available = Number(product.stock) || 0;
 			productName = product.name ?? product.id;
@@ -156,6 +170,7 @@ export async function validateStockAvailability(
 				console.error('[validateStockAvailability] Product not found:', { itemId, baseId, availableSlugs: products.map((p) => p.slug) });
 				return `Product "${item.name ?? item.id}" is not available.`;
 			}
+			if (!isWebsiteSellable(baseProduct)) return `Product "${baseProduct.name ?? baseProduct.id}" is not available.`;
 			// Use base product's total stock (source of truth)
 			available = Number(baseProduct.stock) || 0;
 			productName = baseProduct.name ?? baseProduct.id;
@@ -163,6 +178,7 @@ export async function validateStockAvailability(
 			// Not found at all - try partial match (e.g., "bacteriostatic-water-10mg" -> "bacteriostatic-water")
 			const partialMatch = products.find((p) => itemId.startsWith(p.id + '-') || itemId.startsWith(p.slug + '-'));
 			if (partialMatch) {
+				if (!isWebsiteSellable(partialMatch)) return `Product "${partialMatch.name ?? partialMatch.id}" is not available.`;
 				available = Number(partialMatch.stock) || 0;
 				productName = partialMatch.name ?? partialMatch.id;
 			} else {

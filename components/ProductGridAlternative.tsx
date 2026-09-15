@@ -1,5 +1,5 @@
 import { products as fallbackProducts } from '@/lib/products';
-import { readSheetProducts } from '@/lib/stockSheet';
+import { readProducts } from '@/lib/productCatalog';
 import ProductGridAlternativeClient from './ProductGridAlternativeClient';
 
 export const dynamic = 'force-dynamic';
@@ -10,9 +10,9 @@ export default async function ProductGridAlternative() {
 	let stockUnavailable = false;
 
 	try {
-		items = await readSheetProducts();
+		items = await readProducts();
 	} catch (error) {
-		console.warn('ProductGridAlternative: Using fallback products due to sheet error:', error);
+		console.warn('ProductGridAlternative: Using fallback products due to catalog error:', error);
 		stockUnavailable = true;
 	}
 

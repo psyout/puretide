@@ -79,10 +79,10 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 			/>
 
 			<div className='relative mx-auto max-w-7xl px-6'>
-				<header className='grid gap-8 border-b border-deep-tidal-teal-800/15 pb-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-20 lg:pb-14'>
+				<header className='grid gap-8 pb-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-20 lg:pb-14'>
 					<div>
 						<p className='mb-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
-							<span className='h-px w-10 bg-deep-tidal-teal-500' />
+							<span className='h-px w-3 bg-deep-tidal-teal-500' />
 							The collection
 						</p>
 						<h2

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { readSheetProducts } from '@/lib/stockSheet';
+import { readProducts } from '@/lib/productCatalog';
 import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
 import type { PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import { getPromoMinimumSubtotalError } from '@/lib/promo';
+import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError } from '@/lib/promo';
 import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
 		try {
 			stockError = await validateStockAvailability(
 				orderPayload.cartItems.map((item) => ({ id: String(item.id), name: item.name, quantity: item.quantity })),
-				readSheetProducts,
+				readProducts,
 			);
 		} catch (error) {
 			return NextResponse.json(
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
 				{ status: 400 },
 			);
 		}
-		const products = await readSheetProducts();
+		const products = await readProducts();
 		const trustedCart = normalizeCartItemsWithTrustedPrices(orderPayload.cartItems, products);
 		if (!trustedCart.ok) {
 			return NextResponse.json({ ok: false, error: trustedCart.error }, { status: 400 });
@@ -192,10 +192,14 @@ export async function POST(request: Request) {
 				if (minimumError) {
 					return NextResponse.json({ ok: false, error: minimumError }, { status: 400 });
 				}
+				const eligibilityError = getPromoProductEligibilityError(promo, cartItems);
+				if (eligibilityError) {
+					return NextResponse.json({ ok: false, error: eligibilityError }, { status: 400 });
+				}
 				if (promo.freeShipping) {
 					shippingCost = 0;
 				}
-				discountAmount = Number((subtotalWithPromo * (promo.discount / 100)).toFixed(2));
+				discountAmount = getPromoDiscountAmount(promo, cartItems);
 			} else {
 				cartItems = trustedCartItems.map((item) => ({
 					...item,

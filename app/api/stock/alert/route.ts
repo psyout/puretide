@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { readSheetProducts } from '@/lib/stockSheet';
+import { readProducts } from '@/lib/productCatalog';
 import { sendLowStockAlert } from '@/lib/email';
 import type { Product } from '@/types/product';
 import { isExplicitDevBypassEnabled } from '@/lib/authEnv';
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
 	}
 	try {
-		const items = await readSheetProducts();
+		const items = await readProducts();
 		const lowStock = items.filter((item) => item.stock <= LOW_STOCK_THRESHOLD && item.status !== 'inactive');
 		if (lowStock.length === 0) {
 			return NextResponse.json({ ok: true, count: 0, skipped: true, reason: 'no-low-stock' });

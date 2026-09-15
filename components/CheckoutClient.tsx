@@ -162,6 +162,7 @@ export default function CheckoutClient() {
 	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
 	const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
 	const [appliedFreeShipping, setAppliedFreeShipping] = useState(false);
+	const [appliedProductIds, setAppliedProductIds] = useState<string[]>([]);
 	const [promoError, setPromoError] = useState<string | null>(null);
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const promoRevalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -195,7 +196,11 @@ export default function CheckoutClient() {
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
 	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
 	const subtotal = promoApplied ? subtotalRaw : subtotalWithVolume;
-	const discountAmount = Number((subtotal * (appliedDiscount / 100)).toFixed(2));
+	const promoEligibleSubtotal = cartItems.reduce(
+		(sum, item) => (appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
+		0,
+	);
+	const discountAmount = Number((promoEligibleSubtotal * (appliedDiscount / 100)).toFixed(2));
 	const subtotalAfterDiscounts = Number((subtotal - discountAmount).toFixed(2));
 	const qualifiesFreeShipping = subtotalAfterDiscounts > FREE_SHIPPING_THRESHOLD;
 	const destinationZipCode = shipToDifferentAddress ? shippingAddress.zipCode : formData.zipCode;
@@ -230,6 +235,7 @@ export default function CheckoutClient() {
 		setAppliedPromoCode(storedPromo.code);
 		setAppliedDiscount(storedPromo.discount);
 		setAppliedFreeShipping(storedPromo.freeShipping);
+		setAppliedProductIds(storedPromo.productIds ?? []);
 		setShowPromoInput(true);
 	}, []);
 
@@ -274,27 +280,33 @@ export default function CheckoutClient() {
 			const response = await fetch('/api/promo/verify', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ code: normalizedCode, subtotal: subtotalRaw }),
+				body: JSON.stringify({ code: normalizedCode, subtotal: subtotalRaw, cartItems: cartItems.map(({ id, price, quantity }) => ({ id, price, quantity })) }),
 			});
 
-			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
+			const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; productIds?: string[]; error?: string };
 			if (data.ok) {
 				const discount = Number(data.discount ?? 0);
 				const freeShipping = Boolean(data.freeShipping);
+				const productIds = Array.isArray(data.productIds) ? data.productIds.map(String) : [];
 				setAppliedDiscount(discount);
 				setAppliedFreeShipping(freeShipping);
+				setAppliedProductIds(productIds);
 				setAppliedPromoCode(normalizedCode);
 				setPromoError(null);
-				storeCartPromo({ code: normalizedCode, discount, freeShipping });
+				storeCartPromo({ code: normalizedCode, discount, freeShipping, productIds });
 			} else {
 				setPromoError(data.error || 'Invalid code');
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
+				setAppliedProductIds([]);
 				setAppliedPromoCode(null);
 				storeCartPromo(null);
 			}
 		} catch (error) {
 			setPromoError('Failed to verify code');
+			setAppliedDiscount(0);
+			setAppliedFreeShipping(false);
+			setAppliedProductIds([]);
 			setAppliedPromoCode(null);
 			storeCartPromo(null);
 		} finally {
@@ -314,23 +326,26 @@ export default function CheckoutClient() {
 				const response = await fetch('/api/promo/verify', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ code: appliedPromoCode, subtotal: subtotalRaw }),
+					body: JSON.stringify({ code: appliedPromoCode, subtotal: subtotalRaw, cartItems: cartItems.map(({ id, price, quantity }) => ({ id, price, quantity })) }),
 					signal: controller.signal,
 				});
-				const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; error?: string };
+				const data = (await response.json()) as { ok?: boolean; discount?: number; freeShipping?: boolean; productIds?: string[]; error?: string };
 				if (data.ok) {
 					const discount = Number(data.discount ?? 0);
 					const freeShipping = Boolean(data.freeShipping);
+					const productIds = Array.isArray(data.productIds) ? data.productIds.map(String) : [];
 					setAppliedDiscount(discount);
 					setAppliedFreeShipping(freeShipping);
+					setAppliedProductIds(productIds);
 					setPromoError(null);
-					storeCartPromo({ code: appliedPromoCode, discount, freeShipping });
+					storeCartPromo({ code: appliedPromoCode, discount, freeShipping, productIds });
 					return;
 				}
 
 				setPromoError(data.error || 'Invalid code');
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
+				setAppliedProductIds([]);
 				setAppliedPromoCode(null);
 				storeCartPromo(null);
 			} catch (error) {
@@ -340,6 +355,7 @@ export default function CheckoutClient() {
 				setPromoError('Failed to verify code');
 				setAppliedDiscount(0);
 				setAppliedFreeShipping(false);
+				setAppliedProductIds([]);
 				setAppliedPromoCode(null);
 				storeCartPromo(null);
 			} finally {
@@ -353,7 +369,7 @@ export default function CheckoutClient() {
 				clearTimeout(promoRevalidateTimeoutRef.current);
 			}
 		};
-	}, [appliedPromoCode, subtotalRaw]);
+	}, [appliedPromoCode, subtotalRaw, cartItems]);
 
 	const buildPayload = () => {
 		// Capitalize name and address fields
@@ -417,6 +433,7 @@ export default function CheckoutClient() {
 		setAppliedPromoCode(null);
 		setAppliedDiscount(0);
 		setAppliedFreeShipping(false);
+		setAppliedProductIds([]);
 		setPromoError(null);
 		setShowPromoInput(false);
 		storeCartPromo(null);
@@ -439,6 +456,7 @@ export default function CheckoutClient() {
 		setAppliedPromoCode(null);
 		setAppliedDiscount(0);
 		setAppliedFreeShipping(false);
+		setAppliedProductIds([]);
 		setPromoError(null);
 		setShowPromoInput(false);
 		storeCartPromo(null);

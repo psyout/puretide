@@ -1,4 +1,5 @@
-import { readSheetProducts, readSheetPromoCodes, readSheetClients, readSheetFriendsFamilyAllowlist, readSheetPromotionCampaigns } from './stockSheet';
+import { readSheetPromoCodes, readSheetClients, readSheetFriendsFamilyAllowlist, readSheetPromotionCampaigns } from './stockSheet';
+import { readProducts } from './productCatalog';
 import type { FriendsFamilySheetEntry } from './stockSheet';
 import type { PromotionCampaign } from '@/types/product';
 
@@ -57,7 +58,7 @@ export async function getCachedSheetProducts() {
 	if (cached) return cached;
 
 	try {
-		const products = await readSheetProducts();
+		const products = await readProducts();
 		setCache(productCache, cacheKey, products, PRODUCT_CACHE_TTL_MS);
 		return products;
 	} catch (error) {

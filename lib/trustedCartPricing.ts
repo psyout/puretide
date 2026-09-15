@@ -57,6 +57,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 		const product = resolveProduct();
 
 		if (product) {
+			if ((product.status ?? 'published') !== 'published') return null;
 			// Regular product found - use its price
 			productPrice = Number(product.price) || 0;
 		} else if (itemId.includes('-')) {
@@ -68,6 +69,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 			if (!baseProduct) {
 				return null;
 			}
+			if ((baseProduct.status ?? 'published') !== 'published') return null;
 			// Try to find variant in variants array
 			const variant = baseProduct.variants?.find((v) => v.key === itemId);
 			if (variant) {

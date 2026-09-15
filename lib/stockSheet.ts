@@ -296,7 +296,7 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:E',
+			range: 'PromoCodes!A1:F',
 		});
 
 		const rows = response.data.values ?? [];
@@ -312,6 +312,10 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 				freeShipping: hasFourColumns ? (row[2] ?? '').trim().toLowerCase() === 'true' : false,
 				active: (hasFourColumns ? row[3] : (row[2] ?? '')).trim().toLowerCase() === 'true',
 				minimumSubtotal: Number.isFinite(minimumSubtotal) ? minimumSubtotal : 0,
+				productIds: (row[5] ?? '')
+					.split(',')
+					.map((id) => id.trim())
+					.filter(Boolean),
 			};
 		});
 	} catch (error) {
@@ -470,13 +474,23 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
 		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'PromoCodes');
 		if (!sheetExists) {
-			console.error('Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active');
+			console.error('Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active, MinimumSubtotal, Products');
 			return;
 		}
-		const values = [['Code', 'Discount', 'FreeShipping', 'Active'], ...codes.map((c) => [c.code, String(c.discount), c.freeShipping ? 'true' : 'false', c.active ? 'true' : 'false'])];
+		const values = [
+			['Code', 'Discount', 'FreeShipping', 'Active', 'MinimumSubtotal', 'Products'],
+			...codes.map((c) => [
+				c.code,
+				String(c.discount),
+				c.freeShipping ? 'true' : 'false',
+				c.active ? 'true' : 'false',
+				String(c.minimumSubtotal ?? 0),
+				(c.productIds ?? []).join(', '),
+			]),
+		];
 		await sheets.spreadsheets.values.update({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:D',
+			range: 'PromoCodes!A1:F',
 			valueInputOption: 'RAW',
 			requestBody: { values },
 		});

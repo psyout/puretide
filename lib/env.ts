@@ -25,6 +25,20 @@ const envSchema = z.object({
 	GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
 	GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
 
+	// Product catalog / Zoho Inventory integration. Google Sheets remains in use
+	// for promotions, clients, and Friends & Family records.
+	PRODUCT_SOURCE: z.enum(['sheet', 'zoho']).default('sheet'),
+	ZOHO_INVENTORY_WRITE_ENABLED: booleanEnv.default(false),
+	ZOHO_INVENTORY_ORGANIZATION_ID: z.string().optional(),
+	ZOHO_INVENTORY_ACCESS_TOKEN: z.string().optional(),
+	ZOHO_INVENTORY_CLIENT_ID: z.string().optional(),
+	ZOHO_INVENTORY_CLIENT_SECRET: z.string().optional(),
+	ZOHO_INVENTORY_REFRESH_TOKEN: z.string().optional(),
+	ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID: z.string().optional(),
+	ZOHO_INVENTORY_LOCATION_ID: z.string().optional(),
+	ZOHO_INVENTORY_API_BASE_URL: z.string().url().optional(),
+	ZOHO_ACCOUNTS_BASE_URL: z.string().url().optional(),
+
 	// Email (SMTP)
 	SMTP_HOST: z.string().optional(),
 	SMTP_PORT: z.coerce.number().optional(),
@@ -201,6 +215,19 @@ export function validateEnv(): EnvSchema {
 			if (!isNextBuildPhase && validatedEnv.ETRANSFER_PROVIDER === 'bluepeak') {
 				required('BLUEPEAK_SECRET_KEY', validatedEnv.BLUEPEAK_SECRET_KEY);
 				required('BLUEPEAK_WEBHOOK_SECRET', validatedEnv.BLUEPEAK_WEBHOOK_SECRET);
+			}
+
+			if (!isNextBuildPhase && validatedEnv.PRODUCT_SOURCE === 'zoho') {
+				required('ZOHO_INVENTORY_ORGANIZATION_ID', validatedEnv.ZOHO_INVENTORY_ORGANIZATION_ID);
+				const hasFixedAccessToken = Boolean(validatedEnv.ZOHO_INVENTORY_ACCESS_TOKEN?.trim());
+				if (!hasFixedAccessToken) {
+					required('ZOHO_INVENTORY_CLIENT_ID', validatedEnv.ZOHO_INVENTORY_CLIENT_ID);
+					required('ZOHO_INVENTORY_CLIENT_SECRET', validatedEnv.ZOHO_INVENTORY_CLIENT_SECRET);
+					required('ZOHO_INVENTORY_REFRESH_TOKEN', validatedEnv.ZOHO_INVENTORY_REFRESH_TOKEN);
+				}
+				if (validatedEnv.ZOHO_INVENTORY_WRITE_ENABLED) {
+					required('ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID', validatedEnv.ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID);
+				}
 			}
 
 			// In production, DigiPay HMAC secret is required if DigiPay is used

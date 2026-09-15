@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { products as fallbackProducts } from '@/lib/products';
-import { readSheetProducts } from '@/lib/stockSheet';
+import { readProducts } from '@/lib/productCatalog';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/types/product';
@@ -46,9 +46,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
 	let items: Product[] = fallbackProducts;
 	let stockUnavailable = false;
 	try {
-		items = await readSheetProducts();
+		items = await readProducts();
 	} catch (error) {
-		console.warn('ProductPage: Using fallback products due to sheet error:', error);
+		console.warn('ProductPage: Using fallback products due to catalog error:', error);
 		items = fallbackProducts;
 		stockUnavailable = true;
 	}
@@ -125,25 +125,25 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
 					{/* Trust Indicators */}
 					<div className='grid grid-rows-1 md:grid-cols-3 divide-y divide-deep-tidal-teal/10 md:divide-y-0 md:divide-x border-t border-deep-tidal-teal/10'>
-						<div className='flex flex-col items-center justify-center gap-2 p-3 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-							<ShieldCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
+						<div className='flex flex-col items-center justify-center gap-3 p-5 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
+							<ShieldCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-13 md:w-13' />
 							<div>
-								<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Secure Checkout</h3>
-								<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Your payment is protected</p>
+								<h3 className='text-sm font-bold leading-tight text-deep-tidal-teal-900 md:text-[15px]'>Secure Checkout</h3>
+								<p className='mt-1 text-sm leading-normal text-deep-tidal-teal-700 md:text-[14px]'>Your payment is protected</p>
 							</div>
 						</div>
-						<div className='flex flex-col items-center justify-center gap-2 p-3 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-							<BadgeCheck className='h-8 w-8 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
+						<div className='flex flex-col items-center justify-center gap-3 p-5 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
+							<BadgeCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-13 md:w-13' />
 							<div>
-								<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Quality Assured</h3>
-								<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Lab tested & verified</p>
+								<h3 className='text-sm font-bold leading-tight text-deep-tidal-teal-900 md:text-[15px]'>Quality Assured</h3>
+								<p className='mt-1 text-sm leading-normal text-deep-tidal-teal-700 md:text-[14px]'>Lab tested & verified</p>
 							</div>
 						</div>
-						<div className='flex flex-col items-center justify-center gap-2 p-3 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-							<PackageCheck className='h-8 w-8 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-12 md:w-12' />
+						<div className='flex flex-col items-center justify-center gap-3 p-5 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
+							<PackageCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-13 md:w-13' />
 							<div>
-								<h3 className='text-[11px] font-bold leading-tight text-deep-tidal-teal-900 md:text-sm'>Discreet Packaging</h3>
-								<p className='mt-1 text-[10px] leading-tight text-deep-tidal-teal-700 md:text-sm md:leading-normal'>Private & secure delivery</p>
+								<h3 className='text-sm font-bold leading-tight text-deep-tidal-teal-900 md:text-[15px]'>Discreet Packaging</h3>
+								<p className='mt-1 text-sm leading-normal text-deep-tidal-teal-700 md:text-[14px]'>Private & secure delivery</p>
 							</div>
 						</div>
 					</div>
