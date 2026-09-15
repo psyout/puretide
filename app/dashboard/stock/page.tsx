@@ -884,7 +884,7 @@ export default function StockDashboardPage() {
 															</option>
 														))}
 													</select>
-													<span className='text-xs text-[#6a6a6a]'>Blank = no product discount. Use Cmd/Ctrl-click for multiple.</span>
+												<span className='text-xs text-[#6a6a6a]'>Blank = all products. Use Cmd/Ctrl-click for multiple.</span>
 												</label>
 												<label className='flex items-center gap-2'>
 													<input

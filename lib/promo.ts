@@ -4,6 +4,9 @@ type PromoCartItem = { id: string | number; price: number; quantity: number };
 
 export function getPromoEligibleSubtotal(promo: PromoCode, items: PromoCartItem[]): number {
 	const eligibleIds = new Set((promo.productIds ?? []).map(String));
+	if (eligibleIds.size === 0) {
+		return items.reduce((subtotal, item) => subtotal + item.price * item.quantity, 0);
+	}
 	return items.reduce((subtotal, item) => {
 		if (!eligibleIds.has(String(item.id))) return subtotal;
 		return subtotal + item.price * item.quantity;

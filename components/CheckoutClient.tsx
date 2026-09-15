@@ -197,7 +197,7 @@ export default function CheckoutClient() {
 	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
 	const subtotal = promoApplied ? subtotalRaw : subtotalWithVolume;
 	const promoEligibleSubtotal = cartItems.reduce(
-		(sum, item) => (appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
+		(sum, item) => (appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
 		0,
 	);
 	const discountAmount = Number((promoEligibleSubtotal * (appliedDiscount / 100)).toFixed(2));

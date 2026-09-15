@@ -37,7 +37,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
 	const summarySubtotal = promoApplied ? rawTotal : total;
 	const promoEligibleSubtotal = cartItems.reduce(
-		(sum, item) => (appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
+		(sum, item) => (appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
 		0,
 	);
 	const promoDiscountAmount = Number((promoEligibleSubtotal * (appliedDiscount / 100)).toFixed(2));

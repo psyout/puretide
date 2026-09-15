@@ -44,7 +44,7 @@ export interface PromoCode {
 	discount: number; // percentage, e.g., 10 for 10%
 	minimumSubtotal?: number;
 	freeShipping?: boolean;
-	/** Product IDs eligible for the discount. Empty/omitted means no products. */
+	/** Product IDs eligible for the discount. Empty/omitted means all products. */
 	productIds?: string[];
 	active: boolean;
 }
