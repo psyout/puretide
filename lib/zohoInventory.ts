@@ -79,7 +79,13 @@ const positiveDuration = (value: unknown, fallback: number) => {
 
 const getCatalogCacheTtlMs = () => positiveDuration(process.env.ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS, DEFAULT_CATALOG_CACHE_TTL_MS);
 const getItemDetailCacheTtlMs = () => positiveDuration(process.env.ZOHO_INVENTORY_DETAIL_CACHE_TTL_MS, DEFAULT_ITEM_DETAIL_CACHE_TTL_MS);
-const getPersistentCachePath = () => process.env.ZOHO_INVENTORY_CACHE_PATH?.trim() || path.join(process.cwd(), 'data', 'zoho-products-cache.json');
+const getPersistentCachePath = () => {
+	const configuredPath = process.env.ZOHO_INVENTORY_CACHE_PATH?.trim();
+	if (configuredPath) return configuredPath;
+	const ordersDatabasePath = process.env.ORDERS_DB_PATH?.trim();
+	if (ordersDatabasePath) return path.join(path.dirname(ordersDatabasePath), 'zoho-products-cache.json');
+	return path.join(process.cwd(), 'data', 'zoho-products-cache.json');
+};
 
 const cloneProducts = (products: Product[]) =>
 	products.map((product) => ({

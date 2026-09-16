@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { mapZohoItemToProduct, readZohoProducts, resetZohoInventoryCacheForTests, type ZohoInventoryItem } from '../lib/zohoInventory';
@@ -105,6 +105,7 @@ test('coalesces concurrent catalog reads and serves subsequent reads from cache'
 		organizationId: process.env.ZOHO_INVENTORY_ORGANIZATION_ID,
 		apiBaseUrl: process.env.ZOHO_INVENTORY_API_BASE_URL,
 		cachePath: process.env.ZOHO_INVENTORY_CACHE_PATH,
+		ordersDbPath: process.env.ORDERS_DB_PATH,
 		catalogCacheTtl: process.env.ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS,
 	};
 	let requestCount = 0;
@@ -114,7 +115,8 @@ test('coalesces concurrent catalog reads and serves subsequent reads from cache'
 		process.env.ZOHO_INVENTORY_ACCESS_TOKEN = 'test-access-token';
 		process.env.ZOHO_INVENTORY_ORGANIZATION_ID = 'test-organization';
 		process.env.ZOHO_INVENTORY_API_BASE_URL = 'https://inventory.example.test/v1';
-		process.env.ZOHO_INVENTORY_CACHE_PATH = path.join(temporaryDirectory, 'catalog.json');
+		delete process.env.ZOHO_INVENTORY_CACHE_PATH;
+		process.env.ORDERS_DB_PATH = path.join(temporaryDirectory, 'data', 'orders.sqlite');
 		process.env.ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS = '60000';
 		resetZohoInventoryCacheForTests();
 
@@ -159,6 +161,10 @@ test('coalesces concurrent catalog reads and serves subsequent reads from cache'
 		assert.equal(first[0]?.stock, 44);
 		assert.deepEqual(second, first);
 		assert.deepEqual(third, first);
+		assert.equal(
+			JSON.parse(await readFile(path.join(temporaryDirectory, 'data', 'zoho-products-cache.json'), 'utf8')).products.length,
+			1,
+		);
 
 		process.env.ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS = '1';
 		await new Promise((resolve) => setTimeout(resolve, 5));
@@ -177,6 +183,7 @@ test('coalesces concurrent catalog reads and serves subsequent reads from cache'
 		restore('ZOHO_INVENTORY_ORGANIZATION_ID', originalEnvironment.organizationId);
 		restore('ZOHO_INVENTORY_API_BASE_URL', originalEnvironment.apiBaseUrl);
 		restore('ZOHO_INVENTORY_CACHE_PATH', originalEnvironment.cachePath);
+		restore('ORDERS_DB_PATH', originalEnvironment.ordersDbPath);
 		restore('ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS', originalEnvironment.catalogCacheTtl);
 		resetZohoInventoryCacheForTests();
 		await rm(temporaryDirectory, { recursive: true, force: true });
