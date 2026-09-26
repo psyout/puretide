@@ -332,7 +332,13 @@ export async function POST(request: Request) {
 				orderNumber,
 				total,
 				paymentProvider: gatewaylinxConfig ? 'gatewaylinx' : 'digipay',
-				redirectUrl: sessionResult.redirectUrl,
+				redirectHost: (() => {
+					try {
+						return new URL(sessionResult.redirectUrl).hostname;
+					} catch {
+						return 'invalid';
+					}
+				})(),
 			}),
 		);
 

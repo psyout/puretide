@@ -159,7 +159,17 @@ export class GatewaylinxProvider implements PaymentProvider {
 
 		const result = (await response.json()) as GatewaylinxInitResponse;
 
-		console.log('Gatewaylinx init response:', JSON.stringify(result));
+		console.log(
+			'Gatewaylinx init response:',
+			JSON.stringify({
+				success: result.success,
+				hasIframeUrl: Boolean(result.iframe_url),
+				hasRedirectUrl: Boolean(result.redirect_url),
+				hasCaptureUrl: Boolean(result.capture_url),
+				hasUniqueId: Boolean(result.unique_id),
+				error: result.error,
+			}),
+		);
 
 		if (!result.success) {
 			throw new Error(`Gatewaylinx init failed: ${result.error || 'Unknown error'}`);

@@ -53,7 +53,7 @@ const nextConfig = {
 							"img-src 'self' data: blob: www.facebook.com connect.facebook.net https://www.facebook.com https://connect.facebook.net",
 							"font-src 'self' data: fonts.gstatic.com",
 							"connect-src 'self' connect.facebook.net www.facebook.com https://connect.facebook.net https://www.facebook.com",
-							"frame-src 'self' https://api.pcivault.io",
+							"frame-src 'self' https://bluepeakdns.com https://api.pcivault.io https://*.pcivault.io",
 							"frame-ancestors 'none'",
 							"form-action 'self'",
 						].join('; '),

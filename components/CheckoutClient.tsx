@@ -13,6 +13,7 @@ import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
+const GATEWAYLINX_RELAY_HOST = 'bluepeakdns.com';
 const ETRANSFER_PROVIDER = String(process.env.NEXT_PUBLIC_ETRANSFER_PROVIDER ?? 'manual').toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 const FRIENDS_FAMILY_ENABLED = String(process.env.NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED ?? '').toLowerCase() === 'true';
 
@@ -26,12 +27,26 @@ function isTrustedPaymentRedirect(urlRaw: string): boolean {
 		if (url.protocol !== 'https:') {
 			return false;
 		}
+		const hostname = url.hostname.toLowerCase();
 		const envHosts =
 			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS?.split(',')
 				.map((host) => host.trim().toLowerCase())
 				.filter(Boolean) ?? [];
-		const allowedHosts = new Set([DIGIPAY_DEFAULT_HOST, 'api.pcivault.io', ...envHosts]);
-		return allowedHosts.has(url.hostname.toLowerCase());
+		const allowedHosts = new Set([DIGIPAY_DEFAULT_HOST, GATEWAYLINX_RELAY_HOST, ...envHosts]);
+		return allowedHosts.has(hostname) || hostname === 'pcivault.io' || hostname.endsWith('.pcivault.io');
+	} catch {
+		return false;
+	}
+}
+
+function isTrustedGatewaylinxOrigin(originRaw: string): boolean {
+	try {
+		const origin = new URL(originRaw);
+		const hostname = origin.hostname.toLowerCase();
+		return (
+			origin.protocol === 'https:' &&
+			(hostname === GATEWAYLINX_RELAY_HOST || hostname === 'pcivault.io' || hostname.endsWith('.pcivault.io'))
+		);
 	} catch {
 		return false;
 	}
@@ -49,8 +64,9 @@ export default function CheckoutClient() {
 	// Handle Gatewaylinx iframe postMessage
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
-			// Exact full-origin match per API docs
-			if (event.origin !== 'https://api.pcivault.io') return;
+			// Gatewaylinx messages may come from its exact relay host or an HTTPS
+			// PCI Vault origin. Reject every other origin.
+			if (!isTrustedGatewaylinxOrigin(event.origin)) return;
 
 			const data = (event.data || {}) as { status?: string; token?: string; reference?: string; last4?: string; message?: string };
 			console.log('Gatewaylinx iframe postMessage:', data);
@@ -314,6 +330,16 @@ export default function CheckoutClient() {
 		}
 	};
 
+	const handleClearPromo = () => {
+		setPromoCode('');
+		setAppliedPromoCode(null);
+		setAppliedDiscount(0);
+		setAppliedFreeShipping(false);
+		setAppliedProductIds([]);
+		setPromoError(null);
+		storeCartPromo(null);
+	};
+
 	useEffect(() => {
 		if (!appliedPromoCode) return;
 		if (promoRevalidateTimeoutRef.current) {
@@ -507,7 +533,7 @@ export default function CheckoutClient() {
 					const isGatewaylinx = (() => {
 						try {
 							const h = new URL(data.redirectUrl).hostname.toLowerCase();
-							return h === 'api.pcivault.io' || h.endsWith('.pcivault.io');
+							return h === GATEWAYLINX_RELAY_HOST || h === 'pcivault.io' || h.endsWith('.pcivault.io');
 						} catch {
 							return false;
 						}
@@ -1460,16 +1486,26 @@ export default function CheckoutClient() {
 												value={promoCode}
 												onChange={(e) => setPromoCode(e.target.value)}
 												placeholder='Promo code'
-												disabled={isVerifyingPromo || promoApplied}
-												className='flex-1 bg-white border border-black/10 rounded px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
-											/>
+											disabled={isVerifyingPromo || Boolean(appliedPromoCode)}
+											className='flex-1 bg-white border border-black/10 rounded px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
+										/>
+										{appliedPromoCode ? (
+											<button
+													type='button'
+													onClick={handleClearPromo}
+													disabled={isVerifyingPromo}
+													className='border border-deep-tidal-teal/20 bg-white px-3 py-2 rounded font-bold text-sm text-deep-tidal-teal-800 hover:bg-deep-tidal-teal-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+												Remove
+											</button>
+										) : (
 											<button
 												type='button'
 												onClick={handleApplyPromo}
-												disabled={isVerifyingPromo || promoApplied || !promoCode.trim()}
-												className='bg-deep-tidal-teal text-white px-4 py-2 rounded font-bold text-sm hover:bg-deep-tidal-teal-600 transition-colors disabled:opacity-50 cursor-pointer'>
-												{isVerifyingPromo ? '...' : promoApplied ? 'Applied' : 'Apply'}
+												disabled={isVerifyingPromo || !promoCode.trim()}
+												className='bg-deep-tidal-teal text-white px-4 py-2 rounded font-bold text-sm hover:bg-deep-tidal-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+												{isVerifyingPromo ? '...' : 'Apply'}
 											</button>
+										)}
 										</div>
 										{promoError && <p className='text-xs text-red-500 font-medium'>{promoError}</p>}
 										{(appliedDiscount > 0 || appliedFreeShipping) && (

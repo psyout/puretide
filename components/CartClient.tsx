@@ -96,6 +96,16 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 		}
 	};
 
+	const handleClearPromo = () => {
+		setPromoCode('');
+		setAppliedPromoCode(null);
+		setAppliedDiscount(0);
+		setAppliedFreeShipping(false);
+		setAppliedProductIds([]);
+		setPromoError(null);
+		storeCartPromo(null);
+	};
+
 	// Create a map of product stock for quick lookup
 	const productStockMap = useMemo(() => buildCartStockMap(products), [products]);
 
@@ -447,16 +457,26 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 												}}
 												placeholder='Promo code'
 												autoCapitalize='characters'
-												disabled={isVerifyingPromo || promoApplied}
-												className='min-w-0 flex-1 rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm uppercase text-deep-tidal-teal-800 outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-60'
-											/>
+											disabled={isVerifyingPromo || Boolean(appliedPromoCode)}
+											className='min-w-0 flex-1 rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm uppercase text-deep-tidal-teal-800 outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-60'
+										/>
+										{appliedPromoCode ? (
+											<button
+													type='button'
+													onClick={handleClearPromo}
+													disabled={isVerifyingPromo}
+													className='rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm font-semibold text-deep-tidal-teal-800 transition-colors hover:bg-deep-tidal-teal-50 disabled:cursor-not-allowed disabled:opacity-50'>
+												Remove
+											</button>
+										) : (
 											<button
 												type='button'
 												onClick={() => void handleApplyPromo()}
-												disabled={isVerifyingPromo || promoApplied || !promoCode.trim()}
+												disabled={isVerifyingPromo || !promoCode.trim()}
 												className='rounded-lg bg-deep-tidal-teal px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-50'>
-												{isVerifyingPromo ? 'Applying…' : promoApplied ? 'Applied' : 'Apply'}
+												{isVerifyingPromo ? 'Applying…' : 'Apply'}
 											</button>
+										)}
 										</div>
 										{promoError && (
 											<p
