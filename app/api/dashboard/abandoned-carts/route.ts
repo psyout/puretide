@@ -13,7 +13,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function readiness() {
 	return {
-		deploymentEnabled: String(process.env.ABANDONED_CART_FEATURE_ENABLED ?? '').toLowerCase() === 'true' && String(process.env.NEXT_PUBLIC_ABANDONED_CART_ENABLED ?? '').toLowerCase() === 'true',
+		deploymentEnabled: String(process.env.ABANDONED_CART_FEATURE_ENABLED ?? '').toLowerCase() === 'true',
 		businessAddressConfigured: Boolean(process.env.ABANDONED_CART_BUSINESS_ADDRESS?.trim()),
 		contactEmailConfigured: Boolean((process.env.ABANDONED_CART_CONTACT_EMAIL ?? process.env.ABANDONED_CART_FROM)?.trim()),
 		tokenSecretConfigured: Boolean(process.env.ABANDONED_CART_SECRET ?? process.env.DASHBOARD_SECRET),

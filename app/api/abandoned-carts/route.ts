@@ -13,7 +13,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CART_ID_RE = /^[a-zA-Z0-9_-]{16,100}$/;
 
 function deploymentEnabled(): boolean {
-	return String(process.env.ABANDONED_CART_FEATURE_ENABLED ?? '').toLowerCase() === 'true' && String(process.env.NEXT_PUBLIC_ABANDONED_CART_ENABLED ?? '').toLowerCase() === 'true';
+	return String(process.env.ABANDONED_CART_FEATURE_ENABLED ?? '').toLowerCase() === 'true';
 }
 
 export async function GET() {

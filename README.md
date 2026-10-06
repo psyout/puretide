@@ -199,9 +199,8 @@ The storefront includes an optional, consent-based abandoned-cart reminder flow 
 The feature has three independent safety gates and starts paused. Configure these variables, deploy, confirm every readiness check in **Dashboard → Abandoned Carts**, create an opted-in test cart, and use **Send test** before enabling live sending.
 
 ```dotenv
-# Both deployment flags are required.
+# Server-side deployment gate. The dashboard live switch is a separate gate.
 ABANDONED_CART_FEATURE_ENABLED=true
-NEXT_PUBLIC_ABANDONED_CART_ENABLED=true
 
 # Use a separate random secret when possible. DASHBOARD_SECRET is a fallback.
 ABANDONED_CART_SECRET=replace-with-a-long-random-secret

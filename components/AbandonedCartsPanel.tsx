@@ -19,8 +19,6 @@ type Cart = {
 type Settings = { enabled: boolean; delayMinutes: number; retentionDays: number; updatedAt: string };
 type Readiness = { deploymentEnabled: boolean; businessAddressConfigured: boolean; contactEmailConfigured: boolean; tokenSecretConfigured: boolean; smtpConfigured: boolean };
 
-const deploymentEnabled = String(process.env.NEXT_PUBLIC_ABANDONED_CART_ENABLED ?? '').toLowerCase() === 'true';
-
 export default function AbandonedCartsPanel() {
 	const [carts, setCarts] = useState<Cart[]>([]);
 	const [settings, setSettings] = useState<Settings | null>(null);
@@ -124,9 +122,9 @@ export default function AbandonedCartsPanel() {
 					Refresh
 				</button>
 			</div>
-			{!deploymentEnabled && (
+			{readiness && !readiness.deploymentEnabled && (
 				<div className='rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4'>
-					Deployment capture is off. Set both <code>ABANDONED_CART_FEATURE_ENABLED=true</code> and <code>NEXT_PUBLIC_ABANDONED_CART_ENABLED=true</code>, then redeploy before testing.
+					Deployment capture is off. Set <code>ABANDONED_CART_FEATURE_ENABLED=true</code> in the server environment, then restart the application before testing.
 				</div>
 			)}
 			{readiness && (

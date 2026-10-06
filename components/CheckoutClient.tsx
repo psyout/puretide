@@ -16,7 +16,6 @@ const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 const GATEWAYLINX_RELAY_HOST = 'bluepeakdns.com';
 const ETRANSFER_PROVIDER = String(process.env.NEXT_PUBLIC_ETRANSFER_PROVIDER ?? 'manual').toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 const FRIENDS_FAMILY_ENABLED = String(process.env.NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED ?? '').toLowerCase() === 'true';
-const ABANDONED_CART_ENABLED = String(process.env.NEXT_PUBLIC_ABANDONED_CART_ENABLED ?? '').toLowerCase() === 'true';
 const ABANDONED_CART_STORAGE_KEY = 'puretide-abandoned-cart-id';
 const ABANDONED_CART_CONSENT_TEXT = 'Email me one reminder about items left in my cart. I can unsubscribe at any time.';
 
@@ -262,7 +261,6 @@ export default function CheckoutClient() {
 	}, []);
 
 	useEffect(() => {
-		if (!ABANDONED_CART_ENABLED) return;
 		let cancelled = false;
 		void fetch('/api/abandoned-carts', { cache: 'no-store' })
 			.then(async (response) => (response.ok ? response.json() : { available: false }))
