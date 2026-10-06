@@ -16,6 +16,9 @@ const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 const GATEWAYLINX_RELAY_HOST = 'bluepeakdns.com';
 const ETRANSFER_PROVIDER = String(process.env.NEXT_PUBLIC_ETRANSFER_PROVIDER ?? 'manual').toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 const FRIENDS_FAMILY_ENABLED = String(process.env.NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED ?? '').toLowerCase() === 'true';
+const ABANDONED_CART_ENABLED = String(process.env.NEXT_PUBLIC_ABANDONED_CART_ENABLED ?? '').toLowerCase() === 'true';
+const ABANDONED_CART_STORAGE_KEY = 'puretide-abandoned-cart-id';
+const ABANDONED_CART_CONSENT_TEXT = 'Email me one reminder about items left in my cart. I can unsubscribe at any time.';
 
 function capitalizeWords(str: string): string {
 	return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
@@ -185,6 +188,9 @@ export default function CheckoutClient() {
 	const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
 	const shippingMethod = 'express';
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
+	const [abandonedCartConsent, setAbandonedCartConsent] = useState(false);
+	const [abandonedCartAvailability, setAbandonedCartAvailability] = useState<{ available: boolean; businessAddress?: string; contactEmail?: string }>({ available: false });
+	const abandonedCartConsentAtRef = useRef<string | null>(null);
 	const [showTermsModal, setShowTermsModal] = useState(false);
 	const [checkoutError, setCheckoutError] = useState<string | null>(null);
 	const [shippingAddress, setShippingAddress] = useState({
@@ -254,6 +260,68 @@ export default function CheckoutClient() {
 		setAppliedProductIds(storedPromo.productIds ?? []);
 		setShowPromoInput(true);
 	}, []);
+
+	useEffect(() => {
+		if (!ABANDONED_CART_ENABLED) return;
+		let cancelled = false;
+		void fetch('/api/abandoned-carts', { cache: 'no-store' })
+			.then(async (response) => (response.ok ? response.json() : { available: false }))
+			.then((data: { available?: boolean; businessAddress?: string; contactEmail?: string }) => {
+				if (!cancelled) setAbandonedCartAvailability({ available: data.available === true, businessAddress: data.businessAddress, contactEmail: data.contactEmail });
+			})
+			.catch(() => undefined);
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!abandonedCartAvailability.available || !abandonedCartConsent) return;
+		const email = formData.email.trim().toLowerCase();
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || cartItems.length === 0) return;
+		const timeout = setTimeout(() => {
+			let id = localStorage.getItem(ABANDONED_CART_STORAGE_KEY);
+			if (!id) {
+				id = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `cart_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+				localStorage.setItem(ABANDONED_CART_STORAGE_KEY, id);
+			}
+			if (!abandonedCartConsentAtRef.current) abandonedCartConsentAtRef.current = new Date().toISOString();
+			void fetch('/api/abandoned-carts', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					id,
+					email,
+					firstName: formData.firstName,
+					consent: true,
+					consentAt: abandonedCartConsentAtRef.current,
+					consentText: ABANDONED_CART_CONSENT_TEXT,
+					items: cartItems.map((item) => ({ id: item.id, quantity: item.quantity })),
+				}),
+			}).catch(() => undefined);
+		}, 800);
+		return () => clearTimeout(timeout);
+	}, [abandonedCartAvailability.available, abandonedCartConsent, cartItems, formData.email, formData.firstName]);
+
+	const cancelAbandonedCartReminder = () => {
+		setAbandonedCartConsent(false);
+		abandonedCartConsentAtRef.current = null;
+		const id = typeof window !== 'undefined' ? localStorage.getItem(ABANDONED_CART_STORAGE_KEY) : null;
+		if (id) {
+			localStorage.removeItem(ABANDONED_CART_STORAGE_KEY);
+			void fetch('/api/abandoned-carts', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ id }),
+			}).catch(() => undefined);
+		}
+	};
+
+	const clearAbandonedCartClientState = () => {
+		setAbandonedCartConsent(false);
+		abandonedCartConsentAtRef.current = null;
+		if (typeof window !== 'undefined') localStorage.removeItem(ABANDONED_CART_STORAGE_KEY);
+	};
 
 	useEffect(() => {
 		if (!FRIENDS_FAMILY_ENABLED) return;
@@ -453,6 +521,7 @@ export default function CheckoutClient() {
 		setShipToDifferentAddress(false);
 		setShippingAddress({ ...initialShippingAddress });
 		setAgreedToTerms(false);
+		clearAbandonedCartClientState();
 		setShowTermsModal(false);
 		setCheckoutError(null);
 		setPromoCode('');
@@ -476,6 +545,7 @@ export default function CheckoutClient() {
 		setShipToDifferentAddress(false);
 		setShippingAddress({ ...initialShippingAddress });
 		setAgreedToTerms(false);
+		clearAbandonedCartClientState();
 		setShowTermsModal(false);
 		setCheckoutError(null);
 		setPromoCode('');
@@ -1319,6 +1389,32 @@ export default function CheckoutClient() {
 										remains protected.
 									</p>
 								</div>
+								{abandonedCartAvailability.available && (
+									<div className='pb-4 mb-4 border-b border-deep-tidal-teal/10'>
+										<label htmlFor='checkout-cart-reminder' className='flex items-start gap-3 cursor-pointer'>
+											<input
+												id='checkout-cart-reminder'
+												type='checkbox'
+												checked={abandonedCartConsent}
+												onChange={(event) => {
+													if (event.target.checked) {
+														abandonedCartConsentAtRef.current = new Date().toISOString();
+														setAbandonedCartConsent(true);
+													} else {
+														cancelAbandonedCartReminder();
+													}
+												}}
+												className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5'
+											/>
+											<span className='text-sm text-deep-tidal-teal-800 flex-1'>
+												Pure Tide may email me one reminder about items left in my cart. I can unsubscribe at any time. This is optional.
+												{abandonedCartAvailability.businessAddress && abandonedCartAvailability.contactEmail && (
+													<span className='block mt-1 text-xs text-deep-tidal-teal-600'>Pure Tide, {abandonedCartAvailability.businessAddress}. Contact: {abandonedCartAvailability.contactEmail}.</span>
+												)}
+											</span>
+										</label>
+									</div>
+								)}
 								<div className='py-1'>
 									<label
 										htmlFor='checkout-terms'

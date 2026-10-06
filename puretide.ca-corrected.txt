@@ -1,0 +1,64 @@
+; Domain: puretide.ca
+; Exported (y-m-d hh:mm:ss): 2026-10-01 18:21:59
+;
+; This file is intended for use for informational and archival
+; purposes ONLY and MUST be edited before use on a production
+; DNS server.
+;
+; In particular, you must update the SOA record with the correct
+; authoritative name server and contact e-mail address information,
+; and add the correct NS records for the name servers which will
+; be authoritative for this domain.
+;
+; For further information, please consult the BIND documentation
+; located on the following website:
+;
+; http://www.isc.org/
+;
+; And RFC 1035:
+;
+; http://www.ietf.org/rfc/rfc1035.txt
+;
+; Please note that we do NOT offer technical support for any use
+; of this zone data, the BIND name server, or any other third-
+; party DNS software.
+;
+; Use at your own risk.
+
+
+$ORIGIN puretide.ca.
+
+; SOA Record
+@	3600	 IN 	SOA	ns21.domaincontrol.com.	dns.jomax.net. (
+					2026093001
+					28800
+					7200
+					604800
+					3600
+					)
+
+; A Record
+@	3600	 IN 	A	82.221.139.21
+mail	600	 IN 	A	82.221.139.21
+
+; CNAME Record
+www	3600	 IN 	CNAME	@
+_domainconnect	3600	 IN 	CNAME	_domainconnect.gd.domaincontrol.com.
+
+; MX Record
+@	600	 IN 	MX	10	mx.zohocloud.ca.
+@	600	 IN 	MX	20	mx2.zohocloud.ca.
+@	600	 IN 	MX	50	mx3.zohocloud.ca.
+
+; NS Record
+@	3600	 IN 	NS	ns21.domaincontrol.com.
+@	3600	 IN 	NS	ns22.domaincontrol.com.
+
+; TXT Record
+@	3600	 IN 	TXT	"v=spf1 include:zoho.com include:zcsend.ca ~all"
+@	3600	 IN 	TXT	"zoho-verification=1234567890abcdef.zmverify.zoho.com"
+@	600	 IN 	TXT	"zoho-verification=zb46179668.zmverify.zohocloud.ca"
+231247._domainkey	3600	 IN 	TXT	"k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDlnvRLzuL5xDoryrdBVqdyytXALq58Q/bpIKFlNm5EuA47/ItuW5NLpzJ8CvTbpn2NaOgh6llulsQnivV8g5ci0ofdh4CCgcAYmq0uo2inW5HVFIQC44d/MRoDZ0dpQhqn8IDN0jQQdSnL3jMBN8+iVyrZ5NIrC0DM2n75vB1BGwIDAQAB"
+send	3600	 IN 	TXT	"v=spf1 include:dc-fd741b8612._spfm.send.puretide.ca ~all"
+zoho._domainkey	600	 IN 	TXT	"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCaTzToIUiSQAbqotHwUxVUgzA9/eMe6M2L3UJZXsRjEoyfXpvSCCnsKuMWNBEzHxIv7CQ8oYcD9o2r9AKDhfAV/2Xb0GxzZ1aorcwPv/4Qyz04xOB+/JOTtCyhVbLjhwXqDxs6/hjtVAhazemBupiOtS4bcbKTWuBNxGHXCXwEEwIDAQAB"
+_dmarc	3600	 IN 	TXT	"v=DMARC1; p=quarantine"

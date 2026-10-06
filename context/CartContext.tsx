@@ -15,6 +15,7 @@ interface CartContextType {
 	removeFromCart: (productId: string) => void;
 	updateQuantity: (productId: string, quantity: number, maxQuantity?: number) => void;
 	clearCart: () => void;
+	restoreCart: (items: CartItem[]) => void;
 	getItemPrice: (item: CartItem) => number;
 	getTotal: () => number;
 }
@@ -165,6 +166,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		}
 	};
 
+	const restoreCart = (items: CartItem[]) => {
+		const sanitized = items.map((entry) => sanitizeCartItem(entry)).filter((entry): entry is CartItem => entry != null);
+		setCartItems(sanitized);
+		if (typeof window !== 'undefined') {
+			localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(sanitized));
+		}
+	};
+
 	const getTotal = () => {
 		return cartItems.reduce((total, item) => total + getItemPrice(item) * item.quantity, 0);
 	};
@@ -179,6 +188,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 				removeFromCart,
 				updateQuantity,
 				clearCart,
+				restoreCart,
 				getItemPrice,
 				getTotal,
 			}}>

@@ -6,7 +6,7 @@ import type { PromoCode } from '@/types/product';
 import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError } from '@/lib/promo';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import { upsertOrderInDb } from '@/lib/ordersDb';
+import { markAbandonedCartsRecoveredByEmail, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
 import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
@@ -325,6 +325,7 @@ export async function POST(request: Request) {
 				country: payload.customer.country,
 			},
 		});
+		await markAbandonedCartsRecoveredByEmail(payload.customer.email, createdAt);
 
 		console.log(
 			JSON.stringify({

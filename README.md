@@ -192,6 +192,42 @@ Related setup notes:
 - [Mac Mail configuration](docs/MAC-MAIL-ZOHO-CONFIG.md)
 - [Email migration guide](docs/EMAIL-MIGRATION-GUIDE.md)
 
+### Abandoned-cart reminders
+
+The storefront includes an optional, consent-based abandoned-cart reminder flow for the custom store. It does not depend on Zoho Campaigns: delivery uses the configured Zoho Mail SMTP account, while the operations dashboard controls the delay, retention period, test delivery, queue, retries, suppression, and live/pause state.
+
+The feature has three independent safety gates and starts paused. Configure these variables, deploy, confirm every readiness check in **Dashboard → Abandoned Carts**, create an opted-in test cart, and use **Send test** before enabling live sending.
+
+```dotenv
+# Both deployment flags are required.
+ABANDONED_CART_FEATURE_ENABLED=true
+NEXT_PUBLIC_ABANDONED_CART_ENABLED=true
+
+# Use a separate random secret when possible. DASHBOARD_SECRET is a fallback.
+ABANDONED_CART_SECRET=replace-with-a-long-random-secret
+
+# Required identification included beside the unsubscribe link.
+ABANDONED_CART_BUSINESS_ADDRESS=replace-with-your-complete-business-mailing-address
+ABANDONED_CART_CONTACT_EMAIL=info@puretide.ca
+ABANDONED_CART_FROM=info@puretide.ca
+SITE_URL=https://puretide.ca
+
+# Optional ABANDONED_CART_SMTP_* overrides; otherwise the shared SMTP_* values above are used.
+ABANDONED_CART_SMTP_HOST=smtp.zoho.com
+ABANDONED_CART_SMTP_PORT=465
+ABANDONED_CART_SMTP_SECURE=true
+ABANDONED_CART_SMTP_USER=info@puretide.ca
+ABANDONED_CART_SMTP_PASS=replace-with-a-secret
+```
+
+Run the protected processor every five minutes. It sends at most one reminder per captured cart and rechecks suppression, completed orders, current stock, and current prices immediately before delivery.
+
+```cron
+*/5 * * * * curl -fsS -X POST "https://puretide.ca/api/cron/abandoned-carts" -H "x-cron-secret: $CRON_SECRET" >/dev/null
+```
+
+The checkout checkbox is optional and unchecked by default. It appears only when live sending is enabled and all required email/business configuration is present. Production use still requires the operator to confirm that the wording, business identification, privacy policy, retention, and consent records meet the laws applicable to the business and recipients.
+
 ## Shipping Labels
 
 The application can generate Avery 5162 `.docx` sheets from order data and attach them to Wrike.

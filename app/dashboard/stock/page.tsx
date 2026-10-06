@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Trash2, Copy } from 'lucide-react';
 import { products as fallbackProducts } from '@/lib/products';
 import type { Product, PromoCode } from '@/types/product';
+import AbandonedCartsPanel from '@/components/AbandonedCartsPanel';
 
 const clampStock = (value: number) => Math.max(0, Math.min(9999, value));
 const clampPrice = (value: number) => Math.max(0, Number(value.toFixed(2)));
@@ -45,7 +46,7 @@ export default function StockDashboardPage() {
 	const [rows, setRows] = useState<Product[]>(fallbackProducts);
 	const [isDirty, setIsDirty] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
-	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'clients' | 'labels' | 'friends_family'>('products');
+	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'clients' | 'labels' | 'friends_family' | 'abandoned_carts'>('products');
 	const [searchValue, setSearchValue] = useState('');
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -597,6 +598,13 @@ export default function StockDashboardPage() {
 								}`}>
 								Friends & Family
 							</button>
+							<button
+								onClick={() => setActiveTab('abandoned_carts')}
+								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+									activeTab === 'abandoned_carts' ? 'bg-[#6c5dd3] text-white' : 'bg-white border border-black/5 hover:bg-[#f4f4f7]'
+								}`}>
+								Abandoned Carts
+							</button>
 						</nav>
 					</aside>
 
@@ -644,6 +652,8 @@ export default function StockDashboardPage() {
 								</div>
 							</div>
 						)}
+
+						{activeTab === 'abandoned_carts' && <AbandonedCartsPanel />}
 
 						{activeTab === 'friends_family' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>

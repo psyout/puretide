@@ -6,7 +6,7 @@ import type { PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError } from '@/lib/promo';
-import { listOrdersFromDb, upsertOrderInDb } from '@/lib/ordersDb';
+import { listOrdersFromDb, markAbandonedCartsRecoveredByEmail, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
 import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
@@ -307,6 +307,7 @@ export async function POST(request: Request) {
 
 		// Save order to DB first so it's always stored even if email fails
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
+		await markAbandonedCartsRecoveredByEmail(normalizedCustomer.email, createdAt);
 
 		// Generate confirmation token and return immediately to avoid request timeouts.
 		// Slow downstream side-effects (emails, sheets, Wrike) run asynchronously below.
