@@ -11,9 +11,7 @@ import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { CreditCard, Truck, Plus, Minus, Trash2, Loader2 } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import type { PromoCode } from '@/types/product';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
-import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 const GATEWAYLINX_RELAY_HOST = 'bluepeakdns.com';
@@ -57,9 +55,8 @@ function isTrustedGatewaylinxOrigin(originRaw: string): boolean {
 	}
 }
 
-export default function CheckoutClient({ automaticPromotion }: { automaticPromotion?: PromoCode | null }) {
-	const scheduledPromotion = useScheduledPromotion(automaticPromotion);
-	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod } = useCart();
+export default function CheckoutClient() {
+	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod, automaticPromotion: scheduledPromotion } = useCart();
 	const router = useRouter();
 	const [gatewaylinxIframeUrl, setGatewaylinxIframeUrl] = useState<string | null>(null);
 	const [gatewaylinxOrderNumber, setGatewaylinxOrderNumber] = useState<string | null>(null);
@@ -180,11 +177,11 @@ export default function CheckoutClient({ automaticPromotion }: { automaticPromot
 	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const [showPromoInput, setShowPromoInput] = useState(true);
 	const [showOrderNotes, setShowOrderNotes] = useState(false);
-	const [promoCode, setPromoCode] = useState(automaticPromotion?.code ?? '');
-	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(automaticPromotion?.code ?? null);
-	const [appliedDiscount, setAppliedDiscount] = useState<number>(automaticPromotion?.discount ?? 0);
-	const [appliedFreeShipping, setAppliedFreeShipping] = useState(automaticPromotion?.freeShipping ?? false);
-	const [appliedProductIds, setAppliedProductIds] = useState<string[]>(automaticPromotion?.productIds ?? []);
+	const [promoCode, setPromoCode] = useState(scheduledPromotion?.code ?? '');
+	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(scheduledPromotion?.code ?? null);
+	const [appliedDiscount, setAppliedDiscount] = useState<number>(scheduledPromotion?.discount ?? 0);
+	const [appliedFreeShipping, setAppliedFreeShipping] = useState(scheduledPromotion?.freeShipping ?? false);
+	const [appliedProductIds, setAppliedProductIds] = useState<string[]>(scheduledPromotion?.productIds ?? []);
 	const [promoError, setPromoError] = useState<string | null>(null);
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const promoRevalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -269,7 +266,7 @@ export default function CheckoutClient({ automaticPromotion }: { automaticPromot
 		if (!storedPromo) {
 			return;
 		}
-		if (storedPromo.code === AUTOMATIC_SITEWIDE_PROMO_CODE && !automaticPromotion) {
+		if (storedPromo.code === AUTOMATIC_SITEWIDE_PROMO_CODE && !scheduledPromotion) {
 			storeCartPromo(null);
 			return;
 		}
@@ -279,7 +276,7 @@ export default function CheckoutClient({ automaticPromotion }: { automaticPromot
 		setAppliedFreeShipping(storedPromo.freeShipping);
 		setAppliedProductIds(storedPromo.productIds ?? []);
 		setShowPromoInput(true);
-	}, [automaticPromotion, scheduledPromotion]);
+	}, [scheduledPromotion]);
 
 	useEffect(() => {
 		if (scheduledPromotion || appliedPromoCode !== AUTOMATIC_SITEWIDE_PROMO_CODE) return;

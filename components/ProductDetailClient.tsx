@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { Product, ProductVariant, PromoCode } from '@/types/product';
+import type { Product, ProductVariant } from '@/types/product';
 import { getSalePrice } from '@/lib/promo';
-import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
+import { useCart } from '@/context/CartContext';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
 import { ChevronRight, CreditCard, FileBadge, FlaskConical, Truck } from 'lucide-react';
@@ -18,11 +18,10 @@ interface ProductDetailClientProps {
 	hasCoaFile: boolean;
 	matchingCoaFile?: string;
 	stockUnavailable?: boolean;
-	automaticPromotion?: PromoCode | null;
 }
 
-export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile, stockUnavailable = false, automaticPromotion }: ProductDetailClientProps) {
-	const scheduledPromotion = useScheduledPromotion(automaticPromotion);
+export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile, stockUnavailable = false }: ProductDetailClientProps) {
+	const { automaticPromotion } = useCart();
 	const variants = useMemo(() => product.variants || [], [product.variants]);
 	const hasVariants = variants.length > 1;
 
@@ -37,7 +36,7 @@ export default function ProductDetailClient({ product, description, details, has
 	// If no variants, use the base product
 	const currentVariant = selectedVariant;
 	const displayPrice = currentVariant?.price ?? product.price;
-	const saleDiscount = scheduledPromotion?.discount ?? 0;
+	const saleDiscount = automaticPromotion?.discount ?? 0;
 	const salePrice = getSalePrice(displayPrice, saleDiscount);
 	const displayMg = currentVariant?.label ?? product.mg;
 	const displayStock = currentVariant?.stock ?? product.stock;

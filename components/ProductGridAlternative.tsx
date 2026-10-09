@@ -1,6 +1,5 @@
 import { products as fallbackProducts } from '@/lib/products';
 import { readProducts } from '@/lib/productCatalog';
-import { getCachedAutomaticSitewidePromo } from '@/lib/sheetCache';
 import ProductGridAlternativeClient from './ProductGridAlternativeClient';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +20,5 @@ export default async function ProductGridAlternative() {
 		const status = product.status ?? 'published';
 		return status === 'published' || status === 'stock-out';
 	});
-	const automaticPromotion = await getCachedAutomaticSitewidePromo();
-
-	return <ProductGridAlternativeClient initialItems={visibleItems} stockUnavailable={stockUnavailable} automaticPromotion={automaticPromotion} />;
+	return <ProductGridAlternativeClient initialItems={visibleItems} stockUnavailable={stockUnavailable} />;
 }

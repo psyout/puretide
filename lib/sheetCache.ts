@@ -98,7 +98,9 @@ export async function getCachedSheetPromoCodes() {
 }
 
 export async function getCachedAutomaticSitewidePromo() {
-	return getAutomaticSitewidePromo(await getCachedSheetPromoCodes());
+	// This value controls prices across the entire checkout flow. Read the sheet
+	// directly once in the root layout instead of relying on per-worker caches.
+	return getAutomaticSitewidePromo(await readSheetPromoCodes());
 }
 
 // Promotion campaign caching

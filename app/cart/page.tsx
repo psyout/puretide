@@ -1,6 +1,6 @@
 import CartClient from '@/components/CartClient';
 import PromoBannerWrapper from '@/components/PromoBannerWrapper';
-import { getCachedAutomaticSitewidePromo, getCachedProducts } from '@/lib/sheetCache';
+import { getCachedProducts } from '@/lib/sheetCache';
 import { products as fallbackProducts } from '@/lib/products';
 import type { Product } from '@/types/product';
 
@@ -9,7 +9,6 @@ export default async function CartPage() {
 
 	let products: Product[] = fallbackProducts;
 	let stockUnavailable = false;
-	const automaticPromotion = await getCachedAutomaticSitewidePromo();
 	try {
 		products = await getCachedProducts();
 	} catch (error) {
@@ -28,7 +27,6 @@ export default async function CartPage() {
 			<CartClient
 				products={products}
 				stockUnavailable={stockUnavailable}
-				automaticPromotion={automaticPromotion}
 			/>
 		</>
 	);
