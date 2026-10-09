@@ -5,7 +5,7 @@ import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
 import type { PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError } from '@/lib/promo';
+import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError, getPromotionForOrder } from '@/lib/promo';
 import { listOrdersFromDb, markAbandonedCartsRecoveredByEmail, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
@@ -184,10 +184,10 @@ export async function POST(request: Request) {
 		const destinationProvince = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.province : orderPayload.customer.province;
 		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
 
-		if (orderPayload.promoCode) {
-			const promoCodes = await getCachedSheetPromoCodes();
-			const promo = promoCodes.find((p: PromoCode) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
-			if (promo) {
+		const promoCodes = await getCachedSheetPromoCodes();
+		const promo = getPromotionForOrder(promoCodes, orderPayload.promoCode);
+
+		if (promo) {
 				appliedPromo = promo;
 				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
 				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -203,12 +203,6 @@ export async function POST(request: Request) {
 					shippingCost = 0;
 				}
 				discountAmount = getPromoDiscountAmount(promo, cartItems);
-			} else {
-				cartItems = trustedCartItems.map((item) => ({
-					...item,
-					price: getDiscountedPrice(item.price, item.quantity),
-				}));
-			}
 		} else {
 			cartItems = trustedCartItems.map((item) => ({
 				...item,

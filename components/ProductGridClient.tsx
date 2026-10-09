@@ -2,14 +2,17 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import ProductCard from './ProductCard';
-import type { Product } from '@/types/product';
+import type { Product, PromoCode } from '@/types/product';
+import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 
 type ProductGridClientProps = {
 	initialItems: Product[];
 	stockUnavailable?: boolean;
+	automaticPromotion?: PromoCode | null;
 };
 
-export default function ProductGridClient({ initialItems, stockUnavailable = false }: ProductGridClientProps) {
+export default function ProductGridClient({ initialItems, stockUnavailable = false, automaticPromotion }: ProductGridClientProps) {
+	const scheduledPromotion = useScheduledPromotion(automaticPromotion);
 	const [selectedCategory, setSelectedCategory] = useState('All');
 	const [items, setItems] = useState<Product[]>(initialItems);
 	const [isLoading, setIsLoading] = useState(initialItems.length === 0);
@@ -168,6 +171,7 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 										<ProductCard
 											product={product}
 											onImageLoaded={handleImageLoaded}
+											automaticPromotion={scheduledPromotion}
 										/>
 									</div>
 								))}

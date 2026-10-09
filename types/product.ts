@@ -42,6 +42,10 @@ export interface Product {
 export interface PromoCode {
 	code: string;
 	discount: number; // percentage, e.g., 10 for 10%
+	/** Inclusive promotion start date in YYYY-MM-DD format (Vancouver time). */
+	startDate?: string;
+	/** Inclusive promotion end date in YYYY-MM-DD format (Vancouver time). */
+	endDate?: string;
 	minimumSubtotal?: number;
 	freeShipping?: boolean;
 	/** Product IDs eligible for the discount. Empty/omitted means all products. */

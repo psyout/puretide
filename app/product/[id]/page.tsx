@@ -12,6 +12,7 @@ import { BadgeCheck, FlaskConical, PackageCheck, ShieldCheck } from 'lucide-reac
 import fs from 'fs';
 import path from 'path';
 import { resolveProductCoaFile } from '@/lib/productCoa';
+import { getCachedAutomaticSitewidePromo } from '@/lib/sheetCache';
 
 type ProductPageProps = {
 	params: { id: string };
@@ -68,6 +69,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 	const hasCoaFile = !!matchingCoaFile;
 
 	const promoBannerEnabled = String(process.env.NEXT_PUBLIC_PROMO_BANNER_ENABLED ?? '').toLowerCase() === 'true';
+	const automaticPromotion = await getCachedAutomaticSitewidePromo();
 
 	return (
 		<div className='min-h-screen'>
@@ -104,6 +106,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 								hasCoaFile={hasCoaFile}
 								matchingCoaFile={matchingCoaFile || ''}
 								stockUnavailable={stockUnavailable}
+								automaticPromotion={automaticPromotion}
 							/>
 						</div>
 

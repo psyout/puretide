@@ -6,14 +6,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { PromotionCampaign } from '@/types/product';
 
-function formatCurrency(value: number) {
-	return new Intl.NumberFormat('en-CA', {
-		style: 'currency',
-		currency: 'CAD',
-		maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
-	}).format(value);
-}
-
 function titleParts(title: string): { primary: string; accent: string } {
 	const words = title.trim().split(/\s+/).filter(Boolean);
 	if (words.length <= 1) return { primary: title.toUpperCase(), accent: '' };
@@ -66,6 +58,13 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 		setIsOpen(false);
 	};
 
+	const shopNow = () => {
+		close();
+		window.setTimeout(() => {
+			document.getElementById('products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}, 180);
+	};
+
 	const backgroundStyle = hasBackgroundImage
 		? {
 				backgroundImage: `linear-gradient(180deg, rgba(3, 20, 36, 0.15), rgba(2, 17, 31, 0.25)), url(/promotions/summer-sale.jpeg)`,
@@ -104,7 +103,7 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 						exit={{ opacity: 0, y: 10, scale: 0.98 }}
 						transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}>
 						<div
-							className={`relative flex h-full px-3 py-3 sm:px-6 sm:py-6 md:px-8 md:py-7 ${hasBackgroundImage ? '' : 'bg-white'}`}
+							className={`relative flex h-full px-5 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12 ${hasBackgroundImage ? '' : 'bg-white'}`}
 							style={backgroundStyle}>
 							{hasBackgroundImage && (
 								<>
@@ -121,7 +120,7 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 								×
 							</button>
 
-							<div className='relative z-10 mx-auto flex min-h-full max-w-[680px] flex-col items-center justify-center text-center'>
+							<div className='relative z-10 mx-auto flex min-h-full max-w-[480px] flex-col items-center justify-center text-center'>
 								<Image
 									src='/logo.png'
 									alt='Pure Tide Advanced Peptide Wellness'
@@ -130,7 +129,7 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 									className='w-[60px] drop-shadow-[0_8px_18px_rgba(0,0,0,0.18)] sm:w-[80px] brightness-0 invert'
 								/>
 
-								<div className='mt-2 sm:mt-5'>
+								<div className='mt-3 sm:mt-5'>
 									<h2
 										className={`font-black uppercase leading-[0.86] tracking-[-0.06em] text-[clamp(1.5rem,6vw,3rem)] sm:text-[clamp(2rem,7vw,4rem)] drop-shadow-[0_6px_18px_rgba(0,0,0,0.18)] ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
 										<span className='block'>{primary}</span>
@@ -141,44 +140,19 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 
 								{campaign.message && (
 									<p
-										className={`mt-2 max-w-[480px] text-[clamp(0.85rem,1.5vw,1.1rem)] font-medium leading-[1.3] drop-shadow ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>
+										className={`mt-4 max-w-[440px] text-[clamp(1.2rem,2vw,1.5rem)] font-semibold leading-[1.4] drop-shadow sm:mt-5 ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>
 										{campaign.message}
 									</p>
 								)}
-								{campaign.subtitle && (
-									<p className={`mt-0.5 text-xs font-semibold uppercase tracking-[0.22em] ${hasBackgroundImage ? 'text-cyan-200/85' : 'text-[#168c96]'}`}>
-										{campaign.subtitle}
-									</p>
-								)}
 
-								<div
-									className={`mt-2 w-full rounded-[14px] border border-[#26c8d0]/70 px-2 py-1.5 shadow-[inset_0_0_32px_rgba(30,199,215,0.08),0_14px_42px_rgba(0,0,0,0.12)] backdrop-blur-sm sm:px-4 sm:py-2.5 ${hasBackgroundImage ? 'bg-[#041b2d]/62' : 'bg-white'}`}>
-									{campaign.tiers.map((tier, index) => (
-										<div
-											key={`${tier.promoCode}-${tier.minimumOrderAmount}`}
-											className={`flex flex-col items-center gap-1.5 py-2 text-center sm:grid sm:grid-cols-[minmax(70px,0.75fr)_minmax(28px,0.2fr)_minmax(100px,1fr)_minmax(100px,0.9fr)] sm:items-center sm:gap-2.5 sm:py-2.5 sm:text-left ${index > 0 ? 'border-t border-cyan-200/35' : ''}`}>
-											<div className='flex flex-col items-center gap-1 sm:hidden'>
-												<div className={`text-lg font-black tracking-[-0.04em] ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
-													{formatCurrency(tier.minimumOrderAmount)}
-												</div>
-												<div className='text-sm font-black uppercase tracking-[-0.04em] text-[#23c5cf]'>SAVE {tier.discountPercentage}%</div>
-												<div className={`text-sm font-semibold ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
-													<span className={`text-md font-normal ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>Code: </span>
-													<span className='font-black text-[#23c5cf]'>{tier.promoCode}</span>
-												</div>
-											</div>
-											<div className={`hidden sm:block text-lg font-black tracking-[-0.04em] sm:text-xl ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
-												{formatCurrency(tier.minimumOrderAmount)}
-											</div>
-											<div className='hidden sm:flex sm:items-center sm:justify-center text-xl font-light text-[#23c5cf] sm:text-2xl'>→</div>
-											<div className='hidden sm:block text-sm font-black uppercase tracking-[-0.04em] text-[#23c5cf] sm:text-lg'>SAVE {tier.discountPercentage}%</div>
-											<div className={`hidden sm:block col-span-1 text-xs font-semibold sm:text-sm ${hasBackgroundImage ? 'text-white' : 'text-[#0b2d3a]'}`}>
-												<span className={`font-normal ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>(code: </span>
-												<span className='font-black text-[#23c5cf]'>{tier.promoCode}</span>
-												<span className={`font-normal ${hasBackgroundImage ? 'text-white/95' : 'text-[#0b2d3a]/80'}`}>)</span>
-											</div>
-										</div>
-									))}
+								<div className='mt-5 flex w-full max-w-[300px] flex-col items-center sm:mt-6'>
+									<div className='h-px w-full bg-gradient-to-r from-transparent via-[#27d2dc] to-transparent' />
+									<button
+										type='button'
+										onClick={shopNow}
+										className='mt-5 inline-flex min-w-[170px] items-center justify-center rounded-full bg-[#25c8d2] px-7 py-3 text-sm font-black uppercase tracking-[0.14em] text-[#031424] shadow-[0_10px_30px_rgba(37,200,210,0.3)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#45dce4] hover:shadow-[0_14px_34px_rgba(37,200,210,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#031424] active:translate-y-0 sm:text-base'>
+										Shop now
+									</button>
 								</div>
 							</div>
 						</div>

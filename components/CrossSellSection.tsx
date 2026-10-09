@@ -10,13 +10,14 @@ import { useCart } from '@/context/CartContext';
 import { hasProductImage } from '@/lib/productImage';
 import { iconMap } from '@/lib/productIcons';
 import ProductImagePlaceholder from './ProductImagePlaceholder';
+import { getSalePrice } from '@/lib/promo';
 
 interface CrossSellSectionProps {
 	className?: string;
 }
 
 export default function CrossSellSection({ className = '' }: CrossSellSectionProps) {
-	const { addToCart, cartItems } = useCart();
+	const { addToCart, cartItems, automaticPromotion } = useCart();
 	const [addingProductId, setAddingProductId] = useState<string | null>(null);
 	const [isVisible, setIsVisible] = useState(false); // Start hidden
 	const [shouldHide, setShouldHide] = useState(false);
@@ -108,14 +109,14 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 											</Link>
 											{product.description && <p className='text-xs text-deep-tidal-teal-600 mt-1 line-clamp-2'>{product.description}</p>}
 										</div>
-										{product.savings && (
-											<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white flex-shrink-0'>{product.savings}</span>
+										{(automaticPromotion || product.savings) && (
+											<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white flex-shrink-0'>{automaticPromotion ? `${automaticPromotion.discount}% OFF` : product.savings}</span>
 										)}
 									</div>
 									<div className='flex items-center justify-between mt-2'>
 										<div className='flex items-center gap-2'>
-											<span className='text-lg font-bold text-deep-tidal-teal'>${product.price.toFixed(2)}</span>
-											{product.originalPrice && <span className='text-xs text-deep-tidal-teal-500 line-through'>${product.originalPrice.toFixed(2)}</span>}
+											<span className={`text-lg font-bold ${automaticPromotion ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>${(automaticPromotion ? getSalePrice(product.price, automaticPromotion.discount) : product.price).toFixed(2)}</span>
+											{automaticPromotion ? <span className='text-xs text-deep-tidal-teal-500 line-through'>${product.price.toFixed(2)}</span> : product.originalPrice ? <span className='text-xs text-deep-tidal-teal-500 line-through'>${product.originalPrice.toFixed(2)}</span> : null}
 										</div>
 										<button
 											onClick={() => handleAddToCart(product)}

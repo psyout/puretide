@@ -1,8 +1,10 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
-import { Product, CartItem } from '@/types/product';
+import { Product, CartItem, PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
+import { getSalePrice } from '@/lib/promo';
+import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 import { CART_PROMO_STORAGE_KEY } from '@/lib/cartPromo';
 
 export type PaymentMethod = 'etransfer' | 'creditcard';
@@ -12,6 +14,7 @@ interface CartContextType {
 	isCartDrawerOpen: boolean;
 	lastAddedItemId: string | null;
 	paymentMethod: PaymentMethod;
+	automaticPromotion: PromoCode | null;
 	setPaymentMethod: (method: PaymentMethod) => void;
 	addToCart: (product: Product, quantity?: number, options?: { openDrawer?: boolean }) => void;
 	openCartDrawer: () => void;
@@ -65,7 +68,8 @@ function sanitizeCartItem(raw: unknown): CartItem | null {
 	};
 }
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({ children, automaticPromotion: automaticPromotionProp }: { children: React.ReactNode; automaticPromotion?: PromoCode | null }) {
+	const automaticPromotion = useScheduledPromotion(automaticPromotionProp);
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
 	const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 	const [lastAddedItemId, setLastAddedItemId] = useState<string | null>(null);
@@ -82,6 +86,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 	};
 
 	const getItemPrice = (item: CartItem) => {
+		if (automaticPromotion) return getSalePrice(item.price, automaticPromotion.discount);
 		return getDiscountedPrice(item.price, item.quantity);
 	};
 
@@ -195,6 +200,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 				isCartDrawerOpen,
 				lastAddedItemId,
 				paymentMethod,
+				automaticPromotion,
 				setPaymentMethod,
 				addToCart,
 				openCartDrawer,

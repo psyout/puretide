@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Product } from '@/types/product';
+import { Product, PromoCode } from '@/types/product';
+import { getSalePrice } from '@/lib/promo';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -14,15 +15,17 @@ import { Eye, ShoppingCart, Loader2 } from 'lucide-react';
 interface ProductCardProps {
 	product: Product;
 	onImageLoaded?: (productId: string) => void;
+	automaticPromotion?: PromoCode | null;
 }
 
-export default function ProductCard({ product, onImageLoaded }: ProductCardProps) {
+export default function ProductCard({ product, onImageLoaded, automaticPromotion }: ProductCardProps) {
 	const { addToCart } = useCart();
 	const router = useRouter();
 	const [isNavigating, setIsNavigating] = useState(false);
 	const [hasReportedImageLoaded, setHasReportedImageLoaded] = useState(false);
 	const variants = product.variants || [];
 	const hasVariants = variants.length > 1;
+	const saleDiscount = automaticPromotion?.discount ?? 0;
 
 	// Determine price display
 	let displayPrice: string;
@@ -38,6 +41,14 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 	} else {
 		displayPrice = product.price.toFixed(2);
 	}
+	const saleDisplayPrice = hasVariants
+		? (() => {
+			const prices = variants.map((variant) => getSalePrice(variant.price, saleDiscount));
+			const minPrice = Math.min(...prices);
+			const maxPrice = Math.max(...prices);
+			return minPrice === maxPrice ? minPrice.toFixed(2) : `${minPrice.toFixed(2)} – ${maxPrice.toFixed(2)}`;
+		})()
+		: getSalePrice(product.price, saleDiscount).toFixed(2);
 
 	// Determine sold-out status
 	const allVariantsSoldOut = hasVariants && variants.every((v) => v.stock <= 0);
@@ -110,6 +121,7 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 
 	return (
 		<div className='group bg-mineral-white-100 rounded-xl ui-border shadow-md relative flex flex-col hover:shadow-lg hover:shadow-deep-tidal-teal-500/10 transition-all duration-300 overflow-hidden'>
+			{saleDiscount > 0 && <span className='absolute top-3 left-3 z-10 text-xs font-bold bg-deep-tidal-teal text-white px-3 py-1.5 rounded-full'>{saleDiscount}% OFF</span>}
 			{isSoldOut && <span className='absolute top-3 right-3 z-10 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-md'>Sold out</span>}
 			{isLowStock && !isSoldOut && (
 				<span className='absolute top-3 right-3 z-10 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal-200 text-mineral-white px-2 py-1 rounded-md'>Low stock</span>
@@ -192,10 +204,8 @@ export default function ProductCard({ product, onImageLoaded }: ProductCardProps
 						{product.name}
 					</h3>
 					{product.subtitle && <p className='text-xs text-deep-tidal-teal-600 mt-0.5 line-clamp-1'>({product.subtitle})</p>}
-					<span className='text-lg md:text-lg font-semibold text-deep-tidal-teal inline-block'>
-						<span className='text-md'>CAD$</span>
-						{displayPrice}
-					</span>
+					{saleDiscount > 0 && <span className='mr-2 text-sm text-deep-tidal-teal-500 line-through'>CAD${displayPrice}</span>}
+					<span className={`text-lg md:text-lg font-semibold inline-block ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}><span className='text-md'>CAD$</span>{saleDisplayPrice}</span>
 				</div>
 			</Link>
 

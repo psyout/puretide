@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Check, CircleAlert, Eye, Loader2 } from 'lucide-react';
-import type { Product } from '@/types/product';
+import type { Product, PromoCode } from '@/types/product';
+import { getSalePrice } from '@/lib/promo';
 import { useCart } from '@/context/CartContext';
 import { iconMap } from '@/lib/productIcons';
 import { hasProductImage } from '@/lib/productImage';
@@ -13,19 +14,20 @@ import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 type ProductCardAlternativeProps = {
 	product: Product;
 	onImageLoaded?: (productId: string) => void;
+	automaticPromotion?: PromoCode | null;
 };
 
-function getProductPrice(product: Product) {
+function getProductPrice(product: Product, discount = 0) {
 	const variants = product.variants ?? [];
-	if (variants.length <= 1) return product.price.toFixed(2);
+	if (variants.length <= 1) return getSalePrice(product.price, discount).toFixed(2);
 
-	const prices = variants.map((variant) => variant.price);
+	const prices = variants.map((variant) => getSalePrice(variant.price, discount));
 	const min = Math.min(...prices);
 	const max = Math.max(...prices);
 	return min === max ? min.toFixed(2) : `${min.toFixed(2)} – ${max.toFixed(2)}`;
 }
 
-export default function ProductCardAlternative({ product, onImageLoaded }: ProductCardAlternativeProps) {
+export default function ProductCardAlternative({ product, onImageLoaded, automaticPromotion }: ProductCardAlternativeProps) {
 	const { addToCart } = useCart();
 	const [hasReportedImageLoaded, setHasReportedImageLoaded] = useState(false);
 	const [justAdded, setJustAdded] = useState(false);
@@ -39,6 +41,7 @@ export default function ProductCardAlternative({ product, onImageLoaded }: Produ
 	const optionLabel = defaultVariant?.label || product.mg;
 	const primaryIconName = product.icons?.[0];
 	const PrimaryIcon = primaryIconName ? iconMap[primaryIconName] : null;
+	const saleDiscount = automaticPromotion?.discount ?? 0;
 
 	useEffect(() => {
 		setHasReportedImageLoaded(false);
@@ -86,6 +89,9 @@ export default function ProductCardAlternative({ product, onImageLoaded }: Produ
 			/>
 
 			<div className='relative flex aspect-square items-center justify-center overflow-hidden bg-[#f3f4f4]'>
+				{saleDiscount > 0 && (
+					<span className='absolute right-4 top-4 z-20 rounded-full bg-deep-tidal-teal px-3 py-1.5 text-xs font-bold text-white'>{saleDiscount}% OFF</span>
+				)}
 				{primaryIconName && PrimaryIcon && (
 					<span className='absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-eucalyptus-100 px-3 py-1.5 text-xs font-medium text-deep-tidal-teal-700'>
 						<PrimaryIcon className='h-4 w-4 text-deep-tidal-teal-700' />
@@ -140,7 +146,12 @@ export default function ProductCardAlternative({ product, onImageLoaded }: Produ
 
 				<div className='mt-auto border-t border-deep-tidal-teal-800/15 pt-3'>
 					<div className='flex items-end justify-between gap-4'>
-						<p className='text-lg font-medium text-deep-tidal-teal-700'>${getProductPrice(product)} CAD</p>
+						<div className='space-y-0.5'>
+							{saleDiscount > 0 && (
+								<p className='text-sm text-deep-tidal-teal-500 line-through'>${getProductPrice(product)} CAD</p>
+							)}
+							<p className={`text-lg font-bold ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-700'}`}>${getProductPrice(product, saleDiscount)} CAD</p>
+						</div>
 						{optionLabel && <p className='text-sm font-semibold text-deep-tidal-teal-700 underline underline-offset-2'>{optionLabel}</p>}
 					</div>
 

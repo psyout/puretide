@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { readSheetPromoCodes } from '@/lib/stockSheet';
 import { checkRateLimit } from '@/lib/rateLimit';
-import { getPromoMinimumSubtotalError, getPromoProductEligibilityError } from '@/lib/promo';
+import { getAutomaticSitewidePromo, getPromoMinimumSubtotalError, getPromoProductEligibilityError, isPromoActive } from '@/lib/promo';
 
 const PROMO_VERIFY_RATE_LIMIT = 20;
 const PROMO_VERIFY_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -33,7 +33,11 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: false, error: 'Promo sheet is empty. Please add a code row after the header.' }, { status: 404 });
 		}
 
-		const promo = promoCodes.find((p) => p.code === normalizedCode && p.active);
+		const automaticPromo = getAutomaticSitewidePromo(promoCodes);
+		if (automaticPromo && normalizedCode !== automaticPromo.code) {
+			return NextResponse.json({ ok: false, error: `${automaticPromo.code} is already applied automatically and cannot be combined with another discount.` }, { status: 409 });
+		}
+		const promo = automaticPromo ?? promoCodes.find((p) => p.code === normalizedCode && isPromoActive(p));
 
 		if (!promo) {
 			return NextResponse.json({ ok: false, error: 'Invalid or expired promo code' }, { status: 404 });

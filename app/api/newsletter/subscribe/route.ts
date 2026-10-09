@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendMail } from '@/lib/email';
 import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
+import { isPromoActive } from '@/lib/promo';
+import type { PromoCode } from '@/types/product';
 import { google } from 'googleapis';
 import { checkRateLimit } from '@/lib/rateLimit';
 
@@ -92,7 +94,7 @@ async function addNewsletterSubscriber(sheets: ReturnType<typeof getSheetsClient
 async function getPromoCode(): Promise<string> {
 	try {
 		const promoCodes = await getCachedSheetPromoCodes();
-		const activePromo = promoCodes.find((p: { active: boolean; code: string }) => p.active && p.code === NEWSLETTER_PROMO_CODE);
+		const activePromo = promoCodes.find((promo: PromoCode) => isPromoActive(promo) && promo.code === NEWSLETTER_PROMO_CODE);
 
 		if (activePromo) {
 			return activePromo.code;

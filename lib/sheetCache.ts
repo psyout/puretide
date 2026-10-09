@@ -2,6 +2,7 @@ import { readSheetPromoCodes, readSheetClients, readSheetFriendsFamilyAllowlist,
 import { readProducts } from './productCatalog';
 import type { FriendsFamilySheetEntry } from './stockSheet';
 import type { PromotionCampaign } from '@/types/product';
+import { getAutomaticSitewidePromo } from './promo';
 
 // Cache TTL: 5 minutes for products, 10 minutes for promos/clients
 const PRODUCT_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -91,6 +92,10 @@ export async function getCachedSheetPromoCodes() {
 		}
 		throw error;
 	}
+}
+
+export async function getCachedAutomaticSitewidePromo() {
+	return getAutomaticSitewidePromo(await getCachedSheetPromoCodes());
 }
 
 // Promotion campaign caching

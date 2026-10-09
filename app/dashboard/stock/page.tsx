@@ -467,7 +467,7 @@ export default function StockDashboardPage() {
 	const handleAddPromo = () => {
 		setPromoCodes((prev) => [
 			...prev,
-			{ code: '', discount: 10, freeShipping: false, productIds: [], affiliateName: '', commissionPercentage: 0, active: true },
+			{ code: '', discount: 10, freeShipping: false, productIds: [], affiliateName: '', commissionPercentage: 0, startDate: '', endDate: '', active: true },
 		]);
 		setPromoCodesDirty(true);
 	};
@@ -1180,7 +1180,7 @@ export default function StockDashboardPage() {
 									<div className='text-[#6a6a6a] py-8'>No promo codes. Add one to get started.</div>
 								) : (
 									<div className='space-y-3'>
-										<div className='hidden items-center px-4 text-xs font-medium uppercase tracking-wide text-[#8d8d8d] xl:grid xl:grid-cols-[minmax(125px,1.1fr)_minmax(75px,0.6fr)_minmax(105px,0.85fr)_minmax(90px,0.75fr)_minmax(115px,0.9fr)_minmax(135px,1fr)_minmax(125px,1fr)_minmax(95px,0.75fr)_minmax(90px,0.7fr)] xl:gap-3'>
+										<div className='hidden items-center px-4 text-xs font-medium uppercase tracking-wide text-[#8d8d8d] xl:grid xl:grid-cols-[minmax(125px,1.1fr)_minmax(75px,0.6fr)_minmax(105px,0.85fr)_minmax(90px,0.75fr)_minmax(115px,0.9fr)_minmax(135px,1fr)_minmax(125px,1fr)_minmax(95px,0.75fr)_minmax(130px,1fr)_minmax(130px,1fr)_minmax(90px,0.7fr)] xl:gap-3'>
 											<span>Code</span>
 											<span>Discount</span>
 											<span>Free shipping</span>
@@ -1189,6 +1189,8 @@ export default function StockDashboardPage() {
 											<span>Products</span>
 											<span>Affiliate</span>
 											<span>Commission</span>
+											<span>Start date</span>
+											<span>End date</span>
 											<span>Action</span>
 										</div>
 										{visiblePromoCodes.length === 0 && (
@@ -1197,7 +1199,7 @@ export default function StockDashboardPage() {
 										{visiblePromoCodes.map(({ promo, index: i }) => (
 											<div
 												key={i}
-												className='grid grid-cols-1 items-center gap-3 rounded-lg border border-black/5 bg-[#f4f4f7] p-4 sm:grid-cols-2 xl:grid-cols-[minmax(125px,1.1fr)_minmax(75px,0.6fr)_minmax(105px,0.85fr)_minmax(90px,0.75fr)_minmax(115px,0.9fr)_minmax(135px,1fr)_minmax(125px,1fr)_minmax(95px,0.75fr)_minmax(90px,0.7fr)] xl:gap-3'>
+												className='grid grid-cols-1 items-center gap-3 rounded-lg border border-black/5 bg-[#f4f4f7] p-4 sm:grid-cols-2 xl:grid-cols-[minmax(125px,1.1fr)_minmax(75px,0.6fr)_minmax(105px,0.85fr)_minmax(90px,0.75fr)_minmax(115px,0.9fr)_minmax(135px,1fr)_minmax(125px,1fr)_minmax(95px,0.75fr)_minmax(130px,1fr)_minmax(130px,1fr)_minmax(90px,0.7fr)] xl:gap-3'>
 												<input
 													type='text'
 													aria-label='Promo code'
@@ -1292,10 +1294,24 @@ export default function StockDashboardPage() {
 												/>
 												<span className='pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#6a6a6a]'>%</span>
 											</div>
+											<input
+												type='date'
+												aria-label={`Start date for ${promo.code || `promo ${i + 1}`}`}
+												value={promo.startDate ?? ''}
+												onChange={(event) => handlePromoChange(i, 'startDate', event.target.value)}
+												className='order-9 w-full rounded border border-black/10 px-3 py-2 text-sm'
+											/>
+											<input
+												type='date'
+												aria-label={`End date for ${promo.code || `promo ${i + 1}`}`}
+												value={promo.endDate ?? ''}
+												onChange={(event) => handlePromoChange(i, 'endDate', event.target.value)}
+												className='order-10 w-full rounded border border-black/10 px-3 py-2 text-sm'
+											/>
 											<button
 													type='button'
 													onClick={() => handleRemovePromo(i)}
-												className='order-9 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 xl:justify-self-start'>
+											className='order-11 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 xl:justify-self-start'>
 													<Trash2 className='h-4 w-4' aria-hidden='true' />
 													Remove
 												</button>

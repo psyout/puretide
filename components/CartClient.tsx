@@ -11,27 +11,31 @@ import { Lock, AlertCircle, PackageCheck, ShieldCheck } from 'lucide-react';
 import CrossSellSection from './CrossSellSection';
 import FreeShippingProgress from './FreeShippingProgress';
 import CartItemDetails from './CartItemDetails';
-import type { Product } from '@/types/product';
+import type { Product, PromoCode } from '@/types/product';
 import { buildCartStockMap, hasInvalidCartQuantity, resolveCartItemStock } from '@/lib/cartStock';
 import { readStoredCartPromo, storeCartPromo } from '@/lib/cartPromo';
+import { AUTOMATIC_SITEWIDE_PROMO_CODE } from '@/lib/promo';
+import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 
 type CartClientProps = {
 	products: Product[];
 	stockUnavailable: boolean;
+	automaticPromotion?: PromoCode | null;
 };
 
-export default function CartClient({ products, stockUnavailable }: CartClientProps) {
+export default function CartClient({ products, stockUnavailable, automaticPromotion }: CartClientProps) {
+	const scheduledPromotion = useScheduledPromotion(automaticPromotion);
 	const { cartItems, removeFromCart, updateQuantity, getTotal, getItemPrice } = useCart();
 	const router = useRouter();
 	const total = getTotal();
 	const rawTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 	const totalSavings = cartItems.reduce((sum, item) => sum + Math.max(0, item.price - getItemPrice(item)) * item.quantity, 0);
 	const [showPromoInput, setShowPromoInput] = useState(true);
-	const [promoCode, setPromoCode] = useState('');
-	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
-	const [appliedDiscount, setAppliedDiscount] = useState(0);
-	const [appliedFreeShipping, setAppliedFreeShipping] = useState(false);
-	const [appliedProductIds, setAppliedProductIds] = useState<string[]>([]);
+	const [promoCode, setPromoCode] = useState(automaticPromotion?.code ?? '');
+	const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(automaticPromotion?.code ?? null);
+	const [appliedDiscount, setAppliedDiscount] = useState(automaticPromotion?.discount ?? 0);
+	const [appliedFreeShipping, setAppliedFreeShipping] = useState(automaticPromotion?.freeShipping ?? false);
+	const [appliedProductIds, setAppliedProductIds] = useState<string[]>(automaticPromotion?.productIds ?? []);
 	const [promoError, setPromoError] = useState<string | null>(null);
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
@@ -44,17 +48,43 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	const summaryTotal = Number((summarySubtotal - promoDiscountAmount).toFixed(2));
 
 	useEffect(() => {
+		if (scheduledPromotion) {
+			setPromoCode(scheduledPromotion.code);
+			setAppliedPromoCode(scheduledPromotion.code);
+			setAppliedDiscount(scheduledPromotion.discount);
+			setAppliedFreeShipping(Boolean(scheduledPromotion.freeShipping));
+			setAppliedProductIds(scheduledPromotion.productIds ?? []);
+			storeCartPromo({ code: scheduledPromotion.code, discount: scheduledPromotion.discount, freeShipping: Boolean(scheduledPromotion.freeShipping), productIds: scheduledPromotion.productIds ?? [] });
+			return;
+		}
 		const storedPromo = readStoredCartPromo();
-		if (!storedPromo) return;
+		if (!storedPromo) {
+			return;
+		}
+		if (storedPromo.code === AUTOMATIC_SITEWIDE_PROMO_CODE && !automaticPromotion) {
+			storeCartPromo(null);
+			return;
+		}
 		setPromoCode(storedPromo.code);
 		setAppliedPromoCode(storedPromo.code);
 		setAppliedDiscount(storedPromo.discount);
 		setAppliedFreeShipping(storedPromo.freeShipping);
 		setAppliedProductIds(storedPromo.productIds ?? []);
 		setShowPromoInput(true);
-	}, []);
+	}, [automaticPromotion, scheduledPromotion]);
+
+	useEffect(() => {
+		if (scheduledPromotion || appliedPromoCode !== AUTOMATIC_SITEWIDE_PROMO_CODE) return;
+		setPromoCode('');
+		setAppliedPromoCode(null);
+		setAppliedDiscount(0);
+		setAppliedFreeShipping(false);
+		setAppliedProductIds([]);
+		storeCartPromo(null);
+	}, [appliedPromoCode, scheduledPromotion]);
 
 	const handleApplyPromo = async () => {
+		if (scheduledPromotion) return;
 		if (!promoCode.trim()) return;
 		setIsVerifyingPromo(true);
 		setPromoError(null);
@@ -97,6 +127,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	};
 
 	const handleClearPromo = () => {
+		if (scheduledPromotion) return;
 		setPromoCode('');
 		setAppliedPromoCode(null);
 		setAppliedDiscount(0);
@@ -427,11 +458,11 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 							<div className='mb-4 border-y border-deep-tidal-teal/10 py-4'>
 								<button
 									type='button'
-									onClick={() => setShowPromoInput((shown) => !shown)}
+									onClick={() => !scheduledPromotion && setShowPromoInput((shown) => !shown)}
 									aria-expanded={showPromoInput}
 									className='flex w-full items-center justify-between text-sm text-deep-tidal-teal-800 hover:text-deep-tidal-teal'>
-									<span>Have a promo code?</span>
-									<svg
+									<span>{scheduledPromotion ? `Sitewide ${scheduledPromotion.discount}% sale applied automatically` : 'Have a promo code?'}</span>
+									{!scheduledPromotion && <svg
 										className={`h-4 w-4 transition-transform ${showPromoInput ? 'rotate-180' : ''}`}
 										fill='none'
 										stroke='currentColor'
@@ -443,9 +474,9 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 											strokeWidth={2}
 											d='M19 9l-7 7-7-7'
 										/>
-									</svg>
+									</svg>}
 								</button>
-								{showPromoInput && (
+								{showPromoInput && !scheduledPromotion && (
 									<div className='mt-3 space-y-2'>
 										<div className='flex gap-2'>
 											<input

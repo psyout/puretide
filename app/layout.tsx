@@ -5,13 +5,15 @@ import './globals.css';
 import { Providers } from './providers';
 import MetaPixelPageView from '@/components/MetaPixelPageView';
 import Footer from '@/components/Footer';
+import { getCachedAutomaticSitewidePromo } from '@/lib/sheetCache';
 
 export const metadata: Metadata = {
 	title: 'Pure Tide Wellness - Advanced Peptide Formulations',
 	description: 'Advanced peptide formulations for optimal health and wellness, delivered to your doorstep.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+	const automaticPromotion = await getCachedAutomaticSitewidePromo();
 	return (
 		<html lang='en'>
 			<head>
@@ -60,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				<Suspense fallback={null}>
 					<MetaPixelPageView />
 				</Suspense>
-				<Providers>{children}</Providers>
+				<Providers automaticPromotion={automaticPromotion}>{children}</Providers>
 				<Footer />
 			</body>
 		</html>

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { Product, ProductVariant } from '@/types/product';
+import type { Product, ProductVariant, PromoCode } from '@/types/product';
+import { getSalePrice } from '@/lib/promo';
+import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
 import { ChevronRight, CreditCard, FileBadge, FlaskConical, Truck } from 'lucide-react';
@@ -16,9 +18,11 @@ interface ProductDetailClientProps {
 	hasCoaFile: boolean;
 	matchingCoaFile?: string;
 	stockUnavailable?: boolean;
+	automaticPromotion?: PromoCode | null;
 }
 
-export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile, stockUnavailable = false }: ProductDetailClientProps) {
+export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile, stockUnavailable = false, automaticPromotion }: ProductDetailClientProps) {
+	const scheduledPromotion = useScheduledPromotion(automaticPromotion);
 	const variants = useMemo(() => product.variants || [], [product.variants]);
 	const hasVariants = variants.length > 1;
 
@@ -33,6 +37,8 @@ export default function ProductDetailClient({ product, description, details, has
 	// If no variants, use the base product
 	const currentVariant = selectedVariant;
 	const displayPrice = currentVariant?.price ?? product.price;
+	const saleDiscount = scheduledPromotion?.discount ?? 0;
+	const salePrice = getSalePrice(displayPrice, saleDiscount);
 	const displayMg = currentVariant?.label ?? product.mg;
 	const displayStock = currentVariant?.stock ?? product.stock;
 	const isSoldOut = displayStock <= 0 || product.status === 'stock-out';
@@ -119,8 +125,10 @@ export default function ProductDetailClient({ product, description, details, has
 
 			{/* Price */}
 			<div className='mb-4'>
-				<div className='text-3xl font-bold text-deep-tidal-teal-700 mt-8'>
-					<span className='text-deep-tidal-teal-700 text-[1.75rem] font-light'>C</span>${displayPrice.toFixed(2)}
+				{saleDiscount > 0 && <div className='mt-8 inline-flex rounded-full bg-eucalyptus-100 px-3 py-1 text-sm font-bold text-deep-tidal-teal-800'>{saleDiscount}% OFF</div>}
+				<div className={`${saleDiscount > 0 ? 'mt-2 flex items-baseline gap-3' : 'mt-8'} text-deep-tidal-teal-700`}>
+					{saleDiscount > 0 && <span className='text-xl font-medium text-deep-tidal-teal-500 line-through'>C${displayPrice.toFixed(2)}</span>}
+					<span className={`text-3xl font-bold ${saleDiscount > 0 ? 'text-[#b42318]' : ''}`}><span className='text-[1.75rem] font-light'>C</span>${salePrice.toFixed(2)}</span>
 				</div>
 				<div className='flex flex-row xs:flex-col items-start gap-3 text-xs md:text-sm text-deep-tidal-teal-600 sm:flex-row sm:items-center sm:gap-3'>
 					<span className='flex items-center gap-1'>

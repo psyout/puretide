@@ -296,7 +296,7 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:H',
+			range: 'PromoCodes!A1:J',
 		});
 
 		const rows = response.data.values ?? [];
@@ -318,6 +318,8 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 					.filter(Boolean),
 				affiliateName: (row[6] ?? '').trim() || undefined,
 				commissionPercentage: Math.max(0, Math.min(100, parseNumber(row[7] ?? '0'))),
+				startDate: (row[8] ?? '').trim() || undefined,
+				endDate: (row[9] ?? '').trim() || undefined,
 			};
 		});
 	} catch (error) {
@@ -633,12 +635,12 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'PromoCodes');
 		if (!sheetExists) {
 			console.error(
-				'Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active, MinimumSubtotal, Products, AffiliateName, CommissionPercentage',
+				'Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active, MinimumSubtotal, Products, AffiliateName, CommissionPercentage, StartDate, EndDate',
 			);
 			return;
 		}
 		const values = [
-			['Code', 'Discount', 'FreeShipping', 'Active', 'MinimumSubtotal', 'Products', 'AffiliateName', 'CommissionPercentage'],
+			['Code', 'Discount', 'FreeShipping', 'Active', 'MinimumSubtotal', 'Products', 'AffiliateName', 'CommissionPercentage', 'StartDate', 'EndDate'],
 			...codes.map((c) => [
 				c.code,
 				String(c.discount),
@@ -648,11 +650,13 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 				(c.productIds ?? []).join(', '),
 				c.affiliateName?.trim() ?? '',
 				String(Math.max(0, Math.min(100, Number(c.commissionPercentage) || 0))),
+				c.startDate?.trim() ?? '',
+				c.endDate?.trim() ?? '',
 			]),
 		];
 		await sheets.spreadsheets.values.update({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:H',
+			range: 'PromoCodes!A1:J',
 			valueInputOption: 'RAW',
 			requestBody: { values },
 		});

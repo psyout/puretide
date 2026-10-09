@@ -2,15 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDown } from 'lucide-react';
-import type { Product } from '@/types/product';
+import type { Product, PromoCode } from '@/types/product';
+import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 import ProductCardAlternative from './ProductCardAlternative';
 
 type ProductGridAlternativeClientProps = {
 	initialItems: Product[];
 	stockUnavailable?: boolean;
+	automaticPromotion?: PromoCode | null;
 };
 
-export default function ProductGridAlternativeClient({ initialItems, stockUnavailable = false }: ProductGridAlternativeClientProps) {
+export default function ProductGridAlternativeClient({ initialItems, stockUnavailable = false, automaticPromotion }: ProductGridAlternativeClientProps) {
+	const scheduledPromotion = useScheduledPromotion(automaticPromotion);
 	const [selectedCategory, setSelectedCategory] = useState('All');
 	const [items, setItems] = useState<Product[]>(initialItems);
 	const [isLoading, setIsLoading] = useState(initialItems.length === 0);
@@ -148,6 +151,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 									<ProductCardAlternative
 										product={product}
 										onImageLoaded={handleImageLoaded}
+										automaticPromotion={scheduledPromotion}
 									/>
 								</div>
 							))}
