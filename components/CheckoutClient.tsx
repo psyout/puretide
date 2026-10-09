@@ -12,7 +12,7 @@ import { CreditCard, Truck, Plus, Minus, Trash2, Loader2 } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import type { PromoCode } from '@/types/product';
-import { AUTOMATIC_SITEWIDE_PROMO_CODE } from '@/lib/promo';
+import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
 import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
@@ -238,7 +238,9 @@ export default function CheckoutClient({ automaticPromotion }: { automaticPromot
 	const isCreditCardOverLimit = paymentMethod === 'creditcard' && total > CREDIT_CARD_LIMIT;
 	const isCreditCardDisabled = total > CREDIT_CARD_LIMIT;
 
-	const getDisplayPrice = (item: (typeof cartItems)[0]) => (appliedDiscount > 0 ? item.price : getItemPrice(item));
+	const isPromoEligibleItem = (item: (typeof cartItems)[0]) => appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id));
+	const getDisplayPrice = (item: (typeof cartItems)[0]) =>
+		promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? getSalePrice(item.price, appliedDiscount) : getItemPrice(item);
 
 	// Canadian postal code
 	const isValidCanadianPostalCode = (zip: string) => /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/.test((zip || '').trim().replace(/\s{2,}/g, ' '));
@@ -1571,10 +1573,11 @@ export default function CheckoutClient({ automaticPromotion }: { automaticPromot
 										{/* Product Details & Price */}
 										<div className='flex-1 min-w-0'>
 											<h3 className='text-sm font-semibold text-deep-tidal-teal-800 leading-tight'>{item.name}</h3>
-											<p className='text-base font-bold text-deep-tidal-teal mt-0.5'>
+											<p className={`text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
 												${(getDisplayPrice(item) * item.quantity).toFixed(2)}
 												{item.quantity > 1 && <span className='text-xs font-normal text-deep-tidal-teal-600 ml-1'>(${getDisplayPrice(item).toFixed(2)} ea)</span>}
 											</p>
+											{promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) && <p className='text-xs text-deep-tidal-teal-500 line-through'>${(item.price * item.quantity).toFixed(2)}</p>}
 										</div>
 
 										{/* Quantity Display */}

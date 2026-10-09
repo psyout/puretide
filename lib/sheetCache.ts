@@ -4,9 +4,12 @@ import type { FriendsFamilySheetEntry } from './stockSheet';
 import type { PromotionCampaign } from '@/types/product';
 import { getAutomaticSitewidePromo } from './promo';
 
-// Cache TTL: 5 minutes for products, 10 minutes for promos/clients
+// Product and operational data can tolerate longer caching. Promo codes use a
+// short TTL so independently running production workers converge quickly when
+// a campaign is toggled directly in Google Sheets.
 const PRODUCT_CACHE_TTL_MS = 5 * 60 * 1000;
 const PROMO_CACHE_TTL_MS = 10 * 60 * 1000;
+const PROMO_CODE_CACHE_TTL_MS = 30 * 1000;
 
 type CachedEntry<T> = {
 	data: T;
@@ -81,7 +84,7 @@ export async function getCachedSheetPromoCodes() {
 
 	try {
 		const promos = await readSheetPromoCodes();
-		setCache(promoCache, cacheKey, promos, PROMO_CACHE_TTL_MS);
+		setCache(promoCache, cacheKey, promos, PROMO_CODE_CACHE_TTL_MS);
 		return promos;
 	} catch (error) {
 		// If cache has stale data, return it as fallback

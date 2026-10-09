@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { readProducts } from '@/lib/productCatalog';
-import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
+import { readSheetPromoCodes } from '@/lib/stockSheet';
 import type { PromoCode } from '@/types/product';
 import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError, getPromotionForOrder } from '@/lib/promo';
 import { getDiscountedPrice } from '@/lib/pricing';
@@ -182,7 +182,8 @@ export async function POST(request: Request) {
 		let discountAmount = 0;
 		let appliedPromo: PromoCode | undefined;
 
-		const promoCodes = await getCachedSheetPromoCodes();
+		// Payment pricing must use current promotion data, never a worker-local stale cache.
+		const promoCodes = await readSheetPromoCodes();
 		const promo = getPromotionForOrder(promoCodes, orderPayload.promoCode);
 
 		if (promo) {

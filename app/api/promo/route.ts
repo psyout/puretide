@@ -3,6 +3,7 @@ import { readSheetPromoCodes, writeSheetPromoCodes } from '@/lib/stockSheet';
 import type { PromoCode } from '@/types/product';
 import { isExplicitDevBypassEnabled } from '@/lib/authEnv';
 import { buildSafeApiError } from '@/lib/apiError';
+import { invalidatePromoCache } from '@/lib/sheetCache';
 
 function requirePromoApiKey(request: Request): boolean {
 	const key = process.env.PROMO_API_KEY;
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
 		const payload = (await request.json()) as { codes: PromoCode[] };
 		const codes = payload?.codes ?? [];
 		await writeSheetPromoCodes(codes);
+		invalidatePromoCache();
 		return NextResponse.json({ ok: true });
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to update promo codes.', error, logLabel: 'promo:post' });

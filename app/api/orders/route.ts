@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { readProducts } from '@/lib/productCatalog';
-import { getCachedSheetPromoCodes } from '@/lib/sheetCache';
+import { readSheetPromoCodes } from '@/lib/stockSheet';
 import type { PromoCode } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
@@ -184,7 +184,8 @@ export async function POST(request: Request) {
 		const destinationProvince = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.province : orderPayload.customer.province;
 		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
 
-		const promoCodes = await getCachedSheetPromoCodes();
+		// Checkout pricing must use current promotion data, never a worker-local stale cache.
+		const promoCodes = await readSheetPromoCodes();
 		const promo = getPromotionForOrder(promoCodes, orderPayload.promoCode);
 
 		if (promo) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
 import { readSheetPromoCodes, writeSheetPromoCodes } from '@/lib/stockSheet';
 import type { PromoCode } from '@/types/product';
+import { invalidatePromoCache } from '@/lib/sheetCache';
 
 export async function GET(request: Request) {
 	const authError = requireDashboardAuth(request);
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
 		const payload = (await request.json()) as { codes?: PromoCode[] };
 		const codes = payload?.codes ?? [];
 		await writeSheetPromoCodes(codes);
+		invalidatePromoCache();
 		return NextResponse.json({ ok: true });
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Failed to update promo codes';

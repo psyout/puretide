@@ -14,7 +14,7 @@ import CartItemDetails from './CartItemDetails';
 import type { Product, PromoCode } from '@/types/product';
 import { buildCartStockMap, hasInvalidCartQuantity, resolveCartItemStock } from '@/lib/cartStock';
 import { readStoredCartPromo, storeCartPromo } from '@/lib/cartPromo';
-import { AUTOMATIC_SITEWIDE_PROMO_CODE } from '@/lib/promo';
+import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
 import { useScheduledPromotion } from '@/lib/useScheduledPromotion';
 
 type CartClientProps = {
@@ -46,6 +46,10 @@ export default function CartClient({ products, stockUnavailable, automaticPromot
 	);
 	const promoDiscountAmount = Number((promoEligibleSubtotal * (appliedDiscount / 100)).toFixed(2));
 	const summaryTotal = Number((summarySubtotal - promoDiscountAmount).toFixed(2));
+	const getDisplayedItemPrice = (item: (typeof cartItems)[0]) => {
+		const isEligible = appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id));
+		return promoApplied && appliedDiscount > 0 && isEligible ? getSalePrice(item.price, appliedDiscount) : getItemPrice(item);
+	};
 
 	useEffect(() => {
 		if (scheduledPromotion) {
@@ -204,8 +208,9 @@ export default function CartClient({ products, stockUnavailable, automaticPromot
 								const isLowStock = availableStock > 0 && availableStock <= 3;
 								const isAtStockLimit = item.quantity >= availableStock;
 								const hasInvalidQuantity = item.quantity > availableStock;
-								const isDiscounted = getItemPrice(item) < item.price;
-								const savings = item.price - getItemPrice(item);
+								const displayedItemPrice = getDisplayedItemPrice(item);
+								const isDiscounted = displayedItemPrice < item.price;
+								const savings = item.price - displayedItemPrice;
 
 								return (
 									<div
@@ -257,9 +262,9 @@ export default function CartClient({ products, stockUnavailable, automaticPromot
 													</div>
 												)}
 
-												{/* Pricing */}
-												<div className='flex items-baseline gap-2 mb-1'>
-													<p className='text-base sm:text-lg font-bold text-deep-tidal-teal'>${getItemPrice(item).toFixed(2)}</p>
+											{/* Pricing */}
+											<div className='flex items-baseline gap-2 mb-1'>
+												<p className={`text-base sm:text-lg font-bold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>${displayedItemPrice.toFixed(2)}</p>
 													{isDiscounted && <p className='text-xs text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</p>}
 												</div>
 												{isDiscounted && (
@@ -400,9 +405,9 @@ export default function CartClient({ products, stockUnavailable, automaticPromot
 												)}
 											</div>
 
-											{/* Price is its own grid column so discount details never push product information down. */}
-											<div className='flex min-w-0 flex-col items-end justify-start text-right'>
-												<p className='text-xl font-bold text-deep-tidal-teal mb-1'>${getItemPrice(item).toFixed(2)}</p>
+										{/* Price is its own grid column so discount details never push product information down. */}
+										<div className='flex min-w-0 flex-col items-end justify-start text-right'>
+											<p className={`text-xl font-bold mb-1 ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>${displayedItemPrice.toFixed(2)}</p>
 												{isDiscounted && (
 													<>
 														<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
@@ -432,7 +437,7 @@ export default function CartClient({ products, stockUnavailable, automaticPromot
 										<span className='text-deep-tidal-teal-700 text-[0.9rem]'>
 											{item.name} × {item.quantity}
 										</span>
-										<span className='text-deep-tidal-teal-800 font-semibold'>${((promoApplied ? item.price : getItemPrice(item)) * item.quantity).toFixed(2)}</span>
+										<span className={`font-semibold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-800'}`}>${(getDisplayedItemPrice(item) * item.quantity).toFixed(2)}</span>
 									</div>
 								))}
 							</div>
@@ -445,12 +450,18 @@ export default function CartClient({ products, stockUnavailable, automaticPromot
 								)}
 								<div className='flex justify-between text-lg font-bold'>
 									<span className='text-deep-tidal-teal-800'>Subtotal</span>
-									<span className='text-deep-tidal-teal'>${summaryTotal.toFixed(2)}</span>
+									<span className='text-deep-tidal-teal'>${summarySubtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
 									<div className='flex justify-between text-sm font-semibold text-emerald-700'>
 										<span>Promo discount ({appliedDiscount}%)</span>
 										<span>−${promoDiscountAmount.toFixed(2)}</span>
+									</div>
+								)}
+								{promoApplied && (
+									<div className='flex justify-between border-t border-deep-tidal-teal/10 pt-2 text-lg font-bold'>
+										<span className='text-deep-tidal-teal-800'>Total</span>
+										<span className='text-[#b42318]'>${summaryTotal.toFixed(2)}</span>
 									</div>
 								)}
 								<p className='text-xs text-deep-tidal-teal-600'>Shipping and payment fees, if applicable, are confirmed at checkout only.</p>
