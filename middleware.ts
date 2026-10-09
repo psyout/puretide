@@ -78,6 +78,9 @@ export async function middleware(request: NextRequest) {
 		if (!cookieValue || isExpired(timestamp) || !(await verifyDashboardCookie(cookieValue))) {
 			return NextResponse.redirect(new URL('/dashboard/login', request.url));
 		}
+		if (pathname === '/dashboard/stock') {
+			return NextResponse.redirect(new URL('/dashboard', request.url));
+		}
 	}
 
 	// Allow all other users (guests) to access the site

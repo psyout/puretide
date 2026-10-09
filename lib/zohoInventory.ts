@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 type ZohoCustomField = {
+	customfield_id?: string | number;
 	label?: string;
 	api_name?: string;
 	value?: unknown;
@@ -59,6 +60,8 @@ export type StockDeductionItem = {
 	name?: string;
 	quantity: number;
 };
+
+export type ZohoWebsiteStatus = 'published' | 'draft' | 'inactive';
 
 let cachedAccessToken: { value: string; expiresAt: number } | null = null;
 type ProductCatalogCache = { products: Product[]; refreshedAt: number; expiresAt: number };
@@ -248,7 +251,7 @@ function getApiBaseUrl() {
 
 function getOrganizationId() {
 	const organizationId = asTrimmedString(process.env.ZOHO_INVENTORY_ORGANIZATION_ID);
-	if (!organizationId) throw new Error('ZOHO_INVENTORY_ORGANIZATION_ID is required when PRODUCT_SOURCE=zoho.');
+	if (!organizationId) throw new Error('ZOHO_INVENTORY_ORGANIZATION_ID is required because Zoho Inventory is the product source of truth.');
 	return organizationId;
 }
 
@@ -386,6 +389,67 @@ export async function readZohoProducts(): Promise<Product[]> {
 	})();
 
 	return cloneProducts(await pendingProductCatalogRead);
+}
+
+export async function updateZohoWebsiteStatus(productIdRaw: string, status: ZohoWebsiteStatus): Promise<Product> {
+	const productId = asTrimmedString(productIdRaw);
+	if (!productId) throw new Error('A product ID is required.');
+	if (!(['published', 'draft', 'inactive'] as const).includes(status)) throw new Error('Website Status must be published, draft, or inactive.');
+
+	const products = await readZohoProducts();
+	const product = products.find((candidate) => candidate.id === productId || candidate.slug === productId || candidate.zohoItemId === productId);
+	if (!product?.zohoItemId) throw new Error(`Zoho product not found for website ID: ${productId}`);
+
+	const itemId = product.zohoItemId;
+	let detail = cachedItemDetails.get(itemId);
+	if (!detail || detail.expiresAt <= Date.now()) {
+		const detailResponse = await zohoRequest<ZohoItemResponse>(`items/${encodeURIComponent(itemId)}`);
+		if (!detailResponse.item) throw new Error(`Zoho Inventory returned no details for item ${itemId}.`);
+		detail = { item: detailResponse.item, expiresAt: Date.now() + getItemDetailCacheTtlMs() };
+		cachedItemDetails.set(itemId, detail);
+	}
+
+	const target = canonicalize('Website Status');
+	const statusField = detail.item.custom_fields?.find(
+		(field) => canonicalize(field.label) === target || canonicalize(field.api_name) === target || canonicalize(field.api_name) === `cf${target}`,
+	);
+	const customFieldId = asTrimmedString(statusField?.customfield_id);
+	if (!customFieldId) throw new Error(`Zoho item ${itemId} does not expose a Website Status custom-field ID.`);
+
+	await zohoRequest(`item/${encodeURIComponent(itemId)}/customfields`, {
+		method: 'PUT',
+		body: JSON.stringify([
+			{
+				customfield_id: customFieldId,
+				label: statusField?.label || 'Website Status',
+				value: status,
+			},
+		]),
+	});
+
+	const updatedProduct = { ...product, status };
+	if (cachedProductCatalog) {
+		cachedProductCatalog = {
+			...cachedProductCatalog,
+			products: cachedProductCatalog.products.map((candidate) => (candidate.zohoItemId === itemId ? { ...candidate, status } : candidate)),
+		};
+		await persistCatalog(cachedProductCatalog);
+	}
+
+	const cachedDetail = cachedItemDetails.get(itemId);
+	if (cachedDetail) {
+		cachedItemDetails.set(itemId, {
+			...cachedDetail,
+			item: {
+				...cachedDetail.item,
+				custom_fields: cachedDetail.item.custom_fields?.map((field) =>
+					asTrimmedString(field.customfield_id) === customFieldId ? { ...field, value: status, value_formatted: status } : field,
+				),
+			},
+		});
+	}
+
+	return updatedProduct;
 }
 
 export function resetZohoInventoryCacheForTests() {

@@ -296,7 +296,7 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:F',
+			range: 'PromoCodes!A1:H',
 		});
 
 		const rows = response.data.values ?? [];
@@ -316,6 +316,8 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 					.split(',')
 					.map((id) => id.trim())
 					.filter(Boolean),
+				affiliateName: (row[6] ?? '').trim() || undefined,
+				commissionPercentage: Math.max(0, Math.min(100, parseNumber(row[7] ?? '0'))),
 			};
 		});
 	} catch (error) {
@@ -418,6 +420,162 @@ export const writeSheetFriendsFamilyAllowlist = async (_entries: FriendsFamilySh
 	throw new Error('Friends & Family allowlist is managed directly in the Google Sheet. Edit the "Friends & Family" worksheet instead.');
 };
 
+export const addSheetFriendsFamilyEmail = async (emailRaw: string): Promise<'added' | 'reactivated' | 'existing'> => {
+	if (!SHEET_ID) throw new Error('Google Sheet ID is not configured.');
+	const email = normalizeSheetEmail(emailRaw);
+	if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
+
+	const sheets = getSheetsClient();
+	const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+	const sheetExists = spreadsheet.data.sheets?.some((sheet: { properties?: { title?: string } }) => sheet.properties?.title === 'Friends & Family');
+	if (!sheetExists) {
+		await sheets.spreadsheets.batchUpdate({
+			spreadsheetId: SHEET_ID,
+			requestBody: { requests: [{ addSheet: { properties: { title: 'Friends & Family' } } }] },
+		});
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: "'Friends & Family'!A1:C1",
+			valueInputOption: 'RAW',
+			requestBody: { values: [['Email', 'Active', 'Note']] },
+		});
+	}
+
+	const response = await sheets.spreadsheets.values.get({
+		spreadsheetId: SHEET_ID,
+		range: "'Friends & Family'!A:C",
+	});
+	const rows = (response.data.values ?? []) as unknown[][];
+	if (rows.length === 0) {
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: "'Friends & Family'!A1:C1",
+			valueInputOption: 'RAW',
+			requestBody: { values: [['Email', 'Active', 'Note']] },
+		});
+	}
+	const existingIndex = rows.findIndex((row, index) => index > 0 && normalizeSheetEmail(row[0]) === email);
+
+	if (existingIndex > 0) {
+		const existingRow = rows[existingIndex];
+		if (parseSheetBoolean(existingRow[1])) return 'existing';
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: `'Friends & Family'!A${existingIndex + 1}:C${existingIndex + 1}`,
+			valueInputOption: 'USER_ENTERED',
+			requestBody: { values: [[email, 'TRUE', String(existingRow[2] ?? '')]] },
+		});
+		return 'reactivated';
+	}
+
+	await sheets.spreadsheets.values.append({
+		spreadsheetId: SHEET_ID,
+		range: "'Friends & Family'!A:C",
+		valueInputOption: 'USER_ENTERED',
+		insertDataOption: 'INSERT_ROWS',
+		requestBody: { values: [[email, 'TRUE', '']] },
+	});
+	return 'added';
+};
+
+export const setSheetFriendsFamilyEmailStatus = async (emailRaw: string, isActive: boolean): Promise<void> => {
+	if (!SHEET_ID) throw new Error('Google Sheet ID is not configured.');
+	const email = normalizeSheetEmail(emailRaw);
+	if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
+
+	const sheets = getSheetsClient();
+	const response = await sheets.spreadsheets.values.get({
+		spreadsheetId: SHEET_ID,
+		range: "'Friends & Family'!A:C",
+	});
+	const rows = (response.data.values ?? []) as unknown[][];
+	if (rows.length === 0) throw new Error('Friends & Family worksheet is empty.');
+
+	const headerRow = rows[0].map((cell) => String(cell ?? ''));
+	const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
+		acc[canonicalizeHeader(header)] = index;
+		return acc;
+	}, {});
+	const emailIndex = indexMap.email ?? 0;
+	const activeIndex = indexMap.active ?? 1;
+	const existingIndex = rows.findIndex((row, index) => index > 0 && normalizeSheetEmail(row[emailIndex]) === email);
+	if (existingIndex < 1) throw new Error('Friends & Family email was not found.');
+
+	const activeColumn = String.fromCharCode(65 + activeIndex);
+	await sheets.spreadsheets.values.update({
+		spreadsheetId: SHEET_ID,
+		range: `'Friends & Family'!${activeColumn}${existingIndex + 1}`,
+		valueInputOption: 'USER_ENTERED',
+		requestBody: { values: [[isActive ? 'TRUE' : 'FALSE']] },
+	});
+};
+
+export const renameSheetFriendsFamilyEmail = async (currentEmailRaw: string, nextEmailRaw: string): Promise<void> => {
+	if (!SHEET_ID) throw new Error('Google Sheet ID is not configured.');
+	const currentEmail = normalizeSheetEmail(currentEmailRaw);
+	const nextEmail = normalizeSheetEmail(nextEmailRaw);
+	if (!isValidEmail(currentEmail) || !isValidEmail(nextEmail)) throw new Error('Enter a valid email address.');
+
+	const sheets = getSheetsClient();
+	const response = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: "'Friends & Family'!A:C" });
+	const rows = (response.data.values ?? []) as unknown[][];
+	if (rows.length === 0) throw new Error('Friends & Family worksheet is empty.');
+	const headerRow = rows[0].map((cell) => String(cell ?? ''));
+	const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
+		acc[canonicalizeHeader(header)] = index;
+		return acc;
+	}, {});
+	const emailIndex = indexMap.email ?? 0;
+	const existingIndex = rows.findIndex((row, index) => index > 0 && normalizeSheetEmail(row[emailIndex]) === currentEmail);
+	if (existingIndex < 1) throw new Error('Friends & Family email was not found.');
+	const duplicateIndex = rows.findIndex((row, index) => index > 0 && index !== existingIndex && normalizeSheetEmail(row[emailIndex]) === nextEmail);
+	if (duplicateIndex > 0) throw new Error('That email is already in Friends & Family.');
+
+	const emailColumn = String.fromCharCode(65 + emailIndex);
+	await sheets.spreadsheets.values.update({
+		spreadsheetId: SHEET_ID,
+		range: `'Friends & Family'!${emailColumn}${existingIndex + 1}`,
+		valueInputOption: 'USER_ENTERED',
+		requestBody: { values: [[nextEmail]] },
+	});
+};
+
+export const deleteSheetFriendsFamilyEmail = async (emailRaw: string): Promise<void> => {
+	if (!SHEET_ID) throw new Error('Google Sheet ID is not configured.');
+	const email = normalizeSheetEmail(emailRaw);
+	if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
+
+	const sheets = getSheetsClient();
+	const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+	const sheet = spreadsheet.data.sheets?.find((candidate: { properties?: { title?: string } }) => candidate.properties?.title === 'Friends & Family');
+	const sheetId = sheet?.properties?.sheetId;
+	if (sheetId == null) throw new Error('Friends & Family worksheet was not found.');
+	const response = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: "'Friends & Family'!A:C" });
+	const rows = (response.data.values ?? []) as unknown[][];
+	if (rows.length === 0) throw new Error('Friends & Family worksheet is empty.');
+	const headerRow = rows[0].map((cell) => String(cell ?? ''));
+	const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
+		acc[canonicalizeHeader(header)] = index;
+		return acc;
+	}, {});
+	const emailIndex = indexMap.email ?? 0;
+	const existingIndex = rows.findIndex((row, index) => index > 0 && normalizeSheetEmail(row[emailIndex]) === email);
+	if (existingIndex < 1) throw new Error('Friends & Family email was not found.');
+
+	await sheets.spreadsheets.batchUpdate({
+		spreadsheetId: SHEET_ID,
+		requestBody: {
+			requests: [
+				{
+					deleteDimension: {
+						range: { sheetId, dimension: 'ROWS', startIndex: existingIndex, endIndex: existingIndex + 1 },
+					},
+				},
+			],
+		},
+	});
+};
+
 export const readSheetFriendsFamilyAllowlist = async (): Promise<FriendsFamilySheetEntry[]> => {
 	if (!SHEET_ID) return [];
 
@@ -474,11 +632,13 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
 		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'PromoCodes');
 		if (!sheetExists) {
-			console.error('Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active, MinimumSubtotal, Products');
+			console.error(
+				'Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active, MinimumSubtotal, Products, AffiliateName, CommissionPercentage',
+			);
 			return;
 		}
 		const values = [
-			['Code', 'Discount', 'FreeShipping', 'Active', 'MinimumSubtotal', 'Products'],
+			['Code', 'Discount', 'FreeShipping', 'Active', 'MinimumSubtotal', 'Products', 'AffiliateName', 'CommissionPercentage'],
 			...codes.map((c) => [
 				c.code,
 				String(c.discount),
@@ -486,11 +646,13 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 				c.active ? 'true' : 'false',
 				String(c.minimumSubtotal ?? 0),
 				(c.productIds ?? []).join(', '),
+				c.affiliateName?.trim() ?? '',
+				String(Math.max(0, Math.min(100, Number(c.commissionPercentage) || 0))),
 			]),
 		];
 		await sheets.spreadsheets.values.update({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:F',
+			range: 'PromoCodes!A1:H',
 			valueInputOption: 'RAW',
 			requestBody: { values },
 		});

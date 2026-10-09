@@ -16,7 +16,7 @@ export default function BuyNowButton({ product, quantity = 1, disabled }: BuyNow
 	const { addToCart } = useCart();
 
 	const handleBuyNow = () => {
-		addToCart(product, quantity);
+		addToCart(product, quantity, { openDrawer: false });
 		router.push('/checkout');
 	};
 

@@ -17,6 +17,7 @@ import { buildSafeApiError } from '@/lib/apiError';
 import { sendPendingManualEtransferNotifications, type FulfillmentOrder } from '@/lib/orderFulfillment';
 import { createOrderTask } from '@/lib/wrike';
 import { decidePaymentPathWithFeatureFlag, getVerifiedFriendsFamilyEmailFromCookie } from '@/lib/friendsFamily';
+import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
 
 interface OrderPayload {
 	customer: {
@@ -178,6 +179,7 @@ export async function POST(request: Request) {
 		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
 		let discountAmount = 0;
+		let appliedPromo: PromoCode | undefined;
 		const destinationZipCode = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.zipCode : orderPayload.customer.zipCode;
 		const destinationProvince = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.province : orderPayload.customer.province;
 		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
@@ -186,6 +188,7 @@ export async function POST(request: Request) {
 			const promoCodes = await getCachedSheetPromoCodes();
 			const promo = promoCodes.find((p: PromoCode) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
+				appliedPromo = promo;
 				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
 				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 				const minimumError = getPromoMinimumSubtotalError({ promo, subtotal: subtotalWithPromo });
@@ -292,6 +295,7 @@ export async function POST(request: Request) {
 					: undefined,
 			paymentPath,
 			...payload,
+			affiliateCommission: createAffiliateCommissionSnapshot(appliedPromo, payload),
 		};
 
 		console.info(

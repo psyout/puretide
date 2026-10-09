@@ -22,7 +22,7 @@ export default function DashboardLoginPage() {
 			});
 			const data = (await res.json()) as { ok?: boolean; error?: string };
 			if (res.ok && data.ok) {
-				router.push('/dashboard/stock');
+				router.push('/dashboard');
 				router.refresh();
 			} else {
 				setError(data.error ?? 'Invalid secret.');
@@ -55,7 +55,7 @@ export default function DashboardLoginPage() {
 							value={secret}
 							onChange={(e) => setSecret(e.target.value)}
 							placeholder='Enter dashboard secret'
-							className='w-full px-4 py-3 border border-black/10 rounded-lg text-[#2f2f2f] focus:outline-none focus:border-[#6c5dd3] focus:ring-2 focus:ring-[#6c5dd3]/20'
+							className='w-full px-4 py-3 border border-black/10 rounded-lg text-[#2f2f2f] focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20'
 							autoComplete='current-password'
 							required
 						/>
@@ -66,7 +66,7 @@ export default function DashboardLoginPage() {
 					<button
 						type='submit'
 						disabled={loading}
-						className='w-full bg-[#6c5dd3] text-white font-semibold py-3 rounded-lg hover:bg-[#5b4ec7] disabled:opacity-50'>
+						className='w-full bg-deep-tidal-teal text-white font-semibold py-3 rounded-lg hover:bg-deep-tidal-teal-600 disabled:opacity-50'>
 						{loading ? 'Signing in...' : 'Sign in'}
 					</button>
 				</form>

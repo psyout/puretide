@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { mapZohoItemToProduct, readZohoProducts, resetZohoInventoryCacheForTests, type ZohoInventoryItem } from '../lib/zohoInventory';
+import { mapZohoItemToProduct, readZohoProducts, resetZohoInventoryCacheForTests, updateZohoWebsiteStatus, type ZohoInventoryItem } from '../lib/zohoInventory';
 
 const customFields = (overrides: Record<string, string> = {}) =>
 	Object.entries({
@@ -20,7 +20,7 @@ const customFields = (overrides: Record<string, string> = {}) =>
 		Purity: 'N/A',
 		'COA File': 'https://example.com/coa/bacteriostatic-water.pdf',
 		...overrides,
-	}).map(([label, value]) => ({ label, value }));
+	}).map(([label, value], index) => ({ customfield_id: `field-${index + 1}`, label, value }));
 
 test('maps a Zoho Inventory item to the website product contract', () => {
 	const item: ZohoInventoryItem = {
@@ -95,6 +95,68 @@ test('sums active location stock when item-level stock is absent', () => {
 	};
 
 	assert.equal(mapZohoItemToProduct(item)?.stock, 17);
+});
+
+test('updates only the Zoho Website Status custom field', async () => {
+	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'puretide-zoho-status-'));
+	const originalFetch = globalThis.fetch;
+	const originalEnvironment = {
+		accessToken: process.env.ZOHO_INVENTORY_ACCESS_TOKEN,
+		organizationId: process.env.ZOHO_INVENTORY_ORGANIZATION_ID,
+		apiBaseUrl: process.env.ZOHO_INVENTORY_API_BASE_URL,
+		cachePath: process.env.ZOHO_INVENTORY_CACHE_PATH,
+	};
+	let updateRequest: { method?: string; body?: string } | null = null;
+
+	try {
+		process.env.ZOHO_INVENTORY_ACCESS_TOKEN = 'test-access-token';
+		process.env.ZOHO_INVENTORY_ORGANIZATION_ID = 'test-organization';
+		process.env.ZOHO_INVENTORY_API_BASE_URL = 'https://inventory.example.test/v1';
+		process.env.ZOHO_INVENTORY_CACHE_PATH = path.join(temporaryDirectory, 'zoho-products-cache.json');
+		resetZohoInventoryCacheForTests();
+
+		globalThis.fetch = (async (input, init) => {
+			const url = new URL(String(input));
+			if (url.pathname.endsWith('/items')) {
+				return Response.json({
+					code: 0,
+					items: [{ item_id: 'item-1', name: 'Bacteriostatic Water', rate: 10.99, stock_on_hand: 44, custom_fields: customFields() }],
+					page_context: { has_more_page: false },
+				});
+			}
+			if (url.pathname.endsWith('/items/item-1')) {
+				return Response.json({
+					code: 0,
+					item: { item_id: 'item-1', name: 'Bacteriostatic Water', rate: 10.99, stock_on_hand: 44, custom_fields: customFields() },
+				});
+			}
+			if (url.pathname.endsWith('/item/item-1/customfields')) {
+				updateRequest = { method: init?.method, body: String(init?.body ?? '') };
+				return Response.json({ code: 0, message: 'Custom Fields Updated Successfully' });
+			}
+			return Response.json({ code: 404, message: 'Not found' }, { status: 404 });
+		}) as typeof fetch;
+
+		const updated = await updateZohoWebsiteStatus('bacteriostatic-water', 'draft');
+		assert.equal(updated.status, 'draft');
+		assert.deepEqual(updateRequest, {
+			method: 'PUT',
+			body: JSON.stringify([{ customfield_id: 'field-2', label: 'Website Status', value: 'draft' }]),
+		});
+		assert.equal((await readZohoProducts())[0]?.status, 'draft');
+	} finally {
+		globalThis.fetch = originalFetch;
+		const restore = (key: string, value: string | undefined) => {
+			if (value == null) delete process.env[key];
+			else process.env[key] = value;
+		};
+		restore('ZOHO_INVENTORY_ACCESS_TOKEN', originalEnvironment.accessToken);
+		restore('ZOHO_INVENTORY_ORGANIZATION_ID', originalEnvironment.organizationId);
+		restore('ZOHO_INVENTORY_API_BASE_URL', originalEnvironment.apiBaseUrl);
+		restore('ZOHO_INVENTORY_CACHE_PATH', originalEnvironment.cachePath);
+		resetZohoInventoryCacheForTests();
+		await rm(temporaryDirectory, { recursive: true, force: true });
+	}
 });
 
 test('coalesces concurrent catalog reads and serves subsequent reads from cache', async () => {

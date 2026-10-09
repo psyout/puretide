@@ -25,9 +25,8 @@ const envSchema = z.object({
 	GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
 	GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
 
-	// Product catalog / Zoho Inventory integration. Google Sheets remains in use
-	// for promotions, clients, and Friends & Family records.
-	PRODUCT_SOURCE: z.enum(['sheet', 'zoho']).default('sheet'),
+	// Zoho Inventory is the product catalog and stock source of truth. Google
+	// Sheets remains in use for promotions, clients, newsletter, and F&F records.
 	ZOHO_INVENTORY_WRITE_ENABLED: booleanEnv.default(false),
 	ZOHO_INVENTORY_ORGANIZATION_ID: z.string().optional(),
 	ZOHO_INVENTORY_ACCESS_TOKEN: z.string().optional(),
@@ -217,7 +216,7 @@ export function validateEnv(): EnvSchema {
 				required('BLUEPEAK_WEBHOOK_SECRET', validatedEnv.BLUEPEAK_WEBHOOK_SECRET);
 			}
 
-			if (!isNextBuildPhase && validatedEnv.PRODUCT_SOURCE === 'zoho') {
+			if (!isNextBuildPhase) {
 				required('ZOHO_INVENTORY_ORGANIZATION_ID', validatedEnv.ZOHO_INVENTORY_ORGANIZATION_ID);
 				const hasFixedAccessToken = Boolean(validatedEnv.ZOHO_INVENTORY_ACCESS_TOKEN?.trim());
 				if (!hasFixedAccessToken) {

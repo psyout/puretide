@@ -1,10 +1,9 @@
 import { buildOrderEmails } from '@/lib/orderEmail';
-import { sendLowStockAlert, sendMail } from '@/lib/email';
-import { LOW_STOCK_THRESHOLD, DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
+import { sendMail } from '@/lib/email';
+import { DEFAULT_ORDER_NOTIFICATION_EMAIL } from '@/lib/constants';
 import { createOrderTask, createClientTask } from '@/lib/wrike';
-import { decrementStock, getProductInventory, getProductsBelowReorderPoint } from '@/lib/wrikeProducts';
-import { readSheetProducts, upsertSheetClient, writeSheetProducts } from '@/lib/stockSheet';
-import { isZohoProductSource, readProducts } from '@/lib/productCatalog';
+import { upsertSheetClient } from '@/lib/stockSheet';
+import { readProducts } from '@/lib/productCatalog';
 import { decrementZohoStock } from '@/lib/zohoInventory';
 
 export type FulfillmentOrder = {
@@ -62,76 +61,6 @@ function getOrderNotificationRecipient() {
 	return DEFAULT_ORDER_NOTIFICATION_EMAIL;
 }
 
-export async function updateWrikeStock(items: FulfillmentOrder['cartItems']): Promise<Array<{ name: string; stock: number; cost: number }>> {
-	try {
-		const stockLevels: Array<{ name: string; stock: number; cost: number }> = [];
-
-		for (const item of items) {
-			const before = await getProductInventory(String(item.id));
-			console.log(
-				JSON.stringify({
-					label: 'fulfillment:wrike:item_start',
-					productId: String(item.id),
-					name: item.name,
-					quantity: item.quantity,
-					beforeStock: before?.stock ?? null,
-					beforeCost: before?.cost ?? null,
-					beforeWrikeTaskId: before?.wrikeTaskId ?? null,
-				}),
-			);
-			const success = await decrementStock(String(item.id), item.quantity);
-			if (success) {
-				const inventory = await getProductInventory(String(item.id));
-				console.log(
-					JSON.stringify({
-						label: 'fulfillment:wrike:item_success',
-						productId: String(item.id),
-						name: item.name,
-						quantity: item.quantity,
-						afterStock: inventory?.stock ?? null,
-						afterCost: inventory?.cost ?? null,
-						afterWrikeTaskId: inventory?.wrikeTaskId ?? null,
-					}),
-				);
-				stockLevels.push({
-					name: item.name,
-					stock: inventory?.stock ?? 0,
-					cost: inventory?.cost ?? 0,
-				});
-			} else {
-				const after = await getProductInventory(String(item.id));
-				console.warn(
-					JSON.stringify({
-						label: 'fulfillment:wrike:item_failed',
-						productId: String(item.id),
-						name: item.name,
-						quantity: item.quantity,
-						beforeStock: before?.stock ?? null,
-						afterStock: after?.stock ?? null,
-						afterWrikeTaskId: after?.wrikeTaskId ?? null,
-					}),
-				);
-				stockLevels.push({ name: item.name, stock: 0, cost: 0 });
-			}
-		}
-
-		const lowStockProducts = await getProductsBelowReorderPoint();
-		if (lowStockProducts.length > 0) {
-			const lowStockForAlert = lowStockProducts.map((inv) => ({
-				name: inv.productId,
-				slug: inv.productId,
-				stock: inv.stock,
-			}));
-			await sendLowStockAlert(lowStockForAlert);
-		}
-
-		return stockLevels;
-	} catch (error) {
-		console.error('[orderFulfillment] Failed to update Wrike stock', error);
-		return [];
-	}
-}
-
 async function getZohoStockSnapshot(items: FulfillmentOrder['cartItems']): Promise<Array<{ name: string; stock: number; cost: number }>> {
 	const products = await readProducts();
 	const bySlug = new Map(products.map((product) => [product.slug, product] as const));
@@ -157,76 +86,6 @@ export type RunFulfillmentOptions = {
 	sendCustomerEmail?: boolean;
 	sendAdminEmail?: boolean;
 };
-
-async function decrementGoogleSheetStock(orderNumber: string, items: FulfillmentOrder['cartItems']) {
-	console.log(JSON.stringify({ label: 'fulfillment:sheets:start', orderNumber, items: items.map((i) => ({ id: i.id, qty: i.quantity })) }));
-
-	const products = await readSheetProducts();
-	const byId = new Map(products.map((p) => [p.id, p] as const));
-	const expectedStockById = new Map<string, number>();
-
-	for (const item of items) {
-		const product = byId.get(String(item.id));
-		if (!product) {
-			console.error(
-				JSON.stringify({
-					label: 'fulfillment:sheets:product_not_found',
-					orderNumber,
-					productId: String(item.id),
-					name: item.name,
-					quantity: item.quantity,
-				}),
-			);
-			throw new Error(`Product not found in Google Sheet: ${String(item.id)}`);
-		}
-
-		const prev = Number(product.stock ?? 0);
-		const qty = Number(item.quantity ?? 0);
-		const next = Math.max(0, prev - qty);
-		product.stock = next;
-		expectedStockById.set(product.id, next);
-
-		console.log(
-			JSON.stringify({
-				label: 'fulfillment:sheets:deduct',
-				orderNumber,
-				productId: product.id,
-				name: product.name,
-				quantity: qty,
-				prevStock: prev,
-				newStock: next,
-			}),
-		);
-	}
-
-	await writeSheetProducts(products);
-
-	const savedProducts = await readSheetProducts();
-	const savedById = new Map(savedProducts.map((product) => [product.id, product] as const));
-	for (const [productId, expectedStock] of Array.from(expectedStockById.entries())) {
-		const savedStock = savedById.get(productId)?.stock;
-		if (savedStock !== expectedStock) {
-			console.error(
-				JSON.stringify({
-					label: 'fulfillment:sheets:verification_failed',
-					orderNumber,
-					productId,
-					expectedStock,
-					savedStock: savedStock ?? null,
-				}),
-			);
-			throw new Error(`Google Sheets stock verification failed for product ${productId}`);
-		}
-	}
-
-	console.log(
-		JSON.stringify({
-			label: 'fulfillment:sheets:success',
-			orderNumber,
-			verifiedStock: Array.from(expectedStockById, ([productId, stock]) => ({ productId, stock })),
-		}),
-	);
-}
 
 export async function sendPendingManualEtransferNotifications(order: FulfillmentOrder): Promise<RunFulfillmentResult> {
 	const emailData = buildOrderEmails({
@@ -338,8 +197,8 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 		adminEmailStatus = adminEmailResult.sent ? { sent: true, skipped: false } : { sent: false, skipped: false, error: adminEmailResult.error };
 	}
 
-	// Wrike can still receive order tasks, but Zoho owns product stock when selected.
-	const stockLevels = isZohoProductSource() ? await getZohoStockSnapshot(order.cartItems) : await updateWrikeStock(order.cartItems);
+	// Wrike can still receive order tasks, but Zoho is the only product and stock source.
+	const stockLevels = await getZohoStockSnapshot(order.cartItems);
 
 	const totalCost = stockLevels.reduce((sum, item) => {
 		const cartItem = order.cartItems.find((ci) => ci.name === item.name);
@@ -394,13 +253,9 @@ export async function runFulfillment(order: FulfillmentOrder, options: RunFulfil
 	await createClientTask(clientRecord);
 	await upsertSheetClient(clientRecord);
 
-	// Final step: update the configured inventory source. Zoho writes remain opt-in
-	// so local checkout testing cannot alter live inventory accidentally.
-	if (isZohoProductSource()) {
-		await decrementZohoStock(order.orderNumber, order.cartItems);
-	} else {
-		await decrementGoogleSheetStock(order.orderNumber, order.cartItems);
-	}
+	// Final step: update Zoho inventory. Writes remain opt-in outside production so
+	// local checkout testing cannot alter live inventory accidentally.
+	await decrementZohoStock(order.orderNumber, order.cartItems);
 
 	return { emailStatus, adminEmailStatus };
 }

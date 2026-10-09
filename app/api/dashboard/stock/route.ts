@@ -1,42 +1,26 @@
 import { NextResponse } from 'next/server';
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
-import { isZohoProductSource, readProducts, writeProducts } from '@/lib/productCatalog';
-import { validateStockItems } from '@/lib/stockValidation';
-import { sendLowStockAlert } from '@/lib/email';
-import { getAllProductInventory, syncNewProductsFromSheets } from '@/lib/wrikeProducts';
+import { readProducts } from '@/lib/productCatalog';
+import { invalidateProductCache } from '@/lib/sheetCache';
+import { updateZohoWebsiteStatus, type ZohoWebsiteStatus } from '@/lib/zohoInventory';
 
-const LOW_STOCK_THRESHOLD = 5;
+async function readAvailableCoaFiles(): Promise<string[]> {
+	try {
+		return (await readdir(path.join(process.cwd(), 'public', 'coa'))).filter((file) => file.toLowerCase().endsWith('.pdf'));
+	} catch (error) {
+		console.warn('[dashboard/stock] Could not read COA directory.', error);
+		return [];
+	}
+}
 
 export async function GET(request: Request) {
 	const authError = requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
-		const catalogProducts = await readProducts();
-		const wrikeInventory = await getAllProductInventory();
-
-		if (!isZohoProductSource() && wrikeInventory.length > 0) {
-			await syncNewProductsFromSheets(catalogProducts);
-		}
-
-		const inventoryMap = new Map(wrikeInventory.map((inv) => [inv.productId, inv]));
-		const mergedProducts = catalogProducts.map((product) => {
-			const inventory = inventoryMap.get(product.id);
-			if (inventory) {
-				const zohoIsSource = isZohoProductSource();
-				return {
-					...product,
-					stock: zohoIsSource ? product.stock : inventory.stock,
-					cost: zohoIsSource ? product.cost : inventory.cost,
-					supplier: inventory.supplier,
-					supplierSku: inventory.supplierSku,
-					reorderPoint: inventory.reorderPoint,
-					reorderQuantity: inventory.reorderQuantity,
-				};
-			}
-			return product;
-		});
-
-		return NextResponse.json({ ok: true, items: mergedProducts });
+		const [items, coaFiles] = await Promise.all([readProducts(), readAvailableCoaFiles()]);
+		return NextResponse.json({ ok: true, items, coaFiles, source: 'zoho' });
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Failed to read stock';
 		return NextResponse.json({ ok: false, error: message }, { status: 500 });
@@ -46,20 +30,29 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
 	const authError = requireDashboardAuth(request);
 	if (authError) return authError;
+	return NextResponse.json(
+		{ ok: false, error: 'Zoho Inventory is the product source of truth. Edit products directly in Zoho.' },
+		{ status: 405, headers: { Allow: 'GET' } },
+	);
+}
+
+export async function PATCH(request: Request) {
+	const authError = requireDashboardAuth(request);
+	if (authError) return authError;
+
 	try {
-		const payload = (await request.json()) as { items?: unknown };
-		const itemsPayload = payload?.items ?? [];
-		const validation = validateStockItems(itemsPayload);
-		if (!validation.valid) {
-			return NextResponse.json({ ok: false, error: validation.error }, { status: 400 });
+		const body = (await request.json()) as { productId?: unknown; status?: unknown };
+		const productId = typeof body.productId === 'string' ? body.productId.trim() : '';
+		const status = typeof body.status === 'string' ? body.status.trim().toLowerCase() : '';
+		if (!productId || !['published', 'draft', 'inactive'].includes(status)) {
+			return NextResponse.json({ ok: false, error: 'A product ID and valid Website Status are required.' }, { status: 400 });
 		}
-		const items = validation.items;
-		await writeProducts(items);
-		const lowStock = items.filter((item) => item.status === 'published' && Number(item.stock) <= LOW_STOCK_THRESHOLD);
-		await sendLowStockAlert(lowStock);
-		return NextResponse.json({ ok: true });
+
+		const item = await updateZohoWebsiteStatus(productId, status as ZohoWebsiteStatus);
+		invalidateProductCache();
+		return NextResponse.json({ ok: true, item });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to update stock';
+		const message = error instanceof Error ? error.message : 'Failed to update Website Status in Zoho Inventory.';
 		return NextResponse.json({ ok: false, error: message }, { status: 500 });
 	}
 }

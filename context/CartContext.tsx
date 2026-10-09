@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { Product, CartItem } from '@/types/product';
 import { getDiscountedPrice } from '@/lib/pricing';
 import { CART_PROMO_STORAGE_KEY } from '@/lib/cartPromo';
@@ -9,9 +9,13 @@ export type PaymentMethod = 'etransfer' | 'creditcard';
 
 interface CartContextType {
 	cartItems: CartItem[];
+	isCartDrawerOpen: boolean;
+	lastAddedItemId: string | null;
 	paymentMethod: PaymentMethod;
 	setPaymentMethod: (method: PaymentMethod) => void;
-	addToCart: (product: Product, quantity?: number) => void;
+	addToCart: (product: Product, quantity?: number, options?: { openDrawer?: boolean }) => void;
+	openCartDrawer: () => void;
+	closeCartDrawer: () => void;
 	removeFromCart: (productId: string) => void;
 	updateQuantity: (productId: string, quantity: number, maxQuantity?: number) => void;
 	clearCart: () => void;
@@ -63,8 +67,12 @@ function sanitizeCartItem(raw: unknown): CartItem | null {
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
+	const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+	const [lastAddedItemId, setLastAddedItemId] = useState<string | null>(null);
 	const [paymentMethod, setPaymentMethodState] = useState<PaymentMethod>('etransfer');
 	const [isInitialized, setIsInitialized] = useState(false);
+	const openCartDrawer = useCallback(() => setIsCartDrawerOpen(true), []);
+	const closeCartDrawer = useCallback(() => setIsCartDrawerOpen(false), []);
 
 	const setPaymentMethod = (method: PaymentMethod) => {
 		setPaymentMethodState(method);
@@ -108,7 +116,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		}
 	}, [cartItems, isInitialized]);
 
-	const addToCart = (product: Product, quantity = 1) => {
+	const addToCart = (product: Product, quantity = 1, options?: { openDrawer?: boolean }) => {
 		const rawId = String(product.id ?? '').trim();
 		const rawSlug = typeof product.slug === 'string' ? product.slug.trim() : '';
 		// Canonical identifier:
@@ -118,6 +126,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		const stock = Number(product.stock) || 0;
 		const maxQ = stock > 0 ? Math.min(stock, CART_MAX_QUANTITY) : CART_MAX_QUANTITY;
 		const toAdd = Math.min(Math.max(1, quantity), maxQ);
+		setLastAddedItemId(canonicalId);
+		if (options?.openDrawer !== false) setIsCartDrawerOpen(true);
 		setCartItems((prevItems) => {
 			const existingItem = prevItems.find((item) => item.id === canonicalId);
 			if (existingItem) {
@@ -182,9 +192,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 		<CartContext.Provider
 			value={{
 				cartItems,
+				isCartDrawerOpen,
+				lastAddedItemId,
 				paymentMethod,
 				setPaymentMethod,
 				addToCart,
+				openCartDrawer,
+				closeCartDrawer,
 				removeFromCart,
 				updateQuantity,
 				clearCart,

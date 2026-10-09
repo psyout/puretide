@@ -52,7 +52,7 @@ function isPromotionInSchedule(campaign: PromotionCampaign, now: Date): boolean 
 }
 
 // Product caching
-export async function getCachedSheetProducts() {
+export async function getCachedProducts() {
 	const cacheKey = 'products';
 	const cached = getFromCache(productCache, cacheKey);
 	if (cached) return cached;
@@ -165,7 +165,7 @@ export async function getCachedSheetClients() {
 export async function warmCaches() {
 	try {
 		await Promise.all([
-			getCachedSheetProducts(),
+			getCachedProducts(),
 			getCachedSheetPromoCodes(),
 			getCachedSheetClients(),
 			getCachedSheetFriendsFamilyAllowlist(),

@@ -1,6 +1,6 @@
 import CartClient from '@/components/CartClient';
 import PromoBannerWrapper from '@/components/PromoBannerWrapper';
-import { getCachedSheetProducts } from '@/lib/sheetCache';
+import { getCachedProducts } from '@/lib/sheetCache';
 import { products as fallbackProducts } from '@/lib/products';
 import type { Product } from '@/types/product';
 
@@ -10,9 +10,9 @@ export default async function CartPage() {
 	let products: Product[] = fallbackProducts;
 	let stockUnavailable = false;
 	try {
-		products = await getCachedSheetProducts();
+		products = await getCachedProducts();
 	} catch (error) {
-		console.warn('CartPage: Using fallback products due to sheet error:', error);
+		console.warn('CartPage: Using fallback products due to Zoho catalog error:', error);
 		products = fallbackProducts;
 		stockUnavailable = true;
 	}

@@ -46,6 +46,10 @@ export interface PromoCode {
 	freeShipping?: boolean;
 	/** Product IDs eligible for the discount. Empty/omitted means all products. */
 	productIds?: string[];
+	/** Display name used in affiliate payout reports. */
+	affiliateName?: string;
+	/** Percentage of discounted merchandise revenue owed to the affiliate. */
+	commissionPercentage?: number;
 	active: boolean;
 }
 

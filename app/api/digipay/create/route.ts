@@ -17,6 +17,7 @@ import { buildSafeApiError } from '@/lib/apiError';
 import { getPaymentProvider } from '@/lib/paymentProvider';
 import { getGatewaylinxConfig } from '@/lib/env';
 import { validateEnv } from '@/lib/env';
+import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -179,11 +180,13 @@ export async function POST(request: Request) {
 		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
 		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
 		let discountAmount = 0;
+		let appliedPromo: PromoCode | undefined;
 
 		if (orderPayload.promoCode) {
 			const promoCodes = await getCachedSheetPromoCodes();
 			const promo = promoCodes.find((p: PromoCode) => p.code === orderPayload.promoCode?.trim().toUpperCase() && p.active);
 			if (promo) {
+				appliedPromo = promo;
 				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
 				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 				const minimumError = getPromoMinimumSubtotalError({ promo, subtotal: subtotalWithPromo });
@@ -283,6 +286,7 @@ export async function POST(request: Request) {
 			paymentStatus: 'pending' as const,
 			paymentProvider: gatewaylinxConfig ? 'gatewaylinx' : 'digipay',
 			...payload,
+			affiliateCommission: createAffiliateCommissionSnapshot(appliedPromo, payload),
 		};
 
 		// Add provider-specific config to order record

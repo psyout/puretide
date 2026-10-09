@@ -90,7 +90,9 @@ The active card provider is selected through server and public environment varia
 
 ### Operations
 
-The dashboard is available under `/dashboard` and protected by a signed, HTTP-only session cookie. It exposes operational views for stock, orders, clients, promotions, fulfillment health, tracking emails, and shipping labels.
+The dashboard is available under `/dashboard` and protected by a signed, HTTP-only session cookie. It exposes operational views for stock, orders, clients, promotions, affiliate payouts, fulfillment health, tracking emails, and shipping labels.
+
+Affiliate settings live in the `PromoCodes` Google Sheet. The dashboard maintains the columns `AffiliateName` and `CommissionPercentage` after the existing promo columns. A commission percentage greater than zero makes the code appear in **Dashboard → Affiliate Payouts**. Reports merge the order database with historical Wrike order tasks, show pending conversions separately, and count commission as owed only after payment is confirmed. Credit-card payment confirmation comes from the order database; manual e-transfer confirmation comes from the Wrike payment custom field being set to `Transferred`, which also triggers database fulfillment through the Wrike webhook. Completing a Wrike task is a shipping/tracking event and does not confirm payment. Commission is calculated on merchandise subtotal after the promo discount, excluding shipping and card fees. New orders store a commission snapshot so later rate changes do not alter historical payouts; older orders fall back to the currently configured rate.
 
 Wrike integration can create order and client tasks, track fulfillment, and attach generated Avery 5162 label documents.
 
@@ -150,7 +152,6 @@ The integration uses each item's `Website Slug` as the website product ID. Only 
 For a read-only local test, add the following to `.env.local`:
 
 ```dotenv
-PRODUCT_SOURCE=zoho
 ZOHO_INVENTORY_WRITE_ENABLED=false
 ZOHO_INVENTORY_ORGANIZATION_ID=replace-with-your-organization-id
 ZOHO_INVENTORY_CLIENT_ID=replace-with-your-client-id
@@ -163,13 +164,15 @@ ZOHO_ACCOUNTS_BASE_URL=https://accounts.zohocloud.ca
 ZOHO_INVENTORY_API_BASE_URL=https://www.zohoapis.ca/inventory/v1
 ```
 
-The local diagnostic is read-only and prints a catalog summary without printing credentials:
+Zoho Inventory is always the product catalog and stock source of truth; no product-source switch is required. The local diagnostic is read-only and prints a catalog summary without printing credentials:
 
 ```bash
 npm run test:zoho:inventory
 ```
 
-Stock writes require an additional `ZohoInventory.inventoryadjustments.CREATE` OAuth scope, `ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID`, and an explicit `ZOHO_INVENTORY_WRITE_ENABLED=true`. Keep writes disabled until a controlled checkout test is approved. The website dashboard intentionally refuses product edits while Zoho is selected, because those changes belong in Zoho Inventory.
+Stock writes require an additional `ZohoInventory.inventoryadjustments.CREATE` OAuth scope, `ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID`, and an explicit `ZOHO_INVENTORY_WRITE_ENABLED=true`. Keep writes disabled until a controlled checkout test is approved. The website dashboard intentionally refuses product edits because those changes belong in Zoho Inventory.
+
+The dashboard's limited Website Status fallback requires the `ZohoInventory.items.UPDATE` OAuth scope. It can change only the `Website Status` custom field between `published`, `draft`, and `inactive`; all other product information remains managed in Zoho Inventory.
 
 The catalog is cached for five minutes, item details are refreshed every six hours, and successful catalog reads are persisted beside `ORDERS_DB_PATH` as `zoho-products-cache.json` (or under `data/` when no orders database path is configured). Concurrent requests share one refresh, and a stale persisted catalog is used if Zoho is temporarily unavailable or rate-limited. These defaults keep normal usage below the Free-plan API allowance without additional environment variables. The intervals can be overridden with `ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS`, `ZOHO_INVENTORY_DETAIL_CACHE_TTL_MS`, and `ZOHO_INVENTORY_CACHE_PATH` if needed.
 

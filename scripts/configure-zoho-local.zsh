@@ -16,7 +16,7 @@ echo
 if [[ -f "$env_file" ]]; then
 	while IFS= read -r line || [[ -n "$line" ]]; do
 		case "$line" in
-			PRODUCT_SOURCE=*|ZOHO_INVENTORY_WRITE_ENABLED=*|ZOHO_INVENTORY_ORGANIZATION_ID=*|ZOHO_INVENTORY_CLIENT_ID=*|ZOHO_INVENTORY_CLIENT_SECRET=*|ZOHO_INVENTORY_REFRESH_TOKEN=*|ZOHO_ACCOUNTS_BASE_URL=*|ZOHO_INVENTORY_API_BASE_URL=*)
+			ZOHO_INVENTORY_WRITE_ENABLED=*|ZOHO_INVENTORY_ORGANIZATION_ID=*|ZOHO_INVENTORY_CLIENT_ID=*|ZOHO_INVENTORY_CLIENT_SECRET=*|ZOHO_INVENTORY_REFRESH_TOKEN=*|ZOHO_ACCOUNTS_BASE_URL=*|ZOHO_INVENTORY_API_BASE_URL=*)
 				continue
 				;;
 		esac
@@ -27,7 +27,6 @@ fi
 {
 	print -r -- ''
 	print -r -- '# Zoho Inventory (local read-only test)'
-	print -r -- 'PRODUCT_SOURCE=zoho'
 	print -r -- 'ZOHO_INVENTORY_WRITE_ENABLED=false'
 	print -r -- "ZOHO_INVENTORY_ORGANIZATION_ID=${zoho_organization_id}"
 	print -r -- "ZOHO_INVENTORY_CLIENT_ID=${zoho_client_id}"
@@ -43,4 +42,3 @@ trap - EXIT
 unset zoho_organization_id zoho_client_id zoho_client_secret zoho_refresh_token
 
 echo 'Zoho Inventory was added to .env.local in read-only mode.'
-
