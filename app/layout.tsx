@@ -7,6 +7,12 @@ import MetaPixelPageView from '@/components/MetaPixelPageView';
 import Footer from '@/components/Footer';
 import { getCachedAutomaticSitewidePromo } from '@/lib/sheetCache';
 
+// Promotion pricing comes from Google Sheets and must be evaluated at request
+// time. Otherwise Next.js can bake an inactive promotion into static cart and
+// checkout pages during deployment.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
 	title: 'Pure Tide Wellness - Advanced Peptide Formulations',
 	description: 'Advanced peptide formulations for optimal health and wellness, delivered to your doorstep.',
