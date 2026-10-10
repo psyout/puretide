@@ -45,10 +45,13 @@ export default function AffiliatesPanel() {
 			<div className='mb-6 flex flex-wrap items-start justify-between gap-4'>
 				<div>
 					<h2 className='text-xl font-semibold text-[#1f1f1f]'>Affiliate Payouts</h2>
-					<p className='mt-1 text-sm text-[#6a6a6a]'>Conversions include placed orders. Commission becomes owed once payment is confirmed and is calculated on merchandise after the promo discount.</p>
+					<p className='mt-1 text-sm text-[#6a6a6a]'>Conversions include placed orders</p>
 				</div>
 				<label className='flex items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2'>
-					<CalendarDays className='h-4 w-4 text-[#6a6a6a]' aria-hidden='true' />
+					<CalendarDays
+						className='h-4 w-4 text-[#6a6a6a]'
+						aria-hidden='true'
+					/>
 					<span className='sr-only'>Payout month</span>
 					<input
 						type='month'
@@ -66,20 +69,28 @@ export default function AffiliatesPanel() {
 				<>
 					<div className='mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
 						<div className='rounded-xl bg-[#f4f4f7] p-4'>
-							<div className='flex items-center gap-2 text-sm text-[#6a6a6a]'><Users className='h-4 w-4' /> Affiliates</div>
+							<div className='flex items-center gap-2 text-sm text-[#6a6a6a]'>
+								<Users className='h-4 w-4' /> Affiliates
+							</div>
 							<p className='mt-2 text-2xl font-semibold text-[#1f1f1f]'>{report.affiliates.length}</p>
 						</div>
 						<div className='rounded-xl bg-[#f4f4f7] p-4'>
-							<div className='flex items-center gap-2 text-sm text-[#6a6a6a]'><ReceiptText className='h-4 w-4' /> Conversions</div>
+							<div className='flex items-center gap-2 text-sm text-[#6a6a6a]'>
+								<ReceiptText className='h-4 w-4' /> Conversions
+							</div>
 							<p className='mt-2 text-2xl font-semibold text-[#1f1f1f]'>{report.usageCount}</p>
 							<p className='mt-1 text-xs text-[#7a7a7a]'>{report.paidUsageCount} paid</p>
 						</div>
 						<div className='rounded-xl bg-[#f4f4f7] p-4'>
-							<div className='flex items-center gap-2 text-sm text-[#6a6a6a]'><BadgeDollarSign className='h-4 w-4' /> Affiliate revenue</div>
+							<div className='flex items-center gap-2 text-sm text-[#6a6a6a]'>
+								<BadgeDollarSign className='h-4 w-4' /> Affiliate revenue
+							</div>
 							<p className='mt-2 text-2xl font-semibold text-[#1f1f1f]'>{money.format(report.commissionableRevenue)}</p>
 						</div>
 						<div className='rounded-xl bg-eucalyptus-50 p-4'>
-							<div className='flex items-center gap-2 text-sm text-deep-tidal-teal'><BadgeDollarSign className='h-4 w-4' /> Total owed</div>
+							<div className='flex items-center gap-2 text-sm text-deep-tidal-teal'>
+								<BadgeDollarSign className='h-4 w-4' /> Total owed
+							</div>
 							<p className='mt-2 text-2xl font-semibold text-deep-tidal-teal'>{money.format(report.totalCommission)}</p>
 							{report.pendingCommission > 0 && <p className='mt-1 text-xs text-[#6a6a6a]'>{money.format(report.pendingCommission)} pending payment</p>}
 						</div>
@@ -93,30 +104,67 @@ export default function AffiliatesPanel() {
 					) : (
 						<div className='space-y-3'>
 							{report.affiliates.map((affiliate) => (
-								<details key={affiliate.code} className='group overflow-hidden rounded-xl border border-black/5 bg-[#f8f8fa]'>
+								<details
+									key={affiliate.code}
+									className='group overflow-hidden rounded-xl border border-black/5 bg-[#f8f8fa]'>
 									<summary className='grid cursor-pointer list-none gap-3 px-4 py-4 sm:grid-cols-[minmax(180px,1.4fr)_repeat(3,minmax(100px,0.7fr))_24px] sm:items-center [&::-webkit-details-marker]:hidden'>
 										<div>
 											<p className='font-semibold text-[#1f1f1f]'>{affiliate.affiliateName}</p>
-											<p className='text-sm font-mono text-[#6a6a6a]'>{affiliate.code} · {affiliate.commissionPercentage}%</p>
+											<p className='text-sm font-mono text-[#6a6a6a]'>
+												{affiliate.code} · {affiliate.commissionPercentage}%
+											</p>
 										</div>
-										<div><p className='text-xs uppercase tracking-wide text-[#8d8d8d]'>Conversions</p><p className='font-semibold'>{affiliate.usageCount} <span className='text-xs font-normal text-[#7a7a7a]'>({affiliate.paidUsageCount} paid)</span></p></div>
-										<div><p className='text-xs uppercase tracking-wide text-[#8d8d8d]'>Revenue</p><p className='font-semibold'>{money.format(affiliate.commissionableRevenue)}</p></div>
-										<div><p className='text-xs uppercase tracking-wide text-[#8d8d8d]'>Owed</p><p className='font-semibold text-deep-tidal-teal'>{money.format(affiliate.totalCommission)}</p>{affiliate.pendingCommission > 0 && <p className='text-xs text-[#7a7a7a]'>{money.format(affiliate.pendingCommission)} pending</p>}</div>
+										<div>
+											<p className='text-xs uppercase tracking-wide text-[#8d8d8d]'>Conversions</p>
+											<p className='font-semibold'>
+												{affiliate.usageCount} <span className='text-xs font-normal text-[#7a7a7a]'>({affiliate.paidUsageCount} paid)</span>
+											</p>
+										</div>
+										<div>
+											<p className='text-xs uppercase tracking-wide text-[#8d8d8d]'>Revenue</p>
+											<p className='font-semibold'>{money.format(affiliate.commissionableRevenue)}</p>
+										</div>
+										<div>
+											<p className='text-xs uppercase tracking-wide text-[#8d8d8d]'>Owed</p>
+											<p className='font-semibold text-deep-tidal-teal'>{money.format(affiliate.totalCommission)}</p>
+											{affiliate.pendingCommission > 0 && <p className='text-xs text-[#7a7a7a]'>{money.format(affiliate.pendingCommission)} pending</p>}
+										</div>
 										<ChevronDown className='hidden h-5 w-5 text-[#6a6a6a] transition-transform group-open:rotate-180 sm:block' />
 									</summary>
 									<div className='overflow-x-auto border-t border-black/5 bg-white'>
 										<table className='min-w-full text-left text-sm'>
-											<thead className='bg-[#f4f4f7] text-xs uppercase tracking-wide text-[#7a7a7a]'><tr><th className='px-4 py-3'>Order</th><th className='px-4 py-3'>Date</th><th className='px-4 py-3'>Customer</th><th className='px-4 py-3'>Status</th><th className='px-4 py-3 text-right'>Order amount</th><th className='px-4 py-3 text-right'>Commission base</th><th className='px-4 py-3 text-right'>Commission</th></tr></thead>
+											<thead className='bg-[#f4f4f7] text-xs uppercase tracking-wide text-[#7a7a7a]'>
+												<tr>
+													<th className='px-4 py-3'>Order</th>
+													<th className='px-4 py-3'>Date</th>
+													<th className='px-4 py-3'>Customer</th>
+													<th className='px-4 py-3'>Status</th>
+													<th className='px-4 py-3 text-right'>Order amount</th>
+													<th className='px-4 py-3 text-right'>Commission base</th>
+													<th className='px-4 py-3 text-right'>Commission</th>
+												</tr>
+											</thead>
 											<tbody className='divide-y divide-black/5'>
 												{affiliate.orders.map((order) => (
 													<tr key={order.orderNumber}>
 														<td className='px-4 py-3 font-mono'>{order.orderNumber}</td>
-														<td className='px-4 py-3 whitespace-nowrap'>{new Date(order.createdAt).toLocaleDateString('en-CA', { timeZone: report.timeZone })}</td>
+														<td className='px-4 py-3 whitespace-nowrap'>
+															{new Date(order.createdAt).toLocaleDateString('en-CA', { timeZone: report.timeZone })}
+														</td>
 														<td className='px-4 py-3'>{order.customerName}</td>
-														<td className='px-4 py-3'><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${order.paymentStatus === 'paid' ? 'bg-eucalyptus-100 text-deep-tidal-teal' : 'bg-amber-100 text-amber-800'}`}>{order.paymentStatus === 'paid' ? 'Paid' : 'Awaiting payment'}</span></td>
+														<td className='px-4 py-3'>
+															<span
+																className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${order.paymentStatus === 'paid' ? 'bg-eucalyptus-100 text-deep-tidal-teal' : 'bg-amber-100 text-amber-800'}`}>
+																{order.paymentStatus === 'paid' ? 'Paid' : 'Awaiting payment'}
+															</span>
+														</td>
 														<td className='px-4 py-3 text-right'>{money.format(order.orderTotal)}</td>
 														<td className='px-4 py-3 text-right'>{money.format(order.commissionableAmount)}</td>
-														<td className={`px-4 py-3 text-right font-semibold ${order.paymentStatus === 'paid' ? 'text-deep-tidal-teal' : 'text-[#7a7a7a]'}`}>{money.format(order.commissionAmount)}{order.paymentStatus !== 'paid' && <span className='ml-1 text-xs font-normal'>(pending)</span>}</td>
+														<td
+															className={`px-4 py-3 text-right font-semibold ${order.paymentStatus === 'paid' ? 'text-deep-tidal-teal' : 'text-[#7a7a7a]'}`}>
+															{money.format(order.commissionAmount)}
+															{order.paymentStatus !== 'paid' && <span className='ml-1 text-xs font-normal'>(pending)</span>}
+														</td>
 													</tr>
 												))}
 											</tbody>

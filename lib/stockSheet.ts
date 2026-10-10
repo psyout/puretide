@@ -296,7 +296,7 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 
 		const response = await sheets.spreadsheets.values.get({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:J',
+			range: 'PromoCodes!A1:K',
 		});
 
 		const rows = response.data.values ?? [];
@@ -320,6 +320,9 @@ export const readSheetPromoCodes = async (): Promise<PromoCode[]> => {
 				commissionPercentage: Math.max(0, Math.min(100, parseNumber(row[7] ?? '0'))),
 				startDate: (row[8] ?? '').trim() || undefined,
 				endDate: (row[9] ?? '').trim() || undefined,
+				kind: ['affiliate', 'promo', 'general'].includes((row[10] ?? '').trim().toLowerCase())
+					? ((row[10] ?? '').trim().toLowerCase() as PromoCode['kind'])
+					: undefined,
 			};
 		});
 	} catch (error) {
@@ -635,12 +638,12 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 		const sheetExists = spreadsheet.data.sheets?.some((s: { properties?: { title?: string } }) => s.properties?.title === 'PromoCodes');
 		if (!sheetExists) {
 			console.error(
-				'Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active, MinimumSubtotal, Products, AffiliateName, CommissionPercentage, StartDate, EndDate',
+				'Sheet "PromoCodes" not found. Create a "PromoCodes" tab with headers: Code, Discount, FreeShipping, Active, MinimumSubtotal, Products, AffiliateName, CommissionPercentage, StartDate, EndDate, Type',
 			);
 			return;
 		}
 		const values = [
-			['Code', 'Discount', 'FreeShipping', 'Active', 'MinimumSubtotal', 'Products', 'AffiliateName', 'CommissionPercentage', 'StartDate', 'EndDate'],
+			['Code', 'Discount', 'FreeShipping', 'Active', 'MinimumSubtotal', 'Products', 'AffiliateName', 'CommissionPercentage', 'StartDate', 'EndDate', 'Type'],
 			...codes.map((c) => [
 				c.code,
 				String(c.discount),
@@ -652,11 +655,12 @@ export const writeSheetPromoCodes = async (codes: PromoCode[]) => {
 				String(Math.max(0, Math.min(100, Number(c.commissionPercentage) || 0))),
 				c.startDate?.trim() ?? '',
 				c.endDate?.trim() ?? '',
+				c.kind ?? '',
 			]),
 		];
 		await sheets.spreadsheets.values.update({
 			spreadsheetId: SHEET_ID,
-			range: 'PromoCodes!A1:J',
+			range: 'PromoCodes!A1:K',
 			valueInputOption: 'RAW',
 			requestBody: { values },
 		});

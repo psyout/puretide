@@ -114,7 +114,7 @@ export default function AbandonedCartsPanel() {
 			<div className='flex flex-wrap items-start justify-between gap-4 mb-5'>
 				<div>
 					<h2 className='text-xl font-semibold text-[#1f1f1f]'>Abandoned Carts</h2>
-					<p className='text-sm text-[#7a7a7a] mt-1'>One consent-based reminder per cart. New installations are paused by default.</p>
+					<p className='text-sm text-[#7a7a7a] mt-1'>One consent-based reminder per cart</p>
 				</div>
 				<button
 					onClick={() => void load()}

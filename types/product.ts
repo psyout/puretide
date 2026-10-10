@@ -39,9 +39,13 @@ export interface Product {
 	stock_2?: number;
 }
 
+export type PromoCodeKind = 'affiliate' | 'promo' | 'general';
+
 export interface PromoCode {
 	code: string;
 	discount: number; // percentage, e.g., 10 for 10%
+	/** Dashboard grouping. Older rows infer this value from affiliate and date fields. */
+	kind?: PromoCodeKind;
 	/** Inclusive promotion start date in YYYY-MM-DD format (Vancouver time). */
 	startDate?: string;
 	/** Inclusive promotion end date in YYYY-MM-DD format (Vancouver time). */

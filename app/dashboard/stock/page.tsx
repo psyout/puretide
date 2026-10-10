@@ -1,10 +1,35 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowUpDown, BarChart3, Check, ChevronDown, CircleCheckBig, Copy, FileCheck2, FileX2, Pencil, Search, Send, Trash2, UserPlus, X } from 'lucide-react';
+import {
+	ArrowUpDown,
+	BadgePercent,
+	BarChart3,
+	Check,
+	ChevronDown,
+	CircleCheckBig,
+	Copy,
+	FileCheck2,
+	FileX2,
+	HandCoins,
+	HeartHandshake,
+	LogOut,
+	Megaphone,
+	Package,
+	Pencil,
+	Search,
+	Send,
+	ShoppingCart,
+	ShoppingBag,
+	Tag,
+	Trash2,
+	UserPlus,
+	Users,
+	X,
+} from 'lucide-react';
 import { products as fallbackProducts } from '@/lib/products';
 import { resolveProductCoaFile } from '@/lib/productCoa';
-import type { Product, PromoCode } from '@/types/product';
+import type { Product, PromoCode, PromoCodeKind } from '@/types/product';
 import AbandonedCartsPanel from '@/components/AbandonedCartsPanel';
 import AffiliatesPanel from '@/components/AffiliatesPanel';
 
@@ -28,6 +53,20 @@ type FriendsFamilyEntry = {
 type PromoSort = 'sheet' | 'code-asc' | 'discount-desc' | 'discount-asc' | 'active-first';
 type ClientSort = 'sheet' | 'email-asc' | 'name-asc' | 'orders-desc' | 'spent-desc' | 'recent';
 type OrderSort = 'sheet' | 'newest' | 'oldest' | 'total-desc' | 'total-asc' | 'customer-asc';
+type ProductSort = 'zoho' | 'name-asc' | 'stock-desc' | 'stock-asc' | 'price-desc' | 'price-asc' | 'status';
+
+const PROMO_KIND_DETAILS: Record<PromoCodeKind, { label: string; shortLabel: string; description: string }> = {
+	affiliate: { label: 'Affiliate codes', shortLabel: 'affiliate code', description: 'Partner codes with commission tracking' },
+	promo: { label: 'Campaign promos', shortLabel: 'campaign promo', description: 'Scheduled and time-sensitive offers' },
+	general: { label: 'General discounts', shortLabel: 'general discount', description: 'Simple, evergreen discount codes' },
+};
+
+const getPromoKind = (promo: PromoCode): PromoCodeKind => {
+	if (promo.kind) return promo.kind;
+	if (promo.affiliateName?.trim() || Number(promo.commissionPercentage ?? 0) > 0) return 'affiliate';
+	if (promo.startDate?.trim() || promo.endDate?.trim()) return 'promo';
+	return 'general';
+};
 
 const buildNewProduct = (fallbackImage: string): Product => {
 	const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `p_${Date.now()}`;
@@ -56,6 +95,7 @@ export default function StockDashboardPage() {
 	const [productStatusUpdatingId, setProductStatusUpdatingId] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'affiliates' | 'clients' | 'friends_family' | 'abandoned_carts'>('products');
 	const [searchValue, setSearchValue] = useState('');
+	const [productSort, setProductSort] = useState<ProductSort>('zoho');
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 
 	const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
@@ -128,6 +168,7 @@ export default function StockDashboardPage() {
 	const [promoCodesError, setPromoCodesError] = useState<string | null>(null);
 	const [promoSearchValue, setPromoSearchValue] = useState('');
 	const [promoSort, setPromoSort] = useState<PromoSort>('sheet');
+	const [promoKind, setPromoKind] = useState<PromoCodeKind>('affiliate');
 
 	const [clients, setClients] = useState<Array<Record<string, unknown>>>([]);
 	const [clientsLoading, setClientsLoading] = useState(false);
@@ -245,7 +286,7 @@ export default function StockDashboardPage() {
 				const data = (await response.json()) as { ok?: boolean; codes?: PromoCode[]; error?: string };
 				if (cancelled) return;
 				if (response.ok && data.ok && data.codes) {
-					setPromoCodes(data.codes);
+					setPromoCodes(data.codes.map((promo) => ({ ...promo, kind: getPromoKind(promo) })));
 				} else {
 					setPromoCodesError(data.error ?? 'Failed to load promo codes.');
 				}
@@ -466,8 +507,20 @@ export default function StockDashboardPage() {
 
 	const handleAddPromo = () => {
 		setPromoCodes((prev) => [
+			{
+				code: '',
+				discount: 10,
+				kind: promoKind,
+				freeShipping: false,
+				minimumSubtotal: 0,
+				productIds: [],
+				affiliateName: '',
+				commissionPercentage: 0,
+				startDate: '',
+				endDate: '',
+				active: true,
+			},
 			...prev,
-			{ code: '', discount: 10, freeShipping: false, productIds: [], affiliateName: '', commissionPercentage: 0, startDate: '', endDate: '', active: true },
 		]);
 		setPromoCodesDirty(true);
 	};
@@ -500,9 +553,7 @@ export default function StockDashboardPage() {
 			if (!response.ok || !data.ok) throw new Error(data.error ?? 'Failed to add email.');
 			if (data.entries) setFriendsFamilyEntries(data.entries);
 			setNewFriendsFamilyEmail('');
-			setFriendsFamilyMessage(
-				data.result === 'existing' ? `${email} is already active.` : data.result === 'reactivated' ? `${email} was reactivated.` : `${email} was added.`,
-			);
+			setFriendsFamilyMessage(data.result === 'existing' ? `${email} is already active.` : data.result === 'reactivated' ? `${email} was reactivated.` : `${email} was added.`);
 		} catch (error) {
 			setFriendsFamilyError(error instanceof Error ? error.message : 'Failed to add email.');
 		} finally {
@@ -602,14 +653,35 @@ export default function StockDashboardPage() {
 
 	const filteredRows = useMemo(() => {
 		const query = searchValue.trim().toLowerCase();
-		if (!query) {
-			return rows;
-		}
-		return rows.filter((product) => {
-			const haystack = `${product.name} ${product.slug} ${product.category}`.toLowerCase();
-			return haystack.includes(query);
+		const visible = rows
+			.map((product, index) => ({ product, index }))
+			.filter(({ product }) => {
+				if (!query) return true;
+				const haystack = `${product.name} ${product.slug} ${product.category} ${product.sku ?? ''} ${product.status ?? ''}`.toLowerCase();
+				return haystack.includes(query);
+			});
+
+		visible.sort((left, right) => {
+			switch (productSort) {
+				case 'name-asc':
+					return left.product.name.localeCompare(right.product.name);
+				case 'stock-desc':
+					return right.product.stock - left.product.stock;
+				case 'stock-asc':
+					return left.product.stock - right.product.stock;
+				case 'price-desc':
+					return right.product.price - left.product.price;
+				case 'price-asc':
+					return left.product.price - right.product.price;
+				case 'status':
+					return String(left.product.status ?? '').localeCompare(String(right.product.status ?? '')) || left.product.name.localeCompare(right.product.name);
+				default:
+					return left.index - right.index;
+			}
 		});
-	}, [rows, searchValue]);
+
+		return visible.map(({ product }) => product);
+	}, [productSort, rows, searchValue]);
 
 	const visibleOrders = useMemo(() => {
 		const query = orderSearchValue.trim().toLowerCase();
@@ -666,9 +738,11 @@ export default function StockDashboardPage() {
 		const visible = promoCodes
 			.map((promo, index) => ({ promo, index }))
 			.filter(({ promo }) => {
+				if (getPromoKind(promo) !== promoKind) return false;
 				if (!query) return true;
 				const selectedProducts = (promo.productIds ?? []).map((id) => productNames.get(id) ?? '').join(' ');
-				const haystack = `${promo.code} ${promo.affiliateName ?? ''} ${promo.active ? 'active' : 'inactive'} ${promo.freeShipping ? 'free shipping' : ''} ${selectedProducts}`.toLowerCase();
+				const haystack =
+					`${promo.code} ${promo.affiliateName ?? ''} ${promo.active ? 'active' : 'inactive'} ${promo.freeShipping ? 'free shipping' : ''} ${selectedProducts}`.toLowerCase();
 				return haystack.includes(query);
 			});
 
@@ -686,7 +760,12 @@ export default function StockDashboardPage() {
 					return a.index - b.index;
 			}
 		});
-	}, [promoCodes, promoSearchValue, promoSort, rows]);
+	}, [promoCodes, promoKind, promoSearchValue, promoSort, rows]);
+
+	const promoKindCounts = useMemo(
+		() => promoCodes.reduce<Record<PromoCodeKind, number>>((counts, promo) => ({ ...counts, [getPromoKind(promo)]: counts[getPromoKind(promo)] + 1 }), { affiliate: 0, promo: 0, general: 0 }),
+		[promoCodes],
+	);
 
 	const visibleClients = useMemo(() => {
 		const query = clientSearchValue.trim().toLowerCase();
@@ -752,88 +831,94 @@ export default function StockDashboardPage() {
 									await fetch('/api/dashboard/signout', { method: 'POST', credentials: 'include' });
 									window.location.href = '/dashboard/login';
 								}}
-								className='w-full text-left px-4 py-3 rounded-xl transition-colors bg-white border border-black/5 hover:bg-[#f4f4f7] block text-rose-600 hover:text-rose-700'>
-								Sign out
+								className='flex w-full items-center gap-3 rounded-xl border border-black/5 bg-white px-4 py-3 text-left text-rose-600 transition-colors hover:bg-[#f4f4f7] hover:text-rose-700'>
+								<LogOut
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Sign out</span>
 							</a>
 							<button
 								onClick={() => setActiveTab('products')}
-								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'products' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
 								}`}>
-								Products
+								<Package
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Products</span>
 							</button>
 							<button
 								onClick={() => setActiveTab('orders')}
-								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'orders' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
 								}`}>
-								Orders
+								<ShoppingBag
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Orders</span>
 							</button>
 							<button
 								onClick={() => setActiveTab('promos')}
-								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'promos' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
 								}`}>
-								Promo Codes
+								<BadgePercent
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Discounts</span>
 							</button>
 							<button
 								onClick={() => setActiveTab('affiliates')}
-								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'affiliates' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
 								}`}>
-								Affiliate Payouts
+								<HandCoins
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Affiliate Payouts</span>
 							</button>
 							<button
 								onClick={() => setActiveTab('clients')}
-								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'clients' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
 								}`}>
-								Clients
+								<Users
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Clients</span>
 							</button>
 							<button
 								onClick={() => setActiveTab('friends_family')}
-								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'friends_family' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
 								}`}>
-								Friends & Family
+								<HeartHandshake
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Friends & Family</span>
 							</button>
 							<button
 								onClick={() => setActiveTab('abandoned_carts')}
-								className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'abandoned_carts' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
 								}`}>
-								Abandoned Carts
+								<ShoppingCart
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Abandoned Carts</span>
 							</button>
 						</nav>
 					</aside>
 
 					<section className='min-w-0 flex flex-col gap-6'>
-						{activeTab === 'products' && (
-							<div className='rounded-2xl border border-black/5 bg-white p-6 shadow-sm flex flex-col gap-4'>
-								<div className='flex flex-wrap items-center justify-between gap-4'>
-									<div>
-										<h1 className='text-2xl font-semibold text-[#1f1f1f]'>Products List</h1>
-										<p className='text-[#7a7a7a] text-sm mt-1'>Live product information and stock from Zoho Inventory</p>
-									</div>
-									<span className='inline-flex items-center rounded-full bg-eucalyptus-100 px-3 py-1.5 text-sm font-semibold text-deep-tidal-teal'>Products synced from Zoho</span>
-								</div>
-								{(productsError || saveError) && (
-									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800'>{productsError ?? saveError}</div>
-								)}
-								<div className='flex flex-wrap items-center justify-between gap-4'>
-									<div className='relative w-full max-w-sm'>
-										<input
-											type='text'
-											value={searchValue}
-											onChange={(event) => setSearchValue(event.target.value)}
-											placeholder='Search product...'
-											className='w-full bg-white border border-black/10 rounded-lg px-4 py-2 text-sm text-[#2f2f2f] focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20'
-										/>
-									</div>
-								</div>
-							</div>
-						)}
-
 						{activeTab === 'abandoned_carts' && <AbandonedCartsPanel />}
 
 						{activeTab === 'friends_family' && (
@@ -841,9 +926,11 @@ export default function StockDashboardPage() {
 								<div className='mb-5 flex flex-wrap items-start justify-between gap-4'>
 									<div>
 										<h2 className='text-xl font-semibold text-[#1f1f1f]'>Friends & Family</h2>
-										<p className='mt-1 text-sm text-[#7a7a7a]'>Manage the emails eligible for Friends & Family checkout.</p>
+										<p className='mt-1 text-sm text-[#7a7a7a]'>Manage the emails eligible for Friends & Family checkout</p>
 									</div>
-									<form onSubmit={handleAddFriendsFamilyEmail} className='flex w-full gap-2 sm:w-auto'>
+									<form
+										onSubmit={handleAddFriendsFamilyEmail}
+										className='flex w-full gap-2 sm:w-auto'>
 										<input
 											type='email'
 											value={newFriendsFamilyEmail}
@@ -857,7 +944,10 @@ export default function StockDashboardPage() {
 											type='submit'
 											disabled={friendsFamilyAdding || !newFriendsFamilyEmail.trim()}
 											className='inline-flex shrink-0 items-center gap-2 rounded-lg bg-deep-tidal-teal px-4 py-2 text-sm font-semibold text-white hover:bg-deep-tidal-teal-600 disabled:opacity-50'>
-											<UserPlus className='h-4 w-4' aria-hidden='true' />
+											<UserPlus
+												className='h-4 w-4'
+												aria-hidden='true'
+											/>
 											{friendsFamilyAdding ? 'Adding…' : 'Add email'}
 										</button>
 									</form>
@@ -877,9 +967,14 @@ export default function StockDashboardPage() {
 									</div>
 								</div>
 								{friendsFamilyError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{friendsFamilyError}</div>}
-								{friendsFamilyMessage && <div className='mb-4 rounded-lg border border-eucalyptus-300 bg-eucalyptus-50 px-4 py-3 text-sm text-deep-tidal-teal'>{friendsFamilyMessage}</div>}
+								{friendsFamilyMessage && (
+									<div className='mb-4 rounded-lg border border-eucalyptus-300 bg-eucalyptus-50 px-4 py-3 text-sm text-deep-tidal-teal'>{friendsFamilyMessage}</div>
+								)}
 								<div className='relative mb-4 w-full max-w-sm'>
-									<Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]' aria-hidden='true' />
+									<Search
+										className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+										aria-hidden='true'
+									/>
 									<input
 										type='search'
 										value={friendsFamilySearchValue}
@@ -911,7 +1006,9 @@ export default function StockDashboardPage() {
 											</thead>
 											<tbody className='divide-y divide-black/5 text-sm text-[#2f2f2f]'>
 												{filteredFriendsFamilyEntries.map((entry) => (
-													<tr key={entry.email} className='h-16'>
+													<tr
+														key={entry.email}
+														className='h-16'>
 														<td className='px-4 py-3 font-medium'>
 															<div className='flex min-h-10 items-center'>
 																{friendsFamilyEditingEmail === entry.email ? (
@@ -955,14 +1052,20 @@ export default function StockDashboardPage() {
 																			disabled={friendsFamilyUpdatingEmail === entry.email}
 																			className='inline-flex h-9 w-9 items-center justify-center rounded-lg text-deep-tidal-teal hover:bg-eucalyptus-100 disabled:opacity-50'
 																			title='Save email'>
-																			<Check className='h-4 w-4' aria-hidden='true' />
+																			<Check
+																				className='h-4 w-4'
+																				aria-hidden='true'
+																			/>
 																		</button>
 																		<button
 																			type='button'
 																			onClick={() => setFriendsFamilyEditingEmail(null)}
 																			className='inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#6a6a6a] hover:bg-[#f4f4f7]'
 																			title='Cancel editing'>
-																			<X className='h-4 w-4' aria-hidden='true' />
+																			<X
+																				className='h-4 w-4'
+																				aria-hidden='true'
+																			/>
 																		</button>
 																	</>
 																) : (
@@ -974,7 +1077,10 @@ export default function StockDashboardPage() {
 																		}}
 																		className='inline-flex h-9 w-9 items-center justify-center rounded-lg text-deep-tidal-teal hover:bg-eucalyptus-100'
 																		title='Edit email'>
-																		<Pencil className='h-4 w-4' aria-hidden='true' />
+																		<Pencil
+																			className='h-4 w-4'
+																			aria-hidden='true'
+																		/>
 																	</button>
 																)}
 																<button
@@ -983,7 +1089,10 @@ export default function StockDashboardPage() {
 																	disabled={friendsFamilyDeletingEmail === entry.email || friendsFamilyUpdatingEmail === entry.email}
 																	className='inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-700 hover:bg-rose-50 disabled:opacity-50'
 																	title='Delete email'>
-																	<Trash2 className='h-4 w-4' aria-hidden='true' />
+																	<Trash2
+																		className='h-4 w-4'
+																		aria-hidden='true'
+																	/>
 																</button>
 															</div>
 														</td>
@@ -997,62 +1106,72 @@ export default function StockDashboardPage() {
 						)}
 
 						{activeTab === 'orders' && (
-							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
-								<div className='mb-8 flex flex-wrap items-center justify-between gap-3'>
-									<h2 className='text-xl font-semibold text-[#1f1f1f]'>Recent Orders</h2>
-									<div className='flex flex-wrap items-center gap-2'>
-										<label className='relative'>
-											<Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]' aria-hidden='true' />
-											<input
-												type='search'
-												value={orderSearchValue}
-												onChange={(event) => setOrderSearchValue(event.target.value)}
-												placeholder='Search orders…'
-												aria-label='Search orders'
-												className='w-52 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
-											/>
-										</label>
-										<label className='relative'>
-											<ArrowUpDown className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]' aria-hidden='true' />
-											<select
-												value={orderSort}
-												onChange={(event) => setOrderSort(event.target.value as OrderSort)}
-												aria-label='Sort orders'
-												className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
-												<option value='sheet'>Original order</option>
-												<option value='newest'>Newest first</option>
-												<option value='oldest'>Oldest first</option>
-												<option value='total-desc'>Highest total</option>
-												<option value='total-asc'>Lowest total</option>
-												<option value='customer-asc'>Customer A–Z</option>
-											</select>
-										</label>
+							<div className='overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm'>
+								<div className='p-6'>
+									<div className='grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_auto]'>
+										<h2 className='text-xl font-semibold text-[#1f1f1f]'>Recent Orders</h2>
+										<div className='flex w-full flex-wrap items-center justify-start gap-2 2xl:w-auto 2xl:justify-self-end 2xl:justify-end'>
+											<label className='relative'>
+												<Search
+													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+													aria-hidden='true'
+												/>
+												<input
+													type='search'
+													value={orderSearchValue}
+													onChange={(event) => setOrderSearchValue(event.target.value)}
+													placeholder='Search orders…'
+													aria-label='Search orders'
+													className='w-52 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
+												/>
+											</label>
+											<label className='relative'>
+												<ArrowUpDown
+													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+													aria-hidden='true'
+												/>
+												<select
+													value={orderSort}
+													onChange={(event) => setOrderSort(event.target.value as OrderSort)}
+													aria-label='Sort orders'
+													className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
+													<option value='sheet'>Original order</option>
+													<option value='newest'>Newest first</option>
+													<option value='oldest'>Oldest first</option>
+													<option value='total-desc'>Highest total</option>
+													<option value='total-asc'>Lowest total</option>
+													<option value='customer-asc'>Customer A–Z</option>
+												</select>
+											</label>
+										</div>
 									</div>
+									{ordersError && <div className='mt-4 rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{ordersError}</div>}
+									{trackingEmailError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{trackingEmailError}</div>}
+									{trackingEmailOkMessage && (
+										<div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{trackingEmailOkMessage}</div>
+									)}
+									{orderActionMessage && (
+										<div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{orderActionMessage}</div>
+									)}
 								</div>
-								{ordersError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{ordersError}</div>}
-								{trackingEmailError && <div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{trackingEmailError}</div>}
-								{trackingEmailOkMessage && (
-									<div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{trackingEmailOkMessage}</div>
-								)}
-								{orderActionMessage && <div className='rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4'>{orderActionMessage}</div>}
 								{ordersLoading ? (
-									<div className='text-[#6a6a6a] py-8'>Loading orders...</div>
+									<div className='border-t border-black/5 px-6 py-8 text-[#6a6a6a]'>Loading orders...</div>
 								) : orders.length === 0 ? (
-									<div className='text-[#6a6a6a] py-8'>{ordersError ? 'Could not load orders.' : 'No orders yet.'}</div>
+									<div className='border-t border-black/5 px-6 py-8 text-[#6a6a6a]'>{ordersError ? 'Could not load orders.' : 'No orders yet.'}</div>
 								) : visibleOrders.length === 0 ? (
-									<div className='rounded-lg bg-[#f4f4f7] px-4 py-8 text-center text-sm text-[#6a6a6a]'>No orders match your search.</div>
+									<div className='border-t border-black/5 bg-[#f4f4f7] px-6 py-8 text-center text-sm text-[#6a6a6a]'>No orders match your search.</div>
 								) : (
-									<div className='divide-y divide-black/5 overflow-x-auto'>
+									<div className='overflow-x-auto border-t border-black/5'>
 										<table className='w-full min-w-[640px]'>
-											<thead>
+											<thead className='bg-[#f4f4f7]'>
 												<tr className='text-left text-xs uppercase tracking-wide text-[#9b9b9b]'>
-													<th className='pb-3 pr-6 font-medium'>Order #</th>
-													<th className='pb-3 pr-6 font-medium'>Customer</th>
-													<th className='pb-3 pr-6 font-medium'>Products</th>
-													<th className='pb-3 pr-6 font-medium'>Date</th>
-													<th className='pb-3 pr-6 font-medium whitespace-nowrap'>Payment</th>
-													<th className='pb-3 pr-2 text-right font-medium'>Actions</th>
-													<th className='pb-3 pl-6 text-right font-medium'>Total</th>
+													<th className='py-3 pl-6 pr-6 font-medium'>Order #</th>
+													<th className='py-3 pr-6 font-medium'>Customer</th>
+													<th className='py-3 pr-6 font-medium'>Products</th>
+													<th className='py-3 pr-6 font-medium'>Date</th>
+													<th className='whitespace-nowrap py-3 pr-6 font-medium'>Payment</th>
+													<th className='py-3 pr-2 text-right font-medium'>Actions</th>
+													<th className='py-3 pl-6 pr-6 text-right font-medium'>Total</th>
 												</tr>
 											</thead>
 											<tbody className='text-sm text-[#2f2f2f]'>
@@ -1078,7 +1197,7 @@ export default function StockDashboardPage() {
 														<tr
 															key={String(order.id)}
 															className='border-t border-black/5'>
-															<td className='py-4 pr-6 font-medium'>{orderNumber}</td>
+															<td className='py-4 pl-6 pr-6 font-medium'>{orderNumber}</td>
 															<td className='py-4 pr-6'>{c ? `${c.firstName} ${c.lastName}` : '-'}</td>
 															<td className='py-4 pr-6 break-words text-[#6a6a6a]'>{products || '-'}</td>
 															<td className='py-4 pr-6'>{date}</td>
@@ -1117,7 +1236,7 @@ export default function StockDashboardPage() {
 																	</button>
 																</div>
 															</td>
-															<td className='py-4 pl-4 text-right whitespace-nowrap'>${Number(order.total ?? 0).toFixed(2)}</td>
+															<td className='whitespace-nowrap py-4 pl-4 pr-6 text-right'>${Number(order.total ?? 0).toFixed(2)}</td>
 														</tr>
 													);
 												})}
@@ -1129,196 +1248,322 @@ export default function StockDashboardPage() {
 						)}
 
 						{activeTab === 'promos' && (
-							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
-								<div className='mb-8 flex flex-wrap items-center justify-between gap-3'>
-									<h2 className='text-xl font-semibold text-[#1f1f1f]'>Promo Codes</h2>
-									<div className='flex flex-wrap items-center justify-end gap-2'>
-										<label className='relative'>
-											<Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]' aria-hidden='true' />
-											<input
-												type='search'
-												value={promoSearchValue}
-												onChange={(event) => setPromoSearchValue(event.target.value)}
-												placeholder='Search codes…'
-												aria-label='Search promo codes'
-												className='w-48 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
-											/>
-										</label>
-										<label className='relative'>
-											<ArrowUpDown className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]' aria-hidden='true' />
-											<select
-												value={promoSort}
-												onChange={(event) => setPromoSort(event.target.value as PromoSort)}
-												aria-label='Sort promo codes'
-												className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
-												<option value='sheet'>Spreadsheet order</option>
-												<option value='code-asc'>Code A–Z</option>
-												<option value='discount-desc'>Highest discount</option>
-												<option value='discount-asc'>Lowest discount</option>
-												<option value='active-first'>Active first</option>
-											</select>
-										</label>
-										<button
-											onClick={handleAddPromo}
-											className='bg-deep-tidal-teal text-white font-semibold px-4 py-2 rounded-lg hover:bg-deep-tidal-teal-600'>
-											+ Add Code
-										</button>
-										<button
-											onClick={handleSavePromos}
-											disabled={!promoCodesDirty}
-											className='bg-[#111111] text-white font-semibold px-4 py-2 rounded-lg disabled:bg-[#bdbdbd]'>
-											Save
-										</button>
+							<div className='overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm'>
+								<div className='p-5 sm:p-6'>
+									<div className='grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_auto]'>
+										<div className='min-w-0'>
+											<h2 className='text-xl font-semibold text-[#1f1f1f]'>Discount codes</h2>
+											<p className='mt-1 text-sm text-[#6a6a6a]'>Manage each type separately to keep campaigns focused and easy to track</p>
+										</div>
+										<div className='flex w-full flex-col items-start gap-2 2xl:w-auto 2xl:items-end 2xl:justify-self-end'>
+											<div className='flex flex-wrap items-center justify-start gap-2 2xl:justify-end'>
+												<label className='relative'>
+													<Search
+														className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+														aria-hidden='true'
+													/>
+													<input
+														type='search'
+														value={promoSearchValue}
+														onChange={(event) => setPromoSearchValue(event.target.value)}
+														placeholder={`Search ${PROMO_KIND_DETAILS[promoKind].label.toLowerCase()}…`}
+														aria-label='Search discount codes'
+														className='w-56 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
+													/>
+												</label>
+												<label className='relative'>
+													<ArrowUpDown
+														className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+														aria-hidden='true'
+													/>
+													<select
+														value={promoSort}
+														onChange={(event) => setPromoSort(event.target.value as PromoSort)}
+														aria-label='Sort discount codes'
+														className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
+														<option value='sheet'>Spreadsheet order</option>
+														<option value='code-asc'>Code A–Z</option>
+														<option value='discount-desc'>Highest discount</option>
+														<option value='discount-asc'>Lowest discount</option>
+														<option value='active-first'>Active first</option>
+													</select>
+												</label>
+											</div>
+										</div>
 									</div>
 								</div>
-								{(promoCodesError || savePromosError) && (
-									<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{promoCodesError ?? savePromosError}</div>
-								)}
-								{promoCodesLoading ? (
-									<div className='text-[#6a6a6a] py-8'>Loading promo codes...</div>
-								) : promoCodes.length === 0 ? (
-									<div className='text-[#6a6a6a] py-8'>No promo codes. Add one to get started.</div>
-								) : (
-									<div className='space-y-3'>
-										<div className='hidden items-center px-4 text-xs font-medium uppercase tracking-wide text-[#8d8d8d] xl:grid xl:grid-cols-[minmax(125px,1.1fr)_minmax(75px,0.6fr)_minmax(105px,0.85fr)_minmax(90px,0.75fr)_minmax(115px,0.9fr)_minmax(135px,1fr)_minmax(125px,1fr)_minmax(95px,0.75fr)_minmax(130px,1fr)_minmax(130px,1fr)_minmax(90px,0.7fr)] xl:gap-3'>
-											<span>Code</span>
-											<span>Discount</span>
-											<span>Free shipping</span>
-											<span>Active</span>
-											<span>Minimum subtotal</span>
-											<span>Products</span>
-											<span>Affiliate</span>
-											<span>Commission</span>
-											<span>Start date</span>
-											<span>End date</span>
-											<span>Action</span>
+
+								<div className='border-t border-deep-tidal-teal/25 bg-white'>
+									<div className='bg-[#f4f4f7] p-4 2xl:hidden'>
+										<label className='block'>
+											<span className='mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#777]'>Discount type</span>
+											<select
+												value={promoKind}
+												onChange={(event) => setPromoKind(event.target.value as PromoCodeKind)}
+												aria-label='Select discount code type'
+												className='w-full rounded-lg border border-black/10 bg-white px-3 py-2.5 text-sm font-semibold text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
+												{(['affiliate', 'promo', 'general'] as const).map((kind) => (
+													<option
+														key={kind}
+														value={kind}>
+														{PROMO_KIND_DETAILS[kind].label} ({promoKindCounts[kind]})
+													</option>
+												))}
+											</select>
+										</label>
+									</div>
+									<div className='hidden bg-white px-5 py-4 2xl:block'>
+										<div
+											className='inline-flex items-center gap-1 rounded-xl bg-[#f1f1f3] p-1'
+											role='tablist'
+											aria-label='Discount code types'>
+											{(['affiliate', 'promo', 'general'] as const).map((kind) => {
+												const selected = promoKind === kind;
+												const label = kind === 'affiliate' ? 'Affiliates' : kind === 'promo' ? 'Campaigns' : 'General';
+												return (
+													<button
+														key={kind}
+														type='button'
+														role='tab'
+														aria-selected={selected}
+														onClick={() => setPromoKind(kind)}
+														className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-deep-tidal-teal/30 ${
+															selected ? 'bg-white text-deep-tidal-teal shadow-sm ring-1 ring-black/5' : 'text-[#626262] hover:bg-white/60 hover:text-[#303030]'
+														}`}>
+														{kind === 'affiliate' ? (
+															<HandCoins className='h-4 w-4' aria-hidden='true' />
+														) : kind === 'promo' ? (
+															<Megaphone className='h-4 w-4' aria-hidden='true' />
+														) : (
+															<Tag className='h-4 w-4' aria-hidden='true' />
+														)}
+														<span>{label}</span>
+														<span className={`rounded-full px-1.5 py-0.5 text-[11px] leading-none ${selected ? 'bg-eucalyptus-100' : 'bg-black/5'}`}>
+															{promoKindCounts[kind]}
+														</span>
+													</button>
+												);
+											})}
 										</div>
-										{visiblePromoCodes.length === 0 && (
-											<div className='rounded-lg border border-black/5 bg-[#f4f4f7] px-4 py-8 text-center text-sm text-[#6a6a6a]'>No promo codes match your search.</div>
+										<p className='mt-2 pl-1 text-sm text-[#777]'>{PROMO_KIND_DETAILS[promoKind].description}</p>
+									</div>
+									<div className='flex flex-wrap items-center justify-start gap-2 px-4 py-3 sm:px-5 2xl:justify-end'>
+										<button
+											type='button'
+											onClick={handleAddPromo}
+											className='rounded-lg bg-deep-tidal-teal px-4 py-2 text-sm font-semibold text-white hover:bg-deep-tidal-teal-600'>
+											+ Add {PROMO_KIND_DETAILS[promoKind].shortLabel}
+										</button>
+										<button
+											type='button'
+											onClick={handleSavePromos}
+											disabled={!promoCodesDirty}
+											className='rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white disabled:bg-[#bdbdbd]'>
+											Save changes
+										</button>
+									</div>
+
+									<div className='p-4 sm:p-5'>
+										{(promoCodesError || savePromosError) && (
+											<div className='rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800 mb-4'>{promoCodesError ?? savePromosError}</div>
 										)}
-										{visiblePromoCodes.map(({ promo, index: i }) => (
-											<div
-												key={i}
-												className='grid grid-cols-1 items-center gap-3 rounded-lg border border-black/5 bg-[#f4f4f7] p-4 sm:grid-cols-2 xl:grid-cols-[minmax(125px,1.1fr)_minmax(75px,0.6fr)_minmax(105px,0.85fr)_minmax(90px,0.75fr)_minmax(115px,0.9fr)_minmax(135px,1fr)_minmax(125px,1fr)_minmax(95px,0.75fr)_minmax(130px,1fr)_minmax(130px,1fr)_minmax(90px,0.7fr)] xl:gap-3'>
-												<input
-													type='text'
-													aria-label='Promo code'
-													value={promo.code}
-													onChange={(e) => handlePromoChange(i, 'code', e.target.value.toUpperCase())}
-													placeholder='CODE'
-													className='order-1 w-full rounded border border-black/10 px-3 py-2 text-sm font-mono'
-												/>
-												<div className='relative order-2'>
-													<input
-														type='number'
-														aria-label='Discount percentage'
-														min={0}
-														max={100}
-														value={promo.discount}
-														onChange={(e) => handlePromoChange(i, 'discount', Number(e.target.value) || 0)}
-														className='w-full rounded border border-black/10 py-2 pl-3 pr-7 text-sm'
-													/>
-													<span className='pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#6a6a6a]'>%</span>
-												</div>
-												<details className='group relative order-6 w-full text-sm'>
-													<summary className='flex cursor-pointer list-none items-center justify-between gap-2 rounded border border-black/10 bg-white px-3 py-2 text-[#2f2f2f] [&::-webkit-details-marker]:hidden'>
-														<span>{promo.productIds?.length ? `${promo.productIds.length} selected` : 'All products'}</span>
-														<ChevronDown className='h-4 w-4 text-[#6a6a6a] transition-transform group-open:rotate-180' aria-hidden='true' />
-													</summary>
-													<div className='absolute left-0 top-full z-20 mt-2 max-h-64 w-64 overflow-y-auto rounded-lg border border-black/10 bg-white p-2 shadow-lg'>
-														<p className='px-2 pb-2 text-xs text-[#6a6a6a]'>No selection applies the code to every product.</p>
-														{rows.map((product) => (
-															<label key={product.id} className='flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-eucalyptus-50'>
-																<input
-																	type='checkbox'
-																	checked={(promo.productIds ?? []).includes(product.id)}
-																	onChange={(event) => handlePromoProductToggle(i, product.id, event.target.checked)}
-																	className='accent-deep-tidal-teal'
+										{promoCodesLoading ? (
+											<div className='text-[#6a6a6a] py-8'>Loading promo codes...</div>
+										) : (
+											<div className='-mx-4 divide-y divide-black/10 sm:-mx-5'>
+												{visiblePromoCodes.length === 0 && (
+													<div className='mx-4 rounded-xl border border-dashed border-black/10 bg-[#fafafa] px-4 py-10 text-center sm:mx-5'>
+														<p className='text-sm font-medium text-[#454545]'>
+															No {PROMO_KIND_DETAILS[promoKind].label.toLowerCase()} {promoSearchValue ? 'match your search' : 'yet'}.
+														</p>
+														{!promoSearchValue && <p className='mt-1 text-xs text-[#777]'>Use the add button above to create one.</p>}
+													</div>
+												)}
+												{visiblePromoCodes.map(({ promo, index: i }) => (
+													<div
+														key={i}
+														className='px-4 py-5 first:pt-0 last:pb-0 sm:px-5'>
+														<div className='mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3'>
+															<div className='flex min-w-0 items-center gap-2'>
+																<span
+																	className={`h-2 w-2 shrink-0 rounded-full ${promo.active ? 'bg-emerald-500' : 'bg-gray-400'}`}
+																	aria-hidden='true'
 																/>
-																<span className='truncate'>
-																	{product.name}
-																	{product.mg ? ` – ${product.mg}` : ''}
+																<p className='truncate text-sm font-semibold text-[#252525]'>
+																	{promo.code || `New ${PROMO_KIND_DETAILS[promoKind].shortLabel}`}
+																</p>
+															</div>
+															<div className='flex items-center gap-2'>
+																<select
+																	value={promo.active ? 'active' : 'inactive'}
+																	onChange={(event) => handlePromoChange(i, 'active', event.target.value === 'active')}
+																	aria-label={`Status for discount code ${promo.code || i + 1}`}
+																	className={`rounded-full border border-transparent py-1.5 pl-3 pr-8 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 ${
+																		promo.active ? 'bg-eucalyptus-100 text-deep-tidal-teal' : 'bg-gray-200 text-gray-600'
+																	}`}>
+																	<option value='active'>Live</option>
+																	<option value='inactive'>Inactive</option>
+																</select>
+																<button
+																	type='button'
+																	onClick={() => handleRemovePromo(i)}
+																	className='inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50'>
+																	<Trash2
+																		className='h-3.5 w-3.5'
+																		aria-hidden='true'
+																	/>
+																	Remove
+																</button>
+															</div>
+														</div>
+
+														<div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+															<label className='block'>
+																<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Code</span>
+																<input
+																	type='text'
+																	value={promo.code}
+																	onChange={(event) => handlePromoChange(i, 'code', event.target.value.toUpperCase())}
+																	placeholder='CODE'
+																	className='w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-mono focus:border-deep-tidal-teal focus:outline-none'
+																/>
+															</label>
+															<label className='block'>
+																<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Discount</span>
+																<span className='relative block'>
+																	<input
+																		type='number'
+																		min={0}
+																		max={100}
+																		value={promo.discount}
+																		onChange={(event) => handlePromoChange(i, 'discount', Number(event.target.value) || 0)}
+																		className='w-full rounded-lg border border-black/10 bg-white py-2 pl-3 pr-8 text-sm focus:border-deep-tidal-teal focus:outline-none'
+																	/>
+																	<span className='pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#6a6a6a]'>%</span>
 																</span>
 															</label>
-														))}
+															<div>
+																<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Products</span>
+																<details className='group relative w-full text-sm'>
+																	<summary className='flex cursor-pointer list-none items-center justify-between gap-2 rounded border border-black/10 bg-white px-3 py-2 text-[#2f2f2f] [&::-webkit-details-marker]:hidden'>
+																		<span>{promo.productIds?.length ? `${promo.productIds.length} selected` : 'All products'}</span>
+																		<ChevronDown
+																			className='h-4 w-4 text-[#6a6a6a] transition-transform group-open:rotate-180'
+																			aria-hidden='true'
+																		/>
+																	</summary>
+																	<div className='absolute left-0 top-full z-20 mt-2 max-h-64 w-64 overflow-y-auto rounded-lg border border-black/10 bg-white p-2 shadow-lg'>
+																		<p className='px-2 pb-2 text-xs text-[#6a6a6a]'>No selection applies the code to every product.</p>
+																		{rows.map((product) => (
+																			<label
+																				key={product.id}
+																				className='flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-eucalyptus-50'>
+																				<input
+																					type='checkbox'
+																					checked={(promo.productIds ?? []).includes(product.id)}
+																					onChange={(event) => handlePromoProductToggle(i, product.id, event.target.checked)}
+																					className='accent-deep-tidal-teal'
+																				/>
+																				<span className='truncate'>
+																					{product.name}
+																					{product.mg ? ` – ${product.mg}` : ''}
+																				</span>
+																			</label>
+																		))}
+																	</div>
+																</details>
+															</div>
+															<label className='block'>
+																<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Minimum order</span>
+																<span className='relative block'>
+																	<span className='pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-[#6a6a6a]'>$</span>
+																	<input
+																		type='number'
+																		min={0}
+																		step='0.01'
+																		value={promo.minimumSubtotal ?? 0}
+																		onChange={(event) => handlePromoChange(i, 'minimumSubtotal', Number(event.target.value) || 0)}
+																		className='w-full rounded-lg border border-black/10 bg-white py-2 pl-7 pr-3 text-sm focus:border-deep-tidal-teal focus:outline-none'
+																	/>
+																</span>
+															</label>
+
+															{promoKind === 'affiliate' && (
+																<>
+																	<label className='block'>
+																		<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>
+																			Affiliate name
+																		</span>
+																		<input
+																			type='text'
+																			value={promo.affiliateName ?? ''}
+																			onChange={(event) => handlePromoChange(i, 'affiliateName', event.target.value)}
+																			placeholder='Name or partner'
+																			className='w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm focus:border-deep-tidal-teal focus:outline-none'
+																		/>
+																	</label>
+																	<label className='block'>
+																		<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Commission</span>
+																		<span className='relative block'>
+																			<input
+																				type='number'
+																				min={0}
+																				max={100}
+																				step='0.01'
+																				value={promo.commissionPercentage ?? 0}
+																				onChange={(event) => handlePromoChange(i, 'commissionPercentage', Number(event.target.value) || 0)}
+																				className='w-full rounded-lg border border-black/10 bg-white py-2 pl-3 pr-8 text-sm focus:border-deep-tidal-teal focus:outline-none'
+																			/>
+																			<span className='pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#6a6a6a]'>
+																				%
+																			</span>
+																		</span>
+																	</label>
+																</>
+															)}
+
+															{promoKind !== 'general' && (
+																<>
+																	<label className='block'>
+																		<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Starts</span>
+																		<input
+																			type='date'
+																			value={promo.startDate ?? ''}
+																			onChange={(event) => handlePromoChange(i, 'startDate', event.target.value)}
+																			className='w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm focus:border-deep-tidal-teal focus:outline-none'
+																		/>
+																	</label>
+																	<label className='block'>
+																		<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Ends</span>
+																		<input
+																			type='date'
+																			value={promo.endDate ?? ''}
+																			onChange={(event) => handlePromoChange(i, 'endDate', event.target.value)}
+																			className='w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm focus:border-deep-tidal-teal focus:outline-none'
+																		/>
+																	</label>
+																</>
+															)}
+
+															<div>
+																<span className='mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#777]'>Shipping</span>
+																<label className='flex min-h-[38px] cursor-pointer items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm'>
+																	<input
+																		type='checkbox'
+																		checked={Boolean(promo.freeShipping)}
+																		onChange={(event) => handlePromoChange(i, 'freeShipping', event.target.checked)}
+																		className='accent-deep-tidal-teal'
+																	/>
+																	Free shipping
+																</label>
+															</div>
+														</div>
 													</div>
-												</details>
-												<label className='order-3 flex items-center gap-2'>
-													<input
-														type='checkbox'
-														checked={Boolean(promo.freeShipping)}
-														onChange={(e) => handlePromoChange(i, 'freeShipping', e.target.checked)}
-													/>
-													<span className='text-sm'>Free shipping</span>
-												</label>
-												<select
-													value={promo.active ? 'active' : 'inactive'}
-													onChange={(event) => handlePromoChange(i, 'active', event.target.value === 'active')}
-													aria-label={`Status for promo code ${promo.code || i + 1}`}
-													className={`order-4 w-full rounded-full border border-transparent py-2 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 ${
-														promo.active ? 'bg-eucalyptus-100 text-deep-tidal-teal' : 'bg-gray-200 text-gray-600'
-													}`}>
-													<option value='active'>Active</option>
-													<option value='inactive'>Inactive</option>
-												</select>
-											<label className='relative order-5 block'>
-													<span className='pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-[#6a6a6a]'>$</span>
-													<input
-														type='number'
-														aria-label='Minimum subtotal'
-														min={0}
-														step='0.01'
-														value={promo.minimumSubtotal ?? 0}
-														onChange={(event) => handlePromoChange(i, 'minimumSubtotal', Number(event.target.value) || 0)}
-														className='w-full rounded border border-black/10 py-2 pl-7 pr-3 text-sm'
-													/>
-											</label>
-											<input
-												type='text'
-												aria-label={`Affiliate name for ${promo.code || `promo ${i + 1}`}`}
-												value={promo.affiliateName ?? ''}
-												onChange={(event) => handlePromoChange(i, 'affiliateName', event.target.value)}
-												placeholder='Affiliate name'
-												className='order-7 w-full rounded border border-black/10 px-3 py-2 text-sm'
-											/>
-											<div className='relative order-8'>
-												<input
-													type='number'
-													aria-label={`Commission percentage for ${promo.code || `promo ${i + 1}`}`}
-													min={0}
-													max={100}
-													step='0.01'
-													value={promo.commissionPercentage ?? 0}
-													onChange={(event) => handlePromoChange(i, 'commissionPercentage', Number(event.target.value) || 0)}
-													className='w-full rounded border border-black/10 py-2 pl-3 pr-7 text-sm'
-												/>
-												<span className='pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[#6a6a6a]'>%</span>
+												))}
 											</div>
-											<input
-												type='date'
-												aria-label={`Start date for ${promo.code || `promo ${i + 1}`}`}
-												value={promo.startDate ?? ''}
-												onChange={(event) => handlePromoChange(i, 'startDate', event.target.value)}
-												className='order-9 w-full rounded border border-black/10 px-3 py-2 text-sm'
-											/>
-											<input
-												type='date'
-												aria-label={`End date for ${promo.code || `promo ${i + 1}`}`}
-												value={promo.endDate ?? ''}
-												onChange={(event) => handlePromoChange(i, 'endDate', event.target.value)}
-												className='order-10 w-full rounded border border-black/10 px-3 py-2 text-sm'
-											/>
-											<button
-													type='button'
-													onClick={() => handleRemovePromo(i)}
-											className='order-11 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 xl:justify-self-start'>
-													<Trash2 className='h-4 w-4' aria-hidden='true' />
-													Remove
-												</button>
-											</div>
-										))}
+										)}
 									</div>
-								)}
+								</div>
 							</div>
 						)}
 
@@ -1326,11 +1571,14 @@ export default function StockDashboardPage() {
 
 						{activeTab === 'clients' && (
 							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
-								<div className='mb-5 flex flex-wrap items-center justify-between gap-3'>
+								<div className='mb-5 grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_auto]'>
 									<h2 className='text-xl font-semibold text-[#1f1f1f]'>Clients</h2>
-									<div className='flex flex-wrap items-center gap-2'>
+									<div className='flex w-full flex-wrap items-center justify-start gap-2 2xl:w-auto 2xl:justify-self-end 2xl:justify-end'>
 										<label className='relative'>
-											<Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]' aria-hidden='true' />
+											<Search
+												className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+												aria-hidden='true'
+											/>
 											<input
 												type='search'
 												value={clientSearchValue}
@@ -1341,7 +1589,10 @@ export default function StockDashboardPage() {
 											/>
 										</label>
 										<label className='relative'>
-											<ArrowUpDown className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]' aria-hidden='true' />
+											<ArrowUpDown
+												className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+												aria-hidden='true'
+											/>
 											<select
 												value={clientSort}
 												onChange={(event) => setClientSort(event.target.value as ClientSort)}
@@ -1363,37 +1614,51 @@ export default function StockDashboardPage() {
 										<summary className='flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-[#f4f4f7] [&::-webkit-details-marker]:hidden'>
 											<div className='flex items-center gap-3'>
 												<span className='inline-flex h-9 w-9 items-center justify-center rounded-lg bg-eucalyptus-100 text-deep-tidal-teal'>
-													<BarChart3 className='h-5 w-5' aria-hidden='true' />
+													<BarChart3
+														className='h-5 w-5'
+														aria-hidden='true'
+													/>
 												</span>
 												<div>
 													<p className='text-sm font-semibold text-[#2f2f2f]'>Client insights</p>
 													<p className='text-xs text-[#7a7a7a]'>Survey and acquisition statistics</p>
 												</div>
 											</div>
-											<ChevronDown className='h-4 w-4 text-[#7a7a7a] transition-transform group-open:rotate-180' aria-hidden='true' />
+											<ChevronDown
+												className='h-4 w-4 text-[#7a7a7a] transition-transform group-open:rotate-180'
+												aria-hidden='true'
+											/>
 										</summary>
 										<div className='grid grid-cols-2 gap-3 border-t border-black/5 p-4 md:grid-cols-3 xl:grid-cols-6'>
-										<div className='rounded-xl bg-[#f4f4f7] p-3'>
-											<p className='text-xs uppercase text-[#7a7a7a]'>Total clients</p>
-											<p className='text-2xl font-semibold text-[#1f1f1f]'>{surveyAnalytics.totalClients}</p>
-										</div>
-										<div className='rounded-xl bg-[#f4f4f7] p-3'>
-											<p className='text-xs uppercase text-[#7a7a7a]'>Survey responses</p>
-											<p className='text-2xl font-semibold text-[#1f1f1f]'>
-												{surveyAnalytics.withSurveyData}{' '}
-												<span className='text-sm font-medium text-[#7a7a7a]'>({Math.round((surveyAnalytics.withSurveyData / surveyAnalytics.totalClients) * 100)}%)</span>
-											</p>
-										</div>
-										{Object.entries(surveyAnalytics.sources)
-											.sort(([, a], [, b]) => b - a)
-											.map(([source, count]) => (
-												<div key={source} className='rounded-xl bg-[#f4f4f7] p-3'>
-													<p className='truncate text-xs uppercase text-[#7a7a7a]' title={source}>{source}</p>
-													<p className='text-2xl font-semibold text-[#1f1f1f]'>
-														{count} <span className='text-sm font-medium text-[#7a7a7a]'>({surveyAnalytics.sourcePercentages[source]}%)</span>
-													</p>
-												</div>
-											))}
+											<div className='rounded-xl bg-[#f4f4f7] p-3'>
+												<p className='text-xs uppercase text-[#7a7a7a]'>Total clients</p>
+												<p className='text-2xl font-semibold text-[#1f1f1f]'>{surveyAnalytics.totalClients}</p>
+											</div>
+											<div className='rounded-xl bg-[#f4f4f7] p-3'>
+												<p className='text-xs uppercase text-[#7a7a7a]'>Survey responses</p>
+												<p className='text-2xl font-semibold text-[#1f1f1f]'>
+													{surveyAnalytics.withSurveyData}{' '}
+													<span className='text-sm font-medium text-[#7a7a7a]'>
+														({Math.round((surveyAnalytics.withSurveyData / surveyAnalytics.totalClients) * 100)}%)
+													</span>
+												</p>
+											</div>
+											{Object.entries(surveyAnalytics.sources)
+												.sort(([, a], [, b]) => b - a)
+												.map(([source, count]) => (
+													<div
+														key={source}
+														className='rounded-xl bg-[#f4f4f7] p-3'>
+														<p
+															className='truncate text-xs uppercase text-[#7a7a7a]'
+															title={source}>
+															{source}
+														</p>
+														<p className='text-2xl font-semibold text-[#1f1f1f]'>
+															{count} <span className='text-sm font-medium text-[#7a7a7a]'>({surveyAnalytics.sourcePercentages[source]}%)</span>
+														</p>
+													</div>
+												))}
 										</div>
 									</details>
 								)}
@@ -1453,7 +1718,9 @@ export default function StockDashboardPage() {
 														<td className='px-3 py-4 text-right'>{Number(client.ordersCount ?? 0)}</td>
 														<td className='px-3 py-4 text-right'>${Number(client.totalSpent ?? 0).toFixed(2)}</td>
 														<td className='whitespace-nowrap px-3 py-4'>{String(client.lastOrderDate ?? '-')}</td>
-														<td className='px-3 py-4'>{Array.isArray(client.products) ? client.products.join(', ') || '-' : String(client.products ?? '-')}</td>
+														<td className='px-3 py-4'>
+															{Array.isArray(client.products) ? client.products.join(', ') || '-' : String(client.products ?? '-')}
+														</td>
 														<td className='px-3 py-4'>{String(client.howDidYouHear ?? '-')}</td>
 														<td className='px-3 py-4'>{String(client.discount ?? '-')}</td>
 													</tr>
@@ -1466,13 +1733,59 @@ export default function StockDashboardPage() {
 						)}
 
 						{activeTab === 'products' && (
-							<div className='grid grid-cols-1 gap-4'>
-								{isLoading && <div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6 text-[#6a6a6a]'>Loading products from Zoho Inventory...</div>}
+							<div className='overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm'>
+								<div className='p-6'>
+									<div className='grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_auto]'>
+										<div className='min-w-0'>
+											<h1 className='text-xl font-semibold text-[#1f1f1f]'>Products List</h1>
+											<p className='mt-1 text-sm font-medium text-deep-tidal-teal'>Synced from Zoho Inventory</p>
+										</div>
+										<div className='flex w-full flex-wrap items-center justify-start gap-2 2xl:w-auto 2xl:justify-self-end 2xl:justify-end'>
+											<label className='relative'>
+												<Search
+													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+													aria-hidden='true'
+												/>
+												<input
+													type='search'
+													value={searchValue}
+													onChange={(event) => setSearchValue(event.target.value)}
+													placeholder='Search products…'
+													aria-label='Search products'
+													className='w-52 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
+												/>
+											</label>
+											<label className='relative'>
+												<ArrowUpDown
+													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
+													aria-hidden='true'
+												/>
+												<select
+													value={productSort}
+													onChange={(event) => setProductSort(event.target.value as ProductSort)}
+													aria-label='Sort products'
+													className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
+													<option value='zoho'>Zoho order</option>
+													<option value='name-asc'>Name A–Z</option>
+													<option value='stock-desc'>Highest stock</option>
+													<option value='stock-asc'>Lowest stock</option>
+													<option value='price-desc'>Highest price</option>
+													<option value='price-asc'>Lowest price</option>
+													<option value='status'>Status</option>
+												</select>
+											</label>
+										</div>
+									</div>
+									{(productsError || saveError) && (
+										<div className='mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800'>{productsError ?? saveError}</div>
+									)}
+								</div>
+								{isLoading && <div className='border-t border-black/5 p-6 text-[#6a6a6a]'>Loading products from Zoho Inventory...</div>}
 								{!isLoading && filteredRows.length > 0 && (
-									<div className='rounded-2xl border border-black/5 bg-[#f4f4f7] shadow-sm overflow-x-auto'>
+									<div className='overflow-x-auto border-t border-black/5 bg-[#f4f4f7]'>
 										<div className='min-w-[880px]'>
 											<div className='px-6 py-3 text-xs uppercase tracking-wide text-[#8d8d8d] border-b border-black/5'>
-											<div className='grid grid-cols-[minmax(180px,1.75fr)_minmax(130px,1.35fr)_minmax(70px,0.7fr)_minmax(70px,0.7fr)_minmax(130px,1fr)] gap-4 items-center text-left'>
+												<div className='grid grid-cols-[minmax(180px,1.75fr)_minmax(130px,1.35fr)_minmax(70px,0.7fr)_minmax(70px,0.7fr)_minmax(130px,1fr)] gap-4 items-center text-left'>
 													<span>Product name</span>
 													<span>COA file</span>
 													<span>Stock</span>
@@ -1485,7 +1798,7 @@ export default function StockDashboardPage() {
 													<div
 														key={product.id}
 														className='px-6 py-4'>
-												<div className='grid grid-cols-[minmax(180px,1.75fr)_minmax(130px,1.35fr)_minmax(70px,0.7fr)_minmax(70px,0.7fr)_minmax(130px,1fr)] gap-4 items-center text-left'>
+														<div className='grid grid-cols-[minmax(180px,1.75fr)_minmax(130px,1.35fr)_minmax(70px,0.7fr)_minmax(70px,0.7fr)_minmax(130px,1fr)] gap-4 items-center text-left'>
 															<div className='text-sm font-semibold text-[#2f2f2f] text-left'>
 																{product.name}
 																{product.mg && <sup className='text-xs ml-0.5 align-top opacity-70'>{product.mg}</sup>}
@@ -1521,19 +1834,19 @@ export default function StockDashboardPage() {
 																{product.stock <= 5 && <span className='ml-2 text-xs text-amber-700'>Low Stock</span>}
 															</div>
 															<div className='text-sm text-[#2f2f2f]'>${product.price}</div>
-													<div>
-														<select
-															value={product.status ?? 'inactive'}
-															onChange={(event) => void handleStatusChange(product.id, event.target.value as Product['status'])}
-															disabled={productStatusUpdatingId === product.id}
-															aria-label={`Website Status for ${product.name}`}
-															className={`w-auto rounded-full border border-transparent py-1.5 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:cursor-wait disabled:opacity-60 ${getStatusBadge(product.status)}`}>
-															<option value='published'>Published</option>
-															<option value='draft'>Draft</option>
-															<option value='inactive'>Inactive</option>
-															{product.status === 'stock-out' && <option value='stock-out'>Stock Out</option>}
-														</select>
-													</div>
+															<div>
+																<select
+																	value={product.status ?? 'inactive'}
+																	onChange={(event) => void handleStatusChange(product.id, event.target.value as Product['status'])}
+																	disabled={productStatusUpdatingId === product.id}
+																	aria-label={`Website Status for ${product.name}`}
+																	className={`w-auto rounded-full border border-transparent py-1.5 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:cursor-wait disabled:opacity-60 ${getStatusBadge(product.status)}`}>
+																	<option value='published'>Published</option>
+																	<option value='draft'>Draft</option>
+																	<option value='inactive'>Inactive</option>
+																	{product.status === 'stock-out' && <option value='stock-out'>Stock Out</option>}
+																</select>
+															</div>
 														</div>
 
 														{expandedId === product.id && (
@@ -1666,6 +1979,7 @@ export default function StockDashboardPage() {
 										</div>
 									</div>
 								)}
+								{!isLoading && filteredRows.length === 0 && <div className='border-t border-black/5 p-6 text-sm text-[#6a6a6a]'>No products match your search.</div>}
 							</div>
 						)}
 					</section>
