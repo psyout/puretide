@@ -9,8 +9,6 @@ import { PRODUCT_CATEGORY_EVENT, PRODUCT_MENU_CATEGORIES, type ProductFilterCate
 const companyLinks = [
 	{ href: '/#about', label: 'About us' },
 	{ href: '/learn', label: 'Learn' },
-	{ href: '/faq', label: 'FAQ' },
-	{ href: '/affiliate', label: 'Affiliate' },
 	{ href: '/#contact', label: 'Contact' },
 ];
 

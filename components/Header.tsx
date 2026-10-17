@@ -196,14 +196,11 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 											role='menu'>
 											<span className='absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-deep-tidal-teal-800/10 bg-white' aria-hidden='true' />
 											<Link href='/learn' role='menuitem' className='block rounded-lg px-4 py-3 text-sm font-semibold transition hover:bg-deep-tidal-teal/5 hover:text-deep-tidal-teal'>Learn</Link>
-											<Link href='/faq' role='menuitem' className='block rounded-lg px-4 py-3 text-sm font-semibold transition hover:bg-deep-tidal-teal/5 hover:text-deep-tidal-teal'>FAQ</Link>
 										</motion.div>
 									</div>
 								)}
 							</AnimatePresence>
 						</div>
-						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
-						<Link href='/affiliate' className='hover:text-muted-sage-200 text-white transition-colors font-medium uppercase'>AFFILIATE</Link>
 						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<button
 							type='button'
@@ -274,13 +271,9 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 										{isMobileAboutOpen && (
 											<motion.div id='mobile-about-menu' initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className='ml-3 overflow-hidden border-l border-white/25 pl-4'>
 												<Link href='/learn' className='block py-2 text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>LEARN</Link>
-												<Link href='/faq' className='block py-2 text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>FAQ</Link>
 											</motion.div>
 										)}
 									</AnimatePresence>
-								</motion.div>
-								<motion.div variants={itemVariants}>
-									<Link href='/affiliate' className='block px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>AFFILIATE</Link>
 								</motion.div>
 								<motion.button variants={itemVariants} onClick={() => scrollToSection('contact')} className='px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>CONTACT</motion.button>
 							</motion.div>
