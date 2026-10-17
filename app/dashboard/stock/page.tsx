@@ -839,6 +839,17 @@ export default function StockDashboardPage() {
 								<span>Sign out</span>
 							</a>
 							<button
+								onClick={() => setActiveTab('clients')}
+								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
+									activeTab === 'clients' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
+								}`}>
+								<Users
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+								<span>Clients</span>
+							</button>
+							<button
 								onClick={() => setActiveTab('products')}
 								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
 									activeTab === 'products' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
@@ -882,17 +893,7 @@ export default function StockDashboardPage() {
 								/>
 								<span>Affiliate Payouts</span>
 							</button>
-							<button
-								onClick={() => setActiveTab('clients')}
-								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
-									activeTab === 'clients' ? 'bg-deep-tidal-teal text-white' : 'bg-white border border-black/5 hover:bg-eucalyptus-50'
-								}`}>
-								<Users
-									className='h-4 w-4 shrink-0'
-									aria-hidden='true'
-								/>
-								<span>Clients</span>
-							</button>
+
 							<button
 								onClick={() => setActiveTab('friends_family')}
 								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
@@ -1328,14 +1329,25 @@ export default function StockDashboardPage() {
 														aria-selected={selected}
 														onClick={() => setPromoKind(kind)}
 														className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-deep-tidal-teal/30 ${
-															selected ? 'bg-white text-deep-tidal-teal shadow-sm ring-1 ring-black/5' : 'text-[#626262] hover:bg-white/60 hover:text-[#303030]'
+															selected
+																? 'bg-white text-deep-tidal-teal shadow-sm ring-1 ring-black/5'
+																: 'text-[#626262] hover:bg-white/60 hover:text-[#303030]'
 														}`}>
 														{kind === 'affiliate' ? (
-															<HandCoins className='h-4 w-4' aria-hidden='true' />
+															<HandCoins
+																className='h-4 w-4'
+																aria-hidden='true'
+															/>
 														) : kind === 'promo' ? (
-															<Megaphone className='h-4 w-4' aria-hidden='true' />
+															<Megaphone
+																className='h-4 w-4'
+																aria-hidden='true'
+															/>
 														) : (
-															<Tag className='h-4 w-4' aria-hidden='true' />
+															<Tag
+																className='h-4 w-4'
+																aria-hidden='true'
+															/>
 														)}
 														<span>{label}</span>
 														<span className={`rounded-full px-1.5 py-0.5 text-[11px] leading-none ${selected ? 'bg-eucalyptus-100' : 'bg-black/5'}`}>

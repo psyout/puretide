@@ -58,7 +58,7 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 					animate={{ opacity: 1, y: 0, height: 'auto' }}
 					exit={{ opacity: 0, y: -20, height: 0 }}
 					transition={{ duration: 0.8, ease: 'easeOut' }}
-					className={`border-b border-deep-tidal-teal/10 pb-3 mb-5 space-y-2 ${className} overflow-hidden`}>
+					className={`border-b border-deep-tidal-teal/10 pb-4 mb-2 space-y-2 ${className} overflow-hidden`}>
 					<div className='flex items-center justify-between mb-4'>
 						<div>
 							<h3 className='text-sm font-semibold text-deep-tidal-teal-800'>You may also need</h3>
@@ -110,13 +110,21 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 											{product.description && <p className='text-xs text-deep-tidal-teal-600 mt-1 line-clamp-2'>{product.description}</p>}
 										</div>
 										{(automaticPromotion || product.savings) && (
-											<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white flex-shrink-0'>{automaticPromotion ? `${automaticPromotion.discount}% OFF` : product.savings}</span>
+											<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-500 text-white flex-shrink-0'>
+												{automaticPromotion ? `${automaticPromotion.discount}% OFF` : product.savings}
+											</span>
 										)}
 									</div>
 									<div className='flex items-center justify-between mt-2'>
 										<div className='flex items-center gap-2'>
-											<span className={`text-lg font-bold ${automaticPromotion ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>${(automaticPromotion ? getSalePrice(product.price, automaticPromotion.discount) : product.price).toFixed(2)}</span>
-											{automaticPromotion ? <span className='text-xs text-deep-tidal-teal-500 line-through'>${product.price.toFixed(2)}</span> : product.originalPrice ? <span className='text-xs text-deep-tidal-teal-500 line-through'>${product.originalPrice.toFixed(2)}</span> : null}
+											<span className={`text-lg font-bold ${automaticPromotion ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
+												${(automaticPromotion ? getSalePrice(product.price, automaticPromotion.discount) : product.price).toFixed(2)}
+											</span>
+											{automaticPromotion ? (
+												<span className='text-xs text-deep-tidal-teal-500 line-through'>${product.price.toFixed(2)}</span>
+											) : product.originalPrice ? (
+												<span className='text-xs text-deep-tidal-teal-500 line-through'>${product.originalPrice.toFixed(2)}</span>
+											) : null}
 										</div>
 										<button
 											onClick={() => handleAddToCart(product)}

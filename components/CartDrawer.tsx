@@ -10,10 +10,11 @@ import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 
 export default function CartDrawer() {
-	const { cartItems, isCartDrawerOpen, lastAddedItemId, closeCartDrawer, getItemPrice, getTotal, removeFromCart, updateQuantity } = useCart();
+	const { cartItems, isCartDrawerOpen, lastAddedItemId, closeCartDrawer, getItemPrice, getTotal, removeFromCart, updateQuantity, automaticPromotion } = useCart();
 	const closeButtonRef = useRef<HTMLButtonElement>(null);
 	const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 	const lastAddedItem = cartItems.find((item) => item.id === lastAddedItemId) ?? cartItems[cartItems.length - 1];
+	const totalSavings = cartItems.reduce((sum, item) => sum + Math.max(0, item.price - getItemPrice(item)) * item.quantity, 0);
 
 	useEffect(() => {
 		if (!isCartDrawerOpen) return;
@@ -91,6 +92,8 @@ export default function CartDrawer() {
 								<div className='flex-1 overflow-y-auto px-6 py-2 sm:px-8'>
 									{cartItems.map((item) => {
 										const itemPrice = getItemPrice(item);
+										const isDiscounted = itemPrice < item.price;
+										const savingsPerItem = item.price - itemPrice;
 										return (
 											<div
 												key={item.id}
@@ -114,8 +117,13 @@ export default function CartDrawer() {
 												</Link>
 												<div className='min-w-0 flex-1'>
 													<div className='flex items-start justify-between gap-3'>
-														<div>
-															<h3 className='font-semibold leading-tight text-deep-tidal-teal-900'>{item.name}</h3>
+														<div className='min-w-0'>
+															{isDiscounted && (
+																<span className='inline-block rounded bg-eucalyptus/40 px-2 py-0.5 text-xs font-medium text-deep-tidal-teal-700'>
+																	{automaticPromotion ? `${automaticPromotion.discount}% off` : `Save C$${savingsPerItem.toFixed(2)} each`}
+																</span>
+															)}
+															<h3 className={`${isDiscounted ? 'mt-1' : ''} font-semibold leading-tight text-deep-tidal-teal-900`}>{item.name}</h3>
 															{item.mg && <p className='mt-1 text-sm text-deep-tidal-teal-600'>{item.mg}</p>}
 														</div>
 														<button
@@ -126,7 +134,12 @@ export default function CartDrawer() {
 															<Trash2 className='h-4 w-4' />
 														</button>
 													</div>
-													<p className='mt-2 text-deep-tidal-teal-800'>C${itemPrice.toFixed(2)}</p>
+													<div className='mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1'>
+														<p className={`font-semibold ${automaticPromotion && isDiscounted ? 'text-[#b42318]' : 'text-deep-tidal-teal-800'}`}>
+															C${itemPrice.toFixed(2)}
+														</p>
+														{isDiscounted && <p className='text-sm text-deep-tidal-teal-500 line-through'>C${item.price.toFixed(2)}</p>}
+													</div>
 													<div className='mt-3 inline-flex items-center overflow-hidden rounded-lg border border-deep-tidal-teal/15 bg-white'>
 														<button
 															type='button'
@@ -151,6 +164,12 @@ export default function CartDrawer() {
 									})}
 								</div>
 								<div className='border-t border-deep-tidal-teal/10 bg-white px-6 py-6 sm:px-8'>
+									{totalSavings > 0 && (
+										<div className='mb-2 flex items-center justify-end gap-5 text-sm font-semibold text-emerald-700'>
+											<span>You save</span>
+											<span>−C${totalSavings.toFixed(2)}</span>
+										</div>
+									)}
 									<div className='mb-5 flex items-center justify-end gap-5'>
 										<span className='text-deep-tidal-teal-600'>Subtotal</span>
 										<span className='text-xl font-semibold leading-none text-deep-tidal-teal-900'>C${getTotal().toFixed(2)}</span>
@@ -167,7 +186,7 @@ export default function CartDrawer() {
 										className='mt-3 min-h-12 w-full rounded-lg border border-deep-tidal-teal/25 font-semibold text-deep-tidal-teal-800 transition hover:bg-deep-tidal-teal/5 uppercase'>
 										Keep shopping
 									</button>
-									<p className='mt-4 text-center text-xs text-deep-tidal-teal-500'>Shipping and discounts are calculated at checkout.</p>
+									<p className='mt-4 text-center text-xs text-deep-tidal-teal-500'>Shipping and any promo-code adjustments are confirmed at checkout.</p>
 								</div>
 							</>
 						)}

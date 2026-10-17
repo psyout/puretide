@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
-import { Lock, AlertCircle, PackageCheck, ShieldCheck } from 'lucide-react';
+import { Lock, AlertCircle, PackageCheck, ShieldCheck, Trash2 } from 'lucide-react';
 import CrossSellSection from './CrossSellSection';
 import FreeShippingProgress from './FreeShippingProgress';
 import CartItemDetails from './CartItemDetails';
@@ -37,10 +37,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
 	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
 	const summarySubtotal = promoApplied ? rawTotal : total;
-	const promoEligibleSubtotal = cartItems.reduce(
-		(sum, item) => (appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
-		0,
-	);
+	const promoEligibleSubtotal = cartItems.reduce((sum, item) => (appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum), 0);
 	const promoDiscountAmount = Number((promoEligibleSubtotal * (appliedDiscount / 100)).toFixed(2));
 	const summaryTotal = Number((summarySubtotal - promoDiscountAmount).toFixed(2));
 	const getDisplayedItemPrice = (item: (typeof cartItems)[0]) => {
@@ -55,7 +52,12 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 			setAppliedDiscount(scheduledPromotion.discount);
 			setAppliedFreeShipping(Boolean(scheduledPromotion.freeShipping));
 			setAppliedProductIds(scheduledPromotion.productIds ?? []);
-			storeCartPromo({ code: scheduledPromotion.code, discount: scheduledPromotion.discount, freeShipping: Boolean(scheduledPromotion.freeShipping), productIds: scheduledPromotion.productIds ?? [] });
+			storeCartPromo({
+				code: scheduledPromotion.code,
+				discount: scheduledPromotion.discount,
+				freeShipping: Boolean(scheduledPromotion.freeShipping),
+				productIds: scheduledPromotion.productIds ?? [],
+			});
 			return;
 		}
 		const storedPromo = readStoredCartPromo();
@@ -196,7 +198,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 						{/* Free Shipping Progress Bar */}
 						<FreeShippingProgress subtotal={total} />
 
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-md'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 shadow-md'>
 							{cartItems.map((item, index) => {
 								const liveStock = resolveCartItemStock(productStockMap, item);
 								const storedStock = Number(item.stock) || 0;
@@ -259,9 +261,11 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													</div>
 												)}
 
-											{/* Pricing */}
-											<div className='flex items-baseline gap-2 mb-1'>
-												<p className={`text-base sm:text-lg font-bold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>${displayedItemPrice.toFixed(2)}</p>
+												{/* Pricing */}
+												<div className='flex items-baseline gap-2 mb-1'>
+													<p className={`text-base sm:text-lg font-bold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
+														${displayedItemPrice.toFixed(2)}
+													</p>
 													{isDiscounted && <p className='text-xs text-deep-tidal-teal-600 line-through opacity-60'>${item.price.toFixed(2)}</p>}
 												</div>
 												{isDiscounted && (
@@ -290,14 +294,16 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													aria-label='Increase quantity'
 													disabled={isAtStockLimit || isOutOfStock}>
 													<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
-												</button>
-											</div>
-											<button
-												onClick={() => removeFromCart(item.id)}
-												className='text-xs text-red-600 hover:text-red-700 font-medium transition-colors whitespace-nowrap'>
-												Remove
-											</button>
-										</div>
+															</button>
+														</div>
+													<button
+														type='button'
+														onClick={() => removeFromCart(item.id)}
+														aria-label={`Remove ${item.name} from cart`}
+														className='rounded-md p-2 text-deep-tidal-teal-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50'>
+														<Trash2 className='h-4 w-4' />
+													</button>
+												</div>
 
 										{/* Mobile: Invalid quantity warning */}
 										{hasInvalidQuantity && (
@@ -376,11 +382,13 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 															<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
 														</button>
 													</div>
-													<button
-														onClick={() => removeFromCart(item.id)}
-														className='text-xs text-red-600 hover:text-red-700 font-medium transition-colors whitespace-nowrap'>
-														Remove
-													</button>
+												<button
+													type='button'
+													onClick={() => removeFromCart(item.id)}
+													aria-label={`Remove ${item.name} from cart`}
+													className='rounded-md p-2 text-deep-tidal-teal-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50'>
+													<Trash2 className='h-4 w-4' />
+												</button>
 												</div>
 
 												{/* Product Details: Desktop/Tablet only, collapsed by default */}
@@ -402,9 +410,11 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 												)}
 											</div>
 
-										{/* Price is its own grid column so discount details never push product information down. */}
-										<div className='flex min-w-0 flex-col items-end justify-start text-right'>
-											<p className={`text-xl font-bold mb-1 ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>${displayedItemPrice.toFixed(2)}</p>
+											{/* Price is its own grid column so discount details never push product information down. */}
+											<div className='flex min-w-0 flex-col items-end justify-start text-right'>
+												<p className={`text-xl font-bold mb-1 ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
+													${displayedItemPrice.toFixed(2)}
+												</p>
 												{isDiscounted && (
 													<>
 														<p className='text-sm text-deep-tidal-teal-600 line-through opacity-60 mb-1'>${item.price.toFixed(2)}</p>
@@ -422,7 +432,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 					</div>
 
 					<div className='lg:col-span-1'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 sticky top-24 shadow-md'>
 							<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div
 								className='space-y-2 mb-3'
@@ -434,7 +444,9 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										<span className='text-deep-tidal-teal-700 text-[0.9rem]'>
 											{item.name} × {item.quantity}
 										</span>
-										<span className={`font-semibold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-800'}`}>${(getDisplayedItemPrice(item) * item.quantity).toFixed(2)}</span>
+										<span className={`font-semibold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-800'}`}>
+											${(getDisplayedItemPrice(item) * item.quantity).toFixed(2)}
+										</span>
 									</div>
 								))}
 							</div>
@@ -470,19 +482,21 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 									aria-expanded={showPromoInput}
 									className='flex w-full items-center justify-between text-sm text-deep-tidal-teal-800 hover:text-deep-tidal-teal'>
 									<span>{scheduledPromotion ? `Sitewide ${scheduledPromotion.discount}% sale applied automatically` : 'Have a promo code?'}</span>
-									{!scheduledPromotion && <svg
-										className={`h-4 w-4 transition-transform ${showPromoInput ? 'rotate-180' : ''}`}
-										fill='none'
-										stroke='currentColor'
-										viewBox='0 0 24 24'
-										aria-hidden='true'>
-										<path
-											strokeLinecap='round'
-											strokeLinejoin='round'
-											strokeWidth={2}
-											d='M19 9l-7 7-7-7'
-										/>
-									</svg>}
+									{!scheduledPromotion && (
+										<svg
+											className={`h-4 w-4 transition-transform ${showPromoInput ? 'rotate-180' : ''}`}
+											fill='none'
+											stroke='currentColor'
+											viewBox='0 0 24 24'
+											aria-hidden='true'>
+											<path
+												strokeLinecap='round'
+												strokeLinejoin='round'
+												strokeWidth={2}
+												d='M19 9l-7 7-7-7'
+											/>
+										</svg>
+									)}
 								</button>
 								{showPromoInput && !scheduledPromotion && (
 									<div className='mt-3 space-y-2'>
@@ -496,26 +510,26 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 												}}
 												placeholder='Promo code'
 												autoCapitalize='characters'
-											disabled={isVerifyingPromo || Boolean(appliedPromoCode)}
-											className='min-w-0 flex-1 rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm uppercase text-deep-tidal-teal-800 outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-60'
-										/>
-										{appliedPromoCode ? (
-											<button
+												disabled={isVerifyingPromo || Boolean(appliedPromoCode)}
+												className='min-w-0 flex-1 rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm uppercase text-deep-tidal-teal-800 outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-60'
+											/>
+											{appliedPromoCode ? (
+												<button
 													type='button'
 													onClick={handleClearPromo}
 													disabled={isVerifyingPromo}
 													className='rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm font-semibold text-deep-tidal-teal-800 transition-colors hover:bg-deep-tidal-teal-50 disabled:cursor-not-allowed disabled:opacity-50'>
-												Remove
-											</button>
-										) : (
-											<button
-												type='button'
-												onClick={() => void handleApplyPromo()}
-												disabled={isVerifyingPromo || !promoCode.trim()}
-												className='rounded-lg bg-deep-tidal-teal px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-50'>
-												{isVerifyingPromo ? 'Applying…' : 'Apply'}
-											</button>
-										)}
+													Remove
+												</button>
+											) : (
+												<button
+													type='button'
+													onClick={() => void handleApplyPromo()}
+													disabled={isVerifyingPromo || !promoCode.trim()}
+													className='rounded-lg bg-deep-tidal-teal px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-50'>
+													{isVerifyingPromo ? 'Applying…' : 'Apply'}
+												</button>
+											)}
 										</div>
 										{promoError && (
 											<p

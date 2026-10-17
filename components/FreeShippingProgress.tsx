@@ -19,8 +19,8 @@ export default function FreeShippingProgress({ subtotal }: FreeShippingProgressP
 			}`}>
 			<div className='flex items-center gap-4'>
 				{/* Truck icon in circular badge */}
-				<div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${isUnlocked ? 'bg-deep-tidal-teal' : 'bg-eucalyptus/15'}`}>
-					<Package className={`w-5 h-5 ${isUnlocked ? 'text-white' : 'text-eucalyptus'}`} />
+				<div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${isUnlocked ? 'bg-deep-tidal-teal' : 'bg-eucalyptus-600/10'}`}>
+					<Package className={`w-5 h-5 ${isUnlocked ? 'text-white' : 'text-eucalyptus-600'}`} />
 				</div>
 
 				{/* Message and progress bar */}
@@ -29,12 +29,12 @@ export default function FreeShippingProgress({ subtotal }: FreeShippingProgressP
 						{isUnlocked ? (
 							<span className='font-bold text-sm text-deep-tidal-teal-800'>You&apos;ve unlocked FREE shipping!</span>
 						) : (
-							<span className='font-semibold text-sm text-eucalyptus'>You&apos;re ${remaining.toFixed(2)} away from FREE shipping</span>
+							<span className='font-semibold text-sm text-eucalyptus-600'>You&apos;re ${remaining.toFixed(2)} away from FREE shipping</span>
 						)}
 					</div>
-					<div className={`w-full rounded-full h-1.5 overflow-hidden ${isUnlocked ? 'bg-deep-tidal-teal/15' : 'bg-eucalyptus/15'}`}>
+					<div className={`w-full rounded-full h-1.5 overflow-hidden ${isUnlocked ? 'bg-deep-tidal-teal/15' : 'bg-eucalyptus-600/15'}`}>
 						<div
-							className={`h-full rounded-full transition-all duration-500 ease-out ${isUnlocked ? 'bg-deep-tidal-teal' : 'bg-eucalyptus'}`}
+							className={`h-full rounded-full transition-all duration-500 ease-out ${isUnlocked ? 'bg-deep-tidal-teal' : 'bg-eucalyptus-600'}`}
 							style={{ width: `${progress}%` }}
 						/>
 					</div>

@@ -46,10 +46,7 @@ function isTrustedGatewaylinxOrigin(originRaw: string): boolean {
 	try {
 		const origin = new URL(originRaw);
 		const hostname = origin.hostname.toLowerCase();
-		return (
-			origin.protocol === 'https:' &&
-			(hostname === GATEWAYLINX_RELAY_HOST || hostname === 'pcivault.io' || hostname.endsWith('.pcivault.io'))
-		);
+		return origin.protocol === 'https:' && (hostname === GATEWAYLINX_RELAY_HOST || hostname === 'pcivault.io' || hostname.endsWith('.pcivault.io'));
 	} catch {
 		return false;
 	}
@@ -218,10 +215,7 @@ export default function CheckoutClient() {
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);
 	const promoApplied = appliedPromoCode != null && (appliedDiscount > 0 || appliedFreeShipping);
 	const subtotal = promoApplied ? subtotalRaw : subtotalWithVolume;
-	const promoEligibleSubtotal = cartItems.reduce(
-		(sum, item) => (appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum),
-		0,
-	);
+	const promoEligibleSubtotal = cartItems.reduce((sum, item) => (appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id)) ? sum + item.price * item.quantity : sum), 0);
 	const discountAmount = Number((promoEligibleSubtotal * (appliedDiscount / 100)).toFixed(2));
 	const subtotalAfterDiscounts = Number((subtotal - discountAmount).toFixed(2));
 	const qualifiesFreeShipping = subtotalAfterDiscounts > FREE_SHIPPING_THRESHOLD;
@@ -236,8 +230,7 @@ export default function CheckoutClient() {
 	const isCreditCardDisabled = total > CREDIT_CARD_LIMIT;
 
 	const isPromoEligibleItem = (item: (typeof cartItems)[0]) => appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id));
-	const getDisplayPrice = (item: (typeof cartItems)[0]) =>
-		promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? getSalePrice(item.price, appliedDiscount) : getItemPrice(item);
+	const getDisplayPrice = (item: (typeof cartItems)[0]) => (promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? getSalePrice(item.price, appliedDiscount) : getItemPrice(item));
 
 	// Canadian postal code
 	const isValidCanadianPostalCode = (zip: string) => /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/.test((zip || '').trim().replace(/\s{2,}/g, ' '));
@@ -253,13 +246,35 @@ export default function CheckoutClient() {
 	}, [cartItems.length, hasSubmitted, router]);
 
 	useEffect(() => {
+		if (!showTermsModal) return;
+
+		const previousOverflow = document.body.style.overflow;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setShowTermsModal(false);
+		};
+
+		document.body.style.overflow = 'hidden';
+		document.addEventListener('keydown', handleKeyDown);
+
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			document.removeEventListener('keydown', handleKeyDown);
+		};
+	}, [showTermsModal]);
+
+	useEffect(() => {
 		if (scheduledPromotion) {
 			setPromoCode(scheduledPromotion.code);
 			setAppliedPromoCode(scheduledPromotion.code);
 			setAppliedDiscount(scheduledPromotion.discount);
 			setAppliedFreeShipping(Boolean(scheduledPromotion.freeShipping));
 			setAppliedProductIds(scheduledPromotion.productIds ?? []);
-			storeCartPromo({ code: scheduledPromotion.code, discount: scheduledPromotion.discount, freeShipping: Boolean(scheduledPromotion.freeShipping), productIds: scheduledPromotion.productIds ?? [] });
+			storeCartPromo({
+				code: scheduledPromotion.code,
+				discount: scheduledPromotion.discount,
+				freeShipping: Boolean(scheduledPromotion.freeShipping),
+				productIds: scheduledPromotion.productIds ?? [],
+			});
 			return;
 		}
 		const storedPromo = readStoredCartPromo();
@@ -775,7 +790,7 @@ export default function CheckoutClient() {
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-1 lg:order-1 lg:col-span-2'>
 						{/* Single container with separators */}
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-md'>
+						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 shadow-md'>
 							{/* Contact Information */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
 								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Contact Information</h2>
@@ -1419,7 +1434,9 @@ export default function CheckoutClient() {
 								</div>
 								{abandonedCartAvailability.available && (
 									<div className='pb-4 mb-4 border-b border-deep-tidal-teal/10'>
-										<label htmlFor='checkout-cart-reminder' className='flex items-start gap-3 cursor-pointer'>
+										<label
+											htmlFor='checkout-cart-reminder'
+											className='flex items-start gap-3 cursor-pointer'>
 											<input
 												id='checkout-cart-reminder'
 												type='checkbox'
@@ -1437,7 +1454,9 @@ export default function CheckoutClient() {
 											<span className='text-sm text-deep-tidal-teal-800 flex-1'>
 												Pure Tide may email me one reminder about items left in my cart. I can unsubscribe at any time. This is optional.
 												{abandonedCartAvailability.businessAddress && abandonedCartAvailability.contactEmail && (
-													<span className='block mt-1 text-xs text-deep-tidal-teal-600'>Pure Tide, {abandonedCartAvailability.businessAddress}. Contact: {abandonedCartAvailability.contactEmail}.</span>
+													<span className='block mt-1 text-xs text-deep-tidal-teal-600'>
+														Pure Tide, {abandonedCartAvailability.businessAddress}. Contact: {abandonedCartAvailability.contactEmail}.
+													</span>
 												)}
 											</span>
 										</label>
@@ -1504,7 +1523,7 @@ export default function CheckoutClient() {
 														: 'Placing Order...'
 													: useCreditCard
 														? 'Continue to Secure Card Payment'
-														: 'Place Order & View Transfer Instructions'}
+														: 'Place Order'}
 											</span>
 										</span>
 										{isProcessing && <span className='sr-only'>Checkout submission in progress. Please wait.</span>}
@@ -1522,7 +1541,7 @@ export default function CheckoutClient() {
 
 					<div className='order-2 lg:order-2 lg:col-span-1'>
 						<div
-							className={`bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 sticky top-24 shadow-md ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
+							className={`bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 sticky top-24 shadow-md ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
 							aria-busy={isProcessing}
 							aria-disabled={isProcessing}>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
@@ -1570,11 +1589,14 @@ export default function CheckoutClient() {
 										{/* Product Details & Price */}
 										<div className='flex-1 min-w-0'>
 											<h3 className='text-sm font-semibold text-deep-tidal-teal-800 leading-tight'>{item.name}</h3>
-											<p className={`text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
+											<p
+												className={`text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
 												${(getDisplayPrice(item) * item.quantity).toFixed(2)}
 												{item.quantity > 1 && <span className='text-xs font-normal text-deep-tidal-teal-600 ml-1'>(${getDisplayPrice(item).toFixed(2)} ea)</span>}
 											</p>
-											{promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) && <p className='text-xs text-deep-tidal-teal-500 line-through'>${(item.price * item.quantity).toFixed(2)}</p>}
+											{promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) && (
+												<p className='text-xs text-deep-tidal-teal-500 line-through'>${(item.price * item.quantity).toFixed(2)}</p>
+											)}
 										</div>
 
 										{/* Quantity Display */}
@@ -1590,18 +1612,20 @@ export default function CheckoutClient() {
 									onClick={() => !scheduledPromotion && setShowPromoInput(!showPromoInput)}
 									className='flex items-center justify-between text-sm text-deep-tidal-teal-800 hover:text-deep-tidal-teal w-full'>
 									<span>{scheduledPromotion ? `Sitewide ${scheduledPromotion.discount}% sale applied automatically` : 'Have a promo code?'}</span>
-									{!scheduledPromotion && <svg
-										className={`w-4 h-4 transition-transform ${showPromoInput ? 'rotate-180' : ''}`}
-										fill='none'
-										stroke='currentColor'
-										viewBox='0 0 24 24'>
-										<path
-											strokeLinecap='round'
-											strokeLinejoin='round'
-											strokeWidth={2}
-											d='M19 9l-7 7-7-7'
-										/>
-									</svg>}
+									{!scheduledPromotion && (
+										<svg
+											className={`w-4 h-4 transition-transform ${showPromoInput ? 'rotate-180' : ''}`}
+											fill='none'
+											stroke='currentColor'
+											viewBox='0 0 24 24'>
+											<path
+												strokeLinecap='round'
+												strokeLinejoin='round'
+												strokeWidth={2}
+												d='M19 9l-7 7-7-7'
+											/>
+										</svg>
+									)}
 								</button>
 								{showPromoInput && !scheduledPromotion && (
 									<div className='space-y-2 mt-2 animate-in fade-in slide-in-from-top-2 duration-300'>
@@ -1611,26 +1635,26 @@ export default function CheckoutClient() {
 												value={promoCode}
 												onChange={(e) => setPromoCode(e.target.value)}
 												placeholder='Promo code'
-											disabled={isVerifyingPromo || Boolean(appliedPromoCode)}
-											className='flex-1 bg-white border border-black/10 rounded px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
-										/>
-										{appliedPromoCode ? (
-											<button
+												disabled={isVerifyingPromo || Boolean(appliedPromoCode)}
+												className='flex-1 bg-white border border-black/10 rounded px-4 py-2 text-sm text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:opacity-50'
+											/>
+											{appliedPromoCode ? (
+												<button
 													type='button'
 													onClick={handleClearPromo}
 													disabled={isVerifyingPromo}
 													className='border border-deep-tidal-teal/20 bg-white px-3 py-2 rounded font-bold text-sm text-deep-tidal-teal-800 hover:bg-deep-tidal-teal-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
-												Remove
-											</button>
-										) : (
-											<button
-												type='button'
-												onClick={handleApplyPromo}
-												disabled={isVerifyingPromo || !promoCode.trim()}
-												className='bg-deep-tidal-teal text-white px-4 py-2 rounded font-bold text-sm hover:bg-deep-tidal-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
-												{isVerifyingPromo ? '...' : 'Apply'}
-											</button>
-										)}
+													Remove
+												</button>
+											) : (
+												<button
+													type='button'
+													onClick={handleApplyPromo}
+													disabled={isVerifyingPromo || !promoCode.trim()}
+													className='bg-deep-tidal-teal text-white px-4 py-2 rounded font-bold text-sm hover:bg-deep-tidal-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+													{isVerifyingPromo ? '...' : 'Apply'}
+												</button>
+											)}
 										</div>
 										{promoError && <p className='text-xs text-red-500 font-medium'>{promoError}</p>}
 										{(appliedDiscount > 0 || appliedFreeShipping) && (
@@ -1680,31 +1704,43 @@ export default function CheckoutClient() {
 
 			{/* Terms & Conditions Modal */}
 			{showTermsModal && (
-				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 mb-3'>
-					<div className='bg-white rounded-xl max-w-3xl w-full max-h-[80vh] overflow-hidden shadow-2xl'>
-						<div className='p-6 border-b border-gray-200 flex items-center justify-between'>
-							<h2 className='text-2xl font-bold text-deep-tidal-teal-800'>Terms & Conditions</h2>
+				<div className='fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black/50 p-3 sm:p-6'>
+					<div
+						role='dialog'
+						aria-modal='true'
+						aria-labelledby='terms-modal-title'
+						className='flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]'>
+						<div className='flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4'>
+							<h2
+								id='terms-modal-title'
+								className='text-xl font-bold leading-tight text-deep-tidal-teal-800 sm:text-2xl'>
+								Terms & Conditions
+							</h2>
 							<button
+								type='button'
 								onClick={() => setShowTermsModal(false)}
-								className='text-gray-500 hover:text-gray-700 text-2xl leading-none'>
-								×
+								aria-label='Close terms and conditions'
+								className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-3xl leading-none text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-tidal-teal/40'>
+								<span aria-hidden='true'>×</span>
 							</button>
 						</div>
-						<div className='p-6 overflow-y-auto max-h-[60vh] text-deep-tidal-teal-800'>
+						<div className='min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 text-deep-tidal-teal-800 sm:p-6'>
 							<TermsContent />
 						</div>
-						<div className='p-6 border-t border-gray-200 flex justify-end gap-3'>
+						<div className='grid shrink-0 grid-cols-2 gap-3 border-t border-gray-200 px-4 py-3 sm:flex sm:justify-end sm:px-6 sm:py-4'>
 							<button
+								type='button'
 								onClick={() => setShowTermsModal(false)}
-								className='px-6 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition-colors'>
+								className='min-h-11 rounded bg-gray-200 px-4 py-2 font-medium text-gray-800 transition-colors hover:bg-gray-300 sm:px-6'>
 								Close
 							</button>
 							<button
+								type='button'
 								onClick={() => {
 									setAgreedToTerms(true);
 									setShowTermsModal(false);
 								}}
-								className='px-6 py-2 rounded bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-medium transition-colors'>
+								className='min-h-11 rounded bg-deep-tidal-teal px-4 py-2 font-medium text-white transition-colors hover:bg-deep-tidal-teal-600 sm:px-6'>
 								I Agree
 							</button>
 						</div>

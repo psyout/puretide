@@ -10,7 +10,7 @@ import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 
 export default function CartIcon() {
-	const { cartItems, getItemPrice, getTotal, openCartDrawer } = useCart();
+	const { cartItems, getItemPrice, getTotal, openCartDrawer, automaticPromotion } = useCart();
 	const pathname = usePathname();
 	const [mounted, setMounted] = useState(false);
 	const [isAnimate, setIsAnimate] = useState(false);
@@ -19,6 +19,7 @@ export default function CartIcon() {
 	const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 	const isCartPage = pathname === '/cart';
+	const totalSavings = cartItems.reduce((sum, item) => sum + Math.max(0, item.price - getItemPrice(item)) * item.quantity, 0);
 
 	useEffect(() => {
 		setMounted(true);
@@ -120,10 +121,11 @@ export default function CartIcon() {
 						) : (
 							<>
 								<div className='max-h-[18rem] overflow-y-auto py-1'>
-									{cartItems.slice(0, 3).map((item) => (
-										<div
-											key={item.id}
-											className='flex gap-3 border-b border-deep-tidal-teal/10 py-4 last:border-0'>
+									{cartItems.slice(0, 3).map((item) => {
+										const itemPrice = getItemPrice(item);
+										const isDiscounted = itemPrice < item.price;
+										return (
+										<div key={item.id} className='flex gap-3 border-b border-deep-tidal-teal/10 py-4 last:border-0'>
 											<div className='flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-deep-tidal-teal/5 p-1.5'>
 												{hasProductImage(item.image) ? (
 													<Image
@@ -143,10 +145,16 @@ export default function CartIcon() {
 												<p className='mt-1 text-xs text-deep-tidal-teal-600'>
 													{item.mg ? `${item.mg} · ` : ''}Qty {item.quantity}
 												</p>
+												{isDiscounted && <p className='mt-1 text-[11px] font-semibold text-emerald-700'>{automaticPromotion ? `${automaticPromotion.discount}% off` : `Save C$${((item.price - itemPrice) * item.quantity).toFixed(2)}`}</p>}
 											</div>
-											<p className='text-sm font-bold'>C${(getItemPrice(item) * item.quantity).toFixed(2)}</p>
+											<div className='shrink-0 text-right'>
+												<p className={`text-sm font-bold ${automaticPromotion && isDiscounted ? 'text-[#b42318]' : ''}`}>C${(itemPrice * item.quantity).toFixed(2)}</p>
+												{isDiscounted && <p className='mt-0.5 text-xs text-deep-tidal-teal-500 line-through'>C${(item.price * item.quantity).toFixed(2)}</p>}
+												{item.quantity > 1 && <p className='mt-0.5 text-[10px] text-deep-tidal-teal-500'>C${itemPrice.toFixed(2)} each</p>}
+											</div>
 										</div>
-									))}
+										);
+									})}
 									{cartItems.length > 3 && (
 										<p className='pb-3 text-center text-xs text-deep-tidal-teal-500'>
 											+ {cartItems.length - 3} more {cartItems.length - 3 === 1 ? 'item' : 'items'}
@@ -154,6 +162,12 @@ export default function CartIcon() {
 									)}
 								</div>
 								<div className='border-t border-deep-tidal-teal/10 pt-4'>
+									{totalSavings > 0 && (
+										<div className='mb-2 flex items-baseline justify-end gap-5 text-xs font-semibold text-emerald-700'>
+											<span>You save</span>
+											<span>−C${totalSavings.toFixed(2)}</span>
+										</div>
+									)}
 									<div className='mb-4 flex items-baseline justify-end gap-5'>
 										<span className='text-sm text-deep-tidal-teal-600'>Subtotal</span>
 										<span className='text-sm font-bold text-deep-tidal-teal-900'>C${getTotal().toFixed(2)}</span>

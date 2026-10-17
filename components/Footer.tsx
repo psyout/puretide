@@ -2,18 +2,33 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { FlaskConical, LockKeyhole, Mail, MapPin } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { FlaskConical, Mail } from 'lucide-react';
+import { PRODUCT_CATEGORY_EVENT, PRODUCT_MENU_CATEGORIES, type ProductFilterCategory } from '@/lib/productCategories';
 
-const footerLinks = [
-	{ href: '/#products', label: 'Products' },
+const companyLinks = [
 	{ href: '/#about', label: 'About us' },
 	{ href: '/learn', label: 'Learn' },
+	{ href: '/faq', label: 'FAQ' },
+	{ href: '/affiliate', label: 'Affiliate' },
 	{ href: '/#contact', label: 'Contact' },
 ];
 
 export default function Footer() {
 	const pathname = usePathname();
+	const router = useRouter();
+
+	const selectProductCategory = (category: Exclude<ProductFilterCategory, 'All'>) => {
+		const destination = `/?category=${encodeURIComponent(category)}#products`;
+		if (typeof window !== 'undefined' && window.location.pathname === '/') {
+			window.history.replaceState(window.history.state, '', destination);
+			window.dispatchEvent(new CustomEvent(PRODUCT_CATEGORY_EVENT, { detail: { category } }));
+			document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
+			return;
+		}
+
+		router.push(destination);
+	};
 
 	// The stock dashboard is an internal tool and intentionally sits outside the storefront shell.
 	if (pathname.startsWith('/dashboard')) return null;
@@ -26,7 +41,7 @@ export default function Footer() {
 
 			<div className='relative mx-auto max-w-7xl px-6 py-12 sm:py-14 lg:px-8'>
 				<div className='border-t border-white/25 pt-10'>
-					<div className='grid gap-10 md:grid-cols-[1.35fr_0.75fr_1fr] md:gap-12'>
+					<div className='grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_0.8fr_0.75fr_1fr] lg:gap-12'>
 						<div className='max-w-md'>
 							<Link
 								href='/'
@@ -40,19 +55,36 @@ export default function Footer() {
 									className='h-9 w-auto sm:h-10'
 								/>
 							</Link>
-							<p className='mt-5 text-sm leading-6 text-white/60'>
-								Canadian-sourced, independently tested research products with a focus on quality, clarity, and discreet service.
+							<p className='mt-5 text-[1rem] leading-6 text-white/60'>
+								Canadian-sourced, independently tested research products with a focus on quality, clarity and transparency.
 							</p>
 						</div>
 
-						<nav aria-label='Footer navigation'>
-							<p className='text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-300'>Explore</p>
+						<nav aria-label='Product categories'>
+							<Link href='/#products' className='text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-300 transition-colors hover:text-white'>Products</Link>
 							<ul className='mt-5 space-y-3'>
-								{footerLinks.map((link) => (
-									<li key={link.label}>
+								{PRODUCT_MENU_CATEGORIES.map((category) => (
+									<li key={category}>
 										<Link
-											href={link.href}
+											href={`/?category=${encodeURIComponent(category)}#products`}
+											onClick={(event) => {
+												event.preventDefault();
+												selectProductCategory(category);
+											}}
 											className='text-sm text-white/65 transition-colors hover:text-white focus-visible:text-white'>
+											{category}
+										</Link>
+									</li>
+								))}
+							</ul>
+						</nav>
+
+						<nav aria-label='Company navigation'>
+							<p className='text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-300'>Company</p>
+							<ul className='mt-5 space-y-3'>
+								{companyLinks.map((link) => (
+									<li key={link.label}>
+										<Link href={link.href} className='text-sm text-white/65 transition-colors hover:text-white focus-visible:text-white'>
 											{link.label}
 										</Link>
 									</li>
@@ -62,10 +94,10 @@ export default function Footer() {
 
 						<div>
 							<p className='text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-300'>Questions?</p>
-							<p className='mt-5 text-sm leading-6 text-white/60'>Help with products, orders & shipping?</p>
+							<p className='mt-5 text-[1rem] leading-6 text-white/60'>Help with products, orders & shipping?</p>
 							<a
 								href='mailto:info@puretide.ca'
-								className='mt-5 inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-eucalyptus-300'>
+								className='mt-5 inline-flex items-center gap-2 text-[1rem] font-medium text-white transition-colors hover:text-eucalyptus-300'>
 								<Mail
 									className='h-4 w-4'
 									aria-hidden='true'

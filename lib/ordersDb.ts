@@ -749,6 +749,53 @@ export async function listOrdersFromDb(): Promise<StoredOrder[]> {
 	return rows.values.map((row) => parseOrderJson(String(row[colIdx])));
 }
 
+export async function claimManualEtransferReminder(orderNumber: string, claimedAt = new Date().toISOString()): Promise<StoredOrder | null> {
+	const db = await getDb();
+	const stmt = db.prepare('SELECT order_json FROM orders WHERE order_number = ? AND payment_status = ? LIMIT 1');
+	stmt.bind([orderNumber, 'pending']);
+	if (!stmt.step()) {
+		stmt.free();
+		return null;
+	}
+	const row = stmt.getAsObject() as { order_json: string };
+	stmt.free();
+	const order = parseOrderJson(row.order_json);
+	const reminder = (order.paymentReminder as Record<string, unknown> | undefined) ?? {};
+	if (reminder.status === 'sent' || reminder.status === 'sending') return null;
+
+	const claimed = normalizeOrder({
+		...order,
+		paymentReminder: {
+			...reminder,
+			status: 'sending',
+			claimedAt,
+			attempts: Number(reminder.attempts ?? 0) + 1,
+			lastError: null,
+		},
+	});
+	db.run('UPDATE orders SET order_json = ?, updated_at = ? WHERE order_number = ? AND payment_status = ?', [JSON.stringify(claimed), claimedAt, orderNumber, 'pending']);
+	const changed = Number(db.exec('SELECT changes() AS count')[0]?.values[0]?.[0] ?? 0);
+	if (changed !== 1) return null;
+	persistDb(db);
+	return claimed;
+}
+
+export async function finishManualEtransferReminder(
+	orderNumber: string,
+	result: { sentAt: string } | { failedAt: string; error: string },
+): Promise<void> {
+	const order = await getOrderByOrderNumberFromDb(orderNumber);
+	if (!order) return;
+	const reminder = (order.paymentReminder as Record<string, unknown> | undefined) ?? {};
+	await upsertOrderInDb({
+		...order,
+		paymentReminder:
+			'sentAt' in result
+				? { ...reminder, status: 'sent', sentAt: result.sentAt, lastError: null }
+				: { ...reminder, status: 'failed', failedAt: result.failedAt, lastError: result.error.slice(0, 500) },
+	});
+}
+
 export async function hasOrderForEmailSince(email: string, sinceIso: string): Promise<boolean> {
 	const normalized = email.trim().toLowerCase();
 	const orders = await listOrdersFromDb();
