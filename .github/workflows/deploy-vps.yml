@@ -71,6 +71,19 @@ jobs:
           fi
           ls -la .next/standalone | head -n 50
 
+      - name: Sanity check public image assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f public/bottles/v01.webp
+          test -f public/background/products-bg.webp
+          IMAGE_COUNT=$(find public -type f \( -name '*.webp' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' -o -name '*.svg' \) | wc -l | tr -d ' ')
+          echo "Public image asset count: ${IMAGE_COUNT}"
+          if [[ "${IMAGE_COUNT}" -lt 40 ]]; then
+            echo "Deployment aborted: expected at least 40 public image assets."
+            exit 1
+          fi
+
       - name: Write deploy key
         shell: bash
         env:
