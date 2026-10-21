@@ -17,6 +17,7 @@ import {
 	Megaphone,
 	Package,
 	Pencil,
+	RefreshCw,
 	Search,
 	Send,
 	ShoppingCart,
@@ -197,6 +198,43 @@ export default function StockDashboardPage() {
 	const [productsError, setProductsError] = useState<string | null>(null);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [savePromosError, setSavePromosError] = useState<string | null>(null);
+	const [isRefreshingData, setIsRefreshingData] = useState(false);
+	const [refreshDataMessage, setRefreshDataMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+	const handleRefreshProductionData = async () => {
+		setIsRefreshingData(true);
+		setRefreshDataMessage(null);
+		try {
+			const response = await fetch('/api/cache/invalidate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ scope: 'all' }),
+			});
+			const data = (await response.json()) as {
+				ok?: boolean;
+				message?: string;
+				error?: string;
+				counts?: { products?: number };
+			};
+			if (!response.ok || !data.ok) throw new Error(data.error ?? 'Failed to refresh production data.');
+
+			const stockResponse = await fetch('/api/dashboard/stock', { credentials: 'include', cache: 'no-store' });
+			const stockData = (await stockResponse.json()) as { ok?: boolean; items?: Product[]; coaFiles?: string[] };
+			if (stockResponse.ok && stockData.ok && stockData.items) {
+				setRows(stockData.items);
+				setAvailableCoaFiles(stockData.coaFiles ?? []);
+			}
+			setRefreshDataMessage({
+				kind: 'success',
+				text: `${data.message ?? 'Production data refreshed.'}${data.counts?.products != null ? ` ${data.counts.products} Zoho products loaded.` : ''}`,
+			});
+		} catch (error) {
+			setRefreshDataMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Failed to refresh production data.' });
+		} finally {
+			setIsRefreshingData(false);
+		}
+	};
 
 	useEffect(() => {
 		const load = async () => {
@@ -824,12 +862,30 @@ export default function StockDashboardPage() {
 							</div>
 						</div>
 						<nav className='space-y-2 text-sm text-[#4a4a4a]'>
+							<button
+								type='button'
+								onClick={handleRefreshProductionData}
+								disabled={isRefreshingData}
+								className='flex w-full items-center gap-3 rounded-xl bg-deep-tidal-teal px-4 py-3 text-left font-medium text-white transition-colors hover:bg-deep-tidal-teal-600 disabled:cursor-wait disabled:opacity-60'>
+								<RefreshCw
+									className={`h-4 w-4 shrink-0 ${isRefreshingData ? 'animate-spin' : ''}`}
+									aria-hidden='true'
+								/>
+								<span>{isRefreshingData ? 'Refreshing data…' : 'Refresh website data'}</span>
+							</button>
+							{refreshDataMessage && (
+								<p
+									role={refreshDataMessage.kind === 'error' ? 'alert' : 'status'}
+									className={`rounded-lg px-3 py-2 text-xs ${refreshDataMessage.kind === 'error' ? 'bg-rose-50 text-rose-700' : 'bg-eucalyptus-50 text-deep-tidal-teal'}`}>
+									{refreshDataMessage.text}
+								</p>
+							)}
 							<a
 								href='/dashboard/login'
 								onClick={async (e) => {
 									e.preventDefault();
 									await fetch('/api/dashboard/signout', { method: 'POST', credentials: 'include' });
-									window.location.href = '/dashboard/login';
+									window.location.href = '/auth/logout?returnTo=/dashboard/login';
 								}}
 								className='flex w-full items-center gap-3 rounded-xl border border-black/5 bg-white px-4 py-3 text-left text-rose-600 transition-colors hover:bg-[#f4f4f7] hover:text-rose-700'>
 								<LogOut

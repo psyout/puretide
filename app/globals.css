@@ -133,6 +133,10 @@ p {
 }
 
 @layer components {
+	.site-cta {
+		@apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold uppercase tracking-wide no-underline transition-all;
+	}
+
 	.ui-border {
 		border: var(--ui-border-width) solid var(--ui-border-color);
 	}

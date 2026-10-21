@@ -174,7 +174,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 						<p className='text-deep-tidal-teal-700 mb-8'>Start shopping to add items to your cart</p>
 						<Link
 							href='/'
-							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+							className='site-cta bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600'>
 							Browse Products
 						</Link>
 					</div>
@@ -294,16 +294,16 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													aria-label='Increase quantity'
 													disabled={isAtStockLimit || isOutOfStock}>
 													<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
-															</button>
-														</div>
-													<button
-														type='button'
-														onClick={() => removeFromCart(item.id)}
-														aria-label={`Remove ${item.name} from cart`}
-														className='rounded-md p-2 text-deep-tidal-teal-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50'>
-														<Trash2 className='h-4 w-4' />
-													</button>
-												</div>
+												</button>
+											</div>
+											<button
+												type='button'
+												onClick={() => removeFromCart(item.id)}
+												aria-label={`Remove ${item.name} from cart`}
+												className='rounded-md p-2 text-deep-tidal-teal-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50'>
+												<Trash2 className='h-4 w-4' />
+											</button>
+										</div>
 
 										{/* Mobile: Invalid quantity warning */}
 										{hasInvalidQuantity && (
@@ -320,7 +320,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 											{/* Desktop: Left Section - Product Image */}
 											<Link
 												href={`/product/${item.slug || item.id}`}
-												className='flex flex-shrink-0 w-36 h-36 items-center justify-center rounded-xl bg-deep-tidal-teal/5 hover:opacity-90 transition-opacity'
+												className='flex flex-shrink-0 w-36 h-36 items-center justify-center rounded-lg bg-deep-tidal-teal/5 hover:opacity-90 transition-opacity'
 												aria-label={`View ${item.name} details`}>
 												{hasProductImage(item.image) ? (
 													<Image
@@ -382,13 +382,13 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 															<span className='w-4 h-4 flex items-center justify-center text-base font-medium'>+</span>
 														</button>
 													</div>
-												<button
-													type='button'
-													onClick={() => removeFromCart(item.id)}
-													aria-label={`Remove ${item.name} from cart`}
-													className='rounded-md p-2 text-deep-tidal-teal-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50'>
-													<Trash2 className='h-4 w-4' />
-												</button>
+													<button
+														type='button'
+														onClick={() => removeFromCart(item.id)}
+														aria-label={`Remove ${item.name} from cart`}
+														className='rounded-md p-2 text-deep-tidal-teal-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50'>
+														<Trash2 className='h-4 w-4' />
+													</button>
 												</div>
 
 												{/* Product Details: Desktop/Tablet only, collapsed by default */}
@@ -556,7 +556,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 									}
 									router.push('/checkout');
 								}}
-								className='w-full min-h-14 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+								className='w-full min-h-14 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
 								disabled={hasCartInvalidQuantity}>
 								<span className='flex items-center gap-2 text-base'>
 									<Lock size={18} /> Continue to Checkout

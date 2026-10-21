@@ -54,10 +54,10 @@ export default function CartDrawer() {
 						animate={{ x: 0 }}
 						exit={{ x: '100%' }}
 						transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-						className='absolute right-0 top-0 flex h-full w-full max-w-[31rem] flex-col bg-mineral-white shadow-2xl'>
+						className='absolute right-0 top-0 flex h-full w-full max-w-[31rem] flex-col bg-white shadow-2xl'>
 						<div className='flex items-center justify-between border-b border-deep-tidal-teal/10 px-6 py-5 sm:px-8'>
 							<div>
-								<p className='text-xs font-bold uppercase tracking-[0.18em] text-eucalyptus-600'>{lastAddedItem ? 'Added to your cart' : 'Your cart'}</p>
+								<p className='text-xs font-bold uppercase tracking-[0.18em]'>{lastAddedItem ? 'Added to your cart' : 'Your cart'}</p>
 								<h2
 									id='cart-drawer-title'
 									className='mt-1 text-xl font-semibold text-deep-tidal-teal-900'>
@@ -83,7 +83,7 @@ export default function CartDrawer() {
 								<Link
 									href='/#products'
 									onClick={closeCartDrawer}
-									className='mt-7 rounded-lg bg-deep-tidal-teal px-6 py-3 font-bold text-white transition hover:bg-deep-tidal-teal-600'>
+									className='site-cta mt-7 bg-deep-tidal-teal text-white hover:bg-deep-tidal-teal-600'>
 									Start shopping
 								</Link>
 							</div>
@@ -97,7 +97,7 @@ export default function CartDrawer() {
 										return (
 											<div
 												key={item.id}
-												className={`flex gap-4 border-b py-6 ${item.id === lastAddedItem?.id ? 'border-eucalyptus-300' : 'border-deep-tidal-teal/10'}`}>
+												className={`flex gap-4 border-b py-6 ${item.id === lastAddedItem?.id ? 'border-white' : 'border-deep-tidal-teal/10'}`}>
 												<Link
 													href={`/product/${item.slug || item.id}`}
 													onClick={closeCartDrawer}
@@ -177,13 +177,13 @@ export default function CartDrawer() {
 									<Link
 										href='/cart'
 										onClick={closeCartDrawer}
-										className='flex min-h-14 w-full items-center justify-center rounded-lg bg-deep-tidal-teal px-5 font-semibold uppercase tracking-wide text-white transition hover:bg-deep-tidal-teal-600'>
+										className='site-cta w-full bg-deep-tidal-teal text-white hover:bg-deep-tidal-teal-600'>
 										View cart
 									</Link>
 									<button
 										type='button'
 										onClick={closeCartDrawer}
-										className='mt-3 min-h-12 w-full rounded-lg border border-deep-tidal-teal/25 font-semibold text-deep-tidal-teal-800 transition hover:bg-deep-tidal-teal/5 uppercase'>
+										className='site-cta mt-3 w-full border border-deep-tidal-teal/25 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/5'>
 										Keep shopping
 									</button>
 									<p className='mt-4 text-center text-xs text-deep-tidal-teal-500'>Shipping and any promo-code adjustments are confirmed at checkout.</p>

@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { mapZohoItemToProduct, readZohoProducts, resetZohoInventoryCacheForTests, updateZohoWebsiteStatus, type ZohoInventoryItem } from '../lib/zohoInventory';
+import {
+	forceRefreshZohoProducts,
+	mapZohoItemToProduct,
+	readZohoProducts,
+	readZohoStockSnapshot,
+	resetZohoInventoryCacheForTests,
+	updateZohoWebsiteStatus,
+	type ZohoInventoryItem,
+} from '../lib/zohoInventory';
 
 const customFields = (overrides: Record<string, string> = {}) =>
 	Object.entries({
@@ -95,6 +103,54 @@ test('sums active location stock when item-level stock is absent', () => {
 	};
 
 	assert.equal(mapZohoItemToProduct(item)?.stock, 17);
+});
+
+test('reads a lightweight paginated Zoho stock snapshot without item detail requests', async () => {
+	const originalFetch = globalThis.fetch;
+	const originalEnvironment = {
+		accessToken: process.env.ZOHO_INVENTORY_ACCESS_TOKEN,
+		organizationId: process.env.ZOHO_INVENTORY_ORGANIZATION_ID,
+		apiBaseUrl: process.env.ZOHO_INVENTORY_API_BASE_URL,
+	};
+	const requestedPaths: string[] = [];
+
+	try {
+		process.env.ZOHO_INVENTORY_ACCESS_TOKEN = 'test-access-token';
+		process.env.ZOHO_INVENTORY_ORGANIZATION_ID = 'test-organization';
+		process.env.ZOHO_INVENTORY_API_BASE_URL = 'https://inventory.example.test/v1';
+		resetZohoInventoryCacheForTests();
+
+		globalThis.fetch = (async (input) => {
+			const url = new URL(String(input));
+			requestedPaths.push(`${url.pathname}?${url.searchParams.toString()}`);
+			const page = url.searchParams.get('page');
+			return Response.json({
+				code: 0,
+				items:
+					page === '1'
+						? [{ item_id: 'item-1', stock_on_hand: '12', custom_fields: customFields({ 'Website Slug': 'Product-One' }) }]
+						: [{ item_id: 'item-2', stock_on_hand: 7, custom_fields: customFields({ 'Website Slug': 'product-two' }) }],
+				page_context: { has_more_page: page === '1' },
+			});
+		}) as typeof fetch;
+
+		assert.deepEqual(await readZohoStockSnapshot(), [
+			{ slug: 'product-one', stock: 12 },
+			{ slug: 'product-two', stock: 7 },
+		]);
+		assert.equal(requestedPaths.length, 2);
+		assert.ok(requestedPaths.every((path) => path.startsWith('/v1/items?')));
+	} finally {
+		globalThis.fetch = originalFetch;
+		const restore = (key: string, value: string | undefined) => {
+			if (value == null) delete process.env[key];
+			else process.env[key] = value;
+		};
+		restore('ZOHO_INVENTORY_ACCESS_TOKEN', originalEnvironment.accessToken);
+		restore('ZOHO_INVENTORY_ORGANIZATION_ID', originalEnvironment.organizationId);
+		restore('ZOHO_INVENTORY_API_BASE_URL', originalEnvironment.apiBaseUrl);
+		resetZohoInventoryCacheForTests();
+	}
 });
 
 test('updates only the Zoho Website Status custom field', async () => {
@@ -247,6 +303,82 @@ test('coalesces concurrent catalog reads and serves subsequent reads from cache'
 		restore('ZOHO_INVENTORY_CACHE_PATH', originalEnvironment.cachePath);
 		restore('ORDERS_DB_PATH', originalEnvironment.ordersDbPath);
 		restore('ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS', originalEnvironment.catalogCacheTtl);
+		resetZohoInventoryCacheForTests();
+		await rm(temporaryDirectory, { recursive: true, force: true });
+	}
+});
+
+test('forced refresh bypasses catalog and item-detail caches while preserving the last good catalog on failure', async () => {
+	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'puretide-zoho-forced-refresh-'));
+	const originalFetch = globalThis.fetch;
+	const originalEnvironment = {
+		accessToken: process.env.ZOHO_INVENTORY_ACCESS_TOKEN,
+		organizationId: process.env.ZOHO_INVENTORY_ORGANIZATION_ID,
+		apiBaseUrl: process.env.ZOHO_INVENTORY_API_BASE_URL,
+		cachePath: process.env.ZOHO_INVENTORY_CACHE_PATH,
+	};
+	let version = 1;
+	let shouldFail = false;
+	let requestCount = 0;
+
+	try {
+		process.env.ZOHO_INVENTORY_ACCESS_TOKEN = 'test-access-token';
+		process.env.ZOHO_INVENTORY_ORGANIZATION_ID = 'test-organization';
+		process.env.ZOHO_INVENTORY_API_BASE_URL = 'https://inventory.example.test/v1';
+		process.env.ZOHO_INVENTORY_CACHE_PATH = path.join(temporaryDirectory, 'zoho-products-cache.json');
+		resetZohoInventoryCacheForTests();
+
+		globalThis.fetch = (async (input) => {
+			requestCount += 1;
+			if (shouldFail) return Response.json({ code: 45, message: 'Daily API limit exceeded' }, { status: 429 });
+			const url = new URL(String(input));
+			const fields = customFields({ 'Website Description': `Description ${version}` });
+			if (url.pathname.endsWith('/items')) {
+				return Response.json({
+					code: 0,
+					items: [{ item_id: 'item-1', name: 'Bacteriostatic Water', rate: 10.99, stock_on_hand: 40 + version, custom_fields: fields }],
+					page_context: { has_more_page: false },
+				});
+			}
+			if (url.pathname.endsWith('/items/item-1')) {
+				return Response.json({
+					code: 0,
+					item: { item_id: 'item-1', name: 'Bacteriostatic Water', rate: 10.99, stock_on_hand: 40 + version, custom_fields: fields },
+				});
+			}
+			return Response.json({ code: 404, message: 'Not found' }, { status: 404 });
+		}) as typeof fetch;
+
+		const initial = await readZohoProducts();
+		assert.equal(initial[0]?.stock, 41);
+		assert.equal(initial[0]?.description, 'Description 1');
+		assert.equal(requestCount, 2);
+
+		version = 2;
+		const cached = await readZohoProducts();
+		assert.equal(cached[0]?.stock, 41);
+		assert.equal(requestCount, 2);
+
+		const refreshed = await forceRefreshZohoProducts();
+		assert.equal(refreshed[0]?.stock, 42);
+		assert.equal(refreshed[0]?.description, 'Description 2');
+		assert.equal(requestCount, 4);
+
+		shouldFail = true;
+		await assert.rejects(forceRefreshZohoProducts(), /Daily API limit exceeded/);
+		const afterFailure = await readZohoProducts();
+		assert.equal(afterFailure[0]?.stock, 42);
+		assert.equal(afterFailure[0]?.description, 'Description 2');
+	} finally {
+		globalThis.fetch = originalFetch;
+		const restore = (key: string, value: string | undefined) => {
+			if (value == null) delete process.env[key];
+			else process.env[key] = value;
+		};
+		restore('ZOHO_INVENTORY_ACCESS_TOKEN', originalEnvironment.accessToken);
+		restore('ZOHO_INVENTORY_ORGANIZATION_ID', originalEnvironment.organizationId);
+		restore('ZOHO_INVENTORY_API_BASE_URL', originalEnvironment.apiBaseUrl);
+		restore('ZOHO_INVENTORY_CACHE_PATH', originalEnvironment.cachePath);
 		resetZohoInventoryCacheForTests();
 		await rm(temporaryDirectory, { recursive: true, force: true });
 	}

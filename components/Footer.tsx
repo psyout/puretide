@@ -9,6 +9,7 @@ import { PRODUCT_CATEGORY_EVENT, PRODUCT_MENU_CATEGORIES, type ProductFilterCate
 const companyLinks = [
 	{ href: '/#about', label: 'About us' },
 	{ href: '/learn', label: 'Learn' },
+	{ href: '/affiliate', label: 'Affiliate program' },
 	{ href: '/#contact', label: 'Contact' },
 ];
 
@@ -53,13 +54,15 @@ export default function Footer() {
 									className='h-9 w-auto sm:h-10'
 								/>
 							</Link>
-							<p className='mt-5 text-[1rem] leading-6 text-white/60'>
-								Canadian-sourced, independently tested research products with a focus on quality, clarity and transparency.
-							</p>
+							<p className='mt-5 text-sm leading-6 text-white/60'>Canadian-sourced, independently tested research products with a focus on quality, clarity and transparency.</p>
 						</div>
 
 						<nav aria-label='Product categories'>
-							<Link href='/#products' className='text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-300 transition-colors hover:text-white'>Products</Link>
+							<Link
+								href='/#products'
+								className='text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-300 transition-colors hover:text-white'>
+								Products
+							</Link>
 							<ul className='mt-5 space-y-3'>
 								{PRODUCT_MENU_CATEGORIES.map((category) => (
 									<li key={category}>
@@ -82,7 +85,9 @@ export default function Footer() {
 							<ul className='mt-5 space-y-3'>
 								{companyLinks.map((link) => (
 									<li key={link.label}>
-										<Link href={link.href} className='text-sm text-white/65 transition-colors hover:text-white focus-visible:text-white'>
+										<Link
+											href={link.href}
+											className='text-sm text-white/65 transition-colors hover:text-white focus-visible:text-white'>
 											{link.label}
 										</Link>
 									</li>
@@ -92,7 +97,7 @@ export default function Footer() {
 
 						<div>
 							<p className='text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-300'>Questions?</p>
-							<p className='mt-5 text-[1rem] leading-6 text-white/60'>Help with products, orders & shipping?</p>
+							<p className='mt-5 text-sm leading-6 text-white/60'>Help with products, orders & shipping?</p>
 							<a
 								href='mailto:info@puretide.ca'
 								className='mt-5 inline-flex items-center gap-2 text-[1rem] font-medium text-white transition-colors hover:text-eucalyptus-300'>

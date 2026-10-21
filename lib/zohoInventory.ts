@@ -61,6 +61,11 @@ export type StockDeductionItem = {
 	quantity: number;
 };
 
+export type ZohoStockSnapshotItem = {
+	slug: string;
+	stock: number;
+};
+
 export type ZohoWebsiteStatus = 'published' | 'draft' | 'inactive';
 
 let cachedAccessToken: { value: string; expiresAt: number } | null = null;
@@ -69,6 +74,7 @@ type ItemDetailCache = { item: ZohoInventoryItem; expiresAt: number };
 
 let cachedProductCatalog: ProductCatalogCache | null = null;
 let pendingProductCatalogRead: Promise<Product[]> | null = null;
+let pendingForcedProductCatalogRefresh: Promise<Product[]> | null = null;
 let persistentCatalogLoaded = false;
 const cachedItemDetails = new Map<string, ItemDetailCache>();
 
@@ -179,6 +185,12 @@ const getStockOnHand = (item: ZohoInventoryItem): number => {
 	if (locationStocks.length === 0) return 0;
 	return Math.max(0, Math.round(locationStocks.reduce((sum, value) => sum + value, 0)));
 };
+
+const hasStockValue = (item: ZohoInventoryItem) =>
+	[item.stock_on_hand, item.actual_available_stock, item.available_stock].some((value) => asFiniteNumber(value) != null) ||
+	(item.locations ?? []).some((location) =>
+		[location.location_stock_on_hand, location.location_actual_available_stock, location.location_available_stock].some((value) => asFiniteNumber(value) != null),
+	);
 
 const normalizeCoaFile = (value: string): string | undefined => {
 	if (!value || value.toUpperCase() === 'N/A') return undefined;
@@ -359,6 +371,30 @@ async function refreshZohoProducts(): Promise<Product[]> {
 	});
 }
 
+/**
+ * Read only the website slug and current stock exposed by Zoho's paginated item
+ * list. This deliberately avoids the per-item detail requests used by the full
+ * storefront catalog, making it safe to run frequently for a spreadsheet view.
+ */
+export async function readZohoStockSnapshot(): Promise<ZohoStockSnapshotItem[]> {
+	const stockBySlug = new Map<string, number>();
+	for (let page = 1; page <= 100; page += 1) {
+		const response = await zohoRequest<ZohoItemsResponse>('items', undefined, { page: String(page), per_page: '200' });
+		for (const item of response.items ?? []) {
+			const slug = getCustomField(item, 'Website Slug');
+			if (!slug) continue;
+			if (!hasStockValue(item)) throw new Error(`Zoho item ${asTrimmedString(item.item_id) || slug} did not include stock in the item list.`);
+			const normalizedSlug = slug.toLowerCase();
+			if (stockBySlug.has(normalizedSlug)) throw new Error(`Zoho returned duplicate Website Slug: ${slug}`);
+			stockBySlug.set(normalizedSlug, getStockOnHand(item));
+		}
+		if (!response.page_context?.has_more_page) break;
+		if (page === 100) throw new Error('Zoho Inventory stock pagination exceeded 100 pages.');
+	}
+	if (stockBySlug.size === 0) throw new Error('Zoho Inventory returned no stock items with a Website Slug.');
+	return Array.from(stockBySlug, ([slug, stock]) => ({ slug, stock }));
+}
+
 export async function readZohoProducts(): Promise<Product[]> {
 	await loadPersistentCatalog();
 	if (cachedProductCatalog && cachedProductCatalog.expiresAt > Date.now()) return cloneProducts(cachedProductCatalog.products);
@@ -389,6 +425,38 @@ export async function readZohoProducts(): Promise<Product[]> {
 	})();
 
 	return cloneProducts(await pendingProductCatalogRead);
+}
+
+/**
+ * Fetch a completely fresh product catalog without discarding the last known-good
+ * catalog first. Normal storefront requests can continue using the existing
+ * catalog while this refresh is in flight.
+ */
+export async function forceRefreshZohoProducts(): Promise<Product[]> {
+	if (pendingForcedProductCatalogRefresh) return cloneProducts(await pendingForcedProductCatalogRefresh);
+
+	pendingForcedProductCatalogRefresh = (async () => {
+		// Avoid racing a normal expiry-triggered refresh that could otherwise finish
+		// later and overwrite this explicitly requested result.
+		if (pendingProductCatalogRead) {
+			await pendingProductCatalogRead;
+		}
+		// Product custom fields can otherwise remain stale for the detail-cache TTL.
+		cachedItemDetails.clear();
+		const products = await refreshZohoProducts();
+		const refreshedAt = Date.now();
+		const nextCatalog = { products, refreshedAt, expiresAt: refreshedAt + getCatalogCacheTtlMs() };
+		await persistCatalog(nextCatalog);
+		cachedProductCatalog = nextCatalog;
+		persistentCatalogLoaded = true;
+		return products;
+	})();
+
+	try {
+		return cloneProducts(await pendingForcedProductCatalogRefresh);
+	} finally {
+		pendingForcedProductCatalogRefresh = null;
+	}
 }
 
 export async function updateZohoWebsiteStatus(productIdRaw: string, status: ZohoWebsiteStatus): Promise<Product> {
@@ -456,6 +524,7 @@ export function resetZohoInventoryCacheForTests() {
 	cachedAccessToken = null;
 	cachedProductCatalog = null;
 	pendingProductCatalogRead = null;
+	pendingForcedProductCatalogRefresh = null;
 	persistentCatalogLoaded = false;
 	cachedItemDetails.clear();
 }

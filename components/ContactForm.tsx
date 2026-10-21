@@ -176,8 +176,8 @@ export default function ContactForm({ variant = 'default' }: ContactFormProps) {
 					disabled={isSubmitting}
 					className={
 						isEditorial
-							? 'flex min-h-14 w-full items-center justify-center rounded-2xl bg-deep-tidal-teal-800 px-6 py-3 font-semibold text-mineral-white shadow-[0_18px_40px_-24px_rgba(10,32,39,0.8)] transition-colors hover:bg-deep-tidal-teal-700 disabled:cursor-not-allowed disabled:opacity-70'
-							: 'w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors disabled:opacity-70 disabled:cursor-not-allowed'
+							? 'site-cta w-full bg-deep-tidal-teal-800 text-mineral-white shadow-[0_18px_40px_-24px_rgba(10,32,39,0.8)] hover:bg-deep-tidal-teal-700 disabled:cursor-not-allowed disabled:opacity-70'
+							: 'site-cta w-full bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-70'
 					}>
 					{isSubmitting ? 'Sending...' : 'Send Message'}
 				</button>

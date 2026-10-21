@@ -98,7 +98,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 		<section
 			id='products'
 			aria-labelledby='alternative-products-title'
-			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] overflow-hidden py-20 scroll-mt-10 sm:py-24 lg:py-28'
+			className='relative left-1/2 right-1/2 w-screen -mx-[50vw] overflow-hidden py-16 scroll-mt-10 sm:py-24 lg:py-28'
 			style={{
 				backgroundColor: 'var(--color-primary, #f5f7f8)',
 				backgroundImage: 'linear-gradient(#dde8ed 1px, transparent 1px), linear-gradient(90deg, #dde8ed 1px, transparent 1px)',
@@ -118,18 +118,16 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 			/>
 
 			<div className='relative mx-auto max-w-7xl px-6'>
-				<header className='grid gap-8 pb-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-20 lg:pb-1'>
-					<div>
-						<p className='mb-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
-							<span className='h-px w-3 bg-deep-tidal-teal-500' />
-							The collection
-						</p>
-					</div>
+				<header>
+					<h2 id='alternative-products-title' className='flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
+						<span className='h-px w-3 bg-deep-tidal-teal-500' />
+						The collection
+					</h2>
 				</header>
 
-				<div className='py-7 sm:py-9'>
+				<div className='pb-10 pt-7 sm:pb-12 sm:pt-8 lg:pb-9 lg:pt-9'>
 					<div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-						<div className='relative w-full lg:order-2 lg:max-w-[22rem]'>
+						<div className='relative order-2 w-full lg:order-2 lg:max-w-[22rem]'>
 							<label htmlFor='product-search' className='sr-only'>Search products</label>
 							<Search className='pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-deep-tidal-teal-500' aria-hidden='true' />
 							<input
@@ -139,7 +137,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 								onChange={(event) => setSearchQuery(event.target.value)}
 								placeholder='Search products'
 								autoComplete='off'
-								className='h-11 w-full rounded-full border border-deep-tidal-teal-800/15 bg-white/85 py-2 pl-11 pr-11 text-sm font-medium text-deep-tidal-teal-900 shadow-sm outline-none transition placeholder:text-deep-tidal-teal-500 focus:border-deep-tidal-teal/45 focus:ring-4 focus:ring-deep-tidal-teal/10'
+								className='h-12 w-full rounded-full border border-deep-tidal-teal-800/15 bg-white/85 py-2 pl-11 pr-11 text-base font-medium text-deep-tidal-teal-900 shadow-sm outline-none transition placeholder:text-deep-tidal-teal-500 focus:border-deep-tidal-teal/45 focus:ring-4 focus:ring-deep-tidal-teal/10 lg:h-11 lg:text-sm'
 							/>
 							{searchQuery && (
 								<button type='button' onClick={() => setSearchQuery('')} aria-label='Clear product search' className='absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-deep-tidal-teal-500 transition hover:bg-deep-tidal-teal/10 hover:text-deep-tidal-teal-800'>
@@ -148,7 +146,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 							)}
 						</div>
 
-						<div className='min-w-0 lg:order-1 lg:flex-1'>
+						<div className='order-1 min-w-0 lg:order-1 lg:flex-1'>
 							<div className='scrollbar-hide -mx-6 flex gap-2 overflow-x-auto px-6 pb-1 lg:mx-0 lg:justify-start lg:px-0' role='group' aria-label='Filter products by category'>
 								{PRODUCT_FILTER_CATEGORIES.map((category) => {
 									const selected = category === selectedCategory;
@@ -158,7 +156,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 											type='button'
 											onClick={() => setSelectedCategory(category)}
 											aria-pressed={selected}
-											className={`shrink-0 rounded-full border px-3.5 py-2 text-sm font-bold transition ${selected ? 'border-deep-tidal-teal bg-deep-tidal-teal text-white shadow-sm' : 'border-deep-tidal-teal-800/10 bg-white/65 text-deep-tidal-teal-700 hover:border-deep-tidal-teal/35 hover:bg-white'}`}>
+											className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-bold transition lg:px-3.5 lg:py-2 ${selected ? 'border-deep-tidal-teal bg-deep-tidal-teal text-white shadow-sm' : 'border-deep-tidal-teal-800/10 bg-white/65 text-deep-tidal-teal-700 hover:border-deep-tidal-teal/35 hover:bg-white'}`}>
 											{category}
 										</button>
 									);

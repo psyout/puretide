@@ -150,7 +150,7 @@ export default function PromotionModal({ campaign }: PromotionModalProps) {
 									<button
 										type='button'
 										onClick={shopNow}
-										className='mt-5 inline-flex min-w-[170px] items-center justify-center rounded-full bg-[#25c8d2] px-7 py-3 text-sm font-black uppercase tracking-[0.14em] text-[#031424] shadow-[0_10px_30px_rgba(37,200,210,0.3)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#45dce4] hover:shadow-[0_14px_34px_rgba(37,200,210,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#031424] active:translate-y-0 sm:text-base'>
+										className='site-cta mt-5 min-w-[170px] border border-[#25c8d2] bg-[#25c8d2] font-black text-[#031424] shadow-[0_10px_30px_rgba(37,200,210,0.3)] hover:border-[#45dce4] hover:bg-[#45dce4] hover:shadow-[0_14px_34px_rgba(37,200,210,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#031424]'>
 										Shop now
 									</button>
 								</div>

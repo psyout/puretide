@@ -61,12 +61,12 @@ function Hero() {
 			<div className='flex gap-[14px] justify-center relative flex-wrap'>
 				<a
 					href='#faqs'
-					className='inline-block bg-[#6EB4CC] text-white text-[11px] font-bold tracking-[0.16em] uppercase px-9 py-[14px] rounded no-underline transition-all hover:bg-[#7fc3da] hover:-translate-y-px'>
+					className='site-cta border border-[#6EB4CC] bg-[#6EB4CC] text-white hover:border-[#7fc3da] hover:bg-[#7fc3da]'>
 					Read the FAQs
 				</a>
 				<a
 					href='https://puretide.ca/shop'
-					className='inline-block bg-transparent text-white/70 text-[11px] font-semibold tracking-[0.16em] uppercase px-9 py-[14px] rounded no-underline border border-white/10 transition-all hover:border-white/40 hover:text-white'>
+					className='site-cta border border-white/20 bg-transparent text-white hover:border-white/40 hover:bg-white/5'>
 					Browse Products
 				</a>
 			</div>
@@ -212,7 +212,7 @@ function HowPeptidesWork() {
 					</div>
 					<a
 						href='https://puretide.ca/shop'
-						className='inline-block bg-[#6EB4CC] text-white text-[11px] font-bold tracking-[0.16em] uppercase px-[30px] py-[13px] rounded no-underline transition-all hover:bg-[#7fc3da] hover:-translate-y-px whitespace-nowrap relative'>
+						className='site-cta relative whitespace-nowrap border border-[#6EB4CC] bg-[#6EB4CC] text-white hover:border-[#7fc3da] hover:bg-[#7fc3da]'>
 						Browse All Products →
 					</a>
 				</div>
@@ -403,7 +403,7 @@ function RetaVsOzempic() {
 					</div>
 					<a
 						href='https://puretide.ca/products/retatrutide'
-						className='inline-block bg-[#1C4855] text-white text-[11px] font-bold tracking-[0.16em] uppercase px-7 py-[13px] rounded no-underline transition-all hover:bg-[#2a5f70] hover:-translate-y-px'>
+						className='site-cta border border-[#1C4855] bg-[#1C4855] text-white hover:border-[#2a5f70] hover:bg-[#2a5f70]'>
 						Shop Retatrutide →
 					</a>
 				</div>
@@ -750,7 +750,7 @@ function WhyPureTide() {
 					<p className='text-[15px] text-white/55 max-w-[460px] leading-[1.7]'>Every batch is independently verified. Every order ships from Canada. Zero compromise on purity.</p>
 					<a
 						href='https://puretide.ca/shop'
-						className='inline-block bg-[#6EB4CC] text-white text-[11px] font-bold tracking-[0.16em] uppercase px-[30px] py-[13px] rounded no-underline transition-all hover:bg-[#7fc3da] hover:-translate-y-px whitespace-nowrap relative'>
+						className='site-cta relative whitespace-nowrap border border-[#6EB4CC] bg-[#6EB4CC] text-white hover:border-[#7fc3da] hover:bg-[#7fc3da]'>
 						View Full Catalogue →
 					</a>
 				</div>
@@ -819,12 +819,12 @@ function CTABanner() {
 			<div className='flex gap-3.5 justify-center flex-wrap relative'>
 				<a
 					href='https://puretide.ca/#products'
-					className='inline-block bg-white text-[#1C4855] text-[11px] font-bold tracking-[0.16em] uppercase px-9 py-[14px] rounded no-underline transition-all hover:bg-[#d4eaf3] hover:-translate-y-px'>
+					className='site-cta border border-white bg-white text-[#1C4855] hover:border-[#d4eaf3] hover:bg-[#d4eaf3]'>
 					View All Products
 				</a>
 				<a
 					href='https://puretide.ca/calculator'
-					className='inline-block border border-white/25 text-white/75 text-[11px] font-semibold tracking-[0.16em] uppercase px-8 py-[15px] rounded no-underline transition-all hover:border-white/50 hover:text-white hidden'>
+					className='site-cta hidden border border-white/25 text-white/75 hover:border-white/50 hover:text-white'>
 					Dosage Calculator
 				</a>
 			</div>

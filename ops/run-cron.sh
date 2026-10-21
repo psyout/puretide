@@ -25,6 +25,10 @@ case "$JOB" in
 		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
 			"http://127.0.0.1:3000/api/cron/shipping-automation" -H "Authorization: Bearer $CRON_SECRET"
 		;;
+	zoho-stock-sheet)
+		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
+			-X POST "http://127.0.0.1:3000/api/cron/zoho-stock-sheet" -H "x-cron-secret: $CRON_SECRET"
+		;;
 	*)
 		echo "Unknown cron job: $JOB"
 		exit 2

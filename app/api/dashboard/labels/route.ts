@@ -16,7 +16,7 @@ function parseIsoDateOnly(s: string | null): Date | null {
 }
 
 export async function POST(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 
 	try {

@@ -19,7 +19,7 @@ export default function ProductTabs({ productSlug, description, details }: Produ
 	return (
 		<div className='space-y-5 text-deep-tidal-teal-800'>
 			<section className='border-t border-deep-tidal-teal/10 px-4 pt-5'>
-				<h2 className='mb-2 text-lg font-semibold tracking-tight'>About this product</h2>
+				<h2 className='mb-2 text-md font-semibold tracking-tight'>About this product</h2>
 				{copy && <p className='text-[0.95rem] leading-6 text-deep-tidal-teal-700 text-pretty'>{copy}</p>}
 				{ctas.map((cta) => (
 					<p
@@ -42,7 +42,7 @@ export default function ProductTabs({ productSlug, description, details }: Produ
 							type='button'
 							onClick={() => setDetailsOpen(!detailsOpen)}
 							aria-expanded={detailsOpen}
-							className='flex w-full items-center justify-between gap-3 py-1 text-left text-lg font-semibold tracking-tight text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal-600'>
+							className='flex w-full items-center justify-between gap-3 py-1 text-left text-md font-semibold tracking-tight text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal-600'>
 							<span>Research details</span>
 							<ChevronDown className={`h-5 w-5 shrink-0 transition-transform duration-200 ${detailsOpen ? 'rotate-180' : ''}`} />
 						</button>
@@ -59,7 +59,7 @@ export default function ProductTabs({ productSlug, description, details }: Produ
 						type='button'
 						onClick={() => setResearchNoticeOpen(!researchNoticeOpen)}
 						aria-expanded={researchNoticeOpen}
-						className='flex w-full items-center justify-between gap-3 py-1 text-left text-lg font-semibold tracking-tight text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal-600'>
+						className='flex w-full items-center justify-between gap-3 py-1 text-left text-md font-semibold tracking-tight text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal-600'>
 						<span>Important: Research Use Only</span>
 						<ChevronDown className={`h-5 w-5 shrink-0 transition-transform duration-200 ${researchNoticeOpen ? 'rotate-180' : ''}`} />
 					</button>

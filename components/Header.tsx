@@ -104,24 +104,31 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 	return (
 		<header
 			ref={headerRef}
-			className={stacked ? 'bg-deep-tidal-teal-600/80 backdrop-blur-md relative z-[100]' : 'bg-deep-tidal-teal-600/80 backdrop-blur-md fixed top-0 left-0 right-0 z-[100]'}>
-			<div className='max-w-7xl mx-auto px-6 sm:px-6 py-4 flex items-center'>
+			className={
+				stacked
+					? 'relative z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
+					: 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
+			}>
+			<div className='mx-auto flex max-w-7xl items-center px-6 py-3.5 sm:py-4 lg:px-8'>
 				<div className='flex items-center'>
 					<Link
 						href='/'
 						className='flex items-center transition-opacity hover:opacity-80'>
-						<Logo className='h-6 sm:h-7 w-auto' />
+						<Logo className='h-6 w-auto' />
 					</Link>
-					<span className='ml-3 sm:ml-6 inline-flex items-center gap-2 text-white font-medium tracking-wide text-sm sm:text-base cursor-default'>
-						<span className='text-[1rem] mt-[0.4rem] flex gap-1'>
+					<span className='ml-3 inline-flex cursor-default items-center text-xs font-medium tracking-[0.04em] text-white/90 sm:ml-4 sm:text-sm'>
+						<span className='flex items-center gap-1.5'>
 							Proudly
-							<MapleLeafIcon className='h-[1.35rem] w-auto' /> Canadian
+							<MapleLeafIcon className='h-4 w-auto' /> Canadian
 						</span>
 					</span>
 				</div>
 
-				<div className='ml-auto flex items-center gap-2 sm:gap-4'>
-					<nav className='hidden md:flex items-center gap-4' aria-label='Main navigation'>
+				<div className='ml-auto flex items-center gap-2 sm:gap-3'>
+					{/* Desktop Navbar */}
+					<nav
+						className='hidden items-center gap-6 md:flex lg:gap-8'
+						aria-label='Main navigation'>
 						<div
 							className='relative'
 							onMouseEnter={() => setIsProductsMenuOpen(true)}
@@ -138,23 +145,34 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 								onFocus={() => setIsProductsMenuOpen(true)}
 								aria-haspopup='menu'
 								aria-expanded={isProductsMenuOpen}
-								className='inline-flex items-center gap-1 font-medium uppercase text-white transition-colors hover:text-muted-sage-200'>
+								className='inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white'>
 								PRODUCTS
-								<ChevronDown className={`h-4 w-4 transition-transform ${isProductsMenuOpen ? 'rotate-180' : ''}`} aria-hidden='true' />
+								<ChevronDown
+									className={`h-3.5 w-3.5 transition-transform ${isProductsMenuOpen ? 'rotate-180' : ''}`}
+									aria-hidden='true'
+								/>
 							</button>
 							<AnimatePresence>
 								{isProductsMenuOpen && (
-									<div className='absolute left-1/2 top-full w-52 -translate-x-1/2 pt-5'>
+									<div className='absolute left-1/2 top-full w-48 -translate-x-1/2 pt-[23px]'>
 										<motion.div
 											initial={{ opacity: 0 }}
 											animate={{ opacity: 1 }}
 											exit={{ opacity: 0 }}
 											transition={{ duration: 0.16 }}
-											className='relative rounded-xl border border-deep-tidal-teal-800/10 bg-white p-2 text-deep-tidal-teal-900 shadow-[0_16px_42px_rgba(5,32,39,0.2)]'
+											className='relative rounded-xl border border-deep-tidal-teal-800/10 bg-white p-1.5 text-deep-tidal-teal-900 shadow-[0_16px_42px_rgba(5,32,39,0.2)]'
 											role='menu'>
-											<span className='absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-deep-tidal-teal-800/10 bg-white' aria-hidden='true' />
+											<span
+												className='absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-deep-tidal-teal-800/10 bg-white'
+												aria-hidden='true'
+											/>
 											{PRODUCT_MENU_CATEGORIES.map((category) => (
-												<button key={category} type='button' role='menuitem' onClick={() => selectProductCategory(category)} className='block w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold transition hover:bg-deep-tidal-teal/5 hover:text-deep-tidal-teal'>
+												<button
+													key={category}
+													type='button'
+													role='menuitem'
+													onClick={() => selectProductCategory(category)}
+													className='block w-full rounded-lg px-3.5 py-2 text-left text-[13px] font-semibold transition hover:bg-deep-tidal-teal/5 hover:text-deep-tidal-teal'>
 													{category}
 												</button>
 											))}
@@ -163,7 +181,6 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 								)}
 							</AnimatePresence>
 						</div>
-						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<div
 							className='relative'
 							onMouseEnter={() => setIsAboutMenuOpen(true)}
@@ -180,37 +197,47 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 								onFocus={() => setIsAboutMenuOpen(true)}
 								aria-haspopup='menu'
 								aria-expanded={isAboutMenuOpen}
-								className='inline-flex items-center gap-1 hover:text-muted-sage-200 text-white transition-colors font-medium uppercase'>
+								className='inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white'>
 								ABOUT US
-								<ChevronDown className={`h-4 w-4 transition-transform ${isAboutMenuOpen ? 'rotate-180' : ''}`} aria-hidden='true' />
+								<ChevronDown
+									className={`h-3.5 w-3.5 transition-transform ${isAboutMenuOpen ? 'rotate-180' : ''}`}
+									aria-hidden='true'
+								/>
 							</button>
 							<AnimatePresence>
 								{isAboutMenuOpen && (
-									<div className='absolute left-1/2 top-full w-48 -translate-x-1/2 pt-5'>
+									<div className='absolute left-1/2 top-full w-44 -translate-x-1/2 pt-[23px]'>
 										<motion.div
 											initial={{ opacity: 0, y: -6 }}
 											animate={{ opacity: 1, y: 0 }}
 											exit={{ opacity: 0, y: -6 }}
 											transition={{ duration: 0.16 }}
-											className='relative rounded-xl border border-deep-tidal-teal-800/10 bg-white p-2 text-deep-tidal-teal-900 shadow-[0_16px_42px_rgba(5,32,39,0.2)]'
+											className='relative rounded-xl border border-deep-tidal-teal-800/10 bg-white p-1.5 text-deep-tidal-teal-900 shadow-[0_16px_42px_rgba(5,32,39,0.2)]'
 											role='menu'>
-											<span className='absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-deep-tidal-teal-800/10 bg-white' aria-hidden='true' />
-											<Link href='/learn' role='menuitem' className='block rounded-lg px-4 py-3 text-sm font-semibold transition hover:bg-deep-tidal-teal/5 hover:text-deep-tidal-teal'>Learn</Link>
+											<span
+												className='absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-deep-tidal-teal-800/10 bg-white'
+												aria-hidden='true'
+											/>
+											<Link
+												href='/learn'
+												role='menuitem'
+												className='block rounded-lg px-3.5 py-2 text-[13px] font-semibold transition hover:bg-deep-tidal-teal/5 hover:text-deep-tidal-teal'>
+												Learn
+											</Link>
 										</motion.div>
 									</div>
 								)}
 							</AnimatePresence>
 						</div>
-						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 						<button
 							type='button'
 							onClick={() => scrollToSection('contact')}
-							className='hover:text-muted-sage-200 text-white transition-colors font-medium uppercase'>
+							className='text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white'>
 							CONTACT
 						</button>
-						<div className='hidden sm:block w-0.5 h-4 bg-mineral-white' />
 					</nav>
-					<div className='text-mineral-white hover:text-muted-sage-200 transition-colors mt-1 md:mt-1'>
+					{/* End Desktop Navbar */}
+					<div className='ml-1 text-mineral-white transition-colors hover:text-white md:ml-2'>
 						<CartIcon />
 					</div>
 					<button
@@ -246,15 +273,32 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 								className='flex flex-col gap-2'
 								variants={containerVariants}>
 								<motion.div variants={itemVariants}>
-									<button type='button' onClick={() => setIsMobileProductsOpen((open) => !open)} aria-expanded={isMobileProductsOpen} aria-controls='mobile-products-menu' className='flex w-full items-center justify-between rounded-lg px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
+									<button
+										type='button'
+										onClick={() => setIsMobileProductsOpen((open) => !open)}
+										aria-expanded={isMobileProductsOpen}
+										aria-controls='mobile-products-menu'
+										className='flex w-full items-center justify-between rounded-lg px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
 										<span>PRODUCTS</span>
-										<ChevronDown className={`h-4 w-4 transition-transform ${isMobileProductsOpen ? 'rotate-180' : ''}`} aria-hidden='true' />
+										<ChevronDown
+											className={`h-4 w-4 transition-transform ${isMobileProductsOpen ? 'rotate-180' : ''}`}
+											aria-hidden='true'
+										/>
 									</button>
 									<AnimatePresence initial={false}>
 										{isMobileProductsOpen && (
-											<motion.div id='mobile-products-menu' initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className='ml-3 overflow-hidden border-l border-white/25 pl-4'>
+											<motion.div
+												id='mobile-products-menu'
+												initial={{ height: 0, opacity: 0 }}
+												animate={{ height: 'auto', opacity: 1 }}
+												exit={{ height: 0, opacity: 0 }}
+												className='ml-3 overflow-hidden border-l border-white/25 pl-4'>
 												{PRODUCT_MENU_CATEGORIES.map((category) => (
-													<button key={category} type='button' onClick={() => selectProductCategory(category)} className='block w-full py-2 text-left text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>
+													<button
+														key={category}
+														type='button'
+														onClick={() => selectProductCategory(category)}
+														className='block w-full py-2 text-left text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>
 														{category.toUpperCase()}
 													</button>
 												))}
@@ -263,19 +307,41 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 									</AnimatePresence>
 								</motion.div>
 								<motion.div variants={itemVariants}>
-									<button type='button' onClick={() => setIsMobileAboutOpen((open) => !open)} aria-expanded={isMobileAboutOpen} aria-controls='mobile-about-menu' className='flex w-full items-center justify-between rounded-lg px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
+									<button
+										type='button'
+										onClick={() => setIsMobileAboutOpen((open) => !open)}
+										aria-expanded={isMobileAboutOpen}
+										aria-controls='mobile-about-menu'
+										className='flex w-full items-center justify-between rounded-lg px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
 										<span>ABOUT US</span>
-										<ChevronDown className={`h-4 w-4 transition-transform ${isMobileAboutOpen ? 'rotate-180' : ''}`} aria-hidden='true' />
+										<ChevronDown
+											className={`h-4 w-4 transition-transform ${isMobileAboutOpen ? 'rotate-180' : ''}`}
+											aria-hidden='true'
+										/>
 									</button>
 									<AnimatePresence initial={false}>
 										{isMobileAboutOpen && (
-											<motion.div id='mobile-about-menu' initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className='ml-3 overflow-hidden border-l border-white/25 pl-4'>
-												<Link href='/learn' className='block py-2 text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>LEARN</Link>
+											<motion.div
+												id='mobile-about-menu'
+												initial={{ height: 0, opacity: 0 }}
+												animate={{ height: 'auto', opacity: 1 }}
+												exit={{ height: 0, opacity: 0 }}
+												className='ml-3 overflow-hidden border-l border-white/25 pl-4'>
+												<Link
+													href='/learn'
+													className='block py-2 text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>
+													LEARN
+												</Link>
 											</motion.div>
 										)}
 									</AnimatePresence>
 								</motion.div>
-								<motion.button variants={itemVariants} onClick={() => scrollToSection('contact')} className='px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>CONTACT</motion.button>
+								<motion.button
+									variants={itemVariants}
+									onClick={() => scrollToSection('contact')}
+									className='px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
+									CONTACT
+								</motion.button>
 							</motion.div>
 						</nav>
 					</motion.div>

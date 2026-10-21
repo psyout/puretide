@@ -44,6 +44,16 @@ export default function DashboardLoginPage() {
 						<p className='text-xs text-[#8d8d8d]'>Sign in</p>
 					</div>
 				</div>
+				<a
+					href='/auth/login?returnTo=/dashboard'
+					className='block w-full rounded-lg bg-deep-tidal-teal py-3 text-center font-semibold text-white hover:bg-deep-tidal-teal-600'>
+					Continue with Auth0
+				</a>
+				<div className='flex items-center gap-3 py-1 text-xs uppercase tracking-wide text-[#8d8d8d]'>
+					<div className='h-px flex-1 bg-black/10' />
+					<span>or use the original secret</span>
+					<div className='h-px flex-1 bg-black/10' />
+				</div>
 				<form onSubmit={handleSubmit} className='space-y-4'>
 					<div>
 						<label htmlFor='secret' className='block text-sm font-medium text-[#4a4a4a] mb-2'>

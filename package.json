@@ -11,6 +11,7 @@
 		"test:email": "tsx scripts/test-all-emails.ts",
 		"test:zoho:inventory": "tsx scripts/test-zoho-inventory.ts",
 		"test:zoho:inventory-write": "tsx scripts/test-zoho-inventory-write.ts",
+		"sync:zoho-stock-sheet": "tsx scripts/sync-zoho-stock-sheet.ts",
 		"zoho:exchange-token": "zsh scripts/exchange-zoho-token.zsh",
 		"zoho:configure-local": "zsh scripts/configure-zoho-local.zsh",
 		"test:wrike": "node scripts/test-wrike.mjs",
@@ -20,6 +21,7 @@
 		"wrike:labels:daily": "node scripts/wrike-daily-labels.mjs"
 	},
 	"dependencies": {
+		"@auth0/nextjs-auth0": "^4.32.0",
 		"axios": "^1.8.0",
 		"docx": "^9.6.1",
 		"form-data": "^4.0.0",

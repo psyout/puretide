@@ -55,7 +55,7 @@ export default function CartIcon() {
 
 	return (
 		<div
-			className='relative'
+			className='relative flex items-center'
 			onMouseEnter={openPreview}
 			onMouseLeave={schedulePreviewClose}>
 			<button
@@ -69,7 +69,7 @@ export default function CartIcon() {
 				aria-haspopup='dialog'
 				className='relative inline-flex items-center justify-center transition-colors duration-300'>
 				<svg
-					className={`h-6 w-6 transition-colors duration-300 ${isAnimate ? 'text-eucalyptus-500' : 'text-current'}`}
+					className={`h-[22px] w-[22px] transition-colors duration-300 ${isAnimate ? 'text-eucalyptus-500' : 'text-current'}`}
 					fill='none'
 					stroke='currentColor'
 					viewBox='0 0 24 24'
@@ -92,7 +92,7 @@ export default function CartIcon() {
 
 			{!isCartPage && isPreviewOpen && (
 				<div
-					className='absolute right-[-1rem] top-full hidden w-[24rem] pt-5 text-left text-deep-tidal-teal-900 md:block'
+					className='absolute right-[-1rem] top-full hidden w-[24rem] pt-6 text-left text-deep-tidal-teal-900 md:block'
 					onMouseEnter={openPreview}
 					onMouseLeave={schedulePreviewClose}>
 					<div className='relative rounded-xl border border-deep-tidal-teal/10 bg-white p-5 shadow-[0_18px_50px_rgba(5,32,39,0.2)]'>

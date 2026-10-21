@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
 
 export async function POST(request: NextRequest) {
-  const authError = requireDashboardAuth(request);
+  const authError = await requireDashboardAuth(request);
   if (authError) return authError;
 
   try {

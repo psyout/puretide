@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
+import { getAuth0Client, isAllowedDashboardSession } from '@/lib/auth0';
 
 export const DASHBOARD_COOKIE_NAME = 'dashboard_session';
 const COOKIE_NAME = DASHBOARD_COOKIE_NAME;
@@ -59,7 +60,13 @@ export function verifySessionCookie(cookieHeader: string | null): boolean {
 	return true;
 }
 
-export function requireDashboardAuth(request: Request): NextResponse | null {
+export async function requireDashboardAuth(request: Request): Promise<NextResponse | null> {
+	const auth0 = getAuth0Client();
+	if (auth0) {
+		const session = await auth0.getSession();
+		if (isAllowedDashboardSession(session)) return null;
+	}
+
 	const cookieHeader = request.headers.get('cookie');
 	if (!verifySessionCookie(cookieHeader)) {
 		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });

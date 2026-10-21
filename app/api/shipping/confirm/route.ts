@@ -3,7 +3,7 @@ import { triggerShippingConfirmationManually } from '@/lib/wrikeShipping';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
 
 export async function POST(request: NextRequest) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 
 	try {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 
 	return NextResponse.json({

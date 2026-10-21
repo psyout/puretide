@@ -68,6 +68,17 @@ const canonicalizeHeader = (value: string) =>
 		.replace(/\s+/g, ' ')
 		.trim();
 
+const columnName = (zeroBasedIndex: number) => {
+	let value = zeroBasedIndex + 1;
+	let result = '';
+	while (value > 0) {
+		value -= 1;
+		result = String.fromCharCode(65 + (value % 26)) + result;
+		value = Math.floor(value / 26);
+	}
+	return result;
+};
+
 const normalizeSheetEmail = (value: unknown) =>
 	String(value ?? '')
 		.trim()
@@ -776,6 +787,78 @@ export const writeSheetProducts = async (items: Product[]) => {
 		reportSheetsError('Error writing products to sheet', error);
 		throw error;
 	}
+};
+
+export type ZohoStockSheetItem = { slug: string; stock: number };
+
+export type ZohoStockSheetSyncResult = {
+	updated: number;
+	sheetRowsWithoutZohoMatch: string[];
+	zohoItemsWithoutSheetRow: string[];
+	column: string;
+};
+
+export const syncZohoStockToSheet = async (items: ZohoStockSheetItem[]): Promise<ZohoStockSheetSyncResult> => {
+	const sheets = getSheetsClient();
+	const title = await getSheetTitle(sheets);
+	const range = `${title}!A1:ZZ`;
+	const response = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range });
+	const rows = (response.data.values ?? []) as string[][];
+	if (rows.length === 0) throw new Error('The product sheet is empty.');
+
+	const [headerRow, ...dataRows] = rows;
+	const indexMap = headerRow.reduce<Record<string, number>>((acc, header, index) => {
+		acc[canonicalizeHeader(String(header ?? ''))] = index;
+		return acc;
+	}, {});
+	const slugIndex = indexMap[canonicalizeHeader('slug')];
+	if (slugIndex == null) throw new Error('The product sheet must contain a slug column before Zoho stock can be synced.');
+
+	let stockIndex = indexMap[canonicalizeHeader('total stock')];
+	if (stockIndex == null) {
+		stockIndex = headerRow.length;
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: `${title}!${columnName(stockIndex)}1`,
+			valueInputOption: 'RAW',
+			requestBody: { values: [['total stock']] },
+		});
+	}
+
+	const stockBySlug = new Map(items.map((item) => [String(item.slug).trim().toLowerCase(), toSafeStockInteger(item.stock, `Zoho stock for slug "${item.slug}"`)]));
+	const matchedZohoSlugs = new Set<string>();
+	const sheetRowsWithoutZohoMatch: string[] = [];
+	let updated = 0;
+	const values = dataRows.map((row) => {
+		const slug = String(row[slugIndex] ?? '').trim();
+		if (!slug) return [''];
+		const normalizedSlug = slug.toLowerCase();
+		const stock = stockBySlug.get(normalizedSlug);
+		if (stock == null) {
+			sheetRowsWithoutZohoMatch.push(slug);
+			return [''];
+		}
+		matchedZohoSlugs.add(normalizedSlug);
+		updated += 1;
+		return [stock];
+	});
+
+	if (values.length > 0) {
+		const column = columnName(stockIndex);
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: `${title}!${column}2:${column}${values.length + 1}`,
+			valueInputOption: 'RAW',
+			requestBody: { values },
+		});
+	}
+
+	return {
+		updated,
+		sheetRowsWithoutZohoMatch,
+		zohoItemsWithoutSheetRow: Array.from(stockBySlug.keys()).filter((slug) => !matchedZohoSlugs.has(slug)),
+		column: columnName(stockIndex),
+	};
 };
 
 // Client tracking

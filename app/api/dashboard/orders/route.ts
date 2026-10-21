@@ -5,7 +5,7 @@ import { buildSafeApiError } from '@/lib/apiError';
 import { completeManualEtransferOrder } from '@/lib/friendsFamilyOrderCompletion';
 
 export async function GET(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const orders = await listOrdersFromDb();
@@ -26,7 +26,7 @@ type CompleteOrderBody = {
 };
 
 export async function POST(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 
 	try {

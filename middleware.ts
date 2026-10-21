@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getAuth0Client, isAllowedDashboardSession } from '@/lib/auth0';
 
 const COOKIE_NAME = 'dashboard_session';
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -63,6 +64,29 @@ export async function middleware(request: NextRequest) {
 		});
 	}
 
+	const auth0 = getAuth0Client();
+	if (auth0) {
+		const authResponse = await auth0.middleware(request);
+		if (pathname.startsWith('/auth')) return authResponse;
+
+		if (pathname.startsWith('/dashboard')) {
+			const session = await auth0.getSession(request);
+			const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
+			const timestamp = cookieValue?.split('.')[0] ?? '';
+			const hasLegacySession = Boolean(cookieValue) && !isExpired(timestamp) && (await verifyDashboardCookie(cookieValue));
+
+			if (pathname === '/dashboard/login') return authResponse;
+			if (!isAllowedDashboardSession(session) && !hasLegacySession) {
+				return NextResponse.redirect(new URL('/dashboard/login', request.url));
+			}
+			if (pathname === '/dashboard/stock') {
+				return NextResponse.redirect(new URL('/dashboard', request.url));
+			}
+		}
+
+		return authResponse;
+	}
+
 	// Skip dashboard auth for API routes, static files, and favicon
 	if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.includes('favicon.ico')) {
 		return NextResponse.next();
@@ -88,5 +112,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ['/((?!api|_next/static|favicon.ico).*)'],
+	matcher: ['/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)'],
 };

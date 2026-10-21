@@ -159,7 +159,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 						type='button'
 						onClick={handleAdd}
 						disabled={isSoldOut || justAdded}
-						className='relative z-20 mt-4  inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-deep-tidal-teal-700/20 bg-transparent px-4 py-3 text-base font-bold text-deep-tidal-teal-700 transition hover:border-deep-tidal-teal hover:bg-deep-tidal-teal hover:text-white disabled:cursor-not-allowed disabled:border-deep-tidal-teal-800/10 disabled:text-deep-tidal-teal-400'>
+						className='site-cta relative z-20 mt-4 w-full border border-deep-tidal-teal-700/20 bg-transparent font-bold text-deep-tidal-teal-700 hover:border-deep-tidal-teal hover:bg-deep-tidal-teal hover:text-white disabled:cursor-not-allowed disabled:border-deep-tidal-teal-800/10 disabled:text-deep-tidal-teal-400'>
 						{justAdded ? <Check className='h-4 w-4' /> : isSoldOut ? <Loader2 className='h-4 w-4' /> : null}
 						<span>{justAdded ? 'Added' : isSoldOut ? 'Unavailable' : 'Add To Cart'}</span>
 					</button>

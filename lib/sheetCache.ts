@@ -2,6 +2,7 @@ import { readSheetPromoCodes, readSheetClients, readSheetFriendsFamilyAllowlist,
 import { readProducts } from './productCatalog';
 import type { FriendsFamilySheetEntry } from './stockSheet';
 import type { PromotionCampaign } from '@/types/product';
+import type { Product } from '@/types/product';
 import { getAutomaticSitewidePromo } from './promo';
 
 // Product and operational data can tolerate longer caching. Promo codes use a
@@ -185,6 +186,35 @@ export async function warmCaches() {
 	} catch (error) {
 		console.warn('Cache warming failed:', error);
 	}
+}
+
+/**
+ * Refresh Google Sheets-backed caches atomically. Existing cached values remain
+ * available if any upstream read fails.
+ */
+export async function refreshSheetCaches() {
+	const [promos, clients, friendsFamily, promotionCampaigns] = await Promise.all([
+		readSheetPromoCodes(),
+		readSheetClients(),
+		readSheetFriendsFamilyAllowlist(),
+		readSheetPromotionCampaigns(),
+	]);
+
+	setCache(promoCache, 'promos', promos, PROMO_CODE_CACHE_TTL_MS);
+	setCache(clientCache, 'clients', clients, PROMO_CACHE_TTL_MS);
+	setCache(friendsFamilyCache, 'friends-family', friendsFamily, PROMO_CACHE_TTL_MS);
+	setCache(promotionCampaignCache, 'promotion-campaigns', promotionCampaigns, PROMO_CACHE_TTL_MS);
+
+	return {
+		promoCodes: promos.length,
+		clients: clients.length,
+		friendsFamily: friendsFamily.length,
+		promotionCampaigns: promotionCampaigns.length,
+	};
+}
+
+export function primeProductCache(products: Product[]) {
+	setCache(productCache, 'products', products, PRODUCT_CACHE_TTL_MS);
 }
 
 // Cache invalidation functions

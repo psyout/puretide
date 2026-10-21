@@ -5,7 +5,7 @@ import type { PromoCode } from '@/types/product';
 import { invalidatePromoCache } from '@/lib/sheetCache';
 
 export async function GET(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const codes = await readSheetPromoCodes();
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const payload = (await request.json()) as { codes?: PromoCode[] };

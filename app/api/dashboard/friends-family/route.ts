@@ -5,7 +5,7 @@ import { addSheetFriendsFamilyEmail, deleteSheetFriendsFamilyEmail, renameSheetF
 import { getCachedSheetFriendsFamilyAllowlist, invalidateFriendsFamilyCache } from '@/lib/sheetCache';
 
 export async function GET(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const entries = await getCachedSheetFriendsFamilyAllowlist();
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const body = (await request.json()) as { email?: unknown };
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const body = (await request.json()) as { email?: unknown; newEmail?: unknown; isActive?: unknown };
@@ -59,7 +59,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const body = (await request.json()) as { email?: unknown };

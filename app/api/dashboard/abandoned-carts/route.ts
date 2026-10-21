@@ -22,7 +22,7 @@ function readiness() {
 }
 
 export async function GET(request: Request) {
-	const unauthorized = requireDashboardAuth(request);
+	const unauthorized = await requireDashboardAuth(request);
 	if (unauthorized) return unauthorized;
 	try {
 		const [settings, carts] = await Promise.all([getAbandonedCartSettings(), listAbandonedCarts(100)]);
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-	const unauthorized = requireDashboardAuth(request);
+	const unauthorized = await requireDashboardAuth(request);
 	if (unauthorized) return unauthorized;
 	try {
 		const body = (await request.json()) as Record<string, unknown>;
@@ -54,7 +54,7 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
-	const unauthorized = requireDashboardAuth(request);
+	const unauthorized = await requireDashboardAuth(request);
 	if (unauthorized) return unauthorized;
 	try {
 		const body = (await request.json()) as Record<string, unknown>;

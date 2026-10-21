@@ -16,7 +16,7 @@ async function readAvailableCoaFiles(): Promise<string[]> {
 }
 
 export async function GET(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	try {
 		const [items, coaFiles] = await Promise.all([readProducts(), readAvailableCoaFiles()]);
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 	return NextResponse.json(
 		{ ok: false, error: 'Zoho Inventory is the product source of truth. Edit products directly in Zoho.' },
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-	const authError = requireDashboardAuth(request);
+	const authError = await requireDashboardAuth(request);
 	if (authError) return authError;
 
 	try {
