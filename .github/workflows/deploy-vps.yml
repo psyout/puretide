@@ -110,56 +110,80 @@ jobs:
             exit 1
           fi
 
-      - name: SSH smoke test
+      - name: Establish persistent SSH connection
         shell: bash
         run: |
           set -euo pipefail
           PORT="${VPS_SSH_PORT:-22}"
-          SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          echo "Testing SSH connection to $SSH_TARGET on port $PORT..."
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "echo ok"
+          cat > ~/.ssh/config <<EOF
+          Host puretide-deploy
+            HostName ${VPS_HOST}
+            User ${VPS_USER}
+            Port ${PORT}
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+            ConnectTimeout 30
+            StrictHostKeyChecking yes
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+            ControlMaster auto
+            ControlPersist 10m
+            ControlPath ~/.ssh/puretide-%C
+          EOF
+          chmod 600 ~/.ssh/config
+
+          # The public SSH port receives substantial unauthenticated bot traffic.
+          # Establish one authenticated transport with backoff, then reuse it for
+          # every ssh and rsync operation in this job. This avoids opening a fresh
+          # connection for every deployment step and hitting sshd MaxStartups.
+          for attempt in $(seq 1 12); do
+            echo "Opening deployment SSH connection (attempt ${attempt}/12)..."
+            if ssh -MNf puretide-deploy; then
+              ssh -O check puretide-deploy
+              echo "Persistent SSH connection established."
+              exit 0
+            fi
+            sleep $((attempt * 3))
+          done
+
+          echo "Unable to establish the persistent deployment SSH connection after 12 attempts."
+          exit 1
 
       - name: Prepare VPS without stopping live app
         shell: bash
         run: |
           set -euo pipefail
-          PORT="${VPS_SSH_PORT:-22}"
-          SSH_TARGET="${VPS_USER}@${VPS_HOST}"
           # Seed the staging static/ dir from the currently live build so
           # previously deployed, content-hashed CSS/JS chunk files are
           # preserved across this deployment. Without this, any browser tab
           # or cache still holding HTML from the previous build would 404 on
           # its CSS/JS the moment this deployment replaces .next/static.
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "set -euo pipefail; test -d \"${VPS_PATH}\"; test -f \"${VPS_PATH}/.env\"; mkdir -p \"${VPS_PATH}/.deploy/next/static\" \"${VPS_PATH}/.deploy/public\" \"${VPS_PATH}/data\"; command -v npm; command -v pm2; cd \"${VPS_PATH}\"; if [ -d .next/static ]; then rsync -a .next/static/ .deploy/next/static/; fi"
+          ssh puretide-deploy "set -euo pipefail; test -d \"${VPS_PATH}\"; test -f \"${VPS_PATH}/.env\"; mkdir -p \"${VPS_PATH}/.deploy/next/static\" \"${VPS_PATH}/.deploy/public\" \"${VPS_PATH}/data\"; command -v npm; command -v pm2; cd \"${VPS_PATH}\"; if [ -d .next/static ]; then rsync -a .next/static/ .deploy/next/static/; fi"
 
       - name: Sync complete build to VPS staging area
         shell: bash
         run: |
           set -euo pipefail
-          PORT="${VPS_SSH_PORT:-22}"
-          SSH_TARGET="${VPS_USER}@${VPS_HOST}"
-          SSH="ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p ${PORT}"
           # .next/static holds content-hashed CSS/JS chunks. Sync WITHOUT
           # --delete so assets from previous deployments (seeded above)
           # remain available for any client whose cached HTML still
           # references them by their old hashed filename.
-          rsync -az -e "$SSH" .next/static/ "${SSH_TARGET}:${VPS_PATH}/.deploy/next/static/"
+          rsync -az -e ssh .next/static/ "puretide-deploy:${VPS_PATH}/.deploy/next/static/"
           # Everything else in .next (server code, BUILD_ID, standalone
           # runtime) must match this exact build, so it is fully replaced.
           # --exclude keeps this from touching the static/ dir populated above.
-          rsync -az --delete --exclude='static' -e "$SSH" .next/ "${SSH_TARGET}:${VPS_PATH}/.deploy/next/"
-          rsync -az --delete -e "$SSH" public/ "${SSH_TARGET}:${VPS_PATH}/.deploy/public/"
-          rsync -az --delete -e "$SSH" ops/ "${SSH_TARGET}:${VPS_PATH}/.deploy/ops/"
-          rsync -az -e "$SSH" package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/.deploy/"
+          rsync -az --delete --exclude='static' -e ssh .next/ "puretide-deploy:${VPS_PATH}/.deploy/next/"
+          rsync -az --delete -e ssh public/ "puretide-deploy:${VPS_PATH}/.deploy/public/"
+          rsync -az --delete -e ssh ops/ "puretide-deploy:${VPS_PATH}/.deploy/ops/"
+          rsync -az -e ssh package.json package-lock.json "puretide-deploy:${VPS_PATH}/.deploy/"
 
       - name: Activate build, restart PM2, and health-check
         shell: bash
         run: |
           set -euo pipefail
-          PORT="${VPS_SSH_PORT:-22}"
-          SSH_TARGET="${VPS_USER}@${VPS_HOST}"
           COMMIT_SHA="${GITHUB_SHA}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes -p "$PORT" "$SSH_TARGET" "
+          ssh puretide-deploy "
             set -euo pipefail
             cd \"${VPS_PATH}\"
             echo \"Deploying commit ${COMMIT_SHA}\"
@@ -285,7 +309,23 @@ jobs:
               fi
             done
 
+            echo 'Verifying representative public image delivery...'
+            IMAGE_RESULT=\$(curl --silent --show-error --max-time 5 -o /dev/null -w '%{http_code} %{content_type}' 'http://127.0.0.1:3000/bottles/v01.webp')
+            IMAGE_STATUS=\"\${IMAGE_RESULT%% *}\"
+            IMAGE_CTYPE=\"\${IMAGE_RESULT#* }\"
+            echo \"  /bottles/v01.webp -> \${IMAGE_STATUS} (\${IMAGE_CTYPE})\"
+            if [ \"\${IMAGE_STATUS}\" != '200' ] || [[ \"\${IMAGE_CTYPE}\" != image/* ]]; then
+              echo \"Health check failed: representative product image returned \${IMAGE_STATUS} (\${IMAGE_CTYPE}).\"
+              rollback
+              exit 1
+            fi
+
             pm2 save
-            echo \"Deployment verified: homepage and all referenced CSS assets returned HTTP 200 for commit ${COMMIT_SHA}.\"
+            echo \"Deployment verified: homepage, CSS assets, and product images returned HTTP 200 for commit ${COMMIT_SHA}.\"
             pm2 describe \"${PM2_APP}\" | sed -n '1,120p'
           "
+
+      - name: Close persistent SSH connection
+        if: always()
+        shell: bash
+        run: ssh -O exit puretide-deploy 2>/dev/null || true
