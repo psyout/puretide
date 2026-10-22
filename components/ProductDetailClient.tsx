@@ -131,12 +131,12 @@ export default function ProductDetailClient({ product, description, details, has
 						<span className='text-[1.75rem] font-light'>C</span>${salePrice.toFixed(2)}
 					</span>
 				</div>
-				<div className='flex flex-row xs:flex-col items-start gap-3 text-xs md:text-sm text-deep-tidal-teal-600 sm:flex-row sm:items-center sm:gap-3'>
+				<div className='flex flex-col items-start gap-1.5 text-xs text-deep-tidal-teal-600 min-[401px]:flex-row min-[401px]:items-center min-[401px]:gap-3 md:text-sm'>
 					<span className='flex items-center gap-1'>
 						<CreditCard className='w-4 h-4' />
 						5% fee when paying by card
 					</span>
-					<span className='hidden text-deep-tidal-teal-300 sm:inline'>•</span>
+					<span className='hidden text-deep-tidal-teal-300 min-[401px]:inline'>•</span>
 					<span className='flex items-center gap-1 text-emerald-600'>
 						<Truck className='w-4 h-4' />
 						{`Free shipping over $${FREE_SHIPPING_THRESHOLD}`}

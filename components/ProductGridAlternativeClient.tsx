@@ -170,16 +170,16 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 					id='product-collection'
 					className='relative scroll-mt-28'>
 					{showSkeleton && (
-						<div className='grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6'>
+						<div className='grid grid-cols-1 gap-3 min-[351px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4'>
 							{Array.from({ length: skeletonCount }).map((_, index) => (
 								<div
 									key={index}
 									className='animate-pulse overflow-hidden rounded-xl border border-deep-tidal-teal/10 bg-white shadow-sm shadow-deep-tidal-teal/5'>
 									<div className='aspect-square bg-[#f3f4f4]' />
-									<div className='flex min-h-[15rem] flex-col gap-4 px-5 pb-5 pt-7 sm:px-6 sm:pb-6'>
-										<div className='h-7 w-2/3 rounded bg-deep-tidal-teal/10' />
-										<div className='h-4 w-1/2 rounded bg-deep-tidal-teal/10' />
-										<div className='mt-auto h-12 rounded-lg bg-deep-tidal-teal/10' />
+									<div className='flex min-h-[12rem] flex-col gap-3 px-3 pb-3 pt-4 sm:min-h-[15rem] sm:gap-4 sm:px-6 sm:pb-6 sm:pt-7'>
+										<div className='h-5 w-3/4 rounded bg-deep-tidal-teal/10 sm:h-7 sm:w-2/3' />
+										<div className='h-3 w-1/2 rounded bg-deep-tidal-teal/10 sm:h-4' />
+										<div className='mt-auto h-10 rounded-lg bg-deep-tidal-teal/10 sm:h-12' />
 									</div>
 								</div>
 							))}
@@ -188,7 +188,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 
 					{visibleProducts.length > 0 ? (
 						<div
-							className={`grid grid-cols-1 gap-5 transition-opacity duration-300 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6 ${showSkeleton ? 'pointer-events-none absolute inset-0 opacity-0' : 'opacity-100'}`}
+							className={`grid grid-cols-1 gap-3 transition-opacity duration-300 min-[351px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 ${showSkeleton ? 'pointer-events-none absolute inset-0 opacity-0' : 'opacity-100'}`}
 							aria-hidden={showSkeleton}>
 							{visibleProducts.map((product) => (
 								<div key={product.id}>
