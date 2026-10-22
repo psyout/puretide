@@ -142,7 +142,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 
 			<div className='flex min-h-[11.5rem] min-w-0 flex-1 flex-col px-3 pb-3 pt-3 sm:min-h-[13rem] sm:px-6 sm:pb-6 sm:pt-4'>
 				<div className='min-w-0'>
-					<h3 className='line-clamp-2 text-md font-medium leading-tight text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal sm:text-[1rem]'>{product.name}</h3>
+					<h3 className='line-clamp-2 text-base font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[351px]:text-[clamp(0.875rem,3.75vw,1rem)] sm:text-base'>{product.name}</h3>
 					{product.subtitle && <p className='mb-1 mt-1 line-clamp-2 text-[0.65rem] font-medium leading-normal text-deep-tidal-teal-600 sm:text-[0.7rem]'>{product.subtitle}</p>}
 				</div>
 
