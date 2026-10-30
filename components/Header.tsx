@@ -109,7 +109,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 					? 'relative z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
 					: 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
 			}>
-			<div className='mx-auto flex max-w-7xl items-center px-6 py-3.5 sm:py-4 lg:px-8'>
+			<div className='mx-auto flex max-w-6xl items-center px-6 py-3.5 sm:py-4'>
 				<div className='flex items-center'>
 					<Link
 						href='/'
@@ -268,7 +268,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 						variants={wrapperVariants}
 						className='md:hidden absolute top-full left-0 right-0 bg-deep-tidal-teal-600/80 backdrop-blur-lg shadow-xl overflow-hidden'
 						style={{ originY: 'top' }}>
-						<nav className='max-w-7xl mx-auto px-4 sm:px-6 py-4'>
+						<nav className='max-w-6xl mx-auto px-4 sm:px-6 py-4'>
 							<motion.div
 								className='flex flex-col gap-2'
 								variants={containerVariants}>

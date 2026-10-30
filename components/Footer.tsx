@@ -9,7 +9,7 @@ import { PRODUCT_CATEGORY_EVENT, PRODUCT_MENU_CATEGORIES, type ProductFilterCate
 const companyLinks = [
 	{ href: '/#about', label: 'About us' },
 	{ href: '/learn', label: 'Learn' },
-	{ href: '/affiliate', label: 'Affiliate program' },
+	// { href: '/affiliate', label: 'Affiliate program' },
 	{ href: '/#contact', label: 'Contact' },
 ];
 
@@ -38,7 +38,7 @@ export default function Footer() {
 			aria-label='Site footer'>
 			<div className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(77,167,182,0.13),transparent_36%),radial-gradient(circle_at_88%_100%,rgba(168,213,186,0.08),transparent_32%)]' />
 
-			<div className='relative mx-auto max-w-7xl px-6 py-12 sm:py-14 lg:px-8'>
+			<div className='relative mx-auto max-w-6xl px-6 py-12 sm:py-14 lg:px-8'>
 				<div className='border-t border-white/25 pt-10'>
 					<div className='grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_0.8fr_0.75fr_1fr] lg:gap-12'>
 						<div className='max-w-md'>

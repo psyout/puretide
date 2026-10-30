@@ -35,7 +35,7 @@ export default function ProductTabs({ productSlug, description, details }: Produ
 				))}
 			</section>
 
-			<div className='divide-y divide-deep-tidal-teal/10 border-y border-deep-tidal-teal/10'>
+			<div className='divide-y divide-deep-tidal-teal/10 border-t border-deep-tidal-teal/10'>
 				{details && (
 					<section className='px-4 py-5'>
 						<button

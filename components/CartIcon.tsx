@@ -15,7 +15,7 @@ export default function CartIcon() {
 	const [mounted, setMounted] = useState(false);
 	const [isAnimate, setIsAnimate] = useState(false);
 	const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-	const prevCountRef = useRef(0);
+	const prevCountRef = useRef(cartItems.reduce((sum, item) => sum + item.quantity, 0));
 	const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 	const isCartPage = pathname === '/cart';
@@ -23,7 +23,6 @@ export default function CartIcon() {
 
 	useEffect(() => {
 		setMounted(true);
-		prevCountRef.current = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 	}, []);
 
 	useEffect(() => {

@@ -28,7 +28,7 @@ const ProductImage = ({ product, priority = false }: { product: Product; priorit
 				style={{ width: 'auto', height: 'auto' }}
 				unoptimized={product.image.startsWith('http')}
 				priority={priority}
-				className='w-auto h-auto max-h-[280px] md:max-h-[400px] lg:max-h-[500px] object-contain drop-shadow-xl transition-all duration-300'
+				className='h-auto w-auto max-h-[280px] max-w-full object-contain drop-shadow-xl transition-all duration-300 md:max-h-[400px] md:max-w-[400px] lg:max-h-[500px]'
 			/>
 		);
 	}
@@ -76,16 +76,34 @@ export default async function ProductPage({ params }: ProductPageProps) {
 				message={process.env.NEXT_PUBLIC_PROMO_BANNER_MESSAGE}
 				cta={process.env.NEXT_PUBLIC_PROMO_BANNER_CTA}
 			/>
-			<div className='max-w-7xl mx-auto px-6 pt-32 pb-10'>
-				<Link
-					href='/'
-					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
-					← Back to Products
-				</Link>
+			<div className='max-w-6xl mx-auto px-6 pt-32 pb-10'>
+				<nav
+					aria-label='Breadcrumb'
+					className='mb-8 min-w-0'>
+					<ol className='flex min-w-0 items-center gap-2 text-[0.95rem] leading-6'>
+						<li className='shrink-0'>
+							<Link
+								href='/#products'
+								className='font-medium text-deep-tidal-teal-600 underline-offset-4 transition-colors hover:text-deep-tidal-teal hover:underline'>
+								Shop
+							</Link>
+						</li>
+						<li
+							aria-hidden='true'
+							className='shrink-0 text-deep-tidal-teal-400'>
+							/
+						</li>
+						<li
+							aria-current='page'
+							className='truncate font-semibold text-deep-tidal-teal-800'>
+							{product.name}
+						</li>
+					</ol>
+				</nav>
 
 				<div className='overflow-hidden'>
-					<div className='grid grid-cols-1 md:grid-cols-[minmax(0,40%)_minmax(0,60%)]'>
-						<div className='p-0 md:col-start-2 md:p-6 lg:p-10'>
+					<div className='grid grid-cols-1 md:grid-cols-2 md:items-start md:gap-10 lg:gap-12'>
+						<div className='p-0 md:col-start-2 md:w-full'>
 							{/* Mobile Image Container */}
 							<div className='relative p-4 flex items-center justify-center mb-4 md:hidden'>
 								{hasCoaFile && (
@@ -108,8 +126,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						</div>
 
 						{/* Desktop Image Container */}
-						<div className='hidden md:col-start-1 md:row-start-1 md:flex md:min-h-[660px] md:items-start md:justify-center md:p-6 lg:min-h-[720px] lg:p-10'>
-							<div className='relative mt-6 w-full max-w-sm bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 px-4 py-16 flex justify-center items-start rounded-xl'>
+						<div className='hidden md:col-start-1 md:row-start-1 md:flex md:min-h-[660px] md:items-start lg:min-h-[720px]'>
+							<div className='relative flex w-full items-start justify-center rounded-xl bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 px-4 py-16'>
 								{hasCoaFile && (
 									<div className='absolute left-4 top-4 z-10'>
 										<TestidesBadge />
@@ -124,7 +142,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 					</div>
 
 					{/* Trust Indicators */}
-					<div className='grid grid-rows-1 md:grid-cols-3 divide-y divide-deep-tidal-teal/10 md:divide-y-0 md:divide-x border-t border-deep-tidal-teal/10'>
+					<div className='grid grid-rows-1 md:grid-cols-3 divide-y divide-deep-tidal-teal/10 md:divide-y-0 md:divide-x border-t border-deep-tidal-teal/10 mt-5'>
+						<div className='flex flex-col items-center justify-center gap-3 p-5 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
+							<BadgeCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-13 md:w-13' />
+							<div>
+								<h3 className='text-sm font-bold leading-tight text-deep-tidal-teal-900 md:text-[15px]'>Quality & Purity Assured</h3>
+								<p className='mt-1 text-sm leading-normal text-deep-tidal-teal-700 md:text-[14px]'>99% purity, lab tested & verified</p>
+							</div>
+						</div>
 						<div className='flex flex-col items-center justify-center gap-3 p-5 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
 							<ShieldCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-13 md:w-13' />
 							<div>
@@ -133,17 +158,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
 							</div>
 						</div>
 						<div className='flex flex-col items-center justify-center gap-3 p-5 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
-							<BadgeCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-13 md:w-13' />
-							<div>
-								<h3 className='text-sm font-bold leading-tight text-deep-tidal-teal-900 md:text-[15px]'>Quality Assured</h3>
-								<p className='mt-1 text-sm leading-normal text-deep-tidal-teal-700 md:text-[14px]'>Lab tested & verified</p>
-							</div>
-						</div>
-						<div className='flex flex-col items-center justify-center gap-3 p-5 text-center md:flex-row md:gap-4 md:p-6 md:text-left'>
 							<PackageCheck className='h-10 w-10 shrink-0 stroke-[1.1] text-deep-tidal-teal-700 md:h-13 md:w-13' />
 							<div>
-								<h3 className='text-sm font-bold leading-tight text-deep-tidal-teal-900 md:text-[15px]'>Discreet Packaging</h3>
-								<p className='mt-1 text-sm leading-normal text-deep-tidal-teal-700 md:text-[14px]'>Private & secure delivery</p>
+								<h3 className='text-sm font-bold leading-tight text-deep-tidal-teal-900 md:text-[15px]'>Ships within 48–72 hours</h3>
+								<p className='mt-1 text-sm leading-normal text-deep-tidal-teal-700 md:text-[14px]'>Express shipping in up to 2 business days</p>
 							</div>
 						</div>
 					</div>

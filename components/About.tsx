@@ -54,7 +54,7 @@ export default function About() {
 					/>
 				</div>
 
-				<div className='relative z-10 mx-auto max-w-7xl px-6'>
+				<div className='relative z-10 mx-auto max-w-6xl px-6'>
 					<h2 className='text-4xl md:text-5xl font-bold text-deep-tidal-teal-800 mb-12 tracking-tight'>Built for innovation. Focused on you.</h2>
 
 					<div className='grid grid-cols-1 md:grid-cols-3 gap-6'>

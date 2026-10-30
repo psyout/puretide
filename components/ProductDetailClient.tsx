@@ -6,10 +6,11 @@ import { getSalePrice } from '@/lib/promo';
 import { useCart } from '@/context/CartContext';
 import ProductActions from '@/components/ProductActions';
 import ProductTabs from '@/components/ProductTabs';
-import { ChevronRight, CreditCard, FileBadge, FlaskConical, Truck } from 'lucide-react';
+import { ChevronRight, CreditCard, FileBadge, Truck } from 'lucide-react';
 import { iconMap } from '@/lib/productIcons';
 import Link from 'next/link';
 import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { getDiscountedPrice } from '@/lib/pricing';
 
 interface ProductDetailClientProps {
 	product: Product;
@@ -232,42 +233,34 @@ export default function ProductDetailClient({ product, description, details, has
 				</div>
 			)}
 
-			{/* Discount Table */}
-			{product.slug !== 'bacteriostatic-water' && (
-				<div className='mb-6 mt-10 max-w overflow-hidden rounded-lg border-deep-tidal-teal/10 bg-mineral-white shadow-sm hidden'>
-					<div className='bg-deep-tidal-teal/5 px-3 py-2 border-b border-deep-tidal-teal/10'>
-						<h3 className='text-sm font-bold text-deep-tidal-teal-700 tracking-wider'>Discount per quantity</h3>
-					</div>
-					<div className='overflow-x-auto'>
-						<table className='w-full text-[14px] text-left'>
-							<thead>
-								<tr className='border-b border-deep-tidal-teal/5'>
-									<th className='px-4 py-2 font-semibold text-deep-tidal-teal-700'>Quantity</th>
-									<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>2 - 5</th>
-									<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>6 - 7</th>
-									<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>8 - 9</th>
-									<th className='px-4 py-2 font-medium text-deep-tidal-teal-600'>10 +</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<td className='px-4 py-3 font-semibold text-deep-tidal-teal-700'>Discount</td>
-									<td className='px-4 py-3 text-emerald-600 font-bold'>5%</td>
-									<td className='px-4 py-3 text-emerald-600 font-bold'>10%</td>
-									<td className='px-4 py-3 text-emerald-600 font-bold'>15%</td>
-									<td className='px-4 py-3 text-emerald-600 font-bold'>25%</td>
-								</tr>
-								<tr className='border-t border-deep-tidal-teal/5'>
-									<td className='px-4 py-3 font-semibold text-deep-tidal-teal-700'>Price</td>
-									<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(displayPrice * 0.95).toFixed(2)}</td>
-									<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(displayPrice * 0.9).toFixed(2)}</td>
-									<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(displayPrice * 0.85).toFixed(2)}</td>
-									<td className='px-4 py-3 text-deep-tidal-teal-700 font-medium'>${(displayPrice * 0.75).toFixed(2)}</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
+			{/* Quantity pricing */}
+			{product.slug !== 'bacteriostatic-water' && saleDiscount === 0 && (
+				<section
+					className='mb-6 mt-8 overflow-hidden rounded-xl border border-deep-tidal-teal/15 bg-mineral-white'
+					aria-label='Quantity pricing'>
+					<table className='w-full border-collapse text-sm'>
+						<thead className='sr-only'>
+							<tr>
+								<th>Quantity</th>
+								<th>Unit price</th>
+							</tr>
+						</thead>
+						<tbody className='divide-y divide-deep-tidal-teal/10'>
+							<tr>
+								<td className='px-5 py-4 text-[0.9rem] font-medium text-deep-tidal-teal-700'>1–2 units</td>
+								<td className='px-5 py-4 text-right text-[0.9rem] font-medium text-deep-tidal-teal-700'>C${displayPrice.toFixed(2)} each</td>
+							</tr>
+							<tr>
+								<td className='px-5 py-4 text-[0.9rem] font-medium text-deep-tidal-teal-700'>3–4 units</td>
+								<td className='px-5 py-4 text-right text-[0.9rem] font-semibold text-emerald-700'>C${getDiscountedPrice(displayPrice, 3).toFixed(2)} each</td>
+							</tr>
+							<tr>
+								<td className='px-5 py-4 text-[0.9rem] font-medium text-deep-tidal-teal-700'>5+ units</td>
+								<td className='px-5 py-4 text-right text-[0.9rem] font-semibold text-emerald-700'>C${getDiscountedPrice(displayPrice, 5).toFixed(2)} each</td>
+							</tr>
+						</tbody>
+					</table>
+				</section>
 			)}
 
 			{/* Supporting product information */}
@@ -277,28 +270,6 @@ export default function ProductDetailClient({ product, description, details, has
 					description={description}
 					details={details}
 				/>
-			</div>
-
-			{/* Research and delivery notice */}
-			<div className='mb-8 md:mb-10'>
-				<div className='grid grid-cols-1 divide-y divide-deep-tidal-teal/15 rounded-2xl bg-gradient-to-br from-deep-tidal-teal/5 to-eucalyptus-50/80 p-4 xl:grid-cols-2 xl:divide-x xl:divide-y-0 xl:divide-deep-tidal-teal/20 xl:p-5'>
-					<div className='flex items-center gap-3 pb-4 xl:pr-6 xl:pb-0'>
-						<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
-							<FlaskConical className='h-6 w-6' />
-						</span>
-						<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
-							<strong className='font-bold text-md'>For research use only.</strong> Not intended for human or animal consumption.
-						</p>
-					</div>
-					<div className='flex items-center gap-3 pt-4 xl:pl-6 xl:pt-0'>
-						<span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700 shadow-sm'>
-							<Truck className='h-6 w-6' />
-						</span>
-						<p className='text-sm leading-relaxed text-deep-tidal-teal-800'>
-							<strong className='font-bold text-md'>Not responsible for shipments</strong> to incorrect addresses. Please double check before placing your order.
-						</p>
-					</div>
-				</div>
 			</div>
 		</>
 	);

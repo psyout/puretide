@@ -100,6 +100,8 @@ While the active, sitewide `SITEWIDE25` campaign is within its scheduled dates, 
 
 Wrike integration can create order and client tasks, track fulfillment, and attach generated Avery 5162 label documents.
 
+Pending manual e-transfer orders receive one friendly payment reminder after two hours. The VPS cron checks every 15 minutes, confirms the Wrike payment field is still `Awaiting Transfer`, and sends the customer an order summary plus payment instructions through the order SMTP account. Set `ETRANSFER_REMINDER_DELAY_HOURS` to a number of hours to override the default, and optionally set `ETRANSFER_REMINDER_FROM` to change the sender address.
+
 ## Local Development
 
 Requirements:

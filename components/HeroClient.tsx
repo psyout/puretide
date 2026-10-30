@@ -105,7 +105,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			<div
 				className='absolute inset-x-0 bottom-0 z-10 flex items-center justify-center'
 				style={{ top: 'var(--site-header-height, 3.75rem)' }}>
-				<div className='mx-auto flex max-w-7xl flex-col items-center px-6 text-center text-pretty'>
+				<div className='mx-auto flex max-w-6xl flex-col items-center px-6 text-center text-pretty'>
 					<div className='mb-4 lg:mb-6'>
 						<LogoHorizontal
 							className='mx-auto h-24 w-auto drop-shadow-2xl sm:h-28 md:h-32 lg:h-36'

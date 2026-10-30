@@ -1,14 +1,5 @@
 import { FREE_SHIPPING_THRESHOLD, getEffectiveShippingCost } from '../lib/constants';
 
-function getDiscountedPrice(price: number, quantity: number): number {
-	// Simplified for test; real implementation uses DISCOUNT_TIERS
-	if (quantity >= 10) return price * 0.75;
-	if (quantity >= 8) return price * 0.85;
-	if (quantity >= 6) return price * 0.9;
-	if (quantity >= 2) return price * 0.95;
-	return price;
-}
-
 function computeTotals(params: { cartItems: { price: number; quantity: number }[]; appliedDiscount?: number; appliedFreeShipping?: boolean }) {
 	const { cartItems, appliedDiscount = 0, appliedFreeShipping = false } = params;
 	const subtotalRaw = cartItems.reduce((s, item) => s + item.price * item.quantity, 0);

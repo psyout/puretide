@@ -47,8 +47,6 @@ export const DEFAULT_ORDER_NOTIFICATION_EMAIL = 'orders@puretide.ca';
 
 // Discount tiers based on quantity
 export const DISCOUNT_TIERS = [
-	{ minQty: 10, discount: 0.25 },
-	{ minQty: 8, discount: 0.15 },
-	{ minQty: 6, discount: 0.1 },
-	{ minQty: 2, discount: 0.05 },
+	{ minQty: 5, discount: 0.2 },
+	{ minQty: 3, discount: 0.1 },
 ] as const;
