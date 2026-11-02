@@ -18,6 +18,7 @@ import { sendPendingManualEtransferNotifications, type FulfillmentOrder } from '
 import { createOrderTask } from '@/lib/wrike';
 import { decidePaymentPathWithFeatureFlag, getVerifiedFriendsFamilyEmailFromCookie } from '@/lib/friendsFamily';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
+import { prepareOrderAttribution } from '@/lib/orderAttribution';
 
 interface OrderPayload {
 	customer: {
@@ -235,7 +236,9 @@ export async function POST(request: Request) {
 		};
 
 		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+		const orderId = `order_${orderNumber}`;
 		const createdAt = new Date().toISOString();
+		const attribution = await prepareOrderAttribution(orderId, request.headers.get('cookie'));
 		const etransferProviderRaw = String(process.env.ETRANSFER_PROVIDER ?? 'manual');
 		const etransferProvider = etransferProviderRaw.toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 		const verifiedFriendsFamilyEmail = getVerifiedFriendsFamilyEmailFromCookie(request.headers.get('cookie'));
@@ -261,9 +264,10 @@ export async function POST(request: Request) {
 			}),
 		);
 		const orderRecord = {
-			id: `order_${orderNumber}`,
+			id: orderId,
 			orderNumber,
 			createdAt,
+			...attribution.fields,
 			paymentStatus: 'pending' as const,
 			paymentProvider: orderPayload.paymentMethod === 'etransfer' && paymentPath === 'bluepeak' ? 'bluepeak' : undefined,
 			etransfer:
@@ -313,6 +317,7 @@ export async function POST(request: Request) {
 		if (idemKey) await setCachedOrder(idemKey, orderRecord.orderNumber, orderRecord.id);
 		const confirmationToken = createOrderConfirmationToken(orderRecord.orderNumber);
 		const response = NextResponse.json({ ok: true, orderId: orderRecord.id, orderNumber: orderRecord.orderNumber, confirmationToken });
+		if (attribution.setCookie) response.headers.append('Set-Cookie', attribution.setCookie);
 
 		const emailEnabled = String(process.env.ENABLE_EMAIL_NOTIFICATIONS ?? '').toLowerCase() !== 'false';
 		const wrikeEnabled = String(process.env.ENABLE_WRIKE_INTEGRATION ?? '').toLowerCase() === 'true';

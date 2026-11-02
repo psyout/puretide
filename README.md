@@ -22,8 +22,8 @@ The application is intended for self-hosted deployment with Next.js standalone o
 
 The site minimizes unnecessary data collection, but it is not an anonymous or client-only application. Order, customer, payment-status, and fulfillment data are processed server-side and shared with configured service providers as required to complete orders.
 
-- No Google Analytics
-- Optional Meta Pixel integration when configured
+- No Google Analytics or Meta Pixel
+- Optional, consent-gated agency order attribution; QA and production have separate release gates
 - Cart contents persist locally in the customer's browser
 - Orders persist in the server-side order database
 - CSP, HSTS in production, clickjacking protection, and restrictive permissions headers
@@ -280,6 +280,12 @@ npm start
 ```
 
 Production deployments must use HTTPS, preserve the database across releases, restrict dashboard and operational secrets, and configure authenticated webhooks for the selected payment provider.
+
+### Agency order attribution
+
+The agency connector is server-only and disabled unless `ATTRIBUTION_ENABLED=true`. QA uses `ATTRIBUTION_ENVIRONMENT=qa`, `ATTRIBUTION_PRODUCTION_ENABLED=false`, and the `binom_click_id` landing parameter. Configure the collector URL, key ID, collector secret, two distinct merchant-only secrets, consent policy, and retention in the protected server environment. Never commit these values or expose them to browser code.
+
+The store persists attribution with the committed order, queues placed and verified-paid states separately, and retries delivery through `/api/cron/order-attribution`. Production reporting must remain disabled until the agency completes the coordinated QA readback test.
 
 ## License
 

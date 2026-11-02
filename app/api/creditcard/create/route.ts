@@ -18,6 +18,7 @@ import { getPaymentProvider } from '@/lib/paymentProvider';
 import { getGatewaylinxConfig } from '@/lib/env';
 import { validateEnv } from '@/lib/env';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
+import { prepareOrderAttribution } from '@/lib/orderAttribution';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -239,7 +240,9 @@ export async function POST(request: Request) {
 
 		const timestamp = Date.now();
 		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+		const orderId = `order_${timestamp}`;
 		const createdAt = new Date().toISOString();
+		const attribution = await prepareOrderAttribution(orderId, request.headers.get('cookie'));
 
 		const confirmationToken = createOrderConfirmationToken(orderNumber);
 		const confirmationParams = new URLSearchParams({ orderNumber });
@@ -265,9 +268,10 @@ export async function POST(request: Request) {
 
 		// Build order record
 		const orderRecord = {
-			id: `order_${timestamp}`,
+			id: orderId,
 			orderNumber,
 			createdAt,
+			...attribution.fields,
 			paymentStatus: 'pending' as const,
 			paymentProvider: gatewaylinxConfig ? 'gatewaylinx' : 'digipay',
 			...payload,
@@ -343,12 +347,15 @@ export async function POST(request: Request) {
 		);
 
 		if (idemKey) await setCachedDigipay(idemKey, orderNumber, sessionResult.redirectUrl);
-		return json({
-			ok: true,
-			redirectUrl: sessionResult.redirectUrl,
-			orderNumber,
-			confirmationToken: confirmationToken ?? null,
-		});
+		return json(
+			{
+				ok: true,
+				redirectUrl: sessionResult.redirectUrl,
+				orderNumber,
+				confirmationToken: confirmationToken ?? null,
+			},
+			attribution.setCookie ? { headers: { 'Set-Cookie': attribution.setCookie } } : {},
+		);
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'creditcard:create' });
 		console.error(JSON.stringify({ label: 'creditcard:create:error', errorId: safe.errorId }));
