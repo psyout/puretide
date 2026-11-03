@@ -922,7 +922,7 @@ export default function StockDashboardPage() {
 
 	const handleSignOut = async () => {
 		await fetch('/api/dashboard/signout', { method: 'POST', credentials: 'include' });
-		window.location.href = '/auth/logout?returnTo=/dashboard/login';
+		window.location.href = '/auth/logout';
 	};
 
 	return (

@@ -33,7 +33,14 @@ let auth0Client: Auth0Client | null = null;
 export function getAuth0Client(): Auth0Client | null {
 	if (!isAuth0Configured()) return null;
 	if (!auth0Client) {
-		auth0Client = new Auth0Client({ signInReturnToPath: '/dashboard' });
+		auth0Client = new Auth0Client({
+			domain: process.env.AUTH0_DOMAIN?.trim(),
+			clientId: process.env.AUTH0_CLIENT_ID?.trim(),
+			clientSecret: process.env.AUTH0_CLIENT_SECRET?.trim(),
+			secret: process.env.AUTH0_SECRET?.trim(),
+			appBaseUrl: process.env.APP_BASE_URL?.trim() || undefined,
+			signInReturnToPath: '/dashboard',
+		});
 	}
 	return auth0Client;
 }
