@@ -108,7 +108,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							</p>
 							<Link
 								href='/'
-								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+								className='site-cta cta-primary'>
 								Return to shop
 							</Link>
 						</div>
@@ -141,7 +141,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							<div className='mt-6'>
 								<Link
 									href='/'
-									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+									className='site-cta cta-primary'>
 									Return to shop
 								</Link>
 							</div>
@@ -169,7 +169,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						<p className='text-deep-tidal-teal-800 mb-6'>We could not find a recent order. Please return to the shop.</p>
 						<Link
 							href='/'
-							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+							className='site-cta cta-primary'>
 							Continue shopping
 						</Link>
 					</div>
@@ -206,7 +206,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							</p>
 							<Link
 								href='/'
-								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+								className='site-cta cta-primary'>
 								Return to shop
 							</Link>
 						</div>
@@ -231,12 +231,12 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						<div className='flex flex-col sm:flex-row gap-3'>
 							<Link
 								href='/checkout'
-								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block text-center'>
+								className='site-cta cta-primary text-center'>
 								Try again
 							</Link>
 							<Link
 								href='/'
-								className='bg-transparent hover:bg-deep-tidal-teal/5 text-deep-tidal-teal font-semibold py-3 px-6 rounded transition-colors inline-block text-center border border-deep-tidal-teal/20'>
+								className='site-cta cta-secondary text-center'>
 								Return to shop
 							</Link>
 						</div>
@@ -276,12 +276,12 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							<div className='flex flex-col sm:flex-row gap-3'>
 								<Link
 									href='/checkout'
-									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block text-center'>
+									className='site-cta cta-primary text-center'>
 									Try again
 								</Link>
 								<Link
 									href='/'
-									className='bg-transparent hover:bg-deep-tidal-teal/5 text-deep-tidal-teal font-semibold py-3 px-6 rounded transition-colors inline-block text-center border border-deep-tidal-teal/20'>
+									className='site-cta cta-secondary text-center'>
 									Return to shop
 								</Link>
 							</div>
@@ -308,7 +308,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 								<p className='text-deep-tidal-teal-600 text-sm mb-4'>Order number: {order.orderNumber ?? orderNumberParam}</p>
 								<Link
 									href='/'
-									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+									className='site-cta cta-primary'>
 									Return to shop
 								</Link>
 							</div>
@@ -497,7 +497,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 							<div className='mt-6'>
 								<Link
 									href='/'
-									className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+									className='site-cta cta-primary'>
 									Return to shop
 								</Link>
 							</div>
@@ -517,7 +517,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						<p className='text-deep-tidal-teal-800 mb-4'>Your order was received and is awaiting payment confirmation.</p>
 						<Link
 							href='/'
-							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+							className='site-cta cta-primary'>
 							Return to shop
 						</Link>
 					</div>
@@ -539,12 +539,12 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						<div className='flex flex-col sm:flex-row gap-3'>
 							<Link
 								href='/checkout'
-								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block text-center'>
+								className='site-cta cta-primary text-center'>
 								Try again
 							</Link>
 							<Link
 								href='/'
-								className='bg-transparent hover:bg-deep-tidal-teal/5 text-deep-tidal-teal font-semibold py-3 px-6 rounded transition-colors inline-block text-center border border-deep-tidal-teal/20'>
+								className='site-cta cta-secondary text-center'>
 								Return to shop
 							</Link>
 						</div>
@@ -568,12 +568,12 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 						<div className='flex flex-col sm:flex-row gap-3'>
 							<Link
 								href='/checkout'
-								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block text-center'>
+								className='site-cta cta-primary text-center'>
 								Try again
 							</Link>
 							<Link
 								href='/'
-								className='bg-transparent hover:bg-deep-tidal-teal/5 text-deep-tidal-teal font-semibold py-3 px-6 rounded transition-colors inline-block text-center border border-deep-tidal-teal/20'>
+								className='site-cta cta-secondary text-center'>
 								Return to shop
 							</Link>
 						</div>
@@ -759,7 +759,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 					<div className='mt-8'>
 						<Link
 							href='/'
-							className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+							className='site-cta cta-primary'>
 							Continue shopping
 						</Link>
 					</div>

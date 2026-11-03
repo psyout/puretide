@@ -174,11 +174,7 @@ export default function ContactForm({ variant = 'default' }: ContactFormProps) {
 				<button
 					type='submit'
 					disabled={isSubmitting}
-					className={
-						isEditorial
-							? 'site-cta w-full bg-deep-tidal-teal-800 text-mineral-white shadow-[0_18px_40px_-24px_rgba(10,32,39,0.8)] hover:bg-deep-tidal-teal-700 disabled:cursor-not-allowed disabled:opacity-70'
-							: 'site-cta w-full bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-70'
-					}>
+				className='site-cta cta-primary w-full'>
 					{isSubmitting ? 'Sending...' : 'Send Message'}
 				</button>
 			</form>

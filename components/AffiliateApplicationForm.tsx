@@ -229,7 +229,7 @@ export default function AffiliateApplicationForm() {
 			<button
 				type='submit'
 				disabled={isSubmitting}
-				className='site-cta mt-6 w-full border border-deep-tidal-teal bg-deep-tidal-teal text-white hover:border-deep-tidal-teal-600 hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-60'>
+				className='site-cta cta-primary mt-6 w-full'>
 				{isSubmitting ? 'Submitting…' : 'Submit application'}
 				{!isSubmitting && (
 					<ArrowRight

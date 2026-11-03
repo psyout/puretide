@@ -11,7 +11,7 @@ export default function NotFound() {
 					<p className='text-deep-tidal-teal-800 mb-8'>The page you&apos;re looking for doesn&apos;t exist or has been moved.</p>
 					<Link
 						href='/'
-						className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+						className='site-cta cta-primary'>
 						Back to shop
 					</Link>
 				</div>

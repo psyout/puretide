@@ -18,14 +18,19 @@ function MapleLeafIcon({ className }: { className?: string }) {
 			aria-hidden='true'
 			focusable='false'>
 			<path
-				fill='#FFFFFF'
+				fill='currentColor'
 				d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z'
 			/>
 		</svg>
 	);
 }
 
-export default function Header({ stacked = false }: { stacked?: boolean }) {
+type HeaderProps = {
+	stacked?: boolean;
+	variant?: 'default' | 'learn';
+};
+
+export default function Header({ stacked = false, variant = 'default' }: HeaderProps) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,6 +39,13 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 	const [isMobileProductsOpen, setIsMobileProductsOpen] = useState(false);
 	const [isMobileAboutOpen, setIsMobileAboutOpen] = useState(false);
 	const headerRef = useRef<HTMLDivElement>(null);
+	const isLearnVariant = variant === 'learn';
+	const desktopNavClass = isLearnVariant
+		? 'inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal'
+		: 'inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white';
+	const mobileNavClass = isLearnVariant
+		? 'font-medium text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal'
+		: 'font-medium text-white transition-colors hover:text-muted-sage-200';
 
 	useEffect(() => {
 		setIsMenuOpen(false);
@@ -105,18 +117,24 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 		<header
 			ref={headerRef}
 			className={
-				stacked
+				isLearnVariant
+					? 'sticky left-0 right-0 top-0 z-[100] border-b border-deep-tidal-teal/10 bg-white/95 shadow-sm backdrop-blur-md'
+					: stacked
 					? 'relative z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
 					: 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
 			}>
-			<div className='mx-auto flex max-w-6xl items-center px-6 py-3.5 sm:py-4'>
+			<div className='mx-auto flex min-h-[62px] max-w-6xl items-center px-6 py-2.5 md:min-h-[70px] md:py-3.5'>
 				<div className='flex items-center'>
 					<Link
 						href='/'
 						className='flex items-center transition-opacity hover:opacity-80'>
-						<Logo className='h-6 w-auto' />
+						<Logo
+							className='h-6 w-auto'
+							fillColor={isLearnVariant ? 'fill-deep-tidal-teal-700' : 'fill-white'}
+						/>
 					</Link>
-					<span className='ml-3 inline-flex cursor-default items-center text-xs font-medium tracking-[0.04em] text-white/90 sm:ml-4 sm:text-sm'>
+					<span
+						className={`ml-3 inline-flex cursor-default items-center text-xs font-medium tracking-[0.04em] sm:ml-4 sm:text-sm ${isLearnVariant ? 'text-deep-tidal-teal-800' : 'text-white/90'}`}>
 						<span className='flex items-center gap-1.5'>
 							Proudly
 							<MapleLeafIcon className='h-4 w-auto' /> Canadian
@@ -145,7 +163,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 								onFocus={() => setIsProductsMenuOpen(true)}
 								aria-haspopup='menu'
 								aria-expanded={isProductsMenuOpen}
-								className='inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white'>
+								className={desktopNavClass}>
 								PRODUCTS
 								<ChevronDown
 									className={`h-3.5 w-3.5 transition-transform ${isProductsMenuOpen ? 'rotate-180' : ''}`}
@@ -197,7 +215,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 								onFocus={() => setIsAboutMenuOpen(true)}
 								aria-haspopup='menu'
 								aria-expanded={isAboutMenuOpen}
-								className='inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white'>
+								className={desktopNavClass}>
 								ABOUT US
 								<ChevronDown
 									className={`h-3.5 w-3.5 transition-transform ${isAboutMenuOpen ? 'rotate-180' : ''}`}
@@ -232,14 +250,22 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 						<button
 							type='button'
 							onClick={() => scrollToSection('contact')}
-							className='text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white'>
+							className={desktopNavClass}>
 							CONTACT
 						</button>
 					</nav>
 					{/* End Desktop Navbar */}
-					<div className='ml-1 text-mineral-white transition-colors hover:text-white md:ml-2'>
-						<CartIcon />
-					</div>
+					{isLearnVariant ? (
+						<Link
+							href='/#products'
+							className='site-cta cta-primary cta-compact ml-1 whitespace-nowrap md:ml-2'>
+							Shop now
+						</Link>
+					) : (
+						<div className='ml-1 text-mineral-white transition-colors hover:text-white md:ml-2'>
+							<CartIcon />
+						</div>
+					)}
 					<button
 						type='button'
 						aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
@@ -247,13 +273,13 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 						className={`md:hidden relative w-6 h-[26px] bg-transparent mt-[0.1rem] border-0 cursor-pointer appearance-none focus:outline-none ml-2 ${isMenuOpen ? 'active' : ''}`}
 						id='menu04'>
 						<span
-							className={`absolute left-0 w-full h-0.5 bg-white rounded-[2px] ${isMenuOpen ? 'top-[11px] -rotate-45 transition-[top,transform] duration-300 ease-[cubic-bezier(.36,-.42,.68,-.56)] [transition-delay:0s,300ms]' : 'top-0 transition-top duration-300'}`}
+							className={`absolute left-0 h-0.5 w-full rounded-[2px] ${isLearnVariant ? 'bg-deep-tidal-teal-700' : 'bg-white'} ${isMenuOpen ? 'top-[11px] -rotate-45 transition-[top,transform] duration-300 ease-[cubic-bezier(.36,-.42,.68,-.56)] [transition-delay:0s,300ms]' : 'top-0 transition-top duration-300'}`}
 						/>
 						<span
-							className={`absolute left-0 w-full h-0.5 bg-white rounded-[2px] top-[10px] ${isMenuOpen ? 'opacity-0 transition-opacity duration-50 delay-300' : 'opacity-100 transition-opacity duration-300 top-3'}`}
+							className={`absolute left-0 top-[10px] h-0.5 w-full rounded-[2px] ${isLearnVariant ? 'bg-deep-tidal-teal-700' : 'bg-white'} ${isMenuOpen ? 'opacity-0 transition-opacity duration-50 delay-300' : 'top-3 opacity-100 transition-opacity duration-300'}`}
 						/>
 						<span
-							className={`absolute left-0 w-full h-0.5 bg-white rounded-[2px] ${isMenuOpen ? 'bottom-[13px] rotate-45 transition-[bottom,transform] duration-300 ease-[cubic-bezier(.36,-.42,.68,-.56)] [transition-delay:0s,300ms]' : 'bottom-1 transition-bottom duration-300'}`}
+							className={`absolute left-0 h-0.5 w-full rounded-[2px] ${isLearnVariant ? 'bg-deep-tidal-teal-700' : 'bg-white'} ${isMenuOpen ? 'bottom-[13px] rotate-45 transition-[bottom,transform] duration-300 ease-[cubic-bezier(.36,-.42,.68,-.56)] [transition-delay:0s,300ms]' : 'bottom-1 transition-bottom duration-300'}`}
 						/>
 					</button>
 				</div>
@@ -266,7 +292,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 						animate='open'
 						exit='closed'
 						variants={wrapperVariants}
-						className='md:hidden absolute top-full left-0 right-0 bg-deep-tidal-teal-600/80 backdrop-blur-lg shadow-xl overflow-hidden'
+						className={`absolute left-0 right-0 top-full overflow-hidden shadow-xl backdrop-blur-lg md:hidden ${isLearnVariant ? 'border-b border-deep-tidal-teal/10 bg-white/95' : 'bg-deep-tidal-teal-600/80'}`}
 						style={{ originY: 'top' }}>
 						<nav className='max-w-6xl mx-auto px-4 sm:px-6 py-4'>
 							<motion.div
@@ -278,7 +304,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 										onClick={() => setIsMobileProductsOpen((open) => !open)}
 										aria-expanded={isMobileProductsOpen}
 										aria-controls='mobile-products-menu'
-										className='flex w-full items-center justify-between rounded-lg px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
+										className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[13px] ${mobileNavClass}`}>
 										<span>PRODUCTS</span>
 										<ChevronDown
 											className={`h-4 w-4 transition-transform ${isMobileProductsOpen ? 'rotate-180' : ''}`}
@@ -292,13 +318,13 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 												initial={{ height: 0, opacity: 0 }}
 												animate={{ height: 'auto', opacity: 1 }}
 												exit={{ height: 0, opacity: 0 }}
-												className='ml-3 overflow-hidden border-l border-white/25 pl-4'>
+												className={`ml-3 overflow-hidden border-l pl-4 ${isLearnVariant ? 'border-deep-tidal-teal/15' : 'border-white/25'}`}>
 												{PRODUCT_MENU_CATEGORIES.map((category) => (
 													<button
 														key={category}
 														type='button'
 														onClick={() => selectProductCategory(category)}
-														className='block w-full py-2 text-left text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>
+													className={`block w-full py-2 text-left text-xs ${mobileNavClass}`}>
 														{category.toUpperCase()}
 													</button>
 												))}
@@ -312,7 +338,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 										onClick={() => setIsMobileAboutOpen((open) => !open)}
 										aria-expanded={isMobileAboutOpen}
 										aria-controls='mobile-about-menu'
-										className='flex w-full items-center justify-between rounded-lg px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
+										className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[13px] ${mobileNavClass}`}>
 										<span>ABOUT US</span>
 										<ChevronDown
 											className={`h-4 w-4 transition-transform ${isMobileAboutOpen ? 'rotate-180' : ''}`}
@@ -326,10 +352,10 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 												initial={{ height: 0, opacity: 0 }}
 												animate={{ height: 'auto', opacity: 1 }}
 												exit={{ height: 0, opacity: 0 }}
-												className='ml-3 overflow-hidden border-l border-white/25 pl-4'>
+												className={`ml-3 overflow-hidden border-l pl-4 ${isLearnVariant ? 'border-deep-tidal-teal/15' : 'border-white/25'}`}>
 												<Link
 													href='/learn'
-													className='block py-2 text-sm font-medium text-white/90 transition hover:text-muted-sage-200'>
+													className={`block py-2 text-xs ${mobileNavClass}`}>
 													LEARN
 												</Link>
 											</motion.div>
@@ -339,7 +365,7 @@ export default function Header({ stacked = false }: { stacked?: boolean }) {
 								<motion.button
 									variants={itemVariants}
 									onClick={() => scrollToSection('contact')}
-									className='px-2 py-1 text-left font-medium text-white transition-colors hover:text-muted-sage-200'>
+									className={`px-2 py-1 text-left text-[13px] ${mobileNavClass}`}>
 									CONTACT
 								</motion.button>
 							</motion.div>

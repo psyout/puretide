@@ -146,7 +146,7 @@ export default function OrderConfirmationSurvey({ orderNumber, customerEmail, co
 					<button
 						type='submit'
 						disabled={!selectedChoice || isSubmitting}
-						className='w-full bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal/40 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg px-4 py-2 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]'>
+						className='site-cta cta-primary w-full'>
 						{isSubmitting ? (
 							<span className='flex items-center justify-center gap-2'>
 								<svg

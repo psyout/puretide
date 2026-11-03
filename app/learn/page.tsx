@@ -61,12 +61,12 @@ function Hero() {
 			<div className='flex gap-[14px] justify-center relative flex-wrap'>
 				<a
 					href='#faqs'
-					className='site-cta border border-[#6EB4CC] bg-[#6EB4CC] text-white hover:border-[#7fc3da] hover:bg-[#7fc3da]'>
+					className='site-cta cta-primary cta-inverse'>
 					Read the FAQs
 				</a>
 				<a
 					href='https://puretide.ca/shop'
-					className='site-cta border border-white/20 bg-transparent text-white hover:border-white/40 hover:bg-white/5'>
+					className='site-cta cta-secondary cta-inverse'>
 					Browse Products
 				</a>
 			</div>
@@ -212,7 +212,7 @@ function HowPeptidesWork() {
 					</div>
 					<a
 						href='https://puretide.ca/shop'
-						className='site-cta relative whitespace-nowrap border border-[#6EB4CC] bg-[#6EB4CC] text-white hover:border-[#7fc3da] hover:bg-[#7fc3da]'>
+						className='site-cta cta-primary relative whitespace-nowrap'>
 						Browse All Products →
 					</a>
 				</div>
@@ -403,7 +403,7 @@ function RetaVsOzempic() {
 					</div>
 					<a
 						href='https://puretide.ca/products/retatrutide'
-						className='site-cta border border-[#1C4855] bg-[#1C4855] text-white hover:border-[#2a5f70] hover:bg-[#2a5f70]'>
+						className='site-cta cta-primary'>
 						Shop Retatrutide →
 					</a>
 				</div>
@@ -750,7 +750,7 @@ function WhyPureTide() {
 					<p className='text-[15px] text-white/55 max-w-[460px] leading-[1.7]'>Every batch is independently verified. Every order ships from Canada. Zero compromise on purity.</p>
 					<a
 						href='https://puretide.ca/shop'
-						className='site-cta relative whitespace-nowrap border border-[#6EB4CC] bg-[#6EB4CC] text-white hover:border-[#7fc3da] hover:bg-[#7fc3da]'>
+						className='site-cta cta-primary relative whitespace-nowrap'>
 						View Full Catalogue →
 					</a>
 				</div>
@@ -819,12 +819,12 @@ function CTABanner() {
 			<div className='flex gap-3.5 justify-center flex-wrap relative'>
 				<a
 					href='https://puretide.ca/#products'
-					className='site-cta border border-white bg-white text-[#1C4855] hover:border-[#d4eaf3] hover:bg-[#d4eaf3]'>
+					className='site-cta cta-primary cta-inverse'>
 					View All Products
 				</a>
 				<a
 					href='https://puretide.ca/calculator'
-					className='site-cta hidden border border-white/25 text-white/75 hover:border-white/50 hover:text-white'>
+					className='site-cta cta-secondary cta-inverse hidden'>
 					Dosage Calculator
 				</a>
 			</div>

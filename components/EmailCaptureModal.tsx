@@ -208,7 +208,7 @@ export default function EmailCaptureModal({ isOpen, onClose, onSuccess, triggerR
 									<button
 										type='button'
 										onClick={handleClose}
-										className='site-cta mt-6 w-full bg-deep-tidal-teal-700 text-white hover:bg-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal-700 focus:ring-offset-2'>
+										className='site-cta cta-primary mt-6 w-full'>
 										Got it
 									</button>
 								</motion.div>
@@ -281,7 +281,7 @@ export default function EmailCaptureModal({ isOpen, onClose, onSuccess, triggerR
 										<button
 											type='submit'
 											disabled={isLoading}
-											className='site-cta w-full bg-deep-tidal-teal-700 text-white hover:bg-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal-700 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'>
+											className='site-cta cta-primary w-full'>
 											{isLoading ? (
 												<>
 													<svg

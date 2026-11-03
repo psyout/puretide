@@ -21,12 +21,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 							<button
 								type='button'
 								onClick={reset}
-								className='bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-3 px-6 rounded transition-colors'>
+								className='site-cta cta-primary'>
 								Try again
 							</button>
 							<Link
 								href='/'
-								className='border-2 border-deep-tidal-teal text-deep-tidal-teal hover:bg-deep-tidal-teal hover:text-mineral-white font-semibold py-3 px-6 rounded transition-colors inline-block'>
+								className='site-cta cta-secondary'>
 								Back to shop
 							</Link>
 						</div>

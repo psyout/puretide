@@ -174,7 +174,7 @@ export default function CartIcon() {
 									<Link
 										href='/cart'
 										onClick={() => setIsPreviewOpen(false)}
-										className='flex min-h-11 w-full items-center justify-center rounded-lg bg-deep-tidal-teal px-4 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-deep-tidal-teal-600'>
+									className='site-cta cta-primary w-full'>
 										View cart
 									</Link>
 								</div>

@@ -50,7 +50,7 @@ export default function AffiliatePage() {
 							<div className='fade-up d3 mt-10 flex flex-col gap-4 sm:flex-row sm:items-center'>
 								<Link
 									href='#apply'
-									className='site-cta border border-deep-tidal-teal-300 bg-deep-tidal-teal-400 text-white hover:border-deep-tidal-teal-200 hover:bg-deep-tidal-teal sm:min-w-[11.5rem]'>
+									className='site-cta cta-primary cta-inverse sm:min-w-[11.5rem]'>
 									Apply to partner{' '}
 									<ArrowDown
 										className='h-4 w-4'
@@ -59,7 +59,7 @@ export default function AffiliatePage() {
 								</Link>
 								<Link
 									href='#how-it-works'
-									className='site-cta border border-white/20 bg-transparent text-white hover:border-white/40 hover:bg-white/5 sm:min-w-[11.5rem]'>
+									className='site-cta cta-secondary cta-inverse sm:min-w-[11.5rem]'>
 									See how it works
 								</Link>
 							</div>

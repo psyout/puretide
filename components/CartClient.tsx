@@ -152,7 +152,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 				<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
 					<Link
 						href='/'
-						className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
+						className='site-cta cta-tertiary -ml-3 mb-8'>
 						← Back to Products
 					</Link>
 					<div className='text-center py-20'>
@@ -174,7 +174,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 						<p className='text-deep-tidal-teal-700 mb-8'>Start shopping to add items to your cart</p>
 						<Link
 							href='/'
-							className='site-cta bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600'>
+							className='site-cta cta-primary'>
 							Browse Products
 						</Link>
 					</div>
@@ -188,7 +188,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 			<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
 				<Link
 					href='/'
-					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
+					className='site-cta cta-tertiary -ml-3 mb-8'>
 					← Back to Products
 				</Link>
 				<h1 className='text-3xl font-bold mb-6 text-deep-tidal-teal-800'>Your Cart</h1>
@@ -518,7 +518,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													type='button'
 													onClick={handleClearPromo}
 													disabled={isVerifyingPromo}
-													className='rounded-lg border border-deep-tidal-teal/20 bg-white px-3 py-2 text-sm font-semibold text-deep-tidal-teal-800 transition-colors hover:bg-deep-tidal-teal-50 disabled:cursor-not-allowed disabled:opacity-50'>
+											className='site-cta cta-secondary cta-compact px-3'>
 													Remove
 												</button>
 											) : (
@@ -526,7 +526,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													type='button'
 													onClick={() => void handleApplyPromo()}
 													disabled={isVerifyingPromo || !promoCode.trim()}
-													className='rounded-lg bg-deep-tidal-teal px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-deep-tidal-teal-600 disabled:cursor-not-allowed disabled:opacity-50'>
+											className='site-cta cta-primary cta-compact'>
 													{isVerifyingPromo ? 'Applying…' : 'Apply'}
 												</button>
 											)}
@@ -556,7 +556,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 									}
 									router.push('/checkout');
 								}}
-								className='w-full min-h-14 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
+								className='site-cta cta-primary min-h-14 w-full'
 								disabled={hasCartInvalidQuantity}>
 								<span className='flex items-center gap-2 text-base'>
 									<Lock size={18} /> Continue to Checkout

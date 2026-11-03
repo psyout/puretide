@@ -83,7 +83,7 @@ export default function CartDrawer() {
 								<Link
 									href='/#products'
 									onClick={closeCartDrawer}
-									className='site-cta mt-7 bg-deep-tidal-teal text-white hover:bg-deep-tidal-teal-600'>
+									className='site-cta cta-primary mt-7'>
 									Start shopping
 								</Link>
 							</div>
@@ -177,13 +177,13 @@ export default function CartDrawer() {
 									<Link
 										href='/cart'
 										onClick={closeCartDrawer}
-										className='site-cta w-full bg-deep-tidal-teal text-white hover:bg-deep-tidal-teal-600'>
+										className='site-cta cta-primary w-full'>
 										View cart
 									</Link>
 									<button
 										type='button'
 										onClick={closeCartDrawer}
-										className='site-cta mt-3 w-full border border-deep-tidal-teal/25 text-deep-tidal-teal-800 hover:bg-deep-tidal-teal/5'>
+										className='site-cta cta-secondary mt-3 w-full'>
 										Keep shopping
 									</button>
 									<p className='mt-4 text-center text-xs text-deep-tidal-teal-500'>Shipping and any promo-code adjustments are confirmed at checkout.</p>

@@ -98,7 +98,7 @@ export default function HowDidYouHearSurvey({ onSubmit, required = false, defaul
 				<button
 					type='submit'
 					disabled={isSubmitting || (required && !selectedChoice)}
-					className='w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-bold text-xl rounded-xl px-10 py-4 transition-colors mt-8'>
+					className='site-cta cta-primary mt-8 w-full px-10 py-4 text-xl'>
 					{isSubmitting ? 'Submitting...' : 'Submit Form'}
 				</button>
 			</form>

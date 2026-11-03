@@ -111,7 +111,7 @@ export default function ProductCard({ product, onImageLoaded, automaticPromotion
 							addToCart(product);
 						}
 					}}
-					className='flex items-center justify-center gap-1 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 text-mineral-white font-semibold py-2 px-4 rounded transition-colors cursor-pointer text-sm'>
+					className='site-cta cta-primary cta-compact cursor-pointer gap-1'>
 					<ShoppingCart size={16} />
 					Add to cart
 				</button>

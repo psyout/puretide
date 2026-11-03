@@ -782,7 +782,7 @@ export default function CheckoutClient() {
 			<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
 				<Link
 					href='/cart'
-					className='text-deep-tidal-teal hover:text-eucalyptus mb-8 inline-block'>
+					className='site-cta cta-tertiary -ml-3 mb-8'>
 					← Back to Cart
 				</Link>
 				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>Checkout</h1>
@@ -1308,7 +1308,7 @@ export default function CheckoutClient() {
 																setFriendsFamilyStartLoading(false);
 															}
 														}}
-														className='bg-deep-tidal-teal text-mineral-white font-semibold px-4 py-2 rounded-lg hover:bg-deep-tidal-teal-600 disabled:opacity-50'>
+												className='site-cta cta-primary cta-compact'>
 														{friendsFamilyStartLoading ? 'Sending...' : 'Send code'}
 													</button>
 													{friendsFamilyEligible === true && (
@@ -1508,7 +1508,7 @@ export default function CheckoutClient() {
 										form='checkout-form'
 										disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
 										aria-busy={isProcessing}
-										className='w-full min-h-[3rem] bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal disabled:cursor-not-allowed text-mineral-white font-semibold py-3 px-4 rounded transition-colors mt-3'>
+										className='site-cta cta-primary mt-3 w-full'>
 										<span className='inline-flex items-center justify-center gap-2'>
 											{isProcessing && (
 												<Loader2
@@ -1643,7 +1643,7 @@ export default function CheckoutClient() {
 													type='button'
 													onClick={handleClearPromo}
 													disabled={isVerifyingPromo}
-													className='border border-deep-tidal-teal/20 bg-white px-3 py-2 rounded font-bold text-sm text-deep-tidal-teal-800 hover:bg-deep-tidal-teal-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+													className='site-cta cta-secondary cta-compact px-3'>
 													Remove
 												</button>
 											) : (
@@ -1651,7 +1651,7 @@ export default function CheckoutClient() {
 													type='button'
 													onClick={handleApplyPromo}
 													disabled={isVerifyingPromo || !promoCode.trim()}
-													className='bg-deep-tidal-teal text-white px-4 py-2 rounded font-bold text-sm hover:bg-deep-tidal-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+													className='site-cta cta-primary cta-compact'>
 													{isVerifyingPromo ? '...' : 'Apply'}
 												</button>
 											)}
@@ -1731,7 +1731,7 @@ export default function CheckoutClient() {
 							<button
 								type='button'
 								onClick={() => setShowTermsModal(false)}
-								className='min-h-11 rounded bg-gray-200 px-4 py-2 font-medium text-gray-800 transition-colors hover:bg-gray-300 sm:px-6'>
+								className='site-cta cta-secondary min-h-11 sm:px-6'>
 								Close
 							</button>
 							<button
@@ -1740,7 +1740,7 @@ export default function CheckoutClient() {
 									setAgreedToTerms(true);
 									setShowTermsModal(false);
 								}}
-								className='min-h-11 rounded bg-deep-tidal-teal px-4 py-2 font-medium text-white transition-colors hover:bg-deep-tidal-teal-600 sm:px-6'>
+								className='site-cta cta-primary min-h-11 sm:px-6'>
 								I Agree
 							</button>
 						</div>
@@ -1758,7 +1758,7 @@ export default function CheckoutClient() {
 							<button
 								type='button'
 								onClick={() => setPaymentMethod('etransfer')}
-								className='px-4 py-2 rounded bg-deep-tidal-teal text-mineral-white hover:bg-deep-tidal-teal-600 transition-colors font-semibold'>
+								className='site-cta cta-primary cta-compact'>
 								Got it
 							</button>
 						</div>

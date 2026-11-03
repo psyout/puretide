@@ -129,7 +129,7 @@ export default function CrossSellSection({ className = '' }: CrossSellSectionPro
 										<button
 											onClick={() => handleAddToCart(product)}
 											disabled={addingProductId === product.id}
-											className='inline-flex items-center gap-1 px-3 py-1.5 bg-deep-tidal-teal hover:bg-deep-tidal-teal-600 disabled:bg-deep-tidal-teal/50 text-white text-sm font-medium rounded transition-colors disabled:cursor-not-allowed'>
+											className='site-cta cta-primary cta-compact gap-1 px-3 py-1.5'>
 											<Plus className='w-3 h-3' />
 											{addingProductId === product.id ? 'Adding...' : 'Add'}
 										</button>

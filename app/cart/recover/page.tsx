@@ -44,7 +44,7 @@ export default function RecoverCartPage() {
 				<h1 className='text-2xl font-bold text-deep-tidal-teal-800 mb-3'>{error ? 'We could not restore your cart' : 'Restoring your cart…'}</h1>
 				<p className='text-deep-tidal-teal-600'>{error ?? 'Checking current prices and availability.'}</p>
 				{error && (
-					<button onClick={() => router.replace('/')} className='mt-6 rounded-lg bg-deep-tidal-teal px-5 py-3 font-semibold text-white'>
+					<button onClick={() => router.replace('/')} className='site-cta cta-primary mt-6'>
 						Continue shopping
 					</button>
 				)}

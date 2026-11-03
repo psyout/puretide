@@ -134,7 +134,83 @@ p {
 
 @layer components {
 	.site-cta {
-		@apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold uppercase tracking-wide no-underline transition-all;
+		@apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border px-5 py-3 text-sm font-semibold uppercase tracking-wide no-underline transition-colors duration-200;
+		border-color: transparent;
+	}
+
+	.site-cta:hover,
+	.site-cta:active {
+		transform: none !important;
+	}
+
+	.site-cta:hover svg,
+	.site-cta:active svg {
+		transform: none !important;
+	}
+
+	.site-cta:focus-visible {
+		@apply outline-none ring-2 ring-deep-tidal-teal/40 ring-offset-2;
+	}
+
+	.site-cta:disabled,
+	.site-cta[aria-disabled='true'] {
+		@apply cursor-not-allowed opacity-50 shadow-none;
+	}
+
+	/* 1. Primary: high-emphasis conversion action. Hover changes tone only. */
+	.cta-primary {
+		@apply border-deep-tidal-teal-700 bg-deep-tidal-teal-700 text-white shadow-sm;
+	}
+
+	.cta-primary:hover:not(:disabled) {
+		@apply border-deep-tidal-teal-800 bg-deep-tidal-teal-800 text-white;
+	}
+
+	/* 2. Secondary: outlined alternative. Hover strengthens border and adds a tint. */
+	.cta-secondary {
+		@apply border-deep-tidal-teal/25 bg-white text-deep-tidal-teal-800;
+	}
+
+	.cta-secondary:hover:not(:disabled) {
+		@apply border-deep-tidal-teal/45 bg-eucalyptus-50 text-deep-tidal-teal-900;
+	}
+
+	/* 3. Tertiary: low-emphasis navigation. Hover changes text decoration only. */
+	.cta-tertiary {
+		@apply min-h-11 border-transparent bg-transparent px-3 text-deep-tidal-teal-700 shadow-none;
+	}
+
+	.cta-tertiary:hover:not(:disabled) {
+		@apply text-deep-tidal-teal-900 underline decoration-1 underline-offset-4;
+	}
+
+	/* Color-context modifier; interaction type remains primary/secondary/tertiary. */
+	.cta-inverse.cta-primary {
+		@apply border-white bg-white text-deep-tidal-teal-800;
+	}
+
+	.cta-inverse.cta-primary:hover:not(:disabled) {
+		@apply border-eucalyptus-100 bg-eucalyptus-100 text-deep-tidal-teal-900;
+	}
+
+	.cta-inverse.cta-secondary {
+		@apply border-white/35 bg-transparent text-white;
+	}
+
+	.cta-inverse.cta-secondary:hover:not(:disabled) {
+		@apply border-white/60 bg-white/10 text-white;
+	}
+
+	.cta-inverse.cta-tertiary {
+		@apply text-white/80;
+	}
+
+	.cta-inverse.cta-tertiary:hover:not(:disabled) {
+		@apply text-white;
+	}
+
+	.cta-compact {
+		@apply min-h-9 px-4 py-2 text-xs;
 	}
 
 	.ui-border {
