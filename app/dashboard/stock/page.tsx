@@ -15,6 +15,7 @@ import {
 	HeartHandshake,
 	LogOut,
 	Megaphone,
+	MoreHorizontal,
 	Package,
 	Pencil,
 	RefreshCw,
@@ -45,10 +46,24 @@ const toSlug = (value: string) =>
 		.replace(/\s+/g, '-')
 		.replace(/-+/g, '-');
 
+const formatCompactList = (values: unknown[], visibleItems: number, separator = ', ') => {
+	const items = Array.from(new Set(values.map((value) => String(value ?? '').trim()).filter(Boolean)));
+	if (items.length <= visibleItems) return items.join(separator);
+	return `${items.slice(0, visibleItems).join(separator)}${separator}… +${items.length - visibleItems} more`;
+};
+
 type FriendsFamilyEntry = {
 	email: string;
 	isActive: boolean;
 	note?: string;
+};
+
+type DashboardUserProfile = {
+	name?: string;
+	nickname?: string;
+	given_name?: string;
+	email?: string;
+	picture?: string;
 };
 
 type PromoSort = 'sheet' | 'code-asc' | 'discount-desc' | 'discount-asc' | 'active-first';
@@ -95,6 +110,9 @@ export default function StockDashboardPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [productStatusUpdatingId, setProductStatusUpdatingId] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'promos' | 'affiliates' | 'clients' | 'friends_family' | 'abandoned_carts'>('products');
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [dashboardUser, setDashboardUser] = useState<DashboardUserProfile | null>(null);
+	const [profileImageFailed, setProfileImageFailed] = useState(false);
 	const [searchValue, setSearchValue] = useState('');
 	const [productSort, setProductSort] = useState<ProductSort>('zoho');
 	const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -235,6 +253,24 @@ export default function StockDashboardPage() {
 			setIsRefreshingData(false);
 		}
 	};
+
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				const response = await fetch('/auth/profile', { credentials: 'include', cache: 'no-store' });
+				if (!response.ok) return;
+				const data = (await response.json()) as DashboardUserProfile | { user?: DashboardUserProfile };
+				const profile = (data as { user?: DashboardUserProfile }).user ?? (data as DashboardUserProfile);
+				if (!cancelled && profile) setDashboardUser(profile);
+			} catch {
+				// Legacy dashboard-secret sessions do not have an Auth0 profile.
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		const load = async () => {
@@ -848,12 +884,68 @@ export default function StockDashboardPage() {
 	}, [friendsFamilyEntries, friendsFamilySearchValue]);
 
 	const activeFriendsFamilyCount = friendsFamilyEntries.filter((entry) => entry.isActive).length;
+	const dashboardUserEmail = dashboardUser?.email?.trim() || 'Signed in';
+	const dashboardUserName = [dashboardUser?.name, dashboardUser?.nickname, dashboardUser?.given_name]
+		.map((value) => value?.trim())
+		.find((value) => value && value.toLowerCase() !== dashboardUserEmail.toLowerCase()) || 'Signed in account';
+	const dashboardUserInitial = dashboardUserName.charAt(0).toUpperCase() || 'U';
+	const renderProfileAvatar = (className: string) =>
+		dashboardUser?.picture && !profileImageFailed ? (
+			<img
+				src={dashboardUser.picture}
+				alt=''
+				referrerPolicy='no-referrer'
+				onError={() => setProfileImageFailed(true)}
+				className={`${className} rounded-full object-cover ring-1 ring-black/10`}
+			/>
+		) : (
+			<span className={`${className} inline-flex items-center justify-center rounded-full bg-eucalyptus-100 font-semibold text-deep-tidal-teal ring-1 ring-black/5`} aria-hidden='true'>
+				{dashboardUserInitial}
+			</span>
+		);
+	const activeTabLabel = {
+		clients: 'Clients',
+		products: 'Products',
+		orders: 'Orders',
+		promos: 'Discounts',
+		affiliates: 'Affiliate Payouts',
+		friends_family: 'Friends & Family',
+		abandoned_carts: 'Abandoned Carts',
+	}[activeTab];
+	const isMoreTabActive = ['promos', 'affiliates', 'friends_family', 'abandoned_carts'].includes(activeTab);
+
+	const selectMobileTab = (tab: typeof activeTab) => {
+		setActiveTab(tab);
+		setIsMobileMenuOpen(false);
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	};
+
+	const handleSignOut = async () => {
+		await fetch('/api/dashboard/signout', { method: 'POST', credentials: 'include' });
+		window.location.href = '/auth/logout?returnTo=/dashboard/login';
+	};
 
 	return (
-		<div className='min-h-screen bg-[#efefef]'>
-			<div className='container mx-auto px-6 py-12'>
+		<div className='min-h-screen bg-[#efefef] pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0'>
+			<header className='sticky top-0 z-30 border-b border-black/5 bg-white/95 px-4 py-3 shadow-sm backdrop-blur lg:hidden'>
+				<div className='mx-auto flex w-full max-w-[1536px] items-center gap-3'>
+					<div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111111] font-bold text-white'>P</div>
+					<div className='min-w-0'>
+						<p className='text-[11px] font-medium uppercase tracking-[0.14em] text-[#8d8d8d]'>Puretide dashboard</p>
+						<h1 className='truncate text-base font-semibold text-[#1f1f1f]'>{activeTabLabel}</h1>
+					</div>
+					<div className='ml-auto flex min-w-0 items-center gap-2'>
+						<div className='hidden min-w-0 text-right sm:block'>
+							<p className='max-w-56 truncate text-xs font-medium text-[#4a4a4a]'>{dashboardUserEmail}</p>
+						</div>
+						{renderProfileAvatar('h-9 w-9 shrink-0 text-sm')}
+					</div>
+				</div>
+			</header>
+
+			<div className='mx-auto w-full max-w-[1536px] px-4 py-4 sm:px-6 sm:py-6 md:py-12'>
 				<div className='grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6'>
-					<aside className='rounded-2xl border border-black/5 bg-white p-6 shadow-sm h-fit top-6'>
+					<aside className='hidden rounded-2xl border border-black/5 bg-white p-6 shadow-sm h-fit top-6 lg:block'>
 						<div className='flex items-center gap-3 mb-6'>
 							<div className='h-10 w-10 rounded-xl bg-[#111111] text-white flex items-center justify-center font-bold'>P</div>
 							<div>
@@ -880,20 +972,6 @@ export default function StockDashboardPage() {
 									{refreshDataMessage.text}
 								</p>
 							)}
-							<a
-								href='/dashboard/login'
-								onClick={async (e) => {
-									e.preventDefault();
-									await fetch('/api/dashboard/signout', { method: 'POST', credentials: 'include' });
-									window.location.href = '/auth/logout?returnTo=/dashboard/login';
-								}}
-								className='flex w-full items-center gap-3 rounded-xl border border-black/5 bg-white px-4 py-3 text-left text-rose-600 transition-colors hover:bg-[#f4f4f7] hover:text-rose-700'>
-								<LogOut
-									className='h-4 w-4 shrink-0'
-									aria-hidden='true'
-								/>
-								<span>Sign out</span>
-							</a>
 							<button
 								onClick={() => setActiveTab('clients')}
 								className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
@@ -973,6 +1051,22 @@ export default function StockDashboardPage() {
 								<span>Abandoned Carts</span>
 							</button>
 						</nav>
+						<div className='mt-6 border-t border-black/5 pt-4'>
+							<div className='flex min-w-0 items-center gap-3 rounded-xl bg-[#f8f8f9] p-3'>
+								{renderProfileAvatar('h-10 w-10 shrink-0 text-sm')}
+								<div className='min-w-0 flex-1'>
+									<p className='truncate text-sm font-medium text-[#2f2f2f]' title={dashboardUserEmail}>{dashboardUserEmail}</p>
+								</div>
+								<button
+									type='button'
+									onClick={handleSignOut}
+									className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-rose-600 transition-colors hover:bg-rose-50'
+									aria-label={`Sign out ${dashboardUserEmail}`}
+									title='Sign out'>
+									<LogOut className='h-4 w-4' aria-hidden='true' />
+								</button>
+							</div>
+						</div>
 					</aside>
 
 					<section className='min-w-0 flex flex-col gap-6'>
@@ -1164,11 +1258,14 @@ export default function StockDashboardPage() {
 
 						{activeTab === 'orders' && (
 							<div className='overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm'>
-								<div className='p-6'>
+								<div className='p-4 md:p-6'>
 									<div className='grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_auto]'>
-										<h2 className='text-xl font-semibold text-[#1f1f1f]'>Recent Orders</h2>
-										<div className='flex w-full flex-wrap items-center justify-start gap-2 2xl:w-auto 2xl:justify-self-end 2xl:justify-end'>
-											<label className='relative'>
+										<div>
+											<h2 className='text-xl font-semibold text-[#1f1f1f]'>Recent Orders</h2>
+											<p className='mt-1 text-sm text-[#7a7a7a]'>{visibleOrders.length} of {orders.length} orders</p>
+										</div>
+										<div className='grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] 2xl:w-auto 2xl:justify-self-end'>
+											<label className='relative block'>
 												<Search
 													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
 													aria-hidden='true'
@@ -1179,10 +1276,10 @@ export default function StockDashboardPage() {
 													onChange={(event) => setOrderSearchValue(event.target.value)}
 													placeholder='Search orders…'
 													aria-label='Search orders'
-													className='w-52 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
+												className='w-full rounded-lg border border-black/10 bg-white py-2.5 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 sm:w-64'
 												/>
 											</label>
-											<label className='relative'>
+											<label className='relative block'>
 												<ArrowUpDown
 													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
 													aria-hidden='true'
@@ -1191,7 +1288,7 @@ export default function StockDashboardPage() {
 													value={orderSort}
 													onChange={(event) => setOrderSort(event.target.value as OrderSort)}
 													aria-label='Sort orders'
-													className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
+												className='w-full rounded-lg border border-black/10 bg-white py-2.5 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 sm:w-auto'>
 													<option value='sheet'>Original order</option>
 													<option value='newest'>Newest first</option>
 													<option value='oldest'>Oldest first</option>
@@ -1218,7 +1315,69 @@ export default function StockDashboardPage() {
 								) : visibleOrders.length === 0 ? (
 									<div className='border-t border-black/5 bg-[#f4f4f7] px-6 py-8 text-center text-sm text-[#6a6a6a]'>No orders match your search.</div>
 								) : (
-									<div className='overflow-x-auto border-t border-black/5'>
+									<>
+										<div className='grid items-start gap-3 border-t border-black/5 bg-[#f4f4f7] p-3 md:grid-cols-2 md:p-4 lg:hidden'>
+											{visibleOrders.slice(0, 50).map(({ order }) => {
+												const customer = order.customer as Record<string, string> | undefined;
+												const cart = (order.cartItems as Array<Record<string, unknown>>) ?? [];
+												const date = order.createdAt ? new Date(String(order.createdAt)).toLocaleDateString() : '-';
+												const productItems = cart.map((item) => `${String(item.name ?? 'Item')}${Number(item.quantity ?? 1) > 1 ? ` ×${item.quantity}` : ''}`);
+												const products = formatCompactList(productItems, 2);
+												const payment = order.paymentMethod === 'creditcard' ? 'Card' : order.paymentMethod === 'etransfer' ? 'E-Transfer' : String(order.paymentMethod ?? '-');
+												const orderNumber = String(order.orderNumber ?? order.id ?? '-');
+												const customerName = customer ? `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() : '';
+												const paymentStatus = String(order.paymentStatus ?? order.status ?? '').trim();
+												const isManualEtransfer =
+													order.paymentMethod === 'etransfer' &&
+													(order.paymentPath === 'manual' || order.paymentPath === 'manual_friends_family');
+												const canFulfill = isManualEtransfer && order.paymentStatus === 'pending';
+												const isFulfilled = isManualEtransfer && order.paymentStatus === 'paid';
+
+												return (
+													<article key={String(order.id)} className='overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]'>
+														<div className='p-4'>
+															<div className='flex items-start justify-between gap-3'>
+																<div className='min-w-0'>
+																	<p className='text-[10px] font-semibold uppercase tracking-wide text-[#7a7a7a]'>Order</p>
+																	<h3 className='truncate text-base font-semibold text-[#1f1f1f]'>#{orderNumber}</h3>
+																</div>
+																<p className='shrink-0 text-lg font-semibold text-deep-tidal-teal'>${Number(order.total ?? 0).toFixed(2)}</p>
+															</div>
+
+															<div className='mt-4 rounded-xl bg-[#f4f4f7] p-3'>
+																<p className='truncate text-sm font-semibold text-[#2f2f2f]'>{customerName || 'Unknown customer'}</p>
+																<p className='truncate text-xs text-[#7a7a7a]'>{customer?.email || 'No email'}</p>
+															</div>
+
+															<dl className='mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm'>
+																<div><dt className='text-xs text-[#7a7a7a]'>Date</dt><dd className='mt-0.5 font-medium text-[#2f2f2f]'>{date}</dd></div>
+																<div><dt className='text-xs text-[#7a7a7a]'>Payment</dt><dd className='mt-0.5 font-medium text-[#2f2f2f]'>{payment}</dd></div>
+																<div className='col-span-2'>
+																	<dt className='text-xs text-[#7a7a7a]'>Products</dt>
+																	<dd className='mt-0.5 text-[#2f2f2f]'>{products || '-'}</dd>
+																</div>
+															</dl>
+															{paymentStatus && <span className='mt-3 inline-flex rounded-full bg-eucalyptus-50 px-2.5 py-1 text-xs font-semibold capitalize text-deep-tidal-teal'>{paymentStatus.replace(/_/g, ' ')}</span>}
+														</div>
+
+														<div className='flex gap-2 border-t border-black/5 bg-[#fafafa] p-3'>
+															{isManualEtransfer && (
+																<button type='button' onClick={() => handleCompleteFriendsFamilyOrder(orderNumber)} disabled={!canFulfill || completingOrderNumber !== null || orderNumber === '-'} className='inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-eucalyptus-300 bg-white px-3 text-sm font-semibold text-deep-tidal-teal disabled:cursor-default disabled:opacity-55'>
+																	<CircleCheckBig className='h-4 w-4' aria-hidden='true' />
+																	{completingOrderNumber === orderNumber ? 'Working…' : isFulfilled ? 'Fulfilled' : 'Fulfill'}
+																</button>
+															)}
+															<button type='button' onClick={() => handleSendTrackingEmail(orderNumber)} disabled={trackingEmailLoading || orderNumber === '-'} className='inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-deep-tidal-teal px-3 text-sm font-semibold text-white disabled:opacity-50'>
+																<Send className='h-4 w-4' aria-hidden='true' />
+																{trackingEmailLoading ? 'Sending…' : 'Tracking email'}
+															</button>
+														</div>
+													</article>
+												);
+											})}
+										</div>
+
+										<div className='hidden overflow-x-auto border-t border-black/5 lg:block'>
 										<table className='w-full min-w-[640px]'>
 											<thead className='bg-[#f4f4f7]'>
 												<tr className='text-left text-xs uppercase tracking-wide text-[#9b9b9b]'>
@@ -1299,7 +1458,8 @@ export default function StockDashboardPage() {
 												})}
 											</tbody>
 										</table>
-									</div>
+										</div>
+									</>
 								)}
 							</div>
 						)}
@@ -1638,11 +1798,14 @@ export default function StockDashboardPage() {
 						{activeTab === 'affiliates' && <AffiliatesPanel />}
 
 						{activeTab === 'clients' && (
-							<div className='rounded-2xl border border-black/5 bg-white shadow-sm p-6'>
+							<div className='rounded-2xl border border-black/5 bg-white p-4 shadow-sm md:p-6'>
 								<div className='mb-5 grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_auto]'>
-									<h2 className='text-xl font-semibold text-[#1f1f1f]'>Clients</h2>
-									<div className='flex w-full flex-wrap items-center justify-start gap-2 2xl:w-auto 2xl:justify-self-end 2xl:justify-end'>
-										<label className='relative'>
+									<div>
+										<h2 className='text-xl font-semibold text-[#1f1f1f]'>Clients</h2>
+										<p className='mt-1 text-sm text-[#7a7a7a]'>{visibleClients.length} of {clients.length} clients</p>
+									</div>
+									<div className='grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] 2xl:w-auto 2xl:justify-self-end'>
+										<label className='relative block'>
 											<Search
 												className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
 												aria-hidden='true'
@@ -1653,10 +1816,10 @@ export default function StockDashboardPage() {
 												onChange={(event) => setClientSearchValue(event.target.value)}
 												placeholder='Search clients…'
 												aria-label='Search clients'
-												className='w-52 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
+												className='w-full rounded-lg border border-black/10 bg-white py-2.5 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 sm:w-64'
 											/>
 										</label>
-										<label className='relative'>
+										<label className='relative block'>
 											<ArrowUpDown
 												className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
 												aria-hidden='true'
@@ -1665,7 +1828,7 @@ export default function StockDashboardPage() {
 												value={clientSort}
 												onChange={(event) => setClientSort(event.target.value as ClientSort)}
 												aria-label='Sort clients'
-												className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
+												className='w-full rounded-lg border border-black/10 bg-white py-2.5 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 sm:w-auto'>
 												<option value='sheet'>Spreadsheet order</option>
 												<option value='email-asc'>Email A–Z</option>
 												<option value='name-asc'>Name A–Z</option>
@@ -1739,8 +1902,90 @@ export default function StockDashboardPage() {
 								) : visibleClients.length === 0 ? (
 									<div className='rounded-lg bg-[#f4f4f7] px-4 py-8 text-center text-sm text-[#6a6a6a]'>No clients match your search.</div>
 								) : (
-									<div className='overflow-x-auto rounded-xl border border-black/5'>
-										<table className='w-full min-w-[1900px] table-fixed'>
+									<>
+										<div className='grid items-start gap-3 md:grid-cols-2 lg:hidden'>
+											{visibleClients.map(({ client, index: i }) => {
+												const firstName = String(client.firstName ?? '').trim();
+												const lastName = String(client.lastName ?? '').trim();
+												const email = String(client.email ?? '').trim();
+												const displayName = `${firstName} ${lastName}`.trim() || email || 'Unnamed client';
+												const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || email.charAt(0).toUpperCase() || '?';
+												const address = [client.address, client.city, client.province, client.zipCode]
+													.map((value) => String(value ?? '').trim())
+													.filter(Boolean)
+													.join(', ');
+												const productItems = Array.isArray(client.products) ? client.products : String(client.products ?? '').split(',');
+												const products = formatCompactList(productItems, 2);
+												const discounts = formatCompactList(String(client.discount ?? '').split(';'), 1, '; ');
+												const acquisition = String(client.howDidYouHear ?? '').trim();
+
+												return (
+													<article key={email || i} className='overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]'>
+														<div className='p-4'>
+															<div className='flex min-w-0 items-start gap-3'>
+																<div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-eucalyptus-100 text-sm font-bold text-deep-tidal-teal'>
+																	{initials}
+																</div>
+																<div className='min-w-0 flex-1'>
+																	<h3 className='truncate font-semibold text-[#1f1f1f]'>{displayName}</h3>
+																	{email ? (
+																		<a href={`mailto:${email}`} className='block truncate text-sm text-deep-tidal-teal underline-offset-2 hover:underline'>{email}</a>
+																	) : (
+																		<p className='text-sm text-[#8a8a8a]'>No email</p>
+																	)}
+																</div>
+															</div>
+
+															<div className='mt-4 grid grid-cols-2 gap-2'>
+																<div className='rounded-xl bg-[#f4f4f7] px-3 py-2.5'>
+																	<p className='text-[10px] font-semibold uppercase tracking-wide text-[#7a7a7a]'>Orders</p>
+																	<p className='mt-0.5 text-lg font-semibold text-[#1f1f1f]'>{Number(client.ordersCount ?? 0)}</p>
+																</div>
+																<div className='rounded-xl bg-eucalyptus-50 px-3 py-2.5'>
+																	<p className='text-[10px] font-semibold uppercase tracking-wide text-deep-tidal-teal/70'>Total spent</p>
+																	<p className='mt-0.5 text-lg font-semibold text-deep-tidal-teal'>${Number(client.totalSpent ?? 0).toFixed(2)}</p>
+																</div>
+															</div>
+
+															<div className='mt-3 flex items-center justify-between gap-3 text-xs'>
+																<span className='text-[#7a7a7a]'>Last order</span>
+																<span className='truncate font-medium text-[#3a3a3a]'>{String(client.lastOrderDate ?? '-')}</span>
+															</div>
+														</div>
+
+														<details className='group border-t border-black/5'>
+															<summary className='flex min-h-12 cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-deep-tidal-teal [&::-webkit-details-marker]:hidden'>
+																Client details
+																<ChevronDown className='h-4 w-4 transition-transform group-open:rotate-180' aria-hidden='true' />
+															</summary>
+															<dl className='space-y-3 border-t border-black/5 bg-[#fafafa] px-4 py-4 text-sm'>
+																<div>
+																	<dt className='text-xs font-medium text-[#7a7a7a]'>Address</dt>
+																	<dd className='mt-0.5 text-[#2f2f2f]'>{address || '-'}</dd>
+																</div>
+																<div>
+																	<dt className='text-xs font-medium text-[#7a7a7a]'>Products</dt>
+																	<dd className='mt-0.5 break-words text-[#2f2f2f]'>{products || '-'}</dd>
+																</div>
+																<div className='grid grid-cols-2 gap-3'>
+																	<div>
+																		<dt className='text-xs font-medium text-[#7a7a7a]'>Acquisition</dt>
+																			<dd className='mt-0.5 text-[#2f2f2f]'>{acquisition || '-'}</dd>
+																	</div>
+																	<div>
+																		<dt className='text-xs font-medium text-[#7a7a7a]'>Discount</dt>
+																			<dd className='mt-0.5 text-[#2f2f2f]'>{discounts || '-'}</dd>
+																	</div>
+																</div>
+															</dl>
+														</details>
+													</article>
+												);
+											})}
+										</div>
+
+										<div className='hidden overflow-x-auto rounded-xl border border-black/5 lg:block'>
+											<table className='w-full min-w-[1900px] table-fixed'>
 											<colgroup>
 												<col style={{ width: 220 }} />
 												<col style={{ width: 120 }} />
@@ -1795,21 +2040,23 @@ export default function StockDashboardPage() {
 												))}
 											</tbody>
 										</table>
-									</div>
+										</div>
+									</>
 								)}
 							</div>
 						)}
 
 						{activeTab === 'products' && (
 							<div className='overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm'>
-								<div className='p-6'>
+								<div className='p-4 md:p-6'>
 									<div className='grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_auto]'>
 										<div className='min-w-0'>
 											<h1 className='text-xl font-semibold text-[#1f1f1f]'>Products List</h1>
 											<p className='mt-1 text-sm font-medium text-deep-tidal-teal'>Synced from Zoho Inventory</p>
+											<p className='mt-1 text-sm text-[#7a7a7a]'>{filteredRows.length} of {rows.length} products</p>
 										</div>
-										<div className='flex w-full flex-wrap items-center justify-start gap-2 2xl:w-auto 2xl:justify-self-end 2xl:justify-end'>
-											<label className='relative'>
+										<div className='grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] 2xl:w-auto 2xl:justify-self-end'>
+											<label className='relative block'>
 												<Search
 													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
 													aria-hidden='true'
@@ -1820,10 +2067,10 @@ export default function StockDashboardPage() {
 													onChange={(event) => setSearchValue(event.target.value)}
 													placeholder='Search products…'
 													aria-label='Search products'
-													className='w-52 rounded-lg border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'
+												className='w-full rounded-lg border border-black/10 bg-white py-2.5 pl-9 pr-3 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 sm:w-64'
 												/>
 											</label>
-											<label className='relative'>
+											<label className='relative block'>
 												<ArrowUpDown
 													className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8d8d]'
 													aria-hidden='true'
@@ -1832,7 +2079,7 @@ export default function StockDashboardPage() {
 													value={productSort}
 													onChange={(event) => setProductSort(event.target.value as ProductSort)}
 													aria-label='Sort products'
-													className='rounded-lg border border-black/10 bg-white py-2 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20'>
+												className='w-full rounded-lg border border-black/10 bg-white py-2.5 pl-9 pr-8 text-sm text-[#2f2f2f] focus:border-deep-tidal-teal focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 sm:w-auto'>
 													<option value='zoho'>Zoho order</option>
 													<option value='name-asc'>Name A–Z</option>
 													<option value='stock-desc'>Highest stock</option>
@@ -1850,8 +2097,56 @@ export default function StockDashboardPage() {
 								</div>
 								{isLoading && <div className='border-t border-black/5 p-6 text-[#6a6a6a]'>Loading products from Zoho Inventory...</div>}
 								{!isLoading && filteredRows.length > 0 && (
-									<div className='overflow-x-auto border-t border-black/5 bg-[#f4f4f7]'>
-										<div className='min-w-[880px]'>
+									<>
+										<div className='grid items-start gap-3 border-t border-black/5 bg-[#f4f4f7] p-3 md:grid-cols-2 md:p-4 lg:hidden'>
+											{filteredRows.map((product) => {
+												const resolvedCoa = resolveProductCoaFile(product.coaFile, availableCoaFiles);
+												return (
+													<article key={product.id} className='overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]'>
+														<div className='p-4'>
+															<div className='flex items-start justify-between gap-3'>
+																<div className='min-w-0'>
+																	<h3 className='truncate font-semibold text-[#1f1f1f]'>{product.name}{product.mg ? ` ${product.mg}` : ''}</h3>
+																	<p className='mt-0.5 truncate text-xs text-[#7a7a7a]'>{product.category || 'Uncategorized'}{product.sku ? ` · ${product.sku}` : ''}</p>
+																</div>
+															<div className='flex shrink-0 items-center gap-1.5'>
+																{resolvedCoa ? (
+																	<a href={`/coa/${resolvedCoa}`} target='_blank' rel='noreferrer' className='inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-eucalyptus-100 text-deep-tidal-teal' aria-label={`View COA for ${product.name}`}>
+																		<FileCheck2 className='h-4 w-4' aria-hidden='true' />
+																	</a>
+																) : (
+																	<span className='inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-700' title='COA missing'>
+																		<FileX2 className='h-4 w-4' aria-hidden='true' />
+																	</span>
+																)}
+																<select value={product.status ?? 'inactive'} onChange={(event) => void handleStatusChange(product.id, event.target.value as Product['status'])} disabled={productStatusUpdatingId === product.id} aria-label={`Website Status for ${product.name}`} className={`h-8 max-w-28 rounded-full border border-transparent py-1 pl-2.5 pr-7 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal/20 disabled:cursor-wait disabled:opacity-60 ${getStatusBadge(product.status)}`}>
+																	<option value='published'>Published</option>
+																	<option value='draft'>Draft</option>
+																	<option value='inactive'>Inactive</option>
+																	{product.status === 'stock-out' && <option value='stock-out'>Stock Out</option>}
+																</select>
+															</div>
+															</div>
+
+															<div className='mt-4 grid grid-cols-2 gap-2'>
+																<div className={`rounded-xl px-3 py-2.5 ${product.stock <= 5 ? 'bg-amber-50' : 'bg-[#f4f4f7]'}`}>
+																	<p className={`text-[10px] font-semibold uppercase tracking-wide ${product.stock <= 5 ? 'text-amber-700' : 'text-[#7a7a7a]'}`}>Stock</p>
+																	<p className='mt-0.5 text-lg font-semibold text-[#1f1f1f]'>{product.stock}</p>
+																	{product.stock <= 5 && <p className='text-[10px] font-semibold text-amber-700'>Low stock</p>}
+																</div>
+																<div className='rounded-xl bg-eucalyptus-50 px-3 py-2.5'>
+																	<p className='text-[10px] font-semibold uppercase tracking-wide text-deep-tidal-teal/70'>Price</p>
+																	<p className='mt-0.5 text-lg font-semibold text-deep-tidal-teal'>${Number(product.price).toFixed(2)}</p>
+																</div>
+															</div>
+														</div>
+													</article>
+												);
+											})}
+										</div>
+
+										<div className='hidden overflow-x-auto border-t border-black/5 bg-[#f4f4f7] lg:block'>
+											<div className='min-w-[880px]'>
 											<div className='px-6 py-3 text-xs uppercase tracking-wide text-[#8d8d8d] border-b border-black/5'>
 												<div className='grid grid-cols-[minmax(180px,1.75fr)_minmax(130px,1.35fr)_minmax(70px,0.7fr)_minmax(70px,0.7fr)_minmax(130px,1fr)] gap-4 items-center text-left'>
 													<span>Product name</span>
@@ -2045,7 +2340,8 @@ export default function StockDashboardPage() {
 												))}
 											</div>
 										</div>
-									</div>
+										</div>
+									</>
 								)}
 								{!isLoading && filteredRows.length === 0 && <div className='border-t border-black/5 p-6 text-sm text-[#6a6a6a]'>No products match your search.</div>}
 							</div>
@@ -2053,6 +2349,142 @@ export default function StockDashboardPage() {
 					</section>
 				</div>
 			</div>
+
+			{isMobileMenuOpen && (
+				<div className='fixed inset-0 z-40 md:hidden'>
+					<button
+						type='button'
+						aria-label='Close navigation menu'
+						className='absolute inset-0 bg-black/35 backdrop-blur-[2px]'
+						onClick={() => setIsMobileMenuOpen(false)}
+					/>
+					<div
+						role='dialog'
+						aria-modal='true'
+						aria-label='More dashboard navigation'
+						className='absolute inset-x-0 bottom-0 max-h-[78vh] overflow-y-auto rounded-t-[28px] bg-white px-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] pt-3 shadow-2xl'>
+						<div className='mx-auto mb-4 h-1.5 w-11 rounded-full bg-black/15' />
+						<div className='mb-3 flex items-center justify-between'>
+							<div>
+								<p className='text-lg font-semibold text-[#1f1f1f]'>More</p>
+								<p className='text-sm text-[#7a7a7a]'>Dashboard sections and account actions</p>
+							</div>
+							<button
+								type='button'
+								onClick={() => setIsMobileMenuOpen(false)}
+								className='flex h-10 w-10 items-center justify-center rounded-full bg-[#f4f4f7] text-[#4a4a4a]'
+								aria-label='Close menu'>
+								<X className='h-5 w-5' aria-hidden='true' />
+							</button>
+						</div>
+
+						<div className='grid grid-cols-2 gap-2'>
+							{[
+								{ tab: 'promos' as const, label: 'Discounts', icon: BadgePercent },
+								{ tab: 'affiliates' as const, label: 'Affiliate Payouts', icon: HandCoins },
+								{ tab: 'friends_family' as const, label: 'Friends & Family', icon: HeartHandshake },
+								{ tab: 'abandoned_carts' as const, label: 'Abandoned Carts', icon: ShoppingCart },
+							].map(({ tab, label, icon: Icon }) => (
+								<button
+									key={tab}
+									type='button'
+									onClick={() => selectMobileTab(tab)}
+									className={`flex min-h-24 flex-col items-start justify-between rounded-2xl border p-4 text-left transition-colors ${
+										activeTab === tab ? 'border-deep-tidal-teal bg-eucalyptus-50 text-deep-tidal-teal' : 'border-black/5 bg-[#f8f8f9] text-[#3f3f3f]'
+									}`}>
+									<Icon className='h-5 w-5' aria-hidden='true' />
+									<span className='text-sm font-semibold leading-tight'>{label}</span>
+								</button>
+							))}
+						</div>
+
+						<div className='mt-4 space-y-2 border-t border-black/5 pt-4'>
+							<div className='mb-3 flex min-w-0 items-center gap-3 rounded-2xl bg-[#f4f4f7] p-3'>
+								{renderProfileAvatar('h-11 w-11 shrink-0 text-sm')}
+								<div className='min-w-0 flex-1'>
+									<p className='truncate text-sm font-medium text-[#2f2f2f]'>{dashboardUserEmail}</p>
+								</div>
+							</div>
+							<button
+								type='button'
+								onClick={handleRefreshProductionData}
+								disabled={isRefreshingData}
+								className='flex min-h-12 w-full items-center gap-3 rounded-xl bg-deep-tidal-teal px-4 py-3 text-left text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60'>
+								<RefreshCw className={`h-4 w-4 ${isRefreshingData ? 'animate-spin' : ''}`} aria-hidden='true' />
+								{isRefreshingData ? 'Refreshing data…' : 'Refresh website data'}
+							</button>
+							{refreshDataMessage && (
+								<p role={refreshDataMessage.kind === 'error' ? 'alert' : 'status'} className={`rounded-lg px-3 py-2 text-xs ${refreshDataMessage.kind === 'error' ? 'bg-rose-50 text-rose-700' : 'bg-eucalyptus-50 text-deep-tidal-teal'}`}>
+									{refreshDataMessage.text}
+								</p>
+							)}
+							<button
+								type='button'
+								onClick={handleSignOut}
+								className='flex min-h-12 w-full items-center gap-3 rounded-xl border border-rose-100 bg-white px-4 py-3 text-left text-sm font-medium text-rose-600'>
+								<LogOut className='h-4 w-4' aria-hidden='true' />
+								Sign out
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			<nav aria-label='Dashboard navigation' className='fixed inset-x-0 bottom-0 z-50 border-t border-black/10 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden'>
+				<div className='mx-auto grid h-[4.75rem] w-full max-w-[1536px] grid-cols-4 px-2 md:grid-cols-7 md:px-4'>
+					{[
+						{ tab: 'clients' as const, label: 'Clients', icon: Users },
+						{ tab: 'products' as const, label: 'Products', icon: Package },
+						{ tab: 'orders' as const, label: 'Orders', icon: ShoppingBag },
+					].map(({ tab, label, icon: Icon }) => {
+						const isActive = activeTab === tab;
+						return (
+							<button
+								key={tab}
+								type='button'
+								onClick={() => selectMobileTab(tab)}
+								aria-current={isActive ? 'page' : undefined}
+								className={`relative flex min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-medium ${isActive ? 'text-deep-tidal-teal' : 'text-[#707070]'}`}>
+								<span className={`flex h-8 min-w-12 items-center justify-center rounded-full px-3 ${isActive ? 'bg-eucalyptus-50' : ''}`}>
+									<Icon className='h-5 w-5' strokeWidth={isActive ? 2.5 : 2} aria-hidden='true' />
+								</span>
+								<span className='truncate'>{label}</span>
+							</button>
+						);
+					})}
+					{[
+						{ tab: 'promos' as const, label: 'Discounts', icon: BadgePercent },
+						{ tab: 'affiliates' as const, label: 'Affiliate Payouts', icon: HandCoins },
+						{ tab: 'friends_family' as const, label: 'Friends & Family', icon: HeartHandshake },
+						{ tab: 'abandoned_carts' as const, label: 'Abandoned Carts', icon: ShoppingCart },
+					].map(({ tab, label, icon: Icon }) => {
+						const isActive = activeTab === tab;
+						return (
+							<button
+								key={tab}
+								type='button'
+								onClick={() => selectMobileTab(tab)}
+								aria-current={isActive ? 'page' : undefined}
+								className={`relative hidden min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-medium md:flex ${isActive ? 'text-deep-tidal-teal' : 'text-[#707070]'}`}>
+								<span className={`flex h-8 min-w-12 items-center justify-center rounded-full px-3 ${isActive ? 'bg-eucalyptus-50' : ''}`}>
+									<Icon className='h-5 w-5' strokeWidth={isActive ? 2.5 : 2} aria-hidden='true' />
+								</span>
+								<span className='max-w-full truncate px-1'>{label}</span>
+							</button>
+						);
+					})}
+					<button
+						type='button'
+						onClick={() => setIsMobileMenuOpen(true)}
+						aria-expanded={isMobileMenuOpen}
+						className={`relative flex min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-medium md:hidden ${isMoreTabActive || isMobileMenuOpen ? 'text-deep-tidal-teal' : 'text-[#707070]'}`}>
+						<span className={`flex h-8 min-w-12 items-center justify-center rounded-full px-3 ${isMoreTabActive || isMobileMenuOpen ? 'bg-eucalyptus-50' : ''}`}>
+							<MoreHorizontal className='h-5 w-5' strokeWidth={isMoreTabActive || isMobileMenuOpen ? 2.5 : 2} aria-hidden='true' />
+						</span>
+						<span>More</span>
+					</button>
+				</div>
+			</nav>
 		</div>
 	);
 }

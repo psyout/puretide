@@ -1,5 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	// Auth0's optional DPoP helper intentionally uses a runtime-computed import
+	// for Node's crypto module. Webpack cannot analyze that expression and emits
+	// a harmless "Critical dependency" warning even when DPoP is not enabled.
+	webpack(config) {
+		config.ignoreWarnings = [
+			...(config.ignoreWarnings ?? []),
+			{
+				module: /@auth0[\\/]nextjs-auth0[\\/]dist[\\/]utils[\\/]dpopUtils\.js$/,
+				message: /Critical dependency: the request of a dependency is an expression/,
+			},
+			{
+				module: /jose[\\/]dist[\\/]webapi[\\/]lib[\\/]deflate\.js$/,
+				message: /A Node\.js API is used \((?:Compression|Decompression)Stream[^)]*\) which is not supported in the Edge Runtime/,
+			},
+		];
+		return config;
+	},
 	// Privacy-focused: Disable telemetry
 	reactStrictMode: true,
 	// No external tracking scripts

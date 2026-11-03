@@ -1,10 +1,16 @@
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
 import type { SessionData } from '@auth0/nextjs-auth0/types';
 
-const REQUIRED_AUTH0_ENV = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_SECRET'] as const;
-
 export function isAuth0Configured(): boolean {
-	return REQUIRED_AUTH0_ENV.every((name) => Boolean(process.env[name]?.trim()));
+	// Keep these references explicit. Next.js can inline statically referenced
+	// environment variables into the Edge middleware bundle, but not dynamic
+	// lookups such as process.env[name].
+	return Boolean(
+		process.env.AUTH0_DOMAIN?.trim() &&
+			process.env.AUTH0_CLIENT_ID?.trim() &&
+			process.env.AUTH0_CLIENT_SECRET?.trim() &&
+			process.env.AUTH0_SECRET?.trim()
+	);
 }
 
 function allowedDashboardEmails(): Set<string> {
