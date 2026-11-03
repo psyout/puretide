@@ -39,6 +39,9 @@ export function getAuth0Client(): Auth0Client | null {
 			clientSecret: process.env.AUTH0_CLIENT_SECRET?.trim(),
 			secret: process.env.AUTH0_SECRET?.trim(),
 			appBaseUrl: process.env.APP_BASE_URL?.trim() || undefined,
+			// The dashboard only needs the user's identity. Omitting offline_access
+			// avoids storing an unnecessary refresh token in the session cookie.
+			authorizationParameters: { scope: 'openid profile email' },
 			signInReturnToPath: '/dashboard',
 		});
 	}

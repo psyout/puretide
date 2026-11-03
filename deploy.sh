@@ -40,6 +40,9 @@ rsync -avz public/ "${SSH_TARGET}:${VPS_PATH}/public/"
 rsync -avz --delete ops/ "${SSH_TARGET}:${VPS_PATH}/ops/"
 rsync -avz package.json package-lock.json "${SSH_TARGET}:${VPS_PATH}/"
 
+echo "Installing and validating nginx configuration..."
+ssh "${SSH_TARGET}" "set -euo pipefail; NGINX_CONF=/etc/nginx/conf.d/puretide.conf; NGINX_BACKUP=/etc/nginx/conf.d/puretide.conf.deploy-backup; cp \"\${NGINX_CONF}\" \"\${NGINX_BACKUP}\"; restore_nginx() { mv -f \"\${NGINX_BACKUP}\" \"\${NGINX_CONF}\"; nginx -t; }; trap restore_nginx ERR; install -m 0644 \"${VPS_PATH}/ops/puretide.nginx.conf\" \"\${NGINX_CONF}\"; nginx -t; systemctl reload nginx; rm -f \"\${NGINX_BACKUP}\"; trap - ERR"
+
 echo "Syncing static assets into standalone runtime..."
 ssh "${SSH_TARGET}" "set -euo pipefail; cd \"${VPS_PATH}\"; rm -rf .next/standalone/.next/static; mkdir -p .next/standalone/.next; cp -R .next/static .next/standalone/.next/static; rm -rf .next/standalone/public; cp -R public .next/standalone/public"
 
