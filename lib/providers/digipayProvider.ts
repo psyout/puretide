@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import type { CreatePaymentSessionResult, PaymentProvider, PaymentResult } from '../paymentProvider';
 import { buildDigipayPaymentUrl, type DigipayPaymentParams } from '../digipay';
 import { getDigipayConfig } from '../env';
+import { paymentCountryCode, paymentRegionCode } from '../paymentAddress';
 
 interface DigipayPostbackPayload {
 	session: string;
@@ -57,14 +58,15 @@ export class DigipayProvider implements PaymentProvider {
 		};
 
 		if (orderPayload.customer) {
+			const countryCode = paymentCountryCode(orderPayload.customer.country);
 			params.firstName = orderPayload.customer.firstName;
 			params.lastName = orderPayload.customer.lastName;
 			params.email = orderPayload.customer.email;
 			params.address = orderPayload.customer.address;
 			params.city = orderPayload.customer.city;
-			params.state = orderPayload.customer.province;
+			params.state = paymentRegionCode(orderPayload.customer.province, countryCode);
 			params.zip = orderPayload.customer.zipCode;
-			params.country = orderPayload.customer.country;
+			params.country = countryCode;
 		}
 
 		const redirectUrl = buildDigipayPaymentUrl(params, encryptionKey);

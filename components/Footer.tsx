@@ -38,7 +38,7 @@ export default function Footer() {
 			aria-label='Site footer'>
 			<div className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(77,167,182,0.13),transparent_36%),radial-gradient(circle_at_88%_100%,rgba(168,213,186,0.08),transparent_32%)]' />
 
-			<div className='relative mx-auto max-w-6xl px-6 py-12 sm:py-14 lg:px-8'>
+			<div className='relative mx-auto max-w-5xl px-6 py-12 sm:py-14 lg:px-8'>
 				<div className='border-t border-white/25 pt-10'>
 					<div className='grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_0.8fr_0.75fr_1fr] lg:gap-12'>
 						<div className='max-w-md'>
@@ -111,13 +111,6 @@ export default function Footer() {
 					</div>
 
 					<div className='mt-10 flex flex-col gap-5 border-t border-white/10 pt-6 md:flex-row md:items-center md:justify-between'>
-						<p className='flex max-w-2xl items-start gap-2 text-xs leading-5 text-white/45'>
-							<FlaskConical
-								className='mt-0.5 h-3.5 w-3.5 shrink-0'
-								aria-hidden='true'
-							/>
-							Products are intended strictly for laboratory research and are not for human or veterinary use.
-						</p>
 						<p className='shrink-0 text-xs text-white/40'>© 2026 Pure Tide Peptides. All rights reserved.</p>
 					</div>
 				</div>

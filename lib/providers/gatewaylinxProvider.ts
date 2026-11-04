@@ -1,42 +1,7 @@
 import crypto from 'crypto';
 import type { CreatePaymentSessionResult, PaymentProvider, PaymentResult } from '../paymentProvider';
 import { getGatewaylinxConfig } from '../env';
-
-// Map common country names to ISO alpha-2 codes for Gatewaylinx.
-function isoCountryCode(country: string): string {
-	const map: Record<string, string> = {
-		canada: 'CA',
-		'united states': 'US',
-		'united states of america': 'US',
-		usa: 'US',
-		mexico: 'MX',
-	};
-	const normalized = country.trim().toLowerCase();
-	return map[normalized] || country.toUpperCase().slice(0, 2);
-}
-
-// Map common province/state names to ISO codes. Currently supports Canada provinces.
-function isoStateCode(province: string, countryIso: string): string {
-	if (countryIso !== 'CA') return province.slice(0, 2).toUpperCase();
-	const map: Record<string, string> = {
-		alberta: 'AB',
-		'british columbia': 'BC',
-		manitoba: 'MB',
-		'new brunswick': 'NB',
-		'newfoundland and labrador': 'NL',
-		newfoundland: 'NL',
-		'nova scotia': 'NS',
-		ontario: 'ON',
-		'prince edward island': 'PE',
-		quebec: 'QC',
-		saskatchewan: 'SK',
-		'northwest territories': 'NT',
-		nunavut: 'NU',
-		yukon: 'YT',
-	};
-	const normalized = province.trim().toLowerCase();
-	return map[normalized] || province.slice(0, 2).toUpperCase();
-}
+import { paymentCountryCode, paymentRegionCode } from '../paymentAddress';
 
 interface GatewaylinxInitResponse {
 	success: boolean;
@@ -108,8 +73,8 @@ export class GatewaylinxProvider implements PaymentProvider {
 
 		// Build init request with customer information
 		// Country/state must be ISO alpha-2 codes (CA, BC) — full names cause bank-side declines.
-		const countryIso = isoCountryCode(orderPayload.customer.country);
-		const stateIso = isoStateCode(orderPayload.customer.province, countryIso);
+		const countryIso = paymentCountryCode(orderPayload.customer.country);
+		const stateIso = paymentRegionCode(orderPayload.customer.province, countryIso);
 
 		const initParams = new URLSearchParams({
 			action: 'init',

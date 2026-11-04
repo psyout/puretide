@@ -117,7 +117,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 				className='absolute -right-48 bottom-20 h-96 w-96 rounded-full bg-deep-tidal-teal-100/40 blur-3xl'
 			/>
 
-			<div className='relative mx-auto max-w-6xl px-6'>
+			<div className='relative mx-auto max-w-5xl px-6'>
 				<header>
 					<h2 id='alternative-products-title' className='flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
 						<span className='h-px w-3 bg-deep-tidal-teal-500' />

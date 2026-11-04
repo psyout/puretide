@@ -15,6 +15,7 @@ import type { Product } from '@/types/product';
 import { buildCartStockMap, hasInvalidCartQuantity, resolveCartItemStock } from '@/lib/cartStock';
 import { readStoredCartPromo, storeCartPromo } from '@/lib/cartPromo';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
+import StoreBreadcrumb from './StoreBreadcrumb';
 
 type CartClientProps = {
 	products: Product[];
@@ -149,12 +150,8 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 	if (cartItems.length === 0) {
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-				<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
-					<Link
-						href='/'
-						className='site-cta cta-tertiary -ml-3 mb-8'>
-						← Back to Products
-					</Link>
+				<div className='max-w-5xl mx-auto px-6 pt-32 pb-24'>
+					<StoreBreadcrumb items={[{ label: 'Shop', href: '/#products' }, { label: 'Cart' }]} />
 					<div className='text-center py-20'>
 						<div className='mb-4 flex justify-center'>
 							<svg
@@ -185,12 +182,8 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
-				<Link
-					href='/'
-					className='site-cta cta-tertiary -ml-3 mb-8'>
-					← Back to Products
-				</Link>
+			<div className='max-w-5xl mx-auto px-6 pt-32 pb-24'>
+				<StoreBreadcrumb items={[{ label: 'Shop', href: '/#products' }, { label: 'Cart' }]} />
 				<h1 className='text-3xl font-bold mb-6 text-deep-tidal-teal-800'>Your Cart</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
@@ -518,7 +511,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													type='button'
 													onClick={handleClearPromo}
 													disabled={isVerifyingPromo}
-											className='site-cta cta-secondary cta-compact px-3'>
+													className='site-cta cta-secondary cta-compact px-3'>
 													Remove
 												</button>
 											) : (
@@ -526,7 +519,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 													type='button'
 													onClick={() => void handleApplyPromo()}
 													disabled={isVerifyingPromo || !promoCode.trim()}
-											className='site-cta cta-primary cta-compact'>
+													className='site-cta cta-primary cta-compact'>
 													{isVerifyingPromo ? 'Applying…' : 'Apply'}
 												</button>
 											)}
@@ -558,7 +551,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 								}}
 								className='site-cta cta-primary min-h-14 w-full'
 								disabled={hasCartInvalidQuantity}>
-								<span className='flex items-center gap-2 text-base'>
+								<span className='flex items-center gap-2 text-[0.9rem]'>
 									<Lock size={18} /> Continue to Checkout
 								</span>
 							</button>

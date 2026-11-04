@@ -4,7 +4,7 @@ export default function CartLoading() {
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<Header />
-			<div className='max-w-6xl mx-auto px-6 py-24'>
+			<div className='max-w-5xl mx-auto px-6 py-24'>
 				<div className='h-5 bg-deep-tidal-teal/15 rounded w-28 mb-8 animate-pulse' aria-hidden />
 				<div className='h-10 bg-deep-tidal-teal/20 rounded w-48 mb-8 animate-pulse' aria-hidden />
 

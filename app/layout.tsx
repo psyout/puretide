@@ -19,8 +19,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
 	const automaticPromotion = await getCachedAutomaticSitewidePromo();
-	const attributionQaEnabled =
-		String(process.env.ATTRIBUTION_ENABLED ?? '').toLowerCase() === 'true' && process.env.ATTRIBUTION_ENVIRONMENT === 'qa';
+	const attributionQaEnabled = String(process.env.ATTRIBUTION_ENABLED ?? '').toLowerCase() === 'true' && process.env.ATTRIBUTION_ENVIRONMENT === 'qa';
 	const attributionParameter = process.env.ATTRIBUTION_PUBLIC_QUERY_PARAMETER ?? 'binom_click_id';
 	return (
 		<html lang='en'>

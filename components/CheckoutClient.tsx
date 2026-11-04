@@ -12,6 +12,7 @@ import { CreditCard, Truck, Plus, Minus, Trash2, Loader2 } from 'lucide-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
+import StoreBreadcrumb from './StoreBreadcrumb';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 const GATEWAYLINX_RELAY_HOST = 'bluepeakdns.com';
@@ -193,7 +194,6 @@ export default function CheckoutClient() {
 	const [shippingAddress, setShippingAddress] = useState({
 		...initialShippingAddress,
 	});
-	const [honeypotCompany, setHoneypotCompany] = useState(''); // honeypot: leave empty
 	const idempotencyKeyRef = useRef<string | null>(null);
 	const [friendsFamilyExpanded, setFriendsFamilyExpanded] = useState(false);
 	const [friendsFamilyStartLoading, setFriendsFamilyStartLoading] = useState(false);
@@ -541,7 +541,6 @@ export default function CheckoutClient() {
 			subtotal,
 			shippingCost,
 			total,
-			company: honeypotCompany,
 			idempotencyKey: getOrCreateIdempotencyKey(),
 			cartItems: cartItems.map((item) => ({
 				id: item.id,
@@ -779,12 +778,8 @@ export default function CheckoutClient() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
-				<Link
-					href='/cart'
-					className='site-cta cta-tertiary -ml-3 mb-8'>
-					← Back to Cart
-				</Link>
+			<div className='max-w-5xl mx-auto px-6 pt-32 pb-24'>
+				<StoreBreadcrumb items={[{ label: 'Shop', href: '/#products' }, { label: 'Cart', href: '/cart' }, { label: 'Checkout' }]} />
 				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>Checkout</h1>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
@@ -848,21 +843,6 @@ export default function CheckoutClient() {
 									<fieldset
 										disabled={isProcessing}
 										className='space-y-4'>
-										<div
-											className='absolute -left-[9999px] w-1 h-1 overflow-hidden'
-											aria-hidden>
-											<label htmlFor='checkout-company'>Company</label>
-											<input
-												type='text'
-												id='checkout-company'
-												name='company'
-												tabIndex={-1}
-												autoComplete='off'
-												value={honeypotCompany}
-												onChange={(e) => setHoneypotCompany(e.target.value)}
-											/>
-										</div>
-
 										<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 											<div>
 												<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>First name *</label>

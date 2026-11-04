@@ -90,9 +90,6 @@ export async function POST(request: Request) {
 		}
 
 		const rawPayload = (await request.json()) as OrderPayload & { company?: string; idempotencyKey?: string };
-		if (typeof rawPayload.company === 'string' && rawPayload.company.trim() !== '') {
-			return json({ ok: false, error: 'Invalid request.' }, { status: 400 });
-		}
 
 		const idemKey = getIdempotencyKey(request, rawPayload);
 		if (idemKey) {

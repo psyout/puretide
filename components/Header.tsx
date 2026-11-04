@@ -43,9 +43,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 	const desktopNavClass = isLearnVariant
 		? 'inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal'
 		: 'inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.045em] text-white/95 transition-colors hover:text-white';
-	const mobileNavClass = isLearnVariant
-		? 'font-medium text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal'
-		: 'font-medium text-white transition-colors hover:text-muted-sage-200';
+	const mobileNavClass = isLearnVariant ? 'font-medium text-deep-tidal-teal-800 transition-colors hover:text-deep-tidal-teal' : 'font-medium text-white transition-colors hover:text-muted-sage-200';
 
 	useEffect(() => {
 		setIsMenuOpen(false);
@@ -120,10 +118,10 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 				isLearnVariant
 					? 'sticky left-0 right-0 top-0 z-[100] border-b border-deep-tidal-teal/10 bg-white/95 shadow-sm backdrop-blur-md'
 					: stacked
-					? 'relative z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
-					: 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
+						? 'relative z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
+						: 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
 			}>
-			<div className='mx-auto flex min-h-[62px] max-w-6xl items-center px-6 py-2.5 md:min-h-[70px] md:py-3.5'>
+			<div className='mx-auto flex min-h-[62px] max-w-5xl items-center px-6 py-2.5 md:min-h-[70px] md:py-3.5'>
 				<div className='flex items-center'>
 					<Link
 						href='/'
@@ -134,18 +132,18 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 						/>
 					</Link>
 					<span
-						className={`ml-3 inline-flex cursor-default items-center text-xs font-medium tracking-[0.04em] sm:ml-4 sm:text-sm ${isLearnVariant ? 'text-deep-tidal-teal-800' : 'text-white/90'}`}>
-						<span className='flex items-center gap-1.5'>
+						className={`ml-3 inline-flex cursor-default items-center text-sm font-medium tracking-[0.04em] sm:ml-4 sm:text-sm ${isLearnVariant ? 'text-deep-tidal-teal-800' : 'text-white/90'}`}>
+						<span className='flex items-center gap-1'>
 							Proudly
 							<MapleLeafIcon className='h-4 w-auto' /> Canadian
 						</span>
 					</span>
 				</div>
 
-				<div className='ml-auto flex items-center gap-2 sm:gap-3'>
+				<div className='ml-auto flex items-center gap-2 sm:gap-3 text-sm'>
 					{/* Desktop Navbar */}
 					<nav
-						className='hidden items-center gap-6 md:flex lg:gap-8'
+						className='hidden items-center gap-6 md:flex lg:gap-6 text-sm'
 						aria-label='Main navigation'>
 						<div
 							className='relative'
@@ -294,7 +292,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 						variants={wrapperVariants}
 						className={`absolute left-0 right-0 top-full overflow-hidden shadow-xl backdrop-blur-lg md:hidden ${isLearnVariant ? 'border-b border-deep-tidal-teal/10 bg-white/95' : 'bg-deep-tidal-teal-600/80'}`}
 						style={{ originY: 'top' }}>
-						<nav className='max-w-6xl mx-auto px-4 sm:px-6 py-4'>
+						<nav className='max-w-5xl mx-auto px-4 sm:px-6 py-4'>
 							<motion.div
 								className='flex flex-col gap-2'
 								variants={containerVariants}>
@@ -304,7 +302,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 										onClick={() => setIsMobileProductsOpen((open) => !open)}
 										aria-expanded={isMobileProductsOpen}
 										aria-controls='mobile-products-menu'
-										className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[13px] ${mobileNavClass}`}>
+										className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[15px] ${mobileNavClass}`}>
 										<span>PRODUCTS</span>
 										<ChevronDown
 											className={`h-4 w-4 transition-transform ${isMobileProductsOpen ? 'rotate-180' : ''}`}
@@ -324,7 +322,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 														key={category}
 														type='button'
 														onClick={() => selectProductCategory(category)}
-													className={`block w-full py-2 text-left text-xs ${mobileNavClass}`}>
+														className={`block w-full py-2 text-left text-[14px] ${mobileNavClass}`}>
 														{category.toUpperCase()}
 													</button>
 												))}
@@ -338,7 +336,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 										onClick={() => setIsMobileAboutOpen((open) => !open)}
 										aria-expanded={isMobileAboutOpen}
 										aria-controls='mobile-about-menu'
-										className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[13px] ${mobileNavClass}`}>
+										className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-[15px] ${mobileNavClass}`}>
 										<span>ABOUT US</span>
 										<ChevronDown
 											className={`h-4 w-4 transition-transform ${isMobileAboutOpen ? 'rotate-180' : ''}`}
@@ -355,7 +353,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 												className={`ml-3 overflow-hidden border-l pl-4 ${isLearnVariant ? 'border-deep-tidal-teal/15' : 'border-white/25'}`}>
 												<Link
 													href='/learn'
-													className={`block py-2 text-xs ${mobileNavClass}`}>
+													className={`block py-2 text-[14px] ${mobileNavClass}`}>
 													LEARN
 												</Link>
 											</motion.div>
@@ -365,7 +363,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 								<motion.button
 									variants={itemVariants}
 									onClick={() => scrollToSection('contact')}
-									className={`px-2 py-1 text-left text-[13px] ${mobileNavClass}`}>
+									className={`px-2 py-1 text-left text-[15px] ${mobileNavClass}`}>
 									CONTACT
 								</motion.button>
 							</motion.div>
