@@ -1,4 +1,5 @@
 import type { CartItem, Product } from '@/types/product';
+import { isProductVariantSellable } from '@/lib/productVariant';
 
 const normalizeName = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
 
@@ -12,7 +13,7 @@ export function buildCartStockMap(products: Product[]): Map<string, number> {
 		if (product.name) stockMap.set(`name:${normalizeName(product.name)}`, stock);
 
 		for (const variant of product.variants ?? []) {
-			stockMap.set(variant.key, Number(variant.stock) || 0);
+			stockMap.set(variant.key, isProductVariantSellable(variant) ? Number(variant.stock) || 0 : 0);
 		}
 	}
 

@@ -326,6 +326,7 @@ export function mapZohoItemsToProducts(items: ZohoInventoryItem[]): Product[] {
 				const variantId = asTrimmedString(variant.item_id);
 				const label = asTrimmedString(variant.attribute_option_name1) || getCustomField(variant, 'Strength');
 				const price = asFiniteNumber(variant.rate);
+				const status = normalizeWebsiteStatus(getCustomField(variant, 'Website Status'));
 				if (!variantId || !label || price == null) {
 					throw new Error(`Zoho variant ${variantId || asTrimmedString(variant.name) || groupId} is missing its item ID, Strength option, or Selling Price.`);
 				}
@@ -337,6 +338,8 @@ export function mapZohoItemsToProducts(items: ZohoInventoryItem[]): Product[] {
 					price,
 					stock: getStockOnHand(variant),
 					image: getWebsiteImage(variant) || product.image,
+					subtitle: getCustomField(variant, 'Website Subtitle') || product.subtitle,
+					status,
 					...(asFiniteNumber(variant.purchase_rate) != null ? { cost: asFiniteNumber(variant.purchase_rate) ?? undefined } : {}),
 				};
 			})
@@ -683,6 +686,7 @@ export async function decrementZohoStock(orderNumber: string, items: StockDeduct
 		const zohoItemId = variant?.zohoItemId ?? product?.zohoItemId;
 		const availableStock = variant?.stock ?? product?.stock ?? 0;
 		if (!product || !zohoItemId) throw new Error(`Zoho product not found for website item: ${item.id}`);
+		if (variant && (variant.status ?? 'published') !== 'published') throw new Error(`Zoho variant is not published: ${product.name} ${variant.label}.`);
 		if (!Number.isInteger(quantity) || quantity <= 0) throw new Error(`Invalid quantity for ${item.id}: ${item.quantity}`);
 		if (quantity > availableStock) throw new Error(`Insufficient Zoho stock for ${product.name}${variant ? ` ${variant.label}` : ''}. Available: ${availableStock}, requested: ${quantity}.`);
 		return {

@@ -41,3 +41,12 @@ test('available inventory still blocks genuinely excessive quantities', () => {
 	const stockMap = buildCartStockMap([product]);
 	assert.equal(hasInvalidCartQuantity(stockMap, [{ ...variantCartItem, quantity: 9 }], false), true);
 });
+
+test('an inactive variant resolves to zero sellable stock even when Zoho has physical stock', () => {
+	const inactiveProduct: Product = {
+		...product,
+		variants: product.variants?.map((variant) => variant.key === 'mots-c-10' ? { ...variant, status: 'inactive' } : variant),
+	};
+	const stockMap = buildCartStockMap([inactiveProduct]);
+	assert.equal(stockMap.get('mots-c-10'), 0);
+});

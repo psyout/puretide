@@ -95,7 +95,7 @@ type StockProduct = {
 	stock: number;
 	name?: string;
 	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
-	variants?: Array<{ key: string; label?: string; stock: number }>;
+	variants?: Array<{ key: string; label?: string; stock: number; status?: 'published' | 'draft' | 'inactive' | 'stock-out' }>;
 };
 
 function isWebsiteSellable(product: StockProduct) {
@@ -168,7 +168,7 @@ export async function validateStockAvailability(
 			}
 			if (!isWebsiteSellable(baseProduct)) return `Product "${baseProduct.name ?? baseProduct.id}" is not available.`;
 			const variant = baseProduct.variants?.find((candidate) => candidate.key === itemId);
-			available = Number(variant?.stock) || 0;
+			available = (variant?.status ?? 'published') === 'published' ? Number(variant?.stock) || 0 : 0;
 			productName = `${baseProduct.name ?? baseProduct.id}${variant?.label ? ` - ${variant.label}` : ''}`;
 		} else {
 			// Not found at all - try partial match (e.g., "bacteriostatic-water-10mg" -> "bacteriostatic-water")

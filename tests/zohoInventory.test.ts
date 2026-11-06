@@ -80,7 +80,7 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			stock_on_hand: 9,
 			attribute_option_name1: '20mg',
 			image_id: 'image-20',
-			custom_fields: customFields({ 'Website Slug': 'retatrutide', Strength: '20mg', 'Website Image': '' }),
+			custom_fields: customFields({ 'Website Slug': 'retatrutide', Strength: '20mg', 'Website Image': '', 'Website Subtitle': 'BPC157 10 mg TB 500 10 mg' }),
 		},
 		{
 			item_id: 'reta-10-id',
@@ -93,7 +93,7 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			stock_on_hand: 4,
 			attribute_option_name1: '10mg',
 			image_id: 'image-10',
-			custom_fields: customFields({ 'Website Slug': '', Strength: '10mg', 'Website Image': '' }),
+			custom_fields: customFields({ 'Website Slug': '', Strength: '10mg', 'Website Image': '', 'Website Subtitle': 'BPC157 5 mg TB 500 5 mg' }),
 		},
 	]);
 
@@ -110,7 +110,9 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			price: 90,
 			stock: 4,
 			image: '/api/products/image/reta-10-id',
+			subtitle: 'BPC157 5 mg TB 500 5 mg',
 			cost: 8,
+			status: 'published',
 		},
 		{
 			key: 'retatrutide-20mg',
@@ -120,9 +122,27 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			price: 150,
 			stock: 9,
 			image: '/api/products/image/reta-20-id',
+			subtitle: 'BPC157 10 mg TB 500 10 mg',
 			cost: 12.23,
+			status: 'published',
 		},
 	]);
+});
+
+test('keeps each grouped variant website status independent', () => {
+	const product = mapZohoItemsToProducts([
+		{
+			item_id: 'reta-20-id', group_id: 'reta-group', group_name: 'Retatrutide', name: 'Retatrutide', rate: 150, stock_on_hand: 9,
+			attribute_option_name1: '20mg', custom_fields: customFields({ 'Website Slug': 'retatrutide', 'Website Status': 'published' }),
+		},
+		{
+			item_id: 'reta-10-id', group_id: 'reta-group', group_name: 'Retatrutide', name: 'Retatrutide - 10mg', rate: 90, stock_on_hand: 20,
+			attribute_option_name1: '10mg', custom_fields: customFields({ 'Website Slug': '', 'Website Status': 'inactive' }),
+		},
+	])[0];
+
+	assert.equal(product.variants?.find((variant) => variant.label === '10mg')?.status, 'inactive');
+	assert.equal(product.variants?.find((variant) => variant.label === '20mg')?.status, 'published');
 });
 
 test('ignores Zoho-only items without a website slug', () => {

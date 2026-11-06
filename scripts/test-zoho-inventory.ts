@@ -36,6 +36,8 @@ async function main() {
 						sku: variant.sku,
 						price: variant.price,
 						stock: variant.stock,
+						status: variant.status,
+						subtitle: variant.subtitle,
 						hasImage: Boolean(variant.image),
 					})),
 				})),

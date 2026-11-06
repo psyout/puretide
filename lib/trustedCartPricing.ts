@@ -1,5 +1,6 @@
 import type { Product } from '@/types/product';
 import { products as baseProducts } from '@/lib/products';
+import { isProductVariantSellable } from '@/lib/productVariant';
 
 type CartItemWithPrice = {
 	id: string | number;
@@ -65,7 +66,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 			if (!baseProduct) return null;
 			if ((baseProduct.status ?? 'published') !== 'published') return null;
 			const variant = baseProduct.variants?.find((v) => v.key === itemId);
-			if (variant) {
+			if (variant && isProductVariantSellable(variant)) {
 				productPrice = Number(variant.price) || 0;
 				resolvedId = variant.key;
 			} else return null;

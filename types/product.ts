@@ -6,7 +6,9 @@ export interface ProductVariant {
 	price: number;
 	stock: number;
 	image?: string;
+	subtitle?: string;
 	cost?: number;
+	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
 }
 
 export interface Product {

@@ -227,7 +227,7 @@ export default function StockDashboardPage() {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
-				body: JSON.stringify({ scope: 'all' }),
+				body: JSON.stringify({ scope: 'zoho' }),
 			});
 			const data = (await response.json()) as {
 				ok?: boolean;

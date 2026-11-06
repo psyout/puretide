@@ -11,6 +11,7 @@ import { iconMap } from '@/lib/productIcons';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Eye, ShoppingCart, Loader2 } from 'lucide-react';
+import { isProductVariantSellable } from '@/lib/productVariant';
 
 interface ProductCardProps {
 	product: Product;
@@ -51,14 +52,14 @@ export default function ProductCard({ product, onImageLoaded, automaticPromotion
 		: getSalePrice(product.price, saleDiscount).toFixed(2);
 
 	// Determine sold-out status
-	const allVariantsSoldOut = hasVariants && variants.every((v) => v.stock <= 0);
+	const allVariantsSoldOut = hasVariants && variants.every((variant) => !isProductVariantSellable(variant));
 	const isSoldOut = allVariantsSoldOut || (!hasVariants && (Number(product.stock) <= 0 || product.status === 'stock-out'));
 
 	// Determine low stock status (for single-variant products)
 	const isLowStock = !isSoldOut && !hasVariants && Number(product.stock) < 10;
 
 	// Default variant for quick add
-	const defaultVariant = hasVariants ? variants.find((v) => v.stock > 0) || variants[0] : null;
+	const defaultVariant = hasVariants ? variants.find(isProductVariantSellable) || variants[0] : null;
 
 	useEffect(() => {
 		setHasReportedImageLoaded(false);
@@ -107,6 +108,7 @@ export default function ProductCard({ product, onImageLoaded, automaticPromotion
 								stock: defaultVariant.stock,
 								mg: defaultVariant.label,
 								image: defaultVariant.image || product.image,
+								subtitle: defaultVariant.subtitle ?? product.subtitle,
 								zohoItemId: defaultVariant.zohoItemId,
 								sku: defaultVariant.sku,
 								cost: defaultVariant.cost,

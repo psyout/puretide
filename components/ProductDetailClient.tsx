@@ -13,6 +13,7 @@ import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { parseProductDescription } from '@/lib/productDescription';
+import { isProductVariantSellable } from '@/lib/productVariant';
 import ProductInfoAccordions from '@/components/ProductInfoAccordions';
 
 interface ProductDetailClientProps {
@@ -32,7 +33,7 @@ export default function ProductDetailClient({ product, description, details, has
 
 	// Default selection: first in-stock variant, else first variant
 	const defaultVariant = useMemo(() => {
-		const firstInStock = variants.find((v) => v.stock > 0);
+		const firstInStock = variants.find(isProductVariantSellable);
 		return firstInStock || variants[0] || null;
 	}, [variants]);
 
@@ -47,7 +48,8 @@ export default function ProductDetailClient({ product, description, details, has
 	const displayMg = currentVariant?.label ?? product.mg;
 	const displayStock = currentVariant?.stock ?? product.stock;
 	const displayImage = currentVariant?.image || product.image;
-	const isSoldOut = displayStock <= 0 || product.status === 'stock-out';
+	const displaySubtitle = currentVariant?.subtitle ?? product.subtitle;
+	const isSoldOut = currentVariant ? !isProductVariantSellable(currentVariant) : displayStock <= 0 || product.status === 'stock-out';
 	const isPreOrder = product.slug === 'cartalax' || product.slug === 'dsip';
 	const normalizedName = product.name.toLocaleLowerCase();
 	const normalizedStrength = displayMg?.trim().toLocaleLowerCase();
@@ -56,7 +58,7 @@ export default function ProductDetailClient({ product, description, details, has
 	const { copy: descriptionCopy, ctas: descriptionCtas } = parseProductDescription(description, product.slug);
 
 	// For variant products, check if all variants are sold out
-	const allVariantsSoldOut = hasVariants && variants.every((v) => v.stock <= 0);
+	const allVariantsSoldOut = hasVariants && variants.every((variant) => !isProductVariantSellable(variant));
 
 	const handleVariantChange = (variantKey: string) => {
 		const variant = variants.find((v) => v.key === variantKey);
@@ -75,6 +77,7 @@ export default function ProductDetailClient({ product, description, details, has
 				stock: currentVariant.stock,
 				mg: currentVariant.label,
 				image: currentVariant.image || product.image,
+				subtitle: currentVariant.subtitle ?? product.subtitle,
 				zohoItemId: currentVariant.zohoItemId,
 				sku: currentVariant.sku,
 				cost: currentVariant.cost,
@@ -116,8 +119,8 @@ export default function ProductDetailClient({ product, description, details, has
 				<div className='mt-1 md:mt-0'>
 					<h1 className='text-3xl font-bold text-deep-tidal-teal-700 leading-tight'>{displayName}</h1>
 				</div>
-				{product.subtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{product.subtitle}</p>}
-				{!product.subtitle && <div className='mb-1' />}
+				{displaySubtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{displaySubtitle}</p>}
+				{!displaySubtitle && <div className='mb-1' />}
 
 				{/* Icons ***/}
 				{product.icons && product.icons.length > 0 && (
@@ -199,7 +202,7 @@ export default function ProductDetailClient({ product, description, details, has
 							aria-label='Strength'>
 							{variants.map((variant) => {
 								const isSelected = selectedVariant?.key === variant.key;
-								const isVariantSoldOut = variant.stock <= 0;
+								const isVariantSoldOut = !isProductVariantSellable(variant);
 								return (
 									<label
 										key={variant.key}

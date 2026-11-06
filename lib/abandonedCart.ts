@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import type { Product } from '@/types/product';
 import type { AbandonedCartItem } from '@/lib/ordersDb';
+import { isProductVariantSellable } from '@/lib/productVariant';
 
 export const ABANDONED_CART_CONSENT_TEXT =
 	'Email me one reminder about items left in my cart. I can unsubscribe at any time.';
@@ -33,7 +34,7 @@ export function resolveRecoverableCartItems(items: AbandonedCartItem[], products
 		}
 		const base = products.find((product) => product.variants?.some((variant) => variant.key === item.id));
 		const variant = base?.variants?.find((entry) => entry.key === item.id);
-		if (base && variant && (base.status ?? 'published') === 'published' && variant.stock > 0) {
+		if (base && variant && (base.status ?? 'published') === 'published' && isProductVariantSellable(variant)) {
 			recovered.push({
 				...base,
 				id: variant.key,
@@ -41,6 +42,7 @@ export function resolveRecoverableCartItems(items: AbandonedCartItem[], products
 				stock: variant.stock,
 				mg: variant.label,
 				image: variant.image || base.image,
+				subtitle: variant.subtitle ?? base.subtitle,
 				zohoItemId: variant.zohoItemId,
 				sku: variant.sku,
 				cost: variant.cost,
