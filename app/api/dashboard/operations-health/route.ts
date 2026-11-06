@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAuth } from '@/lib/dashboardAuth';
 import { getRecentRetryJobs } from '@/lib/ordersDb';
+import { getZohoApiHealth } from '@/lib/zohoInventory';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
 			generatedAt: now,
 			dueRetryJobs: dueJobs.length,
 			failedRetryJobs: failedJobs.length,
+			zoho: getZohoApiHealth(),
 			jobs: jobs.map((job) => ({
 				id: job.id,
 				orderSession: job.session,

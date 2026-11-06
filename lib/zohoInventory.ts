@@ -78,15 +78,27 @@ export type ZohoWebsiteStatus = 'published' | 'draft' | 'inactive';
 let cachedAccessToken: { value: string; expiresAt: number } | null = null;
 type ProductCatalogCache = { products: Product[]; refreshedAt: number; expiresAt: number };
 type ItemDetailCache = { item: ZohoInventoryItem; expiresAt: number };
+type ItemListCache = { items: ZohoInventoryItem[]; refreshedAt: number; expiresAt: number };
 
 let cachedProductCatalog: ProductCatalogCache | null = null;
 let pendingProductCatalogRead: Promise<Product[]> | null = null;
 let pendingForcedProductCatalogRefresh: Promise<Product[]> | null = null;
 let persistentCatalogLoaded = false;
 const cachedItemDetails = new Map<string, ItemDetailCache>();
+let cachedItemList: ItemListCache | null = null;
+let pendingItemListRead: Promise<ZohoInventoryItem[]> | null = null;
+let zohoBlockedUntil = 0;
+let zohoApiCallsSinceStart = 0;
+let lastZohoApiCallAt: number | null = null;
+let lastZohoApiError: string | null = null;
 
-const DEFAULT_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
-const DEFAULT_ITEM_DETAIL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const DEFAULT_CATALOG_CACHE_TTL_MS = 30 * 60 * 1000;
+// Keep this below the 30-minute cron interval so each scheduled stock sync gets
+// one fresh list while storefront reads in the same window reuse it.
+const DEFAULT_ITEM_LIST_CACHE_TTL_MS = 25 * 60 * 1000;
+const DEFAULT_ITEM_DETAIL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+const DEFAULT_BURST_RATE_LIMIT_COOLDOWN_MS = 2 * 60 * 1000;
 
 const positiveDuration = (value: unknown, fallback: number) => {
 	const parsed = Number(value);
@@ -94,7 +106,10 @@ const positiveDuration = (value: unknown, fallback: number) => {
 };
 
 const getCatalogCacheTtlMs = () => positiveDuration(process.env.ZOHO_INVENTORY_CATALOG_CACHE_TTL_MS, DEFAULT_CATALOG_CACHE_TTL_MS);
+const getItemListCacheTtlMs = () => positiveDuration(process.env.ZOHO_INVENTORY_ITEMS_CACHE_TTL_MS, DEFAULT_ITEM_LIST_CACHE_TTL_MS);
 const getItemDetailCacheTtlMs = () => positiveDuration(process.env.ZOHO_INVENTORY_DETAIL_CACHE_TTL_MS, DEFAULT_ITEM_DETAIL_CACHE_TTL_MS);
+const getRateLimitCooldownMs = () => positiveDuration(process.env.ZOHO_INVENTORY_RATE_LIMIT_COOLDOWN_MS, DEFAULT_RATE_LIMIT_COOLDOWN_MS);
+const getBurstRateLimitCooldownMs = () => positiveDuration(process.env.ZOHO_INVENTORY_BURST_RATE_LIMIT_COOLDOWN_MS, DEFAULT_BURST_RATE_LIMIT_COOLDOWN_MS);
 const getPersistentCachePath = () => {
 	const configuredPath = process.env.ZOHO_INVENTORY_CACHE_PATH?.trim();
 	if (configuredPath) return configuredPath;
@@ -407,10 +422,14 @@ async function getAccessToken(): Promise<string> {
 }
 
 async function zohoRequest<T extends ZohoApiResponse>(path: string, init?: RequestInit, query?: Record<string, string>): Promise<T> {
+	if (zohoBlockedUntil > Date.now()) {
+		throw new Error(`Zoho Inventory requests are paused until ${new Date(zohoBlockedUntil).toISOString()} after a rate-limit response.`);
+	}
 	const url = new URL(`${getApiBaseUrl()}/${path.replace(/^\/+/, '')}`);
 	url.searchParams.set('organization_id', getOrganizationId());
 	for (const [key, value] of Object.entries(query ?? {})) url.searchParams.set(key, value);
 	const token = await getAccessToken();
+	const startedAt = Date.now();
 	const response = await fetch(url, {
 		...init,
 		headers: {
@@ -421,19 +440,85 @@ async function zohoRequest<T extends ZohoApiResponse>(path: string, init?: Reque
 		},
 		cache: 'no-store',
 	});
+	zohoApiCallsSinceStart += 1;
+	lastZohoApiCallAt = Date.now();
 	const payload = (await response.json()) as T;
 	if (!response.ok || (typeof payload.code === 'number' && payload.code !== 0)) {
-		throw new Error(`Zoho Inventory request failed (${response.status}): ${payload.message || response.statusText}`);
+		const message = payload.message || response.statusText;
+		lastZohoApiError = message;
+		if (response.status === 429 || payload.code === 44 || payload.code === 45) {
+			const isDailyLimit = payload.code === 45 || /daily|maximum call rate limit/i.test(message);
+			zohoBlockedUntil = Date.now() + (isDailyLimit ? getRateLimitCooldownMs() : getBurstRateLimitCooldownMs());
+		}
+		console.warn(
+			JSON.stringify({
+				label: 'zoho:api_request',
+				method: init?.method ?? 'GET',
+				path: url.pathname,
+				status: response.status,
+				durationMs: Date.now() - startedAt,
+				callsSinceStart: zohoApiCallsSinceStart,
+				blockedUntil: zohoBlockedUntil > Date.now() ? new Date(zohoBlockedUntil).toISOString() : null,
+			}),
+		);
+		throw new Error(`Zoho Inventory request failed (${response.status}): ${message}`);
 	}
+	lastZohoApiError = null;
+	console.info(
+		JSON.stringify({
+			label: 'zoho:api_request',
+			method: init?.method ?? 'GET',
+			path: url.pathname,
+			status: response.status,
+			durationMs: Date.now() - startedAt,
+			callsSinceStart: zohoApiCallsSinceStart,
+		}),
+	);
 	return payload;
+}
+
+async function fetchZohoItemList(): Promise<ZohoInventoryItem[]> {
+	const items: ZohoInventoryItem[] = [];
+	for (let page = 1; page <= 100; page += 1) {
+		const response = await zohoRequest<ZohoItemsResponse>('items', undefined, { page: String(page), per_page: '200' });
+		items.push(...(response.items ?? []));
+		if (!response.page_context?.has_more_page) break;
+		if (page === 100) throw new Error('Zoho Inventory pagination exceeded 100 pages.');
+	}
+	return items;
+}
+
+async function readZohoItemList(force = false): Promise<ZohoInventoryItem[]> {
+	if (!force && cachedItemList && cachedItemList.expiresAt > Date.now()) return cachedItemList.items;
+	if (pendingItemListRead) return pendingItemListRead;
+	if (!force && zohoBlockedUntil > Date.now() && cachedItemList) return cachedItemList.items;
+
+	pendingItemListRead = (async () => {
+		try {
+			const items = await fetchZohoItemList();
+			const refreshedAt = Date.now();
+			cachedItemList = { items, refreshedAt, expiresAt: refreshedAt + getItemListCacheTtlMs() };
+			return items;
+		} catch (error) {
+			if (!force && cachedItemList?.items.length) return cachedItemList.items;
+			throw error;
+		} finally {
+			pendingItemListRead = null;
+		}
+	})();
+	return pendingItemListRead;
 }
 
 export async function readZohoItemImage(itemIdRaw: string): Promise<{ bytes: ArrayBuffer; contentType: string }> {
 	const itemId = asTrimmedString(itemIdRaw);
 	if (!itemId) throw new Error('A Zoho item ID is required.');
+	if (zohoBlockedUntil > Date.now()) {
+		throw new Error(`Zoho Inventory requests are paused until ${new Date(zohoBlockedUntil).toISOString()} after a rate-limit response.`);
+	}
 	const url = new URL(`${getApiBaseUrl()}/items/${encodeURIComponent(itemId)}/image`);
 	url.searchParams.set('organization_id', getOrganizationId());
 	url.searchParams.set('preview', 'false');
+	const startedAt = Date.now();
 	const response = await fetch(url, {
 		headers: {
 			Accept: '*/*',
@@ -441,21 +526,43 @@ export async function readZohoItemImage(itemIdRaw: string): Promise<{ bytes: Arr
 		},
 		cache: 'no-store',
 	});
-	if (!response.ok) throw new Error(`Zoho Inventory image request failed (${response.status}): ${response.statusText}`);
+	zohoApiCallsSinceStart += 1;
+	lastZohoApiCallAt = Date.now();
+	if (!response.ok) {
+		lastZohoApiError = response.statusText;
+		if (response.status === 429) zohoBlockedUntil = Date.now() + getBurstRateLimitCooldownMs();
+		console.warn(
+			JSON.stringify({
+				label: 'zoho:api_request',
+				method: 'GET',
+				path: url.pathname,
+				status: response.status,
+				durationMs: Date.now() - startedAt,
+				callsSinceStart: zohoApiCallsSinceStart,
+				blockedUntil: zohoBlockedUntil > Date.now() ? new Date(zohoBlockedUntil).toISOString() : null,
+			}),
+		);
+		throw new Error(`Zoho Inventory image request failed (${response.status}): ${response.statusText}`);
+	}
+	lastZohoApiError = null;
+	console.info(
+		JSON.stringify({
+			label: 'zoho:api_request',
+			method: 'GET',
+			path: url.pathname,
+			status: response.status,
+			durationMs: Date.now() - startedAt,
+			callsSinceStart: zohoApiCallsSinceStart,
+		}),
+	);
 	return {
 		bytes: await response.arrayBuffer(),
 		contentType: response.headers.get('content-type') || 'application/octet-stream',
 	};
 }
 
-async function refreshZohoProducts(): Promise<Product[]> {
-	const allItems: ZohoInventoryItem[] = [];
-	for (let page = 1; page <= 100; page += 1) {
-		const response = await zohoRequest<ZohoItemsResponse>('items', undefined, { page: String(page), per_page: '200' });
-		allItems.push(...(response.items ?? []));
-		if (!response.page_context?.has_more_page) break;
-		if (page === 100) throw new Error('Zoho Inventory pagination exceeded 100 pages.');
-	}
+async function refreshZohoProducts(forceItemList = false): Promise<Product[]> {
+	const allItems = await readZohoItemList(forceItemList);
 	const websiteAnchors = allItems.filter((item) => Boolean(getCustomField(item, 'Website Slug')));
 	if (websiteAnchors.length === 0) throw new Error('Zoho Inventory returned no items with a Website Slug.');
 	const websiteGroupIds = new Set(websiteAnchors.map((item) => asTrimmedString(item.group_id)).filter(Boolean));
@@ -500,13 +607,7 @@ async function refreshZohoProducts(): Promise<Product[]> {
  * storefront catalog, making it safe to run frequently for a spreadsheet view.
  */
 export async function readZohoStockSnapshot(): Promise<ZohoStockSnapshotItem[]> {
-	const items: ZohoInventoryItem[] = [];
-	for (let page = 1; page <= 100; page += 1) {
-		const response = await zohoRequest<ZohoItemsResponse>('items', undefined, { page: String(page), per_page: '200' });
-		items.push(...(response.items ?? []));
-		if (!response.page_context?.has_more_page) break;
-		if (page === 100) throw new Error('Zoho Inventory stock pagination exceeded 100 pages.');
-	}
+	const items = await readZohoItemList();
 	const stockBySlug = new Map<string, number>();
 	const itemsByGroup = new Map<string, ZohoInventoryItem[]>();
 	for (const item of items) {
@@ -531,6 +632,7 @@ export async function readZohoStockSnapshot(): Promise<ZohoStockSnapshotItem[]> 
 export async function readZohoProducts(): Promise<Product[]> {
 	await loadPersistentCatalog();
 	if (cachedProductCatalog && cachedProductCatalog.expiresAt > Date.now()) return cloneProducts(cachedProductCatalog.products);
+	if (cachedProductCatalog && zohoBlockedUntil > Date.now()) return cloneProducts(cachedProductCatalog.products);
 	if (pendingProductCatalogRead) return cloneProducts(await pendingProductCatalogRead);
 
 	pendingProductCatalogRead = (async () => {
@@ -576,7 +678,7 @@ export async function forceRefreshZohoProducts(): Promise<Product[]> {
 		}
 		// Product custom fields can otherwise remain stale for the detail-cache TTL.
 		cachedItemDetails.clear();
-		const products = await refreshZohoProducts();
+		const products = await refreshZohoProducts(true);
 		const refreshedAt = Date.now();
 		const nextCatalog = { products, refreshedAt, expiresAt: refreshedAt + getCatalogCacheTtlMs() };
 		await persistCatalog(nextCatalog);
@@ -660,6 +762,23 @@ export function resetZohoInventoryCacheForTests() {
 	pendingForcedProductCatalogRefresh = null;
 	persistentCatalogLoaded = false;
 	cachedItemDetails.clear();
+	cachedItemList = null;
+	pendingItemListRead = null;
+	zohoBlockedUntil = 0;
+	zohoApiCallsSinceStart = 0;
+	lastZohoApiCallAt = null;
+	lastZohoApiError = null;
+}
+
+export function getZohoApiHealth() {
+	return {
+		callsSinceStart: zohoApiCallsSinceStart,
+		lastCallAt: lastZohoApiCallAt == null ? null : new Date(lastZohoApiCallAt).toISOString(),
+		lastError: lastZohoApiError,
+		blockedUntil: zohoBlockedUntil > Date.now() ? new Date(zohoBlockedUntil).toISOString() : null,
+		itemListRefreshedAt: cachedItemList ? new Date(cachedItemList.refreshedAt).toISOString() : null,
+		catalogRefreshedAt: cachedProductCatalog ? new Date(cachedProductCatalog.refreshedAt).toISOString() : null,
+	};
 }
 
 export function isZohoInventoryWriteEnabled() {

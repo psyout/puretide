@@ -59,19 +59,24 @@ export default function ProductInfoAccordions({ details, freeShippingThreshold }
 							onClick={() => setOpenSection(isOpen ? null : section.id)}
 							aria-expanded={isOpen}
 							aria-controls={panelId}
-							className='flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-deep-tidal-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-deep-tidal-teal/40'>
+							className='group flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-deep-tidal-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-deep-tidal-teal/40'>
 							<span>{section.label}</span>
-							{isOpen ? (
-								<Minus
-									className='h-4 w-4 shrink-0'
-									aria-hidden='true'
-								/>
-							) : (
-								<Plus
-									className='h-4 w-4 shrink-0'
-									aria-hidden='true'
-								/>
-							)}
+							<span
+								className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-out group-hover:bg-eucalyptus/45 group-hover:text-deep-tidal-teal-800 group-focus-visible:bg-eucalyptus/45 group-focus-visible:text-deep-tidal-teal-800 ${
+									isOpen ? 'bg-eucalyptus/45 text-deep-tidal-teal-800' : 'text-deep-tidal-teal-500'
+								}`}>
+								{isOpen ? (
+									<Minus
+										className='h-4 w-4'
+										aria-hidden='true'
+									/>
+								) : (
+									<Plus
+										className='h-4 w-4'
+										aria-hidden='true'
+									/>
+								)}
+							</span>
 						</button>
 						<div
 							className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${

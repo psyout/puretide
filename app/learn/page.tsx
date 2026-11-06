@@ -65,7 +65,7 @@ function Hero() {
 					Read the FAQs
 				</a>
 				<a
-					href='https://puretide.ca/shop'
+					href='https://puretide.ca/#products'
 					className='site-cta cta-secondary cta-inverse'>
 					Browse Products
 				</a>

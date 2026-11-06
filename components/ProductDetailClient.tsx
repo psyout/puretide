@@ -259,12 +259,16 @@ export default function ProductDetailClient({ product, description, details, has
 
 					{/* COA */}
 					{hasCoaFile && (
-						<div className='mb-5 flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-deep-tidal-teal-700'>
+						<div className='lab-assurance mb-5 flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-deep-tidal-teal-700'>
 							<span className='inline-flex items-center gap-2 font-semibold'>
-								<FlaskConical
-									className='h-5 w-5 shrink-0'
-									aria-hidden='true'
-								/>
+								<span
+									className='relative inline-flex h-6 w-6 shrink-0 items-center justify-center'
+									aria-hidden='true'>
+									<FlaskConical className='lab-flask-icon h-5 w-5' />
+									<span className='lab-bubble' />
+									<span className='lab-bubble' />
+									<span className='lab-bubble' />
+								</span>
 								Independently lab tested
 							</span>
 							<span
@@ -276,7 +280,7 @@ export default function ProductDetailClient({ product, description, details, has
 								target='_blank'
 								rel='noopener noreferrer'
 								aria-label='View lab report (opens in a new tab)'
-								className='inline-flex min-h-11 items-center rounded-sm font-semibold underline decoration-1 underline-offset-4 hover:text-deep-tidal-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-tidal-teal/40 focus-visible:ring-offset-2'>
+								className='lab-report-link inline-flex min-h-11 items-center rounded-sm font-semibold hover:text-deep-tidal-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-tidal-teal/40 focus-visible:ring-offset-2'>
 								View lab report
 							</Link>
 						</div>

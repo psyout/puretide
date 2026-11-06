@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
 	forceRefreshZohoProducts,
+	getZohoApiHealth,
 	mapZohoItemToProduct,
 	mapZohoItemsToProducts,
 	readZohoProducts,
@@ -213,10 +214,12 @@ test('reads a lightweight paginated Zoho stock snapshot without item detail requ
 			});
 		}) as typeof fetch;
 
-		assert.deepEqual(await readZohoStockSnapshot(), [
+		const expected = [
 			{ slug: 'product-one', stock: 12 },
 			{ slug: 'product-two', stock: 7 },
-		]);
+		];
+		assert.deepEqual(await readZohoStockSnapshot(), expected);
+		assert.deepEqual(await readZohoStockSnapshot(), expected);
 		assert.equal(requestedPaths.length, 2);
 		assert.ok(requestedPaths.every((path) => path.startsWith('/v1/items?')));
 	} finally {
@@ -370,6 +373,10 @@ test('coalesces concurrent catalog reads and serves subsequent reads from cache'
 		const stale = await readZohoProducts();
 		assert.equal(requestCount, 3);
 		assert.deepEqual(JSON.parse(JSON.stringify(stale)), JSON.parse(JSON.stringify(first)));
+		const staleDuringCooldown = await readZohoProducts();
+		assert.equal(requestCount, 3);
+		assert.deepEqual(JSON.parse(JSON.stringify(staleDuringCooldown)), JSON.parse(JSON.stringify(first)));
+		assert.ok(getZohoApiHealth().blockedUntil);
 	} finally {
 		globalThis.fetch = originalFetch;
 		const restore = (key: string, value: string | undefined) => {

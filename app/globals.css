@@ -41,6 +41,36 @@
 	}
 }
 
+@keyframes lab-bubble-rise {
+	0% {
+		opacity: 0;
+		transform: translate3d(0, 2px, 0) scale(0.65);
+	}
+	20% {
+		opacity: 0.75;
+	}
+	75% {
+		opacity: 0.45;
+	}
+	100% {
+		opacity: 0;
+		transform: translate3d(var(--bubble-x, 0), -15px, 0) scale(1);
+	}
+}
+
+@keyframes lab-flask-react {
+	0%,
+	100% {
+		transform: rotate(0deg);
+	}
+	35% {
+		transform: rotate(-4deg);
+	}
+	65% {
+		transform: rotate(3deg);
+	}
+}
+
 .animate-fade-in {
 	animation: fade-in 0.3s ease-out;
 }
@@ -133,6 +163,88 @@ p {
 }
 
 @layer components {
+	.lab-assurance .lab-flask-icon {
+		transform-origin: 50% 80%;
+	}
+
+	.lab-assurance:hover .lab-flask-icon,
+	.lab-assurance:focus-within .lab-flask-icon {
+		animation: lab-flask-react 900ms ease-in-out infinite;
+	}
+
+	.lab-bubble {
+		@apply pointer-events-none absolute rounded-full border border-current opacity-0;
+		bottom: 0.7rem;
+		height: 0.2rem;
+		width: 0.2rem;
+	}
+
+	.lab-bubble:nth-of-type(1) {
+		--bubble-x: -0.2rem;
+		left: 0.45rem;
+	}
+
+	.lab-bubble:nth-of-type(2) {
+		--bubble-x: 0.15rem;
+		left: 0.75rem;
+		height: 0.25rem;
+		width: 0.25rem;
+	}
+
+	.lab-bubble:nth-of-type(3) {
+		--bubble-x: 0.25rem;
+		left: 0.95rem;
+	}
+
+	.lab-assurance:hover .lab-bubble,
+	.lab-assurance:focus-within .lab-bubble {
+		animation: lab-bubble-rise 1.45s ease-out infinite;
+	}
+
+	.lab-assurance:hover .lab-bubble:nth-of-type(2),
+	.lab-assurance:focus-within .lab-bubble:nth-of-type(2) {
+		animation-delay: 480ms;
+	}
+
+	.lab-assurance:hover .lab-bubble:nth-of-type(3),
+	.lab-assurance:focus-within .lab-bubble:nth-of-type(3) {
+		animation-delay: 920ms;
+	}
+
+	.lab-report-link {
+		@apply relative no-underline transition-colors duration-200;
+	}
+
+	.lab-report-link::after {
+		@apply absolute bg-current;
+		bottom: 0.55rem;
+		content: '';
+		height: 1px;
+		left: 0;
+		transform: scaleX(0.28);
+		transform-origin: left;
+		transition: transform 260ms ease-out;
+		width: 100%;
+	}
+
+	.lab-report-link:hover::after,
+	.lab-report-link:focus-visible::after {
+		transform: scaleX(1);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.lab-assurance:hover .lab-flask-icon,
+		.lab-assurance:focus-within .lab-flask-icon,
+		.lab-assurance:hover .lab-bubble,
+		.lab-assurance:focus-within .lab-bubble {
+			animation: none;
+		}
+
+		.lab-report-link::after {
+			transition: none;
+		}
+	}
+
 	.bento-card {
 		@apply rounded-xl border border-deep-tidal-teal/10 bg-white;
 		box-shadow:

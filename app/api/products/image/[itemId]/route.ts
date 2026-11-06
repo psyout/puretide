@@ -17,7 +17,7 @@ export async function GET(_request: Request, { params }: { params: { itemId: str
 		return new Response(image.bytes, {
 			headers: {
 				'Content-Type': image.contentType,
-				'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
+				'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
 			},
 		});
 	} catch (error) {

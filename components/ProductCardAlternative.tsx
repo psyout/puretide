@@ -154,14 +154,14 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 					<h3 className='line-clamp-2 text-base font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[351px]:text-[clamp(0.875rem,3.75vw,1rem)] sm:text-base'>
 						{product.name}
 					</h3>
-					{product.subtitle && <p className='mb-1 mt-1 line-clamp-2 text-[0.65rem] font-medium leading-normal text-deep-tidal-teal-600 sm:text-[0.75rem]'>{product.subtitle}</p>}
+					{product.subtitle && <p className='mb-1 mt-1 line-clamp-2 text-[0.7rem] font-medium leading-normal text-deep-tidal-teal-600 sm:text-[0.75rem]'>{product.subtitle}</p>}
 				</div>
 
 				<div className='mt-auto border-t border-deep-tidal-teal-800/15 pt-2.5 sm:pt-3'>
 					<div className='flex flex-col items-start gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4'>
 						<div className='space-y-0.5'>
 							{saleDiscount > 0 && <p className='text-xs text-deep-tidal-teal-500 line-through sm:text-sm'>${getProductPrice(product)} CAD</p>}
-							<p className={`text-base font-bold leading-tight sm:text-lg ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-700'}`}>
+							<p className={`text-sm xs:text-md font-medium leading-tight sm:text-[1.05rem] ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-700'}`}>
 								${getProductPrice(product, saleDiscount)} CAD
 							</p>
 						</div>

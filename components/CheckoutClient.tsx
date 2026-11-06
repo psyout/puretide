@@ -8,7 +8,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
-import { CreditCard, Truck, Plus, Minus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Minus, Trash2, Loader2 } from 'lucide-react';
+import { IconCreditCard, IconFileInvoice, IconMail, IconTruckDelivery } from '@tabler/icons-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
@@ -789,7 +790,16 @@ export default function CheckoutClient() {
 						<div className='bento-card p-5'>
 							{/* Contact Information */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-xl font-semibold mb-4 text-deep-tidal-teal-800'>Contact Information</h2>
+								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
+									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
+										<IconMail
+											className='h-5 w-5'
+											stroke={1.6}
+											aria-hidden='true'
+										/>
+									</span>
+									Contact Information
+								</h2>
 								{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
 									<div
 										role='alert'
@@ -835,7 +845,16 @@ export default function CheckoutClient() {
 
 							{/* Billing Details */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-xl font-semibold mb-4 text-deep-tidal-teal-800'>Billing Details</h2>
+								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
+									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
+										<IconFileInvoice
+											className='h-5 w-5'
+											stroke={1.6}
+											aria-hidden='true'
+										/>
+									</span>
+									Billing Details
+								</h2>
 								<form
 									id='checkout-form'
 									onSubmit={handleSubmit}
@@ -1141,8 +1160,14 @@ export default function CheckoutClient() {
 
 							{/* Shipping Section */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-lg font-semibold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
-									<Truck className='w-5 h-5' />
+								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
+									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
+										<IconTruckDelivery
+											className='h-5 w-5'
+											stroke={1.6}
+											aria-hidden='true'
+										/>
+									</span>
 									Shipping
 								</h2>
 								<div className='text-xs text-deep-tidal-teal-600 mb-3'>
@@ -1177,8 +1202,14 @@ export default function CheckoutClient() {
 
 							{/* Payment Section */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-lg font-semibold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
-									<CreditCard className='w-5 h-5' />
+								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
+									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
+										<IconCreditCard
+											className='h-5 w-5'
+											stroke={1.6}
+											aria-hidden='true'
+										/>
+									</span>
 									Payment Method
 								</h2>
 								<div className='space-y-3'>

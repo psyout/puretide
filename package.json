@@ -5,6 +5,7 @@
 	"scripts": {
 		"dev": "next dev",
 		"build": "next build",
+		"build:affiliate-preview": "node scripts/export-affiliate-preview.mjs",
 		"start": "next start",
 		"lint": "next lint",
 		"test": "node scripts/run-tests.mjs",
