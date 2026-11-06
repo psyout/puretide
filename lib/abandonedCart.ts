@@ -40,6 +40,10 @@ export function resolveRecoverableCartItems(items: AbandonedCartItem[], products
 				price: variant.price,
 				stock: variant.stock,
 				mg: variant.label,
+				image: variant.image || base.image,
+				zohoItemId: variant.zohoItemId,
+				sku: variant.sku,
+				cost: variant.cost,
 				quantity: Math.min(item.quantity, variant.stock, 99),
 			});
 		}

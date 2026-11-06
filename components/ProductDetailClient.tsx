@@ -10,10 +10,10 @@ import { iconMap } from '@/lib/productIcons';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import { getDiscountedPrice } from '@/lib/pricing';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { parseProductDescription } from '@/lib/productDescription';
+import ProductInfoAccordions from '@/components/ProductInfoAccordions';
 
 interface ProductDetailClientProps {
 	product: Product;
@@ -23,17 +23,6 @@ interface ProductDetailClientProps {
 	matchingCoaFile?: string;
 	stockUnavailable?: boolean;
 	relatedProducts?: Product[];
-}
-
-const RESEARCH_USE_NOTICE =
-	'All compounds sold by Pure Tide are intended exclusively for laboratory and bench-research applications and are not for human or veterinary use. Nothing on this website should be interpreted as medical, dietary, diagnostic, or therapeutic advice. Unless otherwise stated, Pure Tide products may be investigational compounds and have not received regulatory approval from Health Canada, the U.S. FDA, the EMA, or any equivalent body at this writing. Research information is provided solely for scientific and educational reference. Pure Tide does not provide dosing, administration, or application instructions. Purchasers are responsible for compliance with all applicable laws, regulations, and laboratory safety standards.';
-
-function getProductFormat(product: Product): string {
-	const productText = `${product.name} ${product.subtitle ?? ''}`.toLocaleLowerCase();
-	if (productText.includes('tablet')) return 'Tablets';
-	if (product.slug === 'bacteriostatic-water') return 'Sterile solution';
-	if (product.category.toLocaleLowerCase() === 'accessory') return 'Accessory';
-	return 'Lyophilized powder';
 }
 
 export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile, stockUnavailable = false, relatedProducts = [] }: ProductDetailClientProps) {
@@ -57,17 +46,14 @@ export default function ProductDetailClient({ product, description, details, has
 	const salePrice = getSalePrice(displayPrice, saleDiscount);
 	const displayMg = currentVariant?.label ?? product.mg;
 	const displayStock = currentVariant?.stock ?? product.stock;
+	const displayImage = currentVariant?.image || product.image;
 	const isSoldOut = displayStock <= 0 || product.status === 'stock-out';
 	const isPreOrder = product.slug === 'cartalax' || product.slug === 'dsip';
 	const normalizedName = product.name.toLocaleLowerCase();
 	const normalizedStrength = displayMg?.trim().toLocaleLowerCase();
 	const showStrength = Boolean(normalizedStrength) && !normalizedName.includes('stack') && !normalizedName.includes(normalizedStrength!);
 	const displayName = showStrength ? `${product.name} – ${displayMg}` : product.name;
-	const strengthFromName = !normalizedName.includes('stack') ? product.name.match(/\b\d+(?:\.\d+)?\s*(?:mcg|mg|g|ml)\b/i)?.[0] : undefined;
-	const displayStrength = displayMg || strengthFromName;
-	const productFormat = getProductFormat(product);
 	const { copy: descriptionCopy, ctas: descriptionCtas } = parseProductDescription(description, product.slug);
-	const showQuantityPricing = product.slug !== 'bacteriostatic-water' && saleDiscount === 0;
 
 	// For variant products, check if all variants are sold out
 	const allVariantsSoldOut = hasVariants && variants.every((v) => v.stock <= 0);
@@ -88,14 +74,37 @@ export default function ProductDetailClient({ product, description, details, has
 				price: currentVariant.price,
 				stock: currentVariant.stock,
 				mg: currentVariant.label,
+				image: currentVariant.image || product.image,
+				zohoItemId: currentVariant.zohoItemId,
+				sku: currentVariant.sku,
+				cost: currentVariant.cost,
 			};
 		}
 		return product;
 	}, [product, currentVariant]);
 
 	return (
-		<div className='contents'>
-			<div className='min-w-0 md:col-start-2 md:row-start-1 md:w-full'>
+		<div className='grid grid-cols-1 gap-y-6'>
+			<div className='grid grid-cols-1 gap-y-6 md:grid-cols-2 md:items-start md:gap-x-8 lg:gap-x-10'>
+			<div className='flex min-h-[300px] items-center justify-center rounded-2xl bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 p-6 md:sticky md:top-24 md:min-h-[560px] md:self-start md:p-10'>
+				{hasProductImage(displayImage) ? (
+					<Image
+						key={displayImage}
+						src={displayImage}
+						alt={displayName}
+						width={500}
+						height={500}
+						style={{ width: 'auto', height: 'auto' }}
+						unoptimized={displayImage.startsWith('http')}
+						priority
+						className='h-auto w-auto max-h-[280px] max-w-full object-contain drop-shadow-xl transition-all duration-300 md:max-h-[400px] md:max-w-[400px] lg:max-h-[500px]'
+					/>
+				) : (
+					<ProductImagePlaceholder className='h-auto w-auto max-h-[280px] object-contain md:max-h-[400px] lg:max-h-[500px]' />
+				)}
+			</div>
+
+			<div className='min-w-0 md:w-full'>
 				{/* Sold out badge */}
 				{(isSoldOut || allVariantsSoldOut) && (
 					<div className='mb-4'>
@@ -120,10 +129,10 @@ export default function ProductDetailClient({ product, description, details, has
 								<div
 									key={iconName}
 									className='inline-flex items-center gap-1.5 rounded-full bg-eucalyptus-100 px-3 py-1.5 text-deep-tidal-teal-700'>
-									<Icon
+									{/* <Icon
 										className='h-4 w-4'
 										aria-hidden='true'
-									/>
+									/> */}
 									<span className='text-xs font-medium'>{iconName}</span>
 								</div>
 							);
@@ -180,40 +189,39 @@ export default function ProductDetailClient({ product, description, details, has
 					</div>
 				)}
 
-				{/* Size Selector - only show when variants exist */}
+				{/* Strength selector - keep every option visible */}
 				{hasVariants && (
 					<fieldset className='mb-6'>
-						<div className='flex items-center gap-3'>
-							<legend className='text-sm font-semibold text-deep-tidal-teal-700 mb-0'>Size:</legend>
-							<div
-								className='inline-flex rounded-xl bg-white shadow-sm ui-border overflow-hidden'
-								role='radiogroup'
-								aria-label='Size'>
-								{variants.map((variant) => {
-									const isSelected = selectedVariant?.key === variant.key;
-									const isVariantSoldOut = variant.stock <= 0;
-									return (
-										<label
-											key={variant.key}
-											className={`relative cursor-pointer select-none px-4 py-2.5 text-sm font-semibold transition-colors focus-within:z-10 focus-within:outline-none focus-within:ring-2 focus-within:ring-inset focus-within:ring-deep-tidal-teal/40 ${
-												isSelected ? 'bg-deep-tidal-teal-700 text-mineral-white' : 'bg-white text-deep-tidal-teal-700 hover:bg-deep-tidal-teal/5'
-											} ${isVariantSoldOut ? 'opacity-50 cursor-not-allowed' : ''} ${variant !== variants[0] ? 'border-l ui-border' : ''}`}
-											aria-label={variant.label}>
-											<input
-												type='radio'
-												name='size'
-												value={variant.key}
-												checked={isSelected}
-												onChange={() => !isVariantSoldOut && handleVariantChange(variant.key)}
-												disabled={isVariantSoldOut}
-												className='peer sr-only'
-											/>
-											{variant.label}
-											{isVariantSoldOut && <span className='ml-1 text-xs'>(Sold Out)</span>}
-										</label>
-									);
-								})}
-							</div>
+						<legend className='mb-2 block text-sm font-semibold text-deep-tidal-teal-700'>Strength</legend>
+						<div
+							className='flex flex-wrap gap-2'
+							role='radiogroup'
+							aria-label='Strength'>
+							{variants.map((variant) => {
+								const isSelected = selectedVariant?.key === variant.key;
+								const isVariantSoldOut = variant.stock <= 0;
+								return (
+									<label
+										key={variant.key}
+										className={`relative inline-flex min-h-11 min-w-[5.5rem] items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition focus-within:outline-none focus-within:ring-2 focus-within:ring-deep-tidal-teal/30 focus-within:ring-offset-2 ${
+											isSelected
+												? 'border-deep-tidal-teal-700 bg-deep-tidal-teal-700 text-white shadow-sm'
+												: 'border-deep-tidal-teal/25 bg-white text-deep-tidal-teal-800 hover:border-deep-tidal-teal/55 hover:bg-eucalyptus-50'
+										} ${isVariantSoldOut ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+										<input
+											type='radio'
+											name='product-strength'
+											value={variant.key}
+											checked={isSelected}
+											onChange={() => handleVariantChange(variant.key)}
+											disabled={isVariantSoldOut}
+											className='sr-only'
+										/>
+										<span>{variant.label}</span>
+										{isVariantSoldOut && <span className='ml-1.5 text-[0.65rem] font-medium uppercase tracking-wide'>Sold out</span>}
+									</label>
+								);
+							})}
 						</div>
 					</fieldset>
 				)}
@@ -273,172 +281,37 @@ export default function ProductDetailClient({ product, description, details, has
 						</Link>
 					</div>
 				)}
+
+				<ProductInfoAccordions
+					details={details}
+					freeShippingThreshold={FREE_SHIPPING_THRESHOLD}
+				/>
+			</div>
 			</div>
 
 			<section
 				aria-label='Store assurances'
-				className='order-2 col-span-full grid grid-cols-3 divide-x divide-deep-tidal-teal/15 mb-10 border-deep-tidal-teal/15'>
-				<div className='flex min-w-0 flex-col items-center justify-center gap-2 px-1 py-5 text-center sm:px-3'>
+				className='order-2 col-span-full mt-10 grid grid-cols-1 border-t border-deep-tidal-teal/15 sm:grid-cols-3 sm:divide-x sm:divide-deep-tidal-teal/15'>
+				<div className='flex min-w-0 flex-col items-center justify-center gap-2 border-b border-deep-tidal-teal/15 px-2 py-10 text-center sm:border-b-0 sm:px-4'>
 					<Truck
-						className='h-6 w-6 shrink-0 text-deep-tidal-teal-700'
+						className='h-12 w-12 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600'
 						aria-hidden='true'
 					/>
-					<span className='text-[0.7rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Fast shipping</span>
+					<span className='text-[0.9rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Fast shipping</span>
 				</div>
-				<div className='flex min-w-0 flex-col items-center justify-center gap-2 px-1 py-5 text-center sm:px-3'>
+				<div className='flex min-w-0 flex-col items-center justify-center gap-2 border-b border-deep-tidal-teal/15 px-2 py-10 text-center sm:border-b-0 sm:px-4 sm:py-6'>
 					<ShieldCheck
-						className='h-6 w-6 shrink-0 text-deep-tidal-teal-700'
+						className='h-12 w-12 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600'
 						aria-hidden='true'
 					/>
-					<span className='text-[0.7rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Quality assured</span>
+					<span className='text-[0.9rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Quality assured</span>
 				</div>
-				<div className='flex min-w-0 flex-col items-center justify-center gap-2 px-1 py-5 text-center sm:px-3'>
+				<div className='flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-10 text-center sm:px-4 sm:py-6'>
 					<CreditCard
-						className='h-6 w-6 shrink-0 text-deep-tidal-teal-700'
+						className='h-12 w-12 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600'
 						aria-hidden='true'
 					/>
-					<span className='text-[0.7rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Secure checkout</span>
-				</div>
-			</section>
-
-			<section
-				className='product-information-tabs order-1 col-span-full min-w-0 my-10'
-				aria-label='Product information'>
-				<input
-					className='sr-only'
-					type='radio'
-					name='product-information-tabs'
-					id='research-details-tab'
-					defaultChecked
-				/>
-				<input
-					className='sr-only'
-					type='radio'
-					name='product-information-tabs'
-					id='research-use-tab'
-				/>
-				{showQuantityPricing && (
-					<input
-						className='sr-only'
-						type='radio'
-						name='product-information-tabs'
-						id='quantity-pricing-tab'
-					/>
-				)}
-				<input
-					className='sr-only'
-					type='radio'
-					name='product-information-tabs'
-					id='usage-details-tab'
-				/>
-				<input
-					className='sr-only'
-					type='radio'
-					name='product-information-tabs'
-					id='shipping-information-tab'
-				/>
-
-				<div className='product-information-tab-scroll'>
-					<div className={`product-information-tab-list grid ${showQuantityPricing ? 'grid-cols-5' : 'grid-cols-4'}`}>
-						<label
-							htmlFor='research-details-tab'
-							className='product-information-tab'>
-							Research details
-						</label>
-						<label
-							htmlFor='research-use-tab'
-							className='product-information-tab'>
-							Research use only
-						</label>
-						{showQuantityPricing && (
-							<label
-								htmlFor='quantity-pricing-tab'
-								className='product-information-tab'>
-								Quantity pricing
-							</label>
-						)}
-						<label
-							htmlFor='usage-details-tab'
-							className='product-information-tab'>
-							Usage &amp; details
-						</label>
-						<label
-							htmlFor='shipping-information-tab'
-							className='product-information-tab'>
-							Shipping
-						</label>
-					</div>
-				</div>
-
-				<div className='product-information-tab-panels'>
-					<section
-						className='product-information-panel research-details-panel'
-						aria-label='Research details'>
-						<p className='text-[1rem] leading-7 text-deep-tidal-teal-700'>{details || 'Additional research details are not currently available for this product.'}</p>
-					</section>
-					<section
-						className='product-information-panel research-use-panel'
-						aria-label='Important research use information'>
-						<p className='text-[1rem] leading-7 text-deep-tidal-teal-700'>{RESEARCH_USE_NOTICE}</p>
-					</section>
-					{showQuantityPricing && (
-						<section
-							className='product-information-panel quantity-pricing-panel'
-							aria-label='Quantity pricing'>
-							<table className='w-full border-collapse text-md'>
-								<thead className='sr-only'>
-									<tr>
-										<th>Quantity</th>
-										<th>Unit price</th>
-									</tr>
-								</thead>
-								<tbody className='divide-y divide-deep-tidal-teal/10'>
-									<tr>
-										<td className='py-3 pr-5 font-medium text-deep-tidal-teal-700'>1–2 units</td>
-										<td className='py-3 text-right font-medium text-deep-tidal-teal-700'>C${displayPrice.toFixed(2)} each</td>
-									</tr>
-									<tr>
-										<td className='py-3 pr-5 font-medium text-deep-tidal-teal-700'>3–4 units</td>
-										<td className='py-3 text-right font-semibold text-emerald-700'>C${getDiscountedPrice(displayPrice, 3).toFixed(2)} each</td>
-									</tr>
-									<tr>
-										<td className='py-3 pr-5 font-medium text-deep-tidal-teal-700'>5+ units</td>
-										<td className='py-3 text-right font-semibold text-emerald-700'>C${getDiscountedPrice(displayPrice, 5).toFixed(2)} each</td>
-									</tr>
-								</tbody>
-							</table>
-						</section>
-					)}
-					<section
-						className='product-information-panel usage-details-panel'
-						aria-label='Usage and product details'>
-						<ul className='list-disc space-y-2 pl-5 text-[1rem] leading-7 text-deep-tidal-teal-700'>
-							<li>
-								<strong>Format:</strong> {productFormat}
-							</li>
-							{displayStrength && (
-								<li>
-									<strong>Strength:</strong> {displayStrength}
-								</li>
-							)}
-							{product.purity && (
-								<li>
-									<strong>Purity:</strong> {product.purity}
-								</li>
-							)}
-						</ul>
-					</section>
-					<section
-						className='product-information-panel shipping-information-panel'
-						aria-label='Shipping information'>
-						<ul className='list-disc space-y-2 pl-5 text-[1rem] leading-7 text-deep-tidal-teal-700'>
-							<li>Ships from our warehouse</li>
-							<li>
-								<strong>Processing:</strong> 1–2 business days
-							</li>
-							<li>Free shipping over ${FREE_SHIPPING_THRESHOLD}</li>
-						</ul>
-					</section>
+					<span className='text-[0.9rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Secure checkout</span>
 				</div>
 			</section>
 

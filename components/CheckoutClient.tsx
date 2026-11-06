@@ -778,7 +778,7 @@ export default function CheckoutClient() {
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
-			<div className='max-w-5xl mx-auto px-6 pt-32 pb-24'>
+			<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
 				<StoreBreadcrumb items={[{ label: 'Shop', href: '/#products' }, { label: 'Cart', href: '/cart' }, { label: 'Checkout' }]} />
 				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>Checkout</h1>
 

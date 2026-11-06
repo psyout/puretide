@@ -31,7 +31,7 @@ export default function AffiliatePage() {
 				<section className='relative isolate overflow-hidden bg-[#1C4855] px-6 pb-[88px] pt-[112px] text-white lg:px-8'>
 					<div className='pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_22%,rgba(168,213,186,0.18),transparent_32%),radial-gradient(circle_at_12%_88%,rgba(77,167,182,0.18),transparent_38%)]' />
 					<div className='pointer-events-none absolute -right-28 top-24 -z-10 h-80 w-80 rounded-full border border-white/10 sm:h-[32rem] sm:w-[32rem]' />
-					<div className='mx-auto grid max-w-5xl items-center gap-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16'>
+					<div className='mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16'>
 						<div>
 							<div className='fade-up inline-flex items-center gap-2 rounded-full border border-eucalyptus-300/30 bg-eucalyptus-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-eucalyptus-200'>
 								<Sparkles
@@ -107,7 +107,7 @@ export default function AffiliatePage() {
 				<section
 					id='how-it-works'
 					className='scroll-mt-24 bg-[#efefef] px-6 py-[88px] lg:px-8'>
-					<div className='mx-auto max-w-5xl'>
+					<div className='mx-auto max-w-6xl'>
 						<div className='max-w-[620px]'>
 							<p className='text-[11px] font-bold uppercase tracking-[0.26em] text-[#6EB4CC]'>From application to commission</p>
 							<h2 className='mt-4 text-balance text-[clamp(32px,5vw,52px)] font-bold leading-[1.1] tracking-[-0.02em]'>A simple partnership, built to last.</h2>
@@ -130,7 +130,7 @@ export default function AffiliatePage() {
 				</section>
 
 				<section className='bg-[#efefef] px-6 pb-[88px] lg:px-8'>
-					<div className='mx-auto grid max-w-5xl overflow-hidden rounded-xl bg-[#e5eee7] lg:grid-cols-[0.82fr_1.18fr]'>
+					<div className='mx-auto grid max-w-6xl overflow-hidden rounded-xl bg-[#e5eee7] lg:grid-cols-[0.82fr_1.18fr]'>
 						<div className='flex flex-col justify-between bg-deep-tidal-teal-700 p-8 text-white sm:p-12'>
 							<div>
 								<FlaskConical
@@ -166,7 +166,7 @@ export default function AffiliatePage() {
 				<section
 					id='apply'
 					className='scroll-mt-20 bg-white px-6 py-[88px] lg:px-8'>
-					<div className='mx-auto grid max-w-5xl gap-12 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16'>
+					<div className='mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16'>
 						<div className='lg:sticky lg:top-32 lg:self-start'>
 							<p className='text-[11px] font-bold uppercase tracking-[0.26em] text-[#6EB4CC]'>Become a partner</p>
 							<h2 className='mt-4 text-balance text-[clamp(32px,5vw,52px)] font-bold leading-[1.1] tracking-[-0.02em]'>Let’s build something worthwhile.</h2>

@@ -106,6 +106,10 @@ export default function ProductCard({ product, onImageLoaded, automaticPromotion
 								price: defaultVariant.price,
 								stock: defaultVariant.stock,
 								mg: defaultVariant.label,
+								image: defaultVariant.image || product.image,
+								zohoItemId: defaultVariant.zohoItemId,
+								sku: defaultVariant.sku,
+								cost: defaultVariant.cost,
 							});
 						} else {
 							addToCart(product);

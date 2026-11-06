@@ -97,7 +97,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			return (
 				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 					<Header />
-					<div className='max-w-5xl mx-auto px-6 py-24'>
+					<div className='max-w-6xl mx-auto px-6 py-24'>
 						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Link already used</h1>
 							<p className='text-deep-tidal-teal-800 mb-6'>
@@ -124,7 +124,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			return (
 				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 					<Header />
-					<div className='max-w-5xl mx-auto px-6 py-24'>
+					<div className='max-w-6xl mx-auto px-6 py-24'>
 						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment received</h1>
 							<p className='text-deep-tidal-teal-800 mb-6'>We’ve confirmed your Interac e-Transfer payment. Your order is now being processed.</p>
@@ -163,7 +163,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
-				<div className='max-w-5xl mx-auto px-6 py-24'>
+				<div className='max-w-6xl mx-auto px-6 py-24'>
 					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Order not found</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>We could not find a recent order. Please return to the shop.</p>
@@ -193,7 +193,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 				maxRefreshes={24}>
 				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 					<Header />
-					<div className='max-w-5xl mx-auto px-6 py-24'>
+					<div className='max-w-6xl mx-auto px-6 py-24'>
 						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Confirming your payment</h1>
 							<p className='text-deep-tidal-teal-800 mb-4'>
@@ -222,7 +222,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
-				<div className='max-w-5xl mx-auto px-6 py-24'>
+				<div className='max-w-6xl mx-auto px-6 py-24'>
 					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment not completed</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>
@@ -267,7 +267,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			return (
 				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 					<Header />
-					<div className='max-w-5xl mx-auto px-6 py-24'>
+					<div className='max-w-6xl mx-auto px-6 py-24'>
 						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment not confirmed</h1>
 							<p className='text-deep-tidal-teal-800 mb-6'>
@@ -299,7 +299,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 					maxRefreshes={24}>
 					<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 						<Header />
-						<div className='max-w-5xl mx-auto px-6 py-24'>
+						<div className='max-w-6xl mx-auto px-6 py-24'>
 							<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 								<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Processing your payment</h1>
 								<p className='text-deep-tidal-teal-800 mb-4'>
@@ -439,7 +439,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 			return (
 				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 					<Header />
-					<div className='max-w-5xl mx-auto px-6 py-24'>
+					<div className='max-w-6xl mx-auto px-6 py-24'>
 						<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Interac e-Transfer required</h1>
 							<p className='text-deep-tidal-teal-800 mb-4'>Your order was received. Please send an Interac e-Transfer using the details below.</p>
@@ -511,7 +511,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
-				<div className='max-w-5xl mx-auto px-6 py-24'>
+				<div className='max-w-6xl mx-auto px-6 py-24'>
 					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Order received</h1>
 						<p className='text-deep-tidal-teal-800 mb-4'>Your order was received and is awaiting payment confirmation.</p>
@@ -530,7 +530,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
-				<div className='max-w-5xl mx-auto px-6 py-24'>
+				<div className='max-w-6xl mx-auto px-6 py-24'>
 					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment not completed</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>
@@ -559,7 +559,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
-				<div className='max-w-5xl mx-auto px-6 py-24'>
+				<div className='max-w-6xl mx-auto px-6 py-24'>
 					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment not completed</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>
@@ -619,7 +619,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 				paymentMethod={confirmedOrder.paymentMethod ?? undefined}
 			/>
 			<Header />
-			<div className='max-w-5xl mx-auto pt-40 pb-6 py-24'>
+			<div className='max-w-6xl mx-auto pt-40 pb-6 py-24'>
 				<div className='max-w-4xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
 					<h1 className='text-4xl font-bold mb-8 text-deep-tidal-teal-800'>Thank you. Your order has been received.</h1>
 					<p className='text-deep-tidal-teal-800 mb-8'>

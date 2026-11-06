@@ -58,7 +58,7 @@ const PromoBanner = forwardRef<HTMLDivElement, PromoBannerProps>(({ messages, ct
 			onMouseEnter={() => setIsPaused(true)}
 			onMouseLeave={() => setIsPaused(false)}
 			className='bg-eucalyptus-50/100 text-white'>
-			<div className='max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-row sm:flex-row items-center justify-center gap-2 sm:gap-4 min-h-[50px] sm:min-h-[48px]'>
+			<div className='max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-row sm:flex-row items-center justify-center gap-2 sm:gap-4 min-h-[50px] sm:min-h-[48px]'>
 				<AnimatePresence mode='wait'>
 					<motion.div
 						key={currentIndex}

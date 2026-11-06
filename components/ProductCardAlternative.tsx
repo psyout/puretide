@@ -69,6 +69,10 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 				price: defaultVariant.price,
 				stock: defaultVariant.stock,
 				mg: defaultVariant.label,
+				image: defaultVariant.image || product.image,
+				zohoItemId: defaultVariant.zohoItemId,
+				sku: defaultVariant.sku,
+				cost: defaultVariant.cost,
 			});
 		} else {
 			addToCart(product);
@@ -142,8 +146,10 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 
 			<div className='flex min-h-[11.5rem] min-w-0 flex-1 flex-col px-3 pb-3 pt-3 sm:min-h-[13rem] sm:px-6 sm:pb-6 sm:pt-4'>
 				<div className='min-w-0'>
-					<h3 className='line-clamp-2 text-base font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[351px]:text-[clamp(0.875rem,3.75vw,1rem)] sm:text-base'>{product.name}</h3>
-					{product.subtitle && <p className='mb-1 mt-1 line-clamp-2 text-[0.65rem] font-medium leading-normal text-deep-tidal-teal-600 sm:text-[0.7rem]'>{product.subtitle}</p>}
+					<h3 className='line-clamp-2 text-base font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[351px]:text-[clamp(0.875rem,3.75vw,1rem)] sm:text-base'>
+						{product.name}
+					</h3>
+					{product.subtitle && <p className='mb-1 mt-1 line-clamp-2 text-[0.65rem] font-medium leading-normal text-deep-tidal-teal-600 sm:text-[0.75rem]'>{product.subtitle}</p>}
 				</div>
 
 				<div className='mt-auto border-t border-deep-tidal-teal-800/15 pt-2.5 sm:pt-3'>
@@ -154,7 +160,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 								${getProductPrice(product, saleDiscount)} CAD
 							</p>
 						</div>
-						{optionLabel && <p className='text-xs font-semibold text-deep-tidal-teal-700 underline underline-offset-2 sm:text-sm'>{optionLabel}</p>}
+						{optionLabel && <p className='text-xs font-semibold text-deep-tidal-teal-700 underline underline-offset-2 sm:text-sm'></p>}
 					</div>
 
 					<button

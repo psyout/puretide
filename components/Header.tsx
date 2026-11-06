@@ -121,7 +121,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 						? 'relative z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
 						: 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-deep-tidal-teal-700/95 backdrop-blur-md'
 			}>
-			<div className='mx-auto flex min-h-[62px] max-w-5xl items-center px-6 py-2.5 md:min-h-[70px] md:py-3.5'>
+			<div className='mx-auto flex min-h-[62px] max-w-6xl items-center px-6 py-2.5 md:min-h-[70px] md:py-3.5'>
 				<div className='flex items-center'>
 					<Link
 						href='/'
@@ -292,7 +292,7 @@ export default function Header({ stacked = false, variant = 'default' }: HeaderP
 						variants={wrapperVariants}
 						className={`absolute left-0 right-0 top-full overflow-hidden shadow-xl backdrop-blur-lg md:hidden ${isLearnVariant ? 'border-b border-deep-tidal-teal/10 bg-white/95' : 'bg-deep-tidal-teal-600/80'}`}
 						style={{ originY: 'top' }}>
-						<nav className='max-w-5xl mx-auto px-4 sm:px-6 py-4'>
+						<nav className='max-w-6xl mx-auto px-4 sm:px-6 py-4'>
 							<motion.div
 								className='flex flex-col gap-2'
 								variants={containerVariants}>

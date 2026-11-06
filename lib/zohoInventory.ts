@@ -12,6 +12,8 @@ type ZohoCustomField = {
 
 export type ZohoInventoryItem = {
 	item_id?: string | number;
+	group_id?: string | number;
+	group_name?: string;
 	name?: string;
 	sku?: string;
 	status?: string;
@@ -20,6 +22,11 @@ export type ZohoInventoryItem = {
 	stock_on_hand?: string | number;
 	available_stock?: string | number;
 	actual_available_stock?: string | number;
+	attribute_name1?: string;
+	attribute_option_name1?: string;
+	image_id?: string | number;
+	image_name?: string;
+	image_type?: string;
 	locations?: Array<{
 		status?: string;
 		location_stock_on_hand?: string | number;
@@ -203,6 +210,27 @@ const normalizeCoaFile = (value: string): string | undefined => {
 	}
 };
 
+const getNativeItemImage = (item: ZohoInventoryItem): string => {
+	const itemId = asTrimmedString(item.item_id);
+	return itemId && (asTrimmedString(item.image_id) || asTrimmedString(item.image_name))
+		? `/api/products/image/${encodeURIComponent(itemId)}`
+		: '';
+};
+
+const getWebsiteImage = (item: ZohoInventoryItem): string => getCustomField(item, 'Website Image') || getNativeItemImage(item);
+
+const normalizeVariantKeyPart = (value: string) =>
+	value
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
+
+const getVariantSortValue = (value: string) => {
+	const parsed = Number.parseFloat(value.replace(/,/g, ''));
+	return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+};
+
 export function mapZohoItemToProduct(item: ZohoInventoryItem): Product | null {
 	const slug = getCustomField(item, 'Website Slug');
 	if (!slug) return null;
@@ -243,7 +271,7 @@ export function mapZohoItemToProduct(item: ZohoInventoryItem): Product | null {
 		description,
 		price: price!,
 		stock: getStockOnHand(item),
-		image: getCustomField(item, 'Website Image'),
+		image: getWebsiteImage(item),
 		category,
 		icons,
 		status: normalizeWebsiteStatus(getCustomField(item, 'Website Status')),
@@ -255,6 +283,79 @@ export function mapZohoItemToProduct(item: ZohoInventoryItem): Product | null {
 		...(coaFile ? { coaFile } : {}),
 		...(asFiniteNumber(item.purchase_rate) != null ? { cost: asFiniteNumber(item.purchase_rate) ?? undefined } : {}),
 	};
+}
+
+/**
+ * Collapse Zoho variants that share a group_id into one storefront product.
+ * Exactly one item in the group carries Website Slug and the shared website
+ * metadata; its siblings remain independent Zoho stock items.
+ */
+export function mapZohoItemsToProducts(items: ZohoInventoryItem[]): Product[] {
+	const groupedItems = new Map<string, ZohoInventoryItem[]>();
+	for (const item of items) {
+		const groupId = asTrimmedString(item.group_id);
+		if (!groupId) continue;
+		groupedItems.set(groupId, [...(groupedItems.get(groupId) ?? []), item]);
+	}
+
+	const consumedItemIds = new Set<string>();
+	const products: Product[] = [];
+	for (const item of items) {
+		const slug = getCustomField(item, 'Website Slug');
+		if (!slug) continue;
+		const itemId = asTrimmedString(item.item_id);
+		if (consumedItemIds.has(itemId)) continue;
+
+		const groupId = asTrimmedString(item.group_id);
+		const siblings = groupId ? (groupedItems.get(groupId) ?? []) : [];
+		const anchors = siblings.filter((candidate) => Boolean(getCustomField(candidate, 'Website Slug')));
+		if (siblings.length > 1 && anchors.length > 1) {
+			throw new Error(`Zoho variant group ${groupId} has more than one Website Slug. Keep the slug only on the existing website item.`);
+		}
+
+		const product = mapZohoItemToProduct(item);
+		if (!product) continue;
+		if (siblings.length <= 1) {
+			products.push(product);
+			consumedItemIds.add(itemId);
+			continue;
+		}
+
+		const variants = siblings
+			.map((variant) => {
+				const variantId = asTrimmedString(variant.item_id);
+				const label = asTrimmedString(variant.attribute_option_name1) || getCustomField(variant, 'Strength');
+				const price = asFiniteNumber(variant.rate);
+				if (!variantId || !label || price == null) {
+					throw new Error(`Zoho variant ${variantId || asTrimmedString(variant.name) || groupId} is missing its item ID, Strength option, or Selling Price.`);
+				}
+				return {
+					key: `${slug}-${normalizeVariantKeyPart(label)}`,
+					label,
+					zohoItemId: variantId,
+					sku: asTrimmedString(variant.sku) || undefined,
+					price,
+					stock: getStockOnHand(variant),
+					image: getWebsiteImage(variant) || product.image,
+					...(asFiniteNumber(variant.purchase_rate) != null ? { cost: asFiniteNumber(variant.purchase_rate) ?? undefined } : {}),
+				};
+			})
+			.sort((left, right) => getVariantSortValue(left.label) - getVariantSortValue(right.label));
+
+		const anchorVariant = variants.find((variant) => variant.zohoItemId === product.zohoItemId) ?? variants[0];
+		products.push({
+			...product,
+			name: asTrimmedString(item.group_name) || product.name,
+			price: anchorVariant.price,
+			stock: variants.reduce((total, variant) => total + variant.stock, 0),
+			image: anchorVariant.image || product.image,
+			mg: anchorVariant.label,
+			variants,
+		});
+		for (const sibling of siblings) consumedItemIds.add(asTrimmedString(sibling.item_id));
+	}
+
+	return products;
 }
 
 function getApiBaseUrl() {
@@ -324,19 +425,40 @@ async function zohoRequest<T extends ZohoApiResponse>(path: string, init?: Reque
 	return payload;
 }
 
+export async function readZohoItemImage(itemIdRaw: string): Promise<{ bytes: ArrayBuffer; contentType: string }> {
+	const itemId = asTrimmedString(itemIdRaw);
+	if (!itemId) throw new Error('A Zoho item ID is required.');
+	const url = new URL(`${getApiBaseUrl()}/items/${encodeURIComponent(itemId)}/image`);
+	url.searchParams.set('organization_id', getOrganizationId());
+	url.searchParams.set('preview', 'false');
+	const response = await fetch(url, {
+		headers: {
+			Accept: '*/*',
+			Authorization: `Zoho-oauthtoken ${await getAccessToken()}`,
+		},
+		cache: 'no-store',
+	});
+	if (!response.ok) throw new Error(`Zoho Inventory image request failed (${response.status}): ${response.statusText}`);
+	return {
+		bytes: await response.arrayBuffer(),
+		contentType: response.headers.get('content-type') || 'application/octet-stream',
+	};
+}
+
 async function refreshZohoProducts(): Promise<Product[]> {
-	const websiteItems: ZohoInventoryItem[] = [];
+	const allItems: ZohoInventoryItem[] = [];
 	for (let page = 1; page <= 100; page += 1) {
 		const response = await zohoRequest<ZohoItemsResponse>('items', undefined, { page: String(page), per_page: '200' });
-		for (const item of response.items ?? []) {
-			if (getCustomField(item, 'Website Slug')) websiteItems.push(item);
-		}
+		allItems.push(...(response.items ?? []));
 		if (!response.page_context?.has_more_page) break;
 		if (page === 100) throw new Error('Zoho Inventory pagination exceeded 100 pages.');
 	}
-	if (websiteItems.length === 0) throw new Error('Zoho Inventory returned no items with a Website Slug.');
+	const websiteAnchors = allItems.filter((item) => Boolean(getCustomField(item, 'Website Slug')));
+	if (websiteAnchors.length === 0) throw new Error('Zoho Inventory returned no items with a Website Slug.');
+	const websiteGroupIds = new Set(websiteAnchors.map((item) => asTrimmedString(item.group_id)).filter(Boolean));
+	const websiteItems = allItems.filter((item) => Boolean(getCustomField(item, 'Website Slug')) || websiteGroupIds.has(asTrimmedString(item.group_id)));
 
-	const products: Product[] = [];
+	const detailedWebsiteItems: ZohoInventoryItem[] = [];
 	const batchSize = 5;
 	for (let index = 0; index < websiteItems.length; index += batchSize) {
 		const batch = websiteItems.slice(index, index + batchSize);
@@ -359,11 +481,9 @@ async function refreshZohoProducts(): Promise<Product[]> {
 			}),
 		);
 
-		for (const item of detailedItems) {
-			const product = mapZohoItemToProduct(item);
-			if (product) products.push(product);
-		}
+		detailedWebsiteItems.push(...detailedItems);
 	}
+	const products = mapZohoItemsToProducts(detailedWebsiteItems);
 	return products.sort((left, right) => {
 		const leftOrder = left.displayOrder ?? Number.MAX_SAFE_INTEGER;
 		const rightOrder = right.displayOrder ?? Number.MAX_SAFE_INTEGER;
@@ -377,19 +497,29 @@ async function refreshZohoProducts(): Promise<Product[]> {
  * storefront catalog, making it safe to run frequently for a spreadsheet view.
  */
 export async function readZohoStockSnapshot(): Promise<ZohoStockSnapshotItem[]> {
-	const stockBySlug = new Map<string, number>();
+	const items: ZohoInventoryItem[] = [];
 	for (let page = 1; page <= 100; page += 1) {
 		const response = await zohoRequest<ZohoItemsResponse>('items', undefined, { page: String(page), per_page: '200' });
-		for (const item of response.items ?? []) {
-			const slug = getCustomField(item, 'Website Slug');
-			if (!slug) continue;
-			if (!hasStockValue(item)) throw new Error(`Zoho item ${asTrimmedString(item.item_id) || slug} did not include stock in the item list.`);
-			const normalizedSlug = slug.toLowerCase();
-			if (stockBySlug.has(normalizedSlug)) throw new Error(`Zoho returned duplicate Website Slug: ${slug}`);
-			stockBySlug.set(normalizedSlug, getStockOnHand(item));
-		}
+		items.push(...(response.items ?? []));
 		if (!response.page_context?.has_more_page) break;
 		if (page === 100) throw new Error('Zoho Inventory stock pagination exceeded 100 pages.');
+	}
+	const stockBySlug = new Map<string, number>();
+	const itemsByGroup = new Map<string, ZohoInventoryItem[]>();
+	for (const item of items) {
+		const groupId = asTrimmedString(item.group_id);
+		if (groupId) itemsByGroup.set(groupId, [...(itemsByGroup.get(groupId) ?? []), item]);
+	}
+	for (const item of items) {
+		const slug = getCustomField(item, 'Website Slug');
+		if (!slug) continue;
+		const normalizedSlug = slug.toLowerCase();
+		if (stockBySlug.has(normalizedSlug)) throw new Error(`Zoho returned duplicate Website Slug: ${slug}`);
+		const groupItems = itemsByGroup.get(asTrimmedString(item.group_id)) ?? [item];
+		for (const groupItem of groupItems) {
+			if (!hasStockValue(groupItem)) throw new Error(`Zoho item ${asTrimmedString(groupItem.item_id) || slug} did not include stock in the item list.`);
+		}
+		stockBySlug.set(normalizedSlug, groupItems.reduce((total, groupItem) => total + getStockOnHand(groupItem), 0));
 	}
 	if (stockBySlug.size === 0) throw new Error('Zoho Inventory returned no stock items with a Website Slug.');
 	return Array.from(stockBySlug, ([slug, stock]) => ({ slug, stock }));
@@ -541,20 +671,23 @@ export async function decrementZohoStock(orderNumber: string, items: StockDeduct
 	}
 
 	const products = await readZohoProducts();
-	const productsBySlug = new Map(products.map((product) => [product.slug, product]));
 	const adjustmentAccountId = asTrimmedString(process.env.ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID);
 	if (!adjustmentAccountId) throw new Error('ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID is required when Zoho stock writes are enabled.');
 	const locationId = asTrimmedString(process.env.ZOHO_INVENTORY_LOCATION_ID);
 
 	const lineItems = items.map((item) => {
-		const product = productsBySlug.get(asTrimmedString(item.id));
+		const requestedId = asTrimmedString(item.id);
+		const product = products.find((candidate) => candidate.id === requestedId || candidate.slug === requestedId || candidate.variants?.some((variant) => variant.key === requestedId));
+		const variant = product?.variants?.find((candidate) => candidate.key === requestedId);
 		const quantity = Number(item.quantity);
-		if (!product?.zohoItemId) throw new Error(`Zoho product not found for website slug: ${item.id}`);
+		const zohoItemId = variant?.zohoItemId ?? product?.zohoItemId;
+		const availableStock = variant?.stock ?? product?.stock ?? 0;
+		if (!product || !zohoItemId) throw new Error(`Zoho product not found for website item: ${item.id}`);
 		if (!Number.isInteger(quantity) || quantity <= 0) throw new Error(`Invalid quantity for ${item.id}: ${item.quantity}`);
-		if (quantity > product.stock) throw new Error(`Insufficient Zoho stock for ${product.name}. Available: ${product.stock}, requested: ${quantity}.`);
+		if (quantity > availableStock) throw new Error(`Insufficient Zoho stock for ${product.name}${variant ? ` ${variant.label}` : ''}. Available: ${availableStock}, requested: ${quantity}.`);
 		return {
-			item_id: product.zohoItemId,
-			name: product.name,
+			item_id: zohoItemId,
+			name: variant ? `${product.name} - ${variant.label}` : product.name,
 			quantity_adjusted: -quantity,
 			adjustment_account_id: adjustmentAccountId,
 			...(locationId ? { location_id: locationId } : {}),
@@ -580,8 +713,15 @@ export async function decrementZohoStock(orderNumber: string, items: StockDeduct
 		cachedProductCatalog = {
 			...cachedProductCatalog,
 			products: cachedProductCatalog.products.map((product) => {
-				const quantity = quantities.get(product.slug);
-				return quantity ? { ...product, stock: Math.max(0, product.stock - quantity) } : product;
+				const productQuantity = quantities.get(product.slug) ?? quantities.get(product.id) ?? 0;
+				const variants = product.variants?.map((variant) => {
+					const quantity = quantities.get(variant.key) ?? 0;
+					return quantity ? { ...variant, stock: Math.max(0, variant.stock - quantity) } : variant;
+				});
+				const variantQuantity = variants ? product.variants!.reduce((total, variant) => total + (quantities.get(variant.key) ?? 0), 0) : 0;
+				return productQuantity || variantQuantity
+					? { ...product, stock: Math.max(0, product.stock - productQuantity - variantQuantity), ...(variants ? { variants } : {}) }
+					: product;
 			}),
 		};
 		await persistCatalog(cachedProductCatalog);

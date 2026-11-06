@@ -6,6 +6,7 @@ import path from 'node:path';
 import {
 	forceRefreshZohoProducts,
 	mapZohoItemToProduct,
+	mapZohoItemsToProducts,
 	readZohoProducts,
 	readZohoStockSnapshot,
 	resetZohoInventoryCacheForTests,
@@ -64,6 +65,64 @@ test('maps a Zoho Inventory item to the website product contract', () => {
 		displayOrder: 27,
 		cost: 4.5,
 	});
+});
+
+test('groups Zoho variants under the single item carrying the website slug', () => {
+	const products = mapZohoItemsToProducts([
+		{
+			item_id: 'reta-20-id',
+			group_id: 'reta-group',
+			group_name: 'Retatrutide',
+			name: 'Retatrutide - 20mg',
+			sku: 'Ret-20',
+			rate: 150,
+			purchase_rate: 12.23,
+			stock_on_hand: 9,
+			attribute_option_name1: '20mg',
+			image_id: 'image-20',
+			custom_fields: customFields({ 'Website Slug': 'retatrutide', Strength: '20mg', 'Website Image': '' }),
+		},
+		{
+			item_id: 'reta-10-id',
+			group_id: 'reta-group',
+			group_name: 'Retatrutide',
+			name: 'Retatrutide - 10mg',
+			sku: 'Ret-10',
+			rate: 90,
+			purchase_rate: 8,
+			stock_on_hand: 4,
+			attribute_option_name1: '10mg',
+			image_id: 'image-10',
+			custom_fields: customFields({ 'Website Slug': '', Strength: '10mg', 'Website Image': '' }),
+		},
+	]);
+
+	assert.equal(products.length, 1);
+	assert.equal(products[0].slug, 'retatrutide');
+	assert.equal(products[0].name, 'Retatrutide');
+	assert.equal(products[0].stock, 13);
+	assert.deepEqual(products[0].variants, [
+		{
+			key: 'retatrutide-10mg',
+			label: '10mg',
+			zohoItemId: 'reta-10-id',
+			sku: 'Ret-10',
+			price: 90,
+			stock: 4,
+			image: '/api/products/image/reta-10-id',
+			cost: 8,
+		},
+		{
+			key: 'retatrutide-20mg',
+			label: '20mg',
+			zohoItemId: 'reta-20-id',
+			sku: 'Ret-20',
+			price: 150,
+			stock: 9,
+			image: '/api/products/image/reta-20-id',
+			cost: 12.23,
+		},
+	]);
 });
 
 test('ignores Zoho-only items without a website slug', () => {

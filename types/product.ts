@@ -1,8 +1,12 @@
 export interface ProductVariant {
 	key: string;
 	label: string;
+	zohoItemId?: string;
+	sku?: string;
 	price: number;
 	stock: number;
+	image?: string;
+	cost?: number;
 }
 
 export interface Product {

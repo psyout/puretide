@@ -4,7 +4,7 @@ export default function OrderConfirmationLoading() {
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<Header />
-			<div className='max-w-5xl mx-auto px-6 py-16 pt-28'>
+			<div className='max-w-6xl mx-auto px-6 py-16 pt-28'>
 				<div className='max-w-4xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border shadow-lg p-6 animate-pulse'>
 					<p className='text-deep-tidal-teal-600 text-sm mb-4' aria-live='polite'>
 						Loading your order…

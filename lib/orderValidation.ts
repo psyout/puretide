@@ -95,7 +95,7 @@ type StockProduct = {
 	stock: number;
 	name?: string;
 	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
-	variants?: Array<{ key: string; stock: number }>;
+	variants?: Array<{ key: string; label?: string; stock: number }>;
 };
 
 function isWebsiteSellable(product: StockProduct) {
@@ -161,19 +161,15 @@ export async function validateStockAvailability(
 			available = Number(product.stock) || 0;
 			productName = product.name ?? product.id;
 		} else if (itemId.includes('-')) {
-			// Not found as regular product, try parsing as variant
-			// Extract base product ID (all segments except last, for IDs like "MOTS-C-40")
-			const parts = itemId.split('-').filter(Boolean);
-			const baseId = parts.length > 1 ? parts.slice(0, -1).join('-') : itemId;
-			const baseProduct = products.find((p) => p.id === baseId || p.slug === baseId);
+			const baseProduct = products.find((candidate) => candidate.variants?.some((variant) => variant.key === itemId));
 			if (!baseProduct) {
-				console.error('[validateStockAvailability] Product not found:', { itemId, baseId, availableSlugs: products.map((p) => p.slug) });
+				console.error('[validateStockAvailability] Product variant not found:', { itemId, availableSlugs: products.map((p) => p.slug) });
 				return `Product "${item.name ?? item.id}" is not available.`;
 			}
 			if (!isWebsiteSellable(baseProduct)) return `Product "${baseProduct.name ?? baseProduct.id}" is not available.`;
-			// Use base product's total stock (source of truth)
-			available = Number(baseProduct.stock) || 0;
-			productName = baseProduct.name ?? baseProduct.id;
+			const variant = baseProduct.variants?.find((candidate) => candidate.key === itemId);
+			available = Number(variant?.stock) || 0;
+			productName = `${baseProduct.name ?? baseProduct.id}${variant?.label ? ` - ${variant.label}` : ''}`;
 		} else {
 			// Not found at all - try partial match (e.g., "bacteriostatic-water-10mg" -> "bacteriostatic-water")
 			const partialMatch = products.find((p) => itemId.startsWith(p.id + '-') || itemId.startsWith(p.slug + '-'));

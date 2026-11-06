@@ -42,7 +42,7 @@ export default function AboutAlternative() {
 			id='about'
 			aria-labelledby='about-alternative-title'
 			className='overflow-hidden bg-[#f3f4f4]'>
-			<div className='mx-auto max-w-5xl px-6 py-20 sm:py-24 lg:py-28'>
+			<div className='mx-auto max-w-6xl px-6 py-20 sm:py-24 lg:py-28'>
 				<div className='grid items-end gap-10 border-b border-deep-tidal-teal-800/15 pb-14 lg:grid-cols-[1.35fr_0.65fr] lg:gap-20 lg:pb-20'>
 					<div>
 						<p className='mb-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>

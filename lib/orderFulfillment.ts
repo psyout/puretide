@@ -63,14 +63,15 @@ function getOrderNotificationRecipient() {
 
 async function getZohoStockSnapshot(items: FulfillmentOrder['cartItems']): Promise<Array<{ name: string; stock: number; cost: number }>> {
 	const products = await readProducts();
-	const bySlug = new Map(products.map((product) => [product.slug, product] as const));
 	return items.map((item) => {
-		const product = bySlug.get(String(item.id));
-		if (!product) throw new Error(`Zoho product not found for website slug: ${String(item.id)}`);
+		const itemId = String(item.id);
+		const product = products.find((candidate) => candidate.id === itemId || candidate.slug === itemId || candidate.variants?.some((variant) => variant.key === itemId));
+		const variant = product?.variants?.find((candidate) => candidate.key === itemId);
+		if (!product) throw new Error(`Zoho product not found for website item: ${itemId}`);
 		return {
 			name: item.name,
-			stock: Math.max(0, product.stock - item.quantity),
-			cost: Number(product.cost ?? 0),
+			stock: Math.max(0, (variant?.stock ?? product.stock) - item.quantity),
+			cost: Number(variant?.cost ?? product.cost ?? 0),
 		};
 	});
 }

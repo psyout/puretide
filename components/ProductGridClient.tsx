@@ -86,7 +86,7 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 				backgroundImage: 'linear-gradient(#dde8ed 1px, transparent 1px), linear-gradient(90deg, #dde8ed 1px, transparent 1px)',
 				backgroundSize: '32px 32px',
 			}}>
-			<div className='relative mx-auto max-w-5xl px-6'>
+			<div className='relative mx-auto max-w-6xl px-6'>
 				<div className='mb-5 mt-20'>
 					<div className='text-center'>
 						<h2

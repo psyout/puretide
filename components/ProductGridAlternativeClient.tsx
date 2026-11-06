@@ -117,9 +117,11 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 				className='absolute -right-48 bottom-20 h-96 w-96 rounded-full bg-deep-tidal-teal-100/40 blur-3xl'
 			/>
 
-			<div className='relative mx-auto max-w-5xl px-6'>
+			<div className='relative mx-auto max-w-6xl px-6'>
 				<header>
-					<h2 id='alternative-products-title' className='flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
+					<h2
+						id='alternative-products-title'
+						className='flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
 						<span className='h-px w-3 bg-deep-tidal-teal-500' />
 						The collection
 					</h2>
@@ -127,9 +129,16 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 
 				<div className='pb-10 pt-7 sm:pb-12 sm:pt-8 lg:pb-9 lg:pt-9'>
 					<div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-						<div className='relative order-2 w-full lg:order-2 lg:max-w-[22rem]'>
-							<label htmlFor='product-search' className='sr-only'>Search products</label>
-							<Search className='pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-deep-tidal-teal-500' aria-hidden='true' />
+						<div className='relative order-2 w-full lg:order-2 lg:max-w-[20rem]'>
+							<label
+								htmlFor='product-search'
+								className='sr-only'>
+								Search products
+							</label>
+							<Search
+								className='pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-deep-tidal-teal-500'
+								aria-hidden='true'
+							/>
 							<input
 								id='product-search'
 								type='search'
@@ -140,14 +149,21 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 								className='h-12 w-full rounded-full border border-deep-tidal-teal-800/15 bg-white/85 py-2 pl-11 pr-11 text-base font-medium text-deep-tidal-teal-900 shadow-sm outline-none transition placeholder:text-deep-tidal-teal-500 focus:border-deep-tidal-teal/45 focus:ring-4 focus:ring-deep-tidal-teal/10 lg:h-11 lg:text-sm'
 							/>
 							{searchQuery && (
-								<button type='button' onClick={() => setSearchQuery('')} aria-label='Clear product search' className='absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-deep-tidal-teal-500 transition hover:bg-deep-tidal-teal/10 hover:text-deep-tidal-teal-800'>
+								<button
+									type='button'
+									onClick={() => setSearchQuery('')}
+									aria-label='Clear product search'
+									className='absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-deep-tidal-teal-500 transition hover:bg-deep-tidal-teal/10 hover:text-deep-tidal-teal-800'>
 									<X className='h-4 w-4' />
 								</button>
 							)}
 						</div>
 
 						<div className='order-1 min-w-0 lg:order-1 lg:flex-1'>
-							<div className='scrollbar-hide -mx-6 flex gap-2 overflow-x-auto px-6 pb-1 lg:mx-0 lg:justify-start lg:px-0' role='group' aria-label='Filter products by category'>
+							<div
+								className='scrollbar-hide -mx-6 flex gap-2 overflow-x-auto px-6 pb-1 lg:mx-0 lg:justify-start lg:px-0'
+								role='group'
+								aria-label='Filter products by category'>
 								{PRODUCT_FILTER_CATEGORIES.map((category) => {
 									const selected = category === selectedCategory;
 									return (
@@ -156,7 +172,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 											type='button'
 											onClick={() => setSelectedCategory(category)}
 											aria-pressed={selected}
-											className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-bold transition lg:px-3.5 lg:py-2 ${selected ? 'border-deep-tidal-teal bg-deep-tidal-teal text-white shadow-sm' : 'border-deep-tidal-teal-800/10 bg-white/65 text-deep-tidal-teal-700 hover:border-deep-tidal-teal/35 hover:bg-white'}`}>
+											className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition lg:px-3.5 lg:py-2 ${selected ? 'border-deep-tidal-teal bg-deep-tidal-teal text-white shadow-sm' : 'border-deep-tidal-teal-800/10 bg-white/65 text-deep-tidal-teal-700 hover:border-deep-tidal-teal/35 hover:bg-white'}`}>
 											{category}
 										</button>
 									);
