@@ -10,4 +10,15 @@ export function isProductFilterCategory(value: string | null): value is ProductF
 	return value !== null && PRODUCT_FILTER_CATEGORIES.some((category) => category === value);
 }
 
+export function getProductFilterCategory(category: string): ProductFilterCategory {
+	const normalized = category.trim().toLowerCase();
+	if (normalized === 'metabolic') return 'Metabolic';
+	if (['stack', 'stacks', 'blend', 'blends'].includes(normalized)) return 'Stack';
+	if (normalized === 'recovery') return 'Recovery';
+	if (['longevity', 'immune', 'antioxidant', 'intimacy', 'sexual health'].includes(normalized)) return 'Longevity';
+	if (normalized === 'cognitive') return 'Cognitive';
+	if (['supplies', 'supply', 'accessory', 'accessories', 'hydration'].includes(normalized)) return 'Supplies';
+	return 'Features';
+}
+
 export const PRODUCT_CATEGORY_EVENT = 'pure-tide:select-product-category';

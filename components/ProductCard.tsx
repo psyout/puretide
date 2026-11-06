@@ -126,7 +126,7 @@ export default function ProductCard({ product, onImageLoaded, automaticPromotion
 	);
 
 	return (
-		<div className='group bg-mineral-white-100 rounded-xl ui-border shadow-md relative flex flex-col hover:shadow-lg hover:shadow-deep-tidal-teal-500/10 transition-all duration-300 overflow-hidden'>
+		<div className='bento-card bento-card-interactive group relative flex h-full flex-col overflow-hidden'>
 			{saleDiscount > 0 && <span className='absolute top-3 left-3 z-10 text-xs font-bold bg-deep-tidal-teal text-white px-3 py-1.5 rounded-full'>{saleDiscount}% OFF</span>}
 			{isSoldOut && <span className='absolute top-3 right-3 z-10 text-xs font-semibold uppercase tracking-wide bg-deep-tidal-teal text-mineral-white px-2 py-1 rounded-md'>Sold out</span>}
 			{isLowStock && !isSoldOut && (
@@ -179,7 +179,10 @@ export default function ProductCard({ product, onImageLoaded, automaticPromotion
 								<div
 									key={iconName}
 									className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-eucalyptus-100'>
-									<Icon className='w-4 h-4 text-deep-tidal-teal-700' />
+									<Icon
+										className='w-4 h-4 text-deep-tidal-teal-700'
+										stroke={1.6}
+									/>
 									<span className='text-xs font-medium text-deep-tidal-teal-700'>{iconName}</span>
 								</div>
 							);
@@ -198,7 +201,10 @@ export default function ProductCard({ product, onImageLoaded, automaticPromotion
 									key={iconName}
 									className='inline-flex items-center justify-center w-[clamp(2.1rem,8.4vw,2rem)] h-[clamp(2.1rem,8.4vw,2rem)] rounded-full bg-eucalyptus-100 text-deep-tidal-teal-700'
 									title={iconName}>
-									<Icon className='w-[1rem] h-[1rem] md:w-[1.1rem] md:h-[1.1rem]' />
+									<Icon
+										className='w-[1rem] h-[1rem] md:w-[1.1rem] md:h-[1.1rem]'
+										stroke={1.6}
+									/>
 								</span>
 							);
 						})}

@@ -87,7 +87,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 		<article
 			onMouseEnter={() => setIsCardHovered(true)}
 			onMouseLeave={() => setIsCardHovered(false)}
-			className='group relative isolate flex h-full flex-col bg-mineral-white'>
+			className='bento-card bento-card-interactive group relative isolate flex h-full flex-col overflow-hidden'>
 			<Link
 				href={`/product/${product.slug}`}
 				aria-label={`View ${product.name}`}
@@ -102,7 +102,10 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 				)}
 				{primaryIconName && PrimaryIcon && (
 					<span className='absolute left-2 top-2 inline-flex max-w-[52%] items-center gap-1 rounded-full bg-eucalyptus-100 px-2 py-1 text-[10px] font-medium text-deep-tidal-teal-700 sm:left-4 sm:top-4 sm:max-w-none sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs'>
-						<PrimaryIcon className='h-3 w-3 shrink-0 text-deep-tidal-teal-700 sm:h-4 sm:w-4' />
+						<PrimaryIcon
+							className='h-3 w-3 shrink-0 text-deep-tidal-teal-700 sm:h-4 sm:w-4'
+							stroke={1.6}
+						/>
 						<span className='truncate'>{primaryIconName}</span>
 					</span>
 				)}
@@ -129,7 +132,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 					View
 				</Link>
 				{hasProductImage(product.image) ? (
-					<div className='relative h-[64%] w-[64%] transition-transform duration-500 ease-out group-hover:scale-[1.025]'>
+					<div className='relative h-[64%] w-[64%]'>
 						<Image
 							src={product.image}
 							alt={product.name}

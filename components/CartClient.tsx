@@ -16,6 +16,7 @@ import { buildCartStockMap, hasInvalidCartQuantity, resolveCartItemStock } from 
 import { readStoredCartPromo, storeCartPromo } from '@/lib/cartPromo';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
 import StoreBreadcrumb from './StoreBreadcrumb';
+import { getProductDisplayName } from '@/lib/productVariant';
 
 type CartClientProps = {
 	products: Product[];
@@ -191,7 +192,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 						{/* Free Shipping Progress Bar */}
 						<FreeShippingProgress subtotal={total} />
 
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 shadow-md'>
+						<div className='bento-card p-5'>
 							{cartItems.map((item, index) => {
 								const liveStock = resolveCartItemStock(productStockMap, item);
 								const storedStock = Number(item.stock) || 0;
@@ -203,6 +204,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 								const displayedItemPrice = getDisplayedItemPrice(item);
 								const isDiscounted = displayedItemPrice < item.price;
 								const savings = item.price - displayedItemPrice;
+								const itemDisplayName = getProductDisplayName(item.name, item.mg, item.id !== item.slug);
 
 								return (
 									<div
@@ -233,9 +235,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 											{/* Product Info */}
 											<div className='flex-1 min-w-0 flex flex-col'>
 												{/* Product Name */}
-												<h3 className='text-md sm:text-base font-bold text-deep-tidal-teal-800 mb-0.5 line-clamp-2 leading-tight'>{item.name}</h3>
-												{item.subtitle && <p className='text-[0.85rem] text-deep-tidal-teal-600 mb-1.5'>{item.subtitle}</p>}
-
+												<h3 className='text-md sm:text-base font-semibold text-deep-tidal-teal-800 mb-0.5 line-clamp-2 leading-tight'>{itemDisplayName}</h3>
 												{/* Stock Status */}
 												{isOutOfStock ? (
 													<div className='flex items-center gap-1.5 text-xs text-red-600 font-medium mb-1.5'>
@@ -332,9 +332,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 											{/* Desktop: Center Section - Product Information */}
 											<div className='flex-1 min-w-0 flex flex-col'>
-												<h3 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>{item.name}</h3>
-												{item.subtitle && <p className='text-sm text-deep-tidal-teal-600 mb-3'>{item.subtitle}</p>}
-
+												<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mb-2'>{itemDisplayName}</h3>
 												{/* Stock Status */}
 												{isOutOfStock ? (
 													<div className='flex items-center gap-2 text-sm text-red-600 font-medium mb-3'>
@@ -425,8 +423,8 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 					</div>
 
 					<div className='lg:col-span-1'>
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 sticky top-24 shadow-md'>
-							<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
+						<div className='bento-card sticky top-24 p-5'>
+							<h2 className='text-xl font-semibold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div
 								className='space-y-2 mb-3'
 								aria-live='polite'>
@@ -435,7 +433,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										key={item.id}
 										className='flex justify-between text-md'>
 										<span className='text-deep-tidal-teal-700 text-[0.9rem]'>
-											{item.name} × {item.quantity}
+											{getProductDisplayName(item.name, item.mg, item.id !== item.slug)} × {item.quantity}
 										</span>
 										<span className={`font-semibold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-800'}`}>
 											${(getDisplayedItemPrice(item) * item.quantity).toFixed(2)}
@@ -451,7 +449,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 									</div>
 								)}
 								<div className='flex justify-between text-lg font-bold'>
-									<span className='text-deep-tidal-teal-800'>Subtotal</span>
+									<span className='text-deep-tidal-teal-800 font-semibold'>Subtotal</span>
 									<span className='text-deep-tidal-teal'>${summarySubtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
@@ -551,7 +549,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 								}}
 								className='site-cta cta-primary min-h-14 w-full'
 								disabled={hasCartInvalidQuantity}>
-								<span className='flex items-center gap-2 text-[0.9rem]'>
+								<span className='flex items-center gap-2 text-[0.75rem] tracking-wider'>
 									<Lock size={18} /> Continue to Checkout
 								</span>
 							</button>

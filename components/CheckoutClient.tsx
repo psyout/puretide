@@ -13,6 +13,7 @@ import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
 import StoreBreadcrumb from './StoreBreadcrumb';
+import { getProductDisplayName } from '@/lib/productVariant';
 
 const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
 const GATEWAYLINX_RELAY_HOST = 'bluepeakdns.com';
@@ -544,7 +545,7 @@ export default function CheckoutClient() {
 			idempotencyKey: getOrCreateIdempotencyKey(),
 			cartItems: cartItems.map((item) => ({
 				id: item.id,
-				name: item.mg && !item.name.toLowerCase().includes('stack') ? `${item.name} – ${item.mg}` : item.name,
+				name: getProductDisplayName(item.name, item.mg, item.id !== item.slug),
 				price: item.price,
 				quantity: item.quantity,
 				image: item.image ?? '',
@@ -785,10 +786,10 @@ export default function CheckoutClient() {
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
 					<div className='order-1 lg:order-1 lg:col-span-2'>
 						{/* Single container with separators */}
-						<div className='bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 shadow-md'>
+						<div className='bento-card p-5'>
 							{/* Contact Information */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Contact Information</h2>
+								<h2 className='text-xl font-semibold mb-4 text-deep-tidal-teal-800'>Contact Information</h2>
 								{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
 									<div
 										role='alert'
@@ -805,7 +806,7 @@ export default function CheckoutClient() {
 									</div>
 								)}
 								<div>
-									<label className='block text-md font-medium mb-2 text-deep-tidal-teal-800'>Email Address *</label>
+									<label className='block text-[0.9rem]  mb-2 text-deep-tidal-teal-800'>Email Address *</label>
 									<input
 										type='email'
 										value={formData.email}
@@ -834,7 +835,7 @@ export default function CheckoutClient() {
 
 							{/* Billing Details */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-xl font-bold mb-4 text-deep-tidal-teal-800'>Billing Details</h2>
+								<h2 className='text-xl font-semibold mb-4 text-deep-tidal-teal-800'>Billing Details</h2>
 								<form
 									id='checkout-form'
 									onSubmit={handleSubmit}
@@ -1140,7 +1141,7 @@ export default function CheckoutClient() {
 
 							{/* Shipping Section */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-lg font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
+								<h2 className='text-lg font-semibold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
 									<Truck className='w-5 h-5' />
 									Shipping
 								</h2>
@@ -1176,7 +1177,7 @@ export default function CheckoutClient() {
 
 							{/* Payment Section */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='text-lg font-bold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
+								<h2 className='text-lg font-semibold mb-4 text-deep-tidal-teal-800 flex items-center gap-2'>
 									<CreditCard className='w-5 h-5' />
 									Payment Method
 								</h2>
@@ -1197,7 +1198,7 @@ export default function CheckoutClient() {
 												/>
 												<span className='min-w-0 flex-1'>
 													<span className='flex items-center justify-between gap-3'>
-														<span className='font-semibold text-deep-tidal-teal-900'>Interac e-Transfer</span>
+														<span className='font-semibold text-[0.9rem] text-deep-tidal-teal-900'>Interac e-Transfer</span>
 														<span className='shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'>No fee</span>
 													</span>
 													<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
@@ -1231,7 +1232,7 @@ export default function CheckoutClient() {
 										<div className='flex items-start justify-between gap-4'>
 											<div>
 												<p className='text-sm font-semibold text-deep-tidal-teal-800'>Friends & Family verification</p>
-												<p className='text-xs text-deep-tidal-teal-700 mt-1'>
+												<p className='text-sm text-deep-tidal-teal-700 mt-1'>
 													If you&apos;re eligible, you can verify your email to use the Friends & Family e-Transfer flow.
 												</p>
 												{friendsFamilyVerified && <p className='text-xs text-emerald-700 mt-2'>Verified session active.</p>}
@@ -1288,7 +1289,7 @@ export default function CheckoutClient() {
 																setFriendsFamilyStartLoading(false);
 															}
 														}}
-												className='site-cta cta-primary cta-compact'>
+														className='site-cta cta-primary cta-compact'>
 														{friendsFamilyStartLoading ? 'Sending...' : 'Send code'}
 													</button>
 													{friendsFamilyEligible === true && (
@@ -1359,7 +1360,7 @@ export default function CheckoutClient() {
 											/>
 											<span className='min-w-0 flex-1'>
 												<span className='flex items-center justify-between gap-3'>
-													<span className='font-semibold text-deep-tidal-teal-900'>Credit card</span>
+													<span className='font-semibold text-[0.9rem] text-deep-tidal-teal-900'>Credit card</span>
 													<span className='shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900'>+5% fee</span>
 												</span>
 												<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
@@ -1405,7 +1406,7 @@ export default function CheckoutClient() {
 												d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
 											/>
 										</svg>
-										<h3 className='font-semibold text-deep-tidal-teal-800'>Privacy Notice</h3>
+										<h3 className='font-semibold text-[0.9rem] text-deep-tidal-teal-800'>Privacy Notice</h3>
 									</div>
 									<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
 										All information is encrypted and stored securely. We do not share your data with third parties. Payments are processed anonymously. Your identity
@@ -1521,11 +1522,11 @@ export default function CheckoutClient() {
 
 					<div className='order-2 lg:order-2 lg:col-span-1'>
 						<div
-							className={`bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-5 sticky top-24 shadow-md ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
+							className={`bento-card sticky top-24 p-5 ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
 							aria-busy={isProcessing}
 							aria-disabled={isProcessing}>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
-								<h2 className='text-xl font-bold text-deep-tidal-teal-800'>Order Summary</h2>
+								<h2 className='text-xl font-semibold text-deep-tidal-teal-800'>Order Summary</h2>
 								<Link
 									href='/cart'
 									className='text-sm font-semibold text-deep-tidal-teal hover:text-deep-tidal-teal-600 transition-colors flex items-center gap-1'>
@@ -1568,7 +1569,9 @@ export default function CheckoutClient() {
 
 										{/* Product Details & Price */}
 										<div className='flex-1 min-w-0'>
-											<h3 className='text-sm font-semibold text-deep-tidal-teal-800 leading-tight'>{item.name}</h3>
+											<h3 className='text-sm font-semibold text-deep-tidal-teal-800 leading-tight'>
+												{getProductDisplayName(item.name, item.mg, item.id !== item.slug)}
+											</h3>
 											<p
 												className={`text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
 												${(getDisplayPrice(item) * item.quantity).toFixed(2)}
@@ -1647,7 +1650,7 @@ export default function CheckoutClient() {
 									</div>
 								)}
 							</div>
-
+							{/* Subtotal */}
 							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm flex flex-col gap-3'>
 								<div className='flex justify-between'>
 									<span className='text-deep-tidal-teal-700 text-[15px]'>Subtotal</span>
@@ -1666,13 +1669,13 @@ export default function CheckoutClient() {
 
 								{/* Card Fee */}
 								{cardFee > 0 && (
-									<div className='flex justify-between text-sm text-deep-tidal-teal-600'>
+									<div className='flex justify-between text-deep-tidal-teal-600'>
 										<span>Card Fee (5%)</span>
 										<span>${cardFee.toFixed(2)}</span>
 									</div>
 								)}
 
-								<div className='border-t border-deep-tidal-teal/10 pt-3 flex justify-between text-xl font-bold'>
+								<div className='border-t border-deep-tidal-teal/10 pt-3 flex justify-between text-xl font-semibold'>
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>

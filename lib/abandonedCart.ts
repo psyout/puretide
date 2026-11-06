@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import type { Product } from '@/types/product';
 import type { AbandonedCartItem } from '@/lib/ordersDb';
-import { isProductVariantSellable } from '@/lib/productVariant';
+import { getProductDisplayName, isProductVariantSellable } from '@/lib/productVariant';
 
 export const ABANDONED_CART_CONSENT_TEXT =
 	'Email me one reminder about items left in my cart. I can unsubscribe at any time.';
@@ -56,7 +56,7 @@ export function resolveRecoverableCartItems(items: AbandonedCartItem[], products
 export function toAbandonedCartDisplayItems(items: RecoverableCartItem[]): AbandonedCartDisplayItem[] {
 	return items.map((item) => ({
 		id: item.id,
-		name: item.mg && !item.name.toLowerCase().includes('stack') ? `${item.name} – ${item.mg}` : item.name,
+		name: getProductDisplayName(item.name, item.mg, item.id !== item.slug),
 		quantity: item.quantity,
 		price: item.price,
 		image: item.image,

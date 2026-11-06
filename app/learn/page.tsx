@@ -476,7 +476,7 @@ function ProductsGrid() {
 						<a
 							key={product.name}
 							href={product.href}
-							className='bg-white border border-[#dde8ed] rounded-xl px-6 py-7 no-underline block transition-all relative overflow-hidden group hover:border-[#d4eaf3] hover:shadow-[0_6px_32px_rgba(28,72,85,0.1)] hover:-translate-y-px'>
+							className='bento-card bento-card-interactive group relative block overflow-hidden px-6 py-7 no-underline'>
 							<div className='absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#6EB4CC] to-[#1C4855] scale-x-0 group-hover:scale-x-100 transition-transform origin-left' />
 							<div className='text-[10px] font-bold tracking-[0.2em] uppercase text-[#6EB4CC] mb-2.5'>{product.tag}</div>
 							<div className='inline-block text-[10px] font-bold bg-[rgba(82,104,83,0.1)] text-[#526853] px-2.5 py-[3px] rounded tracking-[0.08em] uppercase mb-2.5'>

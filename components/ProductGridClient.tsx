@@ -143,7 +143,7 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 								{Array.from({ length: skeletonCount }).map((_, index) => (
 									<div
 										key={index}
-										className='bg-mineral-white-100 rounded-xl ui-border shadow-md animate-pulse relative flex flex-col overflow-hidden'>
+										className='bento-card relative flex flex-col overflow-hidden animate-pulse'>
 										{/* Image placeholder */}
 										<div className='m-4 md:m-5 rounded-lg bg-eucalyptus-50/60 min-h-[10rem] md:min-h-[12rem] flex justify-center items-center'>
 											<div className='w-56 h-56 md:w-52 md:h-52 rounded-lg bg-deep-tidal-teal/10' />
@@ -166,7 +166,9 @@ export default function ProductGridClient({ initialItems, stockUnavailable = fal
 								}`}
 								aria-hidden={showSkeleton}>
 								{visibleProducts.map((product) => (
-									<div key={product.id}>
+									<div
+										key={product.id}
+										className='h-full'>
 										<ProductCard
 											product={product}
 											onImageLoaded={handleImageLoaded}

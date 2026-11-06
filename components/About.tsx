@@ -63,7 +63,7 @@ export default function About() {
 							return (
 								<div
 									key={index}
-									className='bg-mineral-white rounded-xl p-10 flex flex-col min-h-[320px] hover:shadow-2xl hover:scale-103 transition-all duration-300 overflow-hidden shadow-sm group'>
+									className='bento-card bento-card-interactive group flex min-h-[320px] flex-col overflow-hidden p-10'>
 									<div className='h-12 w-12 rounded-full bg-eucalyptus flex items-center justify-center mb-6'>
 										<Icon className={`w-8 h-8 ${item.colorClass}`} />
 									</div>

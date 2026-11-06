@@ -8,6 +8,7 @@ import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
+import { getProductDisplayName } from '@/lib/productVariant';
 
 export default function CartDrawer() {
 	const { cartItems, isCartDrawerOpen, lastAddedItemId, closeCartDrawer, getItemPrice, getTotal, removeFromCart, updateQuantity, automaticPromotion } = useCart();
@@ -123,8 +124,7 @@ export default function CartDrawer() {
 																	{automaticPromotion ? `${automaticPromotion.discount}% off` : `Save C$${savingsPerItem.toFixed(2)} each`}
 																</span>
 															)}
-															<h3 className={`${isDiscounted ? 'mt-1' : ''} font-semibold leading-tight text-deep-tidal-teal-900`}>{item.name}</h3>
-															{item.mg && <p className='mt-1 text-sm text-deep-tidal-teal-600'>{item.mg}</p>}
+																	<h3 className={`${isDiscounted ? 'mt-1' : ''} font-semibold leading-tight text-deep-tidal-teal-900`}>{getProductDisplayName(item.name, item.mg, item.id !== item.slug)}</h3>
 														</div>
 														<button
 															type='button'

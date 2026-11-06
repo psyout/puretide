@@ -8,6 +8,7 @@ import ProductDetailClient from '@/components/ProductDetailClient';
 import fs from 'fs';
 import path from 'path';
 import { resolveProductCoaFile } from '@/lib/productCoa';
+import { getProductFilterCategory } from '@/lib/productCategories';
 
 type ProductPageProps = {
 	params: { id: string };
@@ -42,9 +43,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
 		.slice(0, 4);
 
 	const promoBannerEnabled = String(process.env.NEXT_PUBLIC_PROMO_BANNER_ENABLED ?? '').toLowerCase() === 'true';
+	const breadcrumbCategory = product.category ? getProductFilterCategory(product.category) : null;
 	const breadcrumbItems = [
 		{ label: 'Shop', href: '/#products' },
-		...(product.category ? [{ label: product.category, href: `/?category=${encodeURIComponent(product.category)}#products` }] : []),
+		...(breadcrumbCategory ? [{ label: breadcrumbCategory, href: `/?category=${encodeURIComponent(breadcrumbCategory)}#products` }] : []),
 		{ label: product.name },
 	];
 

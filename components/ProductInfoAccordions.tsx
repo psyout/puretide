@@ -53,7 +53,7 @@ export default function ProductInfoAccordions({ details, freeShippingThreshold }
 				return (
 					<section
 						key={section.id}
-						className='overflow-hidden rounded-xl border border-deep-tidal-teal/15 bg-white'>
+						className='bento-card overflow-hidden'>
 						<button
 							type='button'
 							onClick={() => setOpenSection(isOpen ? null : section.id)}
@@ -61,7 +61,17 @@ export default function ProductInfoAccordions({ details, freeShippingThreshold }
 							aria-controls={panelId}
 							className='flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-deep-tidal-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-deep-tidal-teal/40'>
 							<span>{section.label}</span>
-							{isOpen ? <Minus className='h-4 w-4 shrink-0' aria-hidden='true' /> : <Plus className='h-4 w-4 shrink-0' aria-hidden='true' />}
+							{isOpen ? (
+								<Minus
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+							) : (
+								<Plus
+									className='h-4 w-4 shrink-0'
+									aria-hidden='true'
+								/>
+							)}
 						</button>
 						<div
 							className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
@@ -69,11 +79,11 @@ export default function ProductInfoAccordions({ details, freeShippingThreshold }
 							}`}
 							aria-hidden={!isOpen}>
 							<div className='overflow-hidden'>
-							<div
-								id={panelId}
-								className='border-t border-deep-tidal-teal/10 px-5 pb-5 pt-4 text-sm leading-6 text-deep-tidal-teal-700'>
-								{section.content}
-							</div>
+								<div
+									id={panelId}
+									className='border-t border-deep-tidal-teal/10 px-5 pb-5 pt-4 text-[0.95rem] leading-7 text-deep-tidal-teal-700'>
+									{section.content}
+								</div>
 							</div>
 						</div>
 					</section>

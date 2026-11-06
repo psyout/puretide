@@ -4,24 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import type { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
-import { isProductFilterCategory, PRODUCT_CATEGORY_EVENT, PRODUCT_FILTER_CATEGORIES, type ProductFilterCategory } from '@/lib/productCategories';
+import { getProductFilterCategory, isProductFilterCategory, PRODUCT_CATEGORY_EVENT, PRODUCT_FILTER_CATEGORIES, type ProductFilterCategory } from '@/lib/productCategories';
 import ProductCardAlternative from './ProductCardAlternative';
 
 type ProductGridAlternativeClientProps = {
 	initialItems: Product[];
 	stockUnavailable?: boolean;
 };
-
-function getFilterCategory(category: string): ProductFilterCategory {
-	const normalized = category.trim().toLowerCase();
-	if (normalized === 'metabolic') return 'Metabolic';
-	if (['stack', 'stacks', 'blend', 'blends'].includes(normalized)) return 'Stack';
-	if (normalized === 'recovery') return 'Recovery';
-	if (['longevity', 'immune', 'antioxidant', 'intimacy', 'sexual health'].includes(normalized)) return 'Longevity';
-	if (normalized === 'cognitive') return 'Cognitive';
-	if (['supplies', 'supply', 'accessory', 'accessories', 'hydration'].includes(normalized)) return 'Supplies';
-	return 'Features';
-}
 
 export default function ProductGridAlternativeClient({ initialItems, stockUnavailable = false }: ProductGridAlternativeClientProps) {
 	const { automaticPromotion } = useCart();
@@ -59,7 +48,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 	const visibleProducts = useMemo(() => {
 		const query = searchQuery.trim().toLowerCase();
 		return items.filter((product) => {
-			const matchesCategory = selectedCategory === 'All' || getFilterCategory(product.category) === selectedCategory;
+			const matchesCategory = selectedCategory === 'All' || getProductFilterCategory(product.category) === selectedCategory;
 			if (!matchesCategory) return false;
 			if (!query) return true;
 			return [product.name, product.subtitle, product.description, product.mg, product.category, ...(product.icons ?? [])]
@@ -190,7 +179,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 							{Array.from({ length: skeletonCount }).map((_, index) => (
 								<div
 									key={index}
-									className='animate-pulse overflow-hidden rounded-xl border border-deep-tidal-teal/10 bg-white shadow-sm shadow-deep-tidal-teal/5'>
+									className='bento-card animate-pulse overflow-hidden'>
 									<div className='aspect-square bg-[#f3f4f4]' />
 									<div className='flex min-h-[12rem] flex-col gap-3 px-3 pb-3 pt-4 sm:min-h-[15rem] sm:gap-4 sm:px-6 sm:pb-6 sm:pt-7'>
 										<div className='h-5 w-3/4 rounded bg-deep-tidal-teal/10 sm:h-7 sm:w-2/3' />
@@ -207,7 +196,9 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 							className={`grid grid-cols-1 gap-3 transition-opacity duration-300 min-[351px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 ${showSkeleton ? 'pointer-events-none absolute inset-0 opacity-0' : 'opacity-100'}`}
 							aria-hidden={showSkeleton}>
 							{visibleProducts.map((product) => (
-								<div key={product.id}>
+								<div
+									key={product.id}
+									className='h-full'>
 									<ProductCardAlternative
 										product={product}
 										onImageLoaded={handleImageLoaded}

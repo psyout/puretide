@@ -14,8 +14,8 @@ export default function FreeShippingProgress({ subtotal }: FreeShippingProgressP
 
 	return (
 		<div
-			className={`backdrop-blur-sm rounded-lg px-5 py-3 shadow-sm mb-6 transition-colors duration-300 ${
-				isUnlocked ? 'bg-deep-tidal-teal/10 ring-1 ring-deep-tidal-teal/20' : 'bg-mineral-white ui-border'
+			className={`bento-card-tinted mb-6 px-5 py-3 transition-colors duration-300 ${
+				isUnlocked ? 'bg-deep-tidal-teal/10 ring-1 ring-deep-tidal-teal/20' : 'bg-white'
 			}`}>
 			<div className='flex items-center gap-4'>
 				{/* Truck icon in circular badge */}

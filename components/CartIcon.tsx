@@ -8,6 +8,7 @@ import { ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
+import { getProductDisplayName } from '@/lib/productVariant';
 
 export default function CartIcon() {
 	const { cartItems, getItemPrice, getTotal, openCartDrawer, automaticPromotion } = useCart();
@@ -140,9 +141,9 @@ export default function CartIcon() {
 												)}
 											</div>
 											<div className='min-w-0 flex-1'>
-												<p className='truncate text-sm font-bold'>{item.name}</p>
+												<p className='truncate text-sm font-bold'>{getProductDisplayName(item.name, item.mg, item.id !== item.slug)}</p>
 												<p className='mt-1 text-xs text-deep-tidal-teal-600'>
-													{item.mg ? `${item.mg} · ` : ''}Qty {item.quantity}
+													Qty {item.quantity}
 												</p>
 												{isDiscounted && <p className='mt-1 text-[11px] font-semibold text-emerald-700'>{automaticPromotion ? `${automaticPromotion.discount}% off` : `Save C$${((item.price - itemPrice) * item.quantity).toFixed(2)}`}</p>}
 											</div>

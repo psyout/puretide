@@ -59,7 +59,7 @@ export default function AboutAlternative() {
 				</div>
 
 				<div className='grid gap-8 pt-14 lg:grid-cols-[0.72fr_1.28fr] lg:gap-8 lg:pt-20'>
-					<div className='relative overflow-hidden rounded-xl bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 p-8 text-deep-tidal-teal-800 shadow-md ui-border sm:p-10 lg:min-h-[31rem] lg:p-12'>
+					<div className='bento-card-tinted relative overflow-hidden bg-gradient-to-br from-eucalyptus-50 via-mineral-white to-deep-tidal-teal/10 p-8 text-deep-tidal-teal-800 sm:p-10 lg:min-h-[31rem] lg:p-12'>
 						<div
 							aria-hidden='true'
 							className='absolute -right-24 -top-24 h-72 w-72 rounded-full border-[3.5rem] border-deep-tidal-teal/5'
@@ -81,7 +81,7 @@ export default function AboutAlternative() {
 						</div>
 					</div>
 
-					<div className='divide-y divide-deep-tidal-teal/10 rounded-lg bg-mineral-white p-8 shadow-md ui-border sm:p-10'>
+					<div className='bento-card divide-y divide-deep-tidal-teal/10 p-8 sm:p-10'>
 						{principles.map((principle) => {
 							const Icon = principle.icon;
 
@@ -117,7 +117,7 @@ export default function AboutAlternative() {
 							return (
 								<article
 									key={item.title}
-									className='rounded-lg bg-mineral-white p-8 shadow-md ui-border sm:p-10'>
+									className='bento-card p-8 sm:p-10'>
 									<div className='mb-10 flex h-12 w-12 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
 										<Icon
 											className='h-6 w-6'
