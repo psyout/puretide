@@ -211,7 +211,7 @@ function HowPeptidesWork() {
 						</p>
 					</div>
 					<a
-						href='https://puretide.ca/shop'
+						href='https://puretide.ca/#products'
 						className='site-cta cta-primary relative whitespace-nowrap'>
 						Browse All Products →
 					</a>
@@ -749,7 +749,7 @@ function WhyPureTide() {
 				<div className='mt-14 pt-10 border-t border-white/10 flex flex-col md:flex-row items-center md:justify-between gap-6 flex-wrap'>
 					<p className='text-[15px] text-white/55 max-w-[460px] leading-[1.7]'>Every batch is independently verified. Every order ships from Canada. Zero compromise on purity.</p>
 					<a
-						href='https://puretide.ca/shop'
+						href='https://puretide.ca/#products'
 						className='site-cta cta-primary relative whitespace-nowrap'>
 						View Full Catalogue →
 					</a>

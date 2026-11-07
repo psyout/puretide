@@ -71,6 +71,10 @@ export type StockDeductionItem = {
 export type ZohoStockSnapshotItem = {
 	slug: string;
 	stock: number;
+	zohoItemId: string;
+	sku?: string;
+	name: string;
+	status: NonNullable<Product['status']>;
 };
 
 export type ZohoWebsiteStatus = 'published' | 'draft' | 'inactive';
@@ -606,9 +610,9 @@ async function refreshZohoProducts(forceItemList = false): Promise<Product[]> {
  * list. This deliberately avoids the per-item detail requests used by the full
  * storefront catalog, making it safe to run frequently for a spreadsheet view.
  */
-export async function readZohoStockSnapshot(): Promise<ZohoStockSnapshotItem[]> {
-	const items = await readZohoItemList();
-	const stockBySlug = new Map<string, number>();
+export async function readZohoStockSnapshot(force = false): Promise<ZohoStockSnapshotItem[]> {
+	const items = await readZohoItemList(force);
+	const stockBySlug = new Map<string, ZohoStockSnapshotItem>();
 	const itemsByGroup = new Map<string, ZohoInventoryItem[]>();
 	for (const item of items) {
 		const groupId = asTrimmedString(item.group_id);
@@ -623,10 +627,42 @@ export async function readZohoStockSnapshot(): Promise<ZohoStockSnapshotItem[]> 
 		for (const groupItem of groupItems) {
 			if (!hasStockValue(groupItem)) throw new Error(`Zoho item ${asTrimmedString(groupItem.item_id) || slug} did not include stock in the item list.`);
 		}
-		stockBySlug.set(normalizedSlug, groupItems.reduce((total, groupItem) => total + getStockOnHand(groupItem), 0));
+		stockBySlug.set(normalizedSlug, {
+			slug: normalizedSlug,
+			stock: groupItems.reduce((total, groupItem) => total + getStockOnHand(groupItem), 0),
+			zohoItemId: asTrimmedString(item.item_id),
+			...(asTrimmedString(item.sku) ? { sku: asTrimmedString(item.sku) } : {}),
+			name: asTrimmedString(item.group_name) || asTrimmedString(item.name) || slug,
+			status: normalizeWebsiteStatus(getCustomField(item, 'Website Status')),
+		});
 	}
 	if (stockBySlug.size === 0) throw new Error('Zoho Inventory returned no stock items with a Website Slug.');
-	return Array.from(stockBySlug, ([slug, stock]) => ({ slug, stock }));
+	return Array.from(stockBySlug.values());
+}
+
+/**
+ * Read one row per Zoho item for the internal Inventory sheet. Unlike the
+ * storefront snapshot, this does not collapse item-group variants into a
+ * combined total. Variant siblings without their own Website Slug are included
+ * when another item in their group is connected to the website.
+ */
+export async function readZohoInventoryItemSnapshot(force = false): Promise<ZohoStockSnapshotItem[]> {
+	const items = await readZohoItemList(force);
+	const websiteGroupIds = new Set(
+		items
+			.filter((item) => Boolean(getCustomField(item, 'Website Slug')))
+			.map((item) => asTrimmedString(item.group_id))
+			.filter(Boolean),
+	);
+	const relevantItems = items.filter((item) => Boolean(getCustomField(item, 'Website Slug')) || websiteGroupIds.has(asTrimmedString(item.group_id)));
+	return relevantItems.map((item) => ({
+		slug: getCustomField(item, 'Website Slug').trim().toLowerCase(),
+		stock: getStockOnHand(item),
+		zohoItemId: asTrimmedString(item.item_id),
+		...(asTrimmedString(item.sku) ? { sku: asTrimmedString(item.sku) } : {}),
+		name: asTrimmedString(item.name) || asTrimmedString(item.group_name) || asTrimmedString(item.item_id),
+		status: normalizeWebsiteStatus(getCustomField(item, 'Website Status')),
+	}));
 }
 
 export async function readZohoProducts(): Promise<Product[]> {

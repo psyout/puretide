@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import type { Product, PromoCode, PromotionCampaign, PromotionTier } from '@/types/product';
 import { products as baseProducts } from '@/lib/products';
+import type { ZohoStockSnapshotItem } from '@/lib/zohoInventory';
 
 export type FriendsFamilySheetEntry = {
 	email: string;
@@ -790,6 +791,171 @@ export const writeSheetProducts = async (items: Product[]) => {
 };
 
 export type ZohoStockSheetItem = { slug: string; stock: number };
+
+export type InventoryBatchQuantities = { current: number; incoming: number };
+
+export function reconcileInventoryBatchQuantities(currentRaw: unknown, incomingRaw: unknown, zohoTotalRaw: unknown): InventoryBatchQuantities {
+	let current = Math.max(0, Math.round(Number(currentRaw) || 0));
+	let incoming = Math.max(0, Math.round(Number(incomingRaw) || 0));
+	const zohoTotal = Math.max(0, Math.round(Number(zohoTotalRaw) || 0));
+	const batchTotal = current + incoming;
+
+	if (zohoTotal < batchTotal) {
+		let deduction = batchTotal - zohoTotal;
+		const fromCurrent = Math.min(current, deduction);
+		current -= fromCurrent;
+		deduction -= fromCurrent;
+		incoming = Math.max(0, incoming - deduction);
+	} else if (zohoTotal > batchTotal) {
+		incoming += zohoTotal - batchTotal;
+	}
+
+	return { current, incoming };
+}
+
+export type ZohoInventorySheetSyncResult = {
+	updated: number;
+	added: string[];
+	inventoryRowsWithoutZohoMatch: string[];
+	syncedAt: string;
+};
+
+/**
+ * Synchronize the Inventory dashboard directly from Zoho. Total Live Stock and
+ * Website Status are overwritten by Zoho; lot, COA, and cap-colour metadata stay
+ * owned by the spreadsheet. Quantity reductions use Current Stock first, while
+ * increases are placed in New Stock for the team to describe.
+ */
+export const syncZohoStockToInventorySheet = async (items: ZohoStockSnapshotItem[]): Promise<ZohoInventorySheetSyncResult> => {
+	if (!SHEET_ID) throw new Error('Google Sheet ID is not configured.');
+	const sheets = getSheetsClient();
+	const title = process.env.GOOGLE_INVENTORY_SHEET_NAME?.trim() || 'Inventory';
+	const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+	const sheet = spreadsheet.data.sheets?.find((candidate: { properties?: { title?: string; sheetId?: number | null } }) => candidate.properties?.title === title);
+	const sheetId = sheet?.properties?.sheetId;
+	if (sheetId == null) throw new Error(`Google Sheets tab "${title}" was not found.`);
+
+	const response = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `'${title}'!A1:N1000`, valueRenderOption: 'UNFORMATTED_VALUE' });
+	const rows = (response.data.values ?? []) as unknown[][];
+	if (rows.length < 3) throw new Error(`Google Sheets tab "${title}" does not contain the expected Inventory layout.`);
+
+	const slugColumn = 11; // hidden column L
+	const itemIdColumn = 12; // hidden column M
+	const varianceColumn = 13; // hidden column N
+	const firstDataIndex = 3; // spreadsheet row 4
+	const noteIndex = rows.findIndex((row, index) => index >= firstDataIndex && String(row[0] ?? '').startsWith('Total Live Stock'));
+	const dataEndIndex = noteIndex >= 0 ? noteIndex : rows.length;
+	const existingRows = rows.slice(firstDataIndex, dataEndIndex);
+	type ExistingInventoryRow = { row: unknown[]; index: number };
+	const existingBySlug = new Map<string, ExistingInventoryRow>();
+	const existingByItemId = new Map<string, ExistingInventoryRow>();
+	const allExistingRows: ExistingInventoryRow[] = [];
+	for (let offset = 0; offset < existingRows.length; offset += 1) {
+		const row = existingRows[offset] ?? [];
+		const existing = { row, index: firstDataIndex + offset };
+		allExistingRows.push(existing);
+		const slug = String(row[slugColumn] ?? '').trim().toLowerCase();
+		const itemId = String(row[itemIdColumn] ?? '').trim();
+		if (slug) existingBySlug.set(slug, existing);
+		if (itemId) existingByItemId.set(itemId, existing);
+	}
+
+	const itemMatches = items.map((item) => {
+		const itemId = item.zohoItemId.trim();
+		const slug = item.slug.trim().toLowerCase();
+		return { item, existing: existingByItemId.get(itemId) ?? (slug ? existingBySlug.get(slug) : undefined) };
+	});
+	const missingItems = itemMatches.filter(({ existing }) => !existing).map(({ item }) => item);
+	const matchedExistingIndexes = new Set(itemMatches.flatMap(({ existing }) => (existing ? [existing.index] : [])));
+	const syncedAt = new Date().toISOString();
+
+	if (missingItems.length > 0) {
+		const insertAt = dataEndIndex;
+		const copySourceIndex = Math.max(firstDataIndex, insertAt - 1);
+		await sheets.spreadsheets.batchUpdate({
+			spreadsheetId: SHEET_ID,
+			requestBody: {
+				requests: [
+					{ insertDimension: { range: { sheetId, dimension: 'ROWS', startIndex: insertAt, endIndex: insertAt + missingItems.length }, inheritFromBefore: true } },
+					{
+						copyPaste: {
+							source: { sheetId, startRowIndex: copySourceIndex, endRowIndex: copySourceIndex + 1, startColumnIndex: 0, endColumnIndex: 14 },
+							destination: { sheetId, startRowIndex: insertAt, endRowIndex: insertAt + missingItems.length, startColumnIndex: 0, endColumnIndex: 14 },
+							pasteType: 'PASTE_NORMAL',
+							pasteOrientation: 'NORMAL',
+						},
+					},
+				],
+			},
+		});
+	}
+
+	const outputRows: unknown[][] = existingRows.map((row) => Array.from({ length: 14 }, (_, index) => row[index] ?? ''));
+	let updated = 0;
+	for (const { item, existing } of itemMatches) {
+		if (!existing) continue;
+		const output = outputRows[existing.index - firstDataIndex];
+		const reconciled = reconcileInventoryBatchQuantities(output[2], output[6], item.stock);
+		output[0] = item.name;
+		output[1] = item.stock;
+		output[2] = reconciled.current;
+		output[6] = reconciled.incoming;
+		output[10] = item.status;
+		output[slugColumn] = item.slug;
+		output[itemIdColumn] = item.zohoItemId;
+		output[varianceColumn] = reconciled.current + reconciled.incoming - item.stock;
+		updated += 1;
+	}
+
+	for (const item of missingItems) {
+		outputRows.push([
+			item.name,
+			item.stock,
+			item.stock,
+			'',
+			'',
+			'',
+			0,
+			'',
+			'',
+			'',
+			item.status,
+			item.slug,
+			item.zohoItemId,
+			0,
+		]);
+	}
+
+	if (outputRows.length > 0) {
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: `'${title}'!A4:N${outputRows.length + 3}`,
+			valueInputOption: 'RAW',
+			requestBody: { values: outputRows },
+		});
+		await sheets.spreadsheets.values.update({
+			spreadsheetId: SHEET_ID,
+			range: `'${title}'!B4:B${outputRows.length + 3}`,
+			valueInputOption: 'USER_ENTERED',
+			requestBody: {
+				values: outputRows.map((_, index) => {
+					const rowNumber = firstDataIndex + index + 1;
+					return [`=C${rowNumber}+G${rowNumber}`];
+				}),
+			},
+		});
+	}
+
+	return {
+		updated,
+		added: missingItems.map((item) => item.slug || item.zohoItemId),
+		inventoryRowsWithoutZohoMatch: allExistingRows
+			.filter((existing) => !matchedExistingIndexes.has(existing.index))
+			.map((existing) => String(existing.row[itemIdColumn] ?? existing.row[slugColumn] ?? existing.row[0] ?? '').trim())
+			.filter(Boolean),
+		syncedAt,
+	};
+};
 
 export type ZohoStockSheetSyncResult = {
 	updated: number;

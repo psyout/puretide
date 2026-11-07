@@ -31,10 +31,10 @@ export default function ProductInfoAccordions({ details, freeShippingThreshold }
 			id: 'shipping',
 			label: 'Shipping',
 			content: (
-				<ul className='list-disc space-y-1.5 pl-5 marker:text-eucalyptus-600'>
-					<li>Ships from our warehouse</li>
+				<ul className='list-disc leading-loose pl-5'>
+					<li>Ships from our warehouse located in Vancouver BC</li>
 					<li>
-						<strong className='font-semibold text-deep-tidal-teal-900'>Processing:</strong> 1–2 business days
+						<strong className='font-semibold text-deep-tidal-teal-900'>Processing:</strong> 1–2 business days sent by Canada Post
 					</li>
 					<li>Free shipping over ${freeShippingThreshold}</li>
 				</ul>
@@ -59,7 +59,7 @@ export default function ProductInfoAccordions({ details, freeShippingThreshold }
 							onClick={() => setOpenSection(isOpen ? null : section.id)}
 							aria-expanded={isOpen}
 							aria-controls={panelId}
-							className='group flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-deep-tidal-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-deep-tidal-teal/40'>
+							className='group flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left text-[1rem] tracking-wide font-medium text-deep-tidal-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-deep-tidal-teal/40'>
 							<span>{section.label}</span>
 							<span
 								className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-out group-hover:bg-eucalyptus/45 group-hover:text-deep-tidal-teal-800 group-focus-visible:bg-eucalyptus/45 group-focus-visible:text-deep-tidal-teal-800 ${

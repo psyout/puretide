@@ -42,9 +42,7 @@ try {
 	let html = await pageResponse.text();
 
 	const stylesheetPaths = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"?]+)(?:\?[^" ]*)?"[^>]*>/g)].map((match) => match[1]);
-	const publicAssetPaths = [...html.matchAll(/(?:src|href)="(\/(?!_next\/)[^"?#]+)(?:[?#][^"]*)?"/g)]
-		.map((match) => match[1])
-		.filter((assetPath) => /\.[a-z0-9]{2,5}$/i.test(assetPath));
+	const publicAssetPaths = [...html.matchAll(/(?:src|href)="(\/(?!_next\/)[^"?#]+)(?:[?#][^"]*)?"/g)].map((match) => match[1]).filter((assetPath) => /\.[a-z0-9]{2,5}$/i.test(assetPath));
 
 	html = html
 		.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')

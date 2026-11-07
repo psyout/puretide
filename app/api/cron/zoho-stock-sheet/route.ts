@@ -15,7 +15,7 @@ async function run(request: Request) {
 	if (!authorized(request)) return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
 	try {
 		const result = await syncZohoStockSheet();
-		return NextResponse.json({ ok: true, syncedAt: new Date().toISOString(), ...result }, { headers: { 'Cache-Control': 'no-store' } });
+		return NextResponse.json({ ok: true, ...result }, { headers: { 'Cache-Control': 'no-store' } });
 	} catch (error) {
 		console.error('[zoho-stock-sheet:cron] failed', error);
 		return NextResponse.json({ ok: false, error: 'Failed to sync Zoho stock to Google Sheets.' }, { status: 502 });

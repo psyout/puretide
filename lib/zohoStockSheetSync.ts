@@ -1,7 +1,7 @@
-import { syncZohoStockToSheet } from '@/lib/stockSheet';
-import { readZohoStockSnapshot } from '@/lib/zohoInventory';
+import { syncZohoStockToInventorySheet } from '@/lib/stockSheet';
+import { readZohoInventoryItemSnapshot } from '@/lib/zohoInventory';
 
 export async function syncZohoStockSheet() {
-	const stock = await readZohoStockSnapshot();
-	return syncZohoStockToSheet(stock);
+	const stock = await readZohoInventoryItemSnapshot();
+	return syncZohoStockToInventorySheet(stock);
 }

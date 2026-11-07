@@ -8,6 +8,7 @@ import {
 	getZohoApiHealth,
 	mapZohoItemToProduct,
 	mapZohoItemsToProducts,
+	readZohoInventoryItemSnapshot,
 	readZohoProducts,
 	readZohoStockSnapshot,
 	resetZohoInventoryCacheForTests,
@@ -215,13 +216,52 @@ test('reads a lightweight paginated Zoho stock snapshot without item detail requ
 		}) as typeof fetch;
 
 		const expected = [
-			{ slug: 'product-one', stock: 12 },
-			{ slug: 'product-two', stock: 7 },
+			{ slug: 'product-one', stock: 12, zohoItemId: 'item-1', name: 'Product-One', status: 'published' },
+			{ slug: 'product-two', stock: 7, zohoItemId: 'item-2', name: 'product-two', status: 'published' },
 		];
 		assert.deepEqual(await readZohoStockSnapshot(), expected);
 		assert.deepEqual(await readZohoStockSnapshot(), expected);
 		assert.equal(requestedPaths.length, 2);
 		assert.ok(requestedPaths.every((path) => path.startsWith('/v1/items?')));
+	} finally {
+		globalThis.fetch = originalFetch;
+		const restore = (key: string, value: string | undefined) => {
+			if (value == null) delete process.env[key];
+			else process.env[key] = value;
+		};
+		restore('ZOHO_INVENTORY_ACCESS_TOKEN', originalEnvironment.accessToken);
+		restore('ZOHO_INVENTORY_ORGANIZATION_ID', originalEnvironment.organizationId);
+		restore('ZOHO_INVENTORY_API_BASE_URL', originalEnvironment.apiBaseUrl);
+		resetZohoInventoryCacheForTests();
+	}
+});
+
+test('keeps grouped Zoho variants as separate Inventory-sheet rows', async () => {
+	const originalFetch = globalThis.fetch;
+	const originalEnvironment = {
+		accessToken: process.env.ZOHO_INVENTORY_ACCESS_TOKEN,
+		organizationId: process.env.ZOHO_INVENTORY_ORGANIZATION_ID,
+		apiBaseUrl: process.env.ZOHO_INVENTORY_API_BASE_URL,
+	};
+	try {
+		process.env.ZOHO_INVENTORY_ACCESS_TOKEN = 'test-access-token';
+		process.env.ZOHO_INVENTORY_ORGANIZATION_ID = 'test-organization';
+		process.env.ZOHO_INVENTORY_API_BASE_URL = 'https://inventory.example.test/v1';
+		resetZohoInventoryCacheForTests();
+		globalThis.fetch = (async () => Response.json({
+			code: 0,
+			items: [
+				{ item_id: 'reta-20', group_id: 'reta-group', name: 'Retatrutide 20 mg', sku: 'RET20', stock_on_hand: 55, custom_fields: customFields({ 'Website Slug': 'retatrutide' }) },
+				{ item_id: 'reta-10', group_id: 'reta-group', name: 'Retatrutide 10 mg', sku: 'RET10', stock_on_hand: 20, custom_fields: customFields({ 'Website Slug': '' }) },
+				{ item_id: 'internal', name: 'Internal supply', stock_on_hand: 99, custom_fields: customFields({ 'Website Slug': '' }) },
+			],
+			page_context: { has_more_page: false },
+		})) as typeof fetch;
+
+		assert.deepEqual(await readZohoInventoryItemSnapshot(), [
+			{ slug: 'retatrutide', stock: 55, zohoItemId: 'reta-20', sku: 'RET20', name: 'Retatrutide 20 mg', status: 'published' },
+			{ slug: '', stock: 20, zohoItemId: 'reta-10', sku: 'RET10', name: 'Retatrutide 10 mg', status: 'published' },
+		]);
 	} finally {
 		globalThis.fetch = originalFetch;
 		const restore = (key: string, value: string | undefined) => {
