@@ -18,7 +18,7 @@ import { getPaymentProvider } from '@/lib/paymentProvider';
 import { getGatewaylinxConfig } from '@/lib/env';
 import { validateEnv } from '@/lib/env';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
-import { prepareOrderAttribution } from '@/lib/orderAttribution';
+import { prepareMetaOrderTracking } from '@/lib/metaConversions';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -239,7 +239,7 @@ export async function POST(request: Request) {
 		const orderNumber = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
 		const orderId = `order_${timestamp}`;
 		const createdAt = new Date().toISOString();
-		const attribution = await prepareOrderAttribution(orderId, request.headers.get('cookie'));
+		const metaTracking = prepareMetaOrderTracking(request);
 
 		const confirmationToken = createOrderConfirmationToken(orderNumber);
 		const confirmationParams = new URLSearchParams({ orderNumber });
@@ -278,7 +278,7 @@ export async function POST(request: Request) {
 			id: orderId,
 			orderNumber,
 			createdAt,
-			...attribution.fields,
+			...metaTracking,
 			paymentStatus: 'pending' as const,
 			paymentProvider: gatewaylinxConfig ? 'gatewaylinx' : 'digipay',
 			...payload,
@@ -346,17 +346,14 @@ export async function POST(request: Request) {
 		);
 
 		if (idemKey) await setCachedDigipay(idemKey, orderNumber, sessionResult.redirectUrl);
-		return json(
-			{
-				ok: true,
-				redirectUrl: sessionResult.redirectUrl,
-				orderNumber,
-				// Return the confirmation token so the frontend can include it in the post-charge redirect.
-				// The same token is embedded in tcomplete for the 3DS return path.
-				confirmationToken: confirmationToken ?? null,
-			},
-			attribution.setCookie ? { headers: { 'Set-Cookie': attribution.setCookie } } : {},
-		);
+		return json({
+			ok: true,
+			redirectUrl: sessionResult.redirectUrl,
+			orderNumber,
+			// Return the confirmation token so the frontend can include it in the post-charge redirect.
+			// The same token is embedded in tcomplete for the 3DS return path.
+			confirmationToken: confirmationToken ?? null,
+		});
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to create payment.', error, logLabel: 'digipay:create' });
 		console.error(JSON.stringify({ label: 'digipay:create:error', errorId: safe.errorId }));

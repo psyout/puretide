@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import './globals.css';
 import { Providers } from './providers';
-import OrderAttributionConsent from '@/components/OrderAttributionConsent';
+import MetaPixel from '@/components/MetaPixel';
 import Footer from '@/components/Footer';
 import { getCachedAutomaticSitewidePromo } from '@/lib/sheetCache';
+import { getMetaPixelId } from '@/lib/metaConversions';
 
 // Promotion pricing comes from Google Sheets and must be evaluated at request
 // time. Otherwise Next.js can bake an inactive promotion into static cart and
@@ -19,8 +20,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
 	const automaticPromotion = await getCachedAutomaticSitewidePromo();
-	const attributionQaEnabled = String(process.env.ATTRIBUTION_ENABLED ?? '').toLowerCase() === 'true' && process.env.ATTRIBUTION_ENVIRONMENT === 'qa';
-	const attributionParameter = process.env.ATTRIBUTION_PUBLIC_QUERY_PARAMETER ?? 'binom_click_id';
+	const metaPixelId = getMetaPixelId();
 	return (
 		<html lang='en'>
 			<head>
@@ -46,9 +46,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				/>
 			</head>
 			<body className='min-h-screen antialiased'>
-				{attributionQaEnabled ? (
+				{metaPixelId ? (
 					<Suspense fallback={null}>
-						<OrderAttributionConsent publicParameter={attributionParameter} />
+						<MetaPixel pixelId={metaPixelId} />
 					</Suspense>
 				) : null}
 				<Providers automaticPromotion={automaticPromotion}>{children}</Providers>

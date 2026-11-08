@@ -332,9 +332,7 @@ async function getDb(): Promise<SqlJsDatabase> {
 				order_number TEXT NOT NULL UNIQUE,
 				created_at TEXT NOT NULL,
 				payment_status TEXT NOT NULL,
-				attribution_ref TEXT,
-				attribution_placed_pending INTEGER NOT NULL DEFAULT 0,
-				attribution_paid_pending INTEGER NOT NULL DEFAULT 0,
+				meta_purchase_pending INTEGER NOT NULL DEFAULT 0,
 				order_json TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			);
@@ -342,18 +340,13 @@ async function getDb(): Promise<SqlJsDatabase> {
 		const orderColumns = new Set(
 			(db.exec('PRAGMA table_info(orders)')[0]?.values ?? []).map((row) => String(row[1])),
 		);
-		if (!orderColumns.has('attribution_ref')) db.run('ALTER TABLE orders ADD COLUMN attribution_ref TEXT');
-		if (!orderColumns.has('attribution_placed_pending')) {
-			db.run('ALTER TABLE orders ADD COLUMN attribution_placed_pending INTEGER NOT NULL DEFAULT 0');
-		}
-		if (!orderColumns.has('attribution_paid_pending')) {
-			db.run('ALTER TABLE orders ADD COLUMN attribution_paid_pending INTEGER NOT NULL DEFAULT 0');
+		if (!orderColumns.has('meta_purchase_pending')) {
+			db.run('ALTER TABLE orders ADD COLUMN meta_purchase_pending INTEGER NOT NULL DEFAULT 0');
 		}
 		db.run('CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)');
 		db.run('CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number)');
 		db.run('CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status)');
-		db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_attribution_ref ON orders(attribution_ref) WHERE attribution_ref IS NOT NULL');
-		db.run('CREATE INDEX IF NOT EXISTS idx_orders_attribution_pending ON orders(attribution_placed_pending, attribution_paid_pending)');
+		db.run('CREATE INDEX IF NOT EXISTS idx_orders_meta_purchase_pending ON orders(meta_purchase_pending, created_at)');
 
 		db.run(`
 			CREATE TABLE IF NOT EXISTS retry_jobs (
@@ -396,33 +389,6 @@ async function getDb(): Promise<SqlJsDatabase> {
 		`);
 		db.run('CREATE INDEX IF NOT EXISTS idx_webhook_events_order_number ON webhook_events(order_number)');
 		db.run('CREATE INDEX IF NOT EXISTS idx_webhook_events_received_at ON webhook_events(received_at DESC)');
-
-		db.run(`
-			CREATE TABLE IF NOT EXISTS attribution_orders (
-				order_ref TEXT PRIMARY KEY,
-				environment TEXT NOT NULL,
-				visit_id TEXT NOT NULL,
-				consent_policy TEXT NOT NULL,
-				revision INTEGER NOT NULL,
-				paid INTEGER NOT NULL,
-				pending INTEGER NOT NULL,
-				cancelled INTEGER NOT NULL DEFAULT 0,
-				attempts INTEGER NOT NULL DEFAULT 0,
-				due_at INTEGER NOT NULL,
-				lease_token TEXT,
-				lease_until INTEGER NOT NULL DEFAULT 0,
-				last_code TEXT,
-				updated_at INTEGER NOT NULL
-			);
-		`);
-		db.run('CREATE INDEX IF NOT EXISTS idx_attribution_due ON attribution_orders(environment, pending, due_at, lease_until)');
-		db.run(`
-			CREATE TABLE IF NOT EXISTS attribution_payment_events (
-				event_ref TEXT PRIMARY KEY,
-				order_ref TEXT NOT NULL,
-				received_at INTEGER NOT NULL
-			);
-		`);
 
 		db.run(`
 			CREATE TABLE IF NOT EXISTS shipping_emails (
@@ -875,19 +841,6 @@ export async function getOrderBySessionFromDb(session: string): Promise<StoredOr
 	return parseOrderJson(row.order_json);
 }
 
-export async function getOrderByAttributionRefFromDb(attributionRef: string): Promise<StoredOrder | null> {
-	const db = await getDb();
-	const stmt = db.prepare('SELECT order_json FROM orders WHERE attribution_ref = ? LIMIT 1');
-	stmt.bind([attributionRef]);
-	if (!stmt.step()) {
-		stmt.free();
-		return null;
-	}
-	const row = stmt.getAsObject() as { order_json: string };
-	stmt.free();
-	return parseOrderJson(row.order_json);
-}
-
 export type PaidFulfillmentClaim = {
 	paidAt: string;
 	source: 'creditcard_charge' | 'creditcard_webhook';
@@ -941,17 +894,17 @@ export async function claimPaidOrderForFulfillment(orderNumber: string, claim: P
 	const row = select.getAsObject() as { order_json: string };
 	select.free();
 	const current = parseOrderJson(row.order_json);
-	const currentTracking = (current.attributionTracking as Record<string, unknown> | undefined) ?? {};
-	const shouldQueuePaidAttribution = current.analyticsAllowed === true && current.orderAttribution != null && currentTracking.paidDelivered !== true;
+	const currentTracking = (current.metaTracking as Record<string, unknown> | undefined) ?? {};
+	const shouldQueueMetaPurchase = currentTracking.enabled === true && currentTracking.purchaseDelivered !== true;
 	const claimedOrder: StoredOrder = {
 		...current,
 		paymentStatus: 'paid',
 		paidAt: claim.paidAt,
-		...(shouldQueuePaidAttribution
+		...(shouldQueueMetaPurchase
 			? {
-					attributionTracking: {
+					metaTracking: {
 						...currentTracking,
-						paidPending: true,
+						purchasePending: true,
 					},
 				}
 			: {}),
@@ -969,9 +922,9 @@ export async function claimPaidOrderForFulfillment(orderNumber: string, claim: P
 	// both change the same pending order to paid in this process.
 	db.run(
 		`UPDATE orders
-		 SET payment_status = ?, attribution_paid_pending = ?, order_json = ?, updated_at = ?
+		 SET payment_status = ?, meta_purchase_pending = ?, order_json = ?, updated_at = ?
 		 WHERE order_number = ? AND payment_status = ?`,
-		['paid', shouldQueuePaidAttribution ? 1 : 0, JSON.stringify(claimedOrder), now, orderNumber, 'pending'],
+		['paid', shouldQueueMetaPurchase ? 1 : 0, JSON.stringify(claimedOrder), now, orderNumber, 'pending'],
 	);
 	const changesResult = db.exec('SELECT changes() AS count');
 	const changedRows = Number(changesResult[0]?.values[0]?.[0] ?? 0);
@@ -991,35 +944,30 @@ export async function upsertOrderInDb(order: StoredOrder): Promise<StoredOrder> 
 	const existing = existingStmt.step() ? parseOrderJson(String(existingStmt.getAsObject().order_json ?? '{}')) : null;
 	existingStmt.free();
 	const normalized = normalizeOrder(existing ? { ...existing, ...initial } : initial);
-	const hasAttribution = normalized.analyticsAllowed === true && normalized.orderAttribution != null;
-	const previousTracking = (existing?.attributionTracking as Record<string, unknown> | undefined) ?? {};
-	const incomingTracking = (normalized.attributionTracking as Record<string, unknown> | undefined) ?? {};
-	const placedDelivered = incomingTracking.placedDelivered === true || previousTracking.placedDelivered === true;
-	const paidDelivered = incomingTracking.paidDelivered === true || previousTracking.paidDelivered === true;
-	const attributionTracking = hasAttribution
+	const previousTracking = (existing?.metaTracking as Record<string, unknown> | undefined) ?? {};
+	const incomingTracking = (normalized.metaTracking as Record<string, unknown> | undefined) ?? {};
+	const hasMetaTracking = incomingTracking.enabled === true || previousTracking.enabled === true;
+	const purchaseDelivered = incomingTracking.purchaseDelivered === true || previousTracking.purchaseDelivered === true;
+	const metaTracking = hasMetaTracking
 		? {
 				...previousTracking,
 				...incomingTracking,
-				placedDelivered,
-				placedPending: placedDelivered ? false : incomingTracking.placedPending !== false,
-				paidDelivered,
-				paidPending: paidDelivered
+				purchaseDelivered,
+				purchasePending: purchaseDelivered
 					? false
-					: incomingTracking.paidPending === true || previousTracking.paidPending === true || normalized.paymentStatus === 'paid',
+					: incomingTracking.purchasePending === true || previousTracking.purchasePending === true || normalized.paymentStatus === 'paid',
 			}
 		: undefined;
-	const stored = attributionTracking ? { ...normalized, attributionTracking } : normalized;
+	const stored = metaTracking ? { ...normalized, metaTracking } : normalized;
 	const now = new Date().toISOString();
 	db.run(
-		`INSERT INTO orders (id, order_number, created_at, payment_status, attribution_ref, attribution_placed_pending, attribution_paid_pending, order_json, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO orders (id, order_number, created_at, payment_status, meta_purchase_pending, order_json, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(order_number) DO UPDATE SET
 			id = excluded.id,
 			created_at = excluded.created_at,
 			payment_status = excluded.payment_status,
-			attribution_ref = excluded.attribution_ref,
-			attribution_placed_pending = excluded.attribution_placed_pending,
-			attribution_paid_pending = excluded.attribution_paid_pending,
+			meta_purchase_pending = excluded.meta_purchase_pending,
 			order_json = excluded.order_json,
 			updated_at = excluded.updated_at`,
 		[
@@ -1027,9 +975,7 @@ export async function upsertOrderInDb(order: StoredOrder): Promise<StoredOrder> 
 			String(stored.orderNumber),
 			String(stored.createdAt),
 			String(stored.paymentStatus),
-			typeof stored.orderAttributionRef === 'string' ? stored.orderAttributionRef : null,
-			attributionTracking?.placedPending === true ? 1 : 0,
-			attributionTracking?.paidPending === true ? 1 : 0,
+			metaTracking?.purchasePending === true ? 1 : 0,
 			JSON.stringify(stored),
 			now,
 		],
@@ -1164,171 +1110,10 @@ export async function recordWebhookEvent(entry: WebhookEventEntry): Promise<void
 	persistDb(db);
 }
 
-type AttributionLease = { orderRef: string; revision: number; leaseToken: string };
-
-function attributionRow(row: Record<string, unknown> | null) {
-	if (!row) return null;
-	return {
-		orderRef: String(row.order_ref),
-		environment: String(row.environment),
-		visitId: String(row.visit_id),
-		consentPolicy: String(row.consent_policy),
-		revision: Number(row.revision),
-		paid: Number(row.paid) === 1,
-		pending: Number(row.pending) === 1,
-		cancelled: Number(row.cancelled) === 1,
-		attempts: Number(row.attempts),
-		dueAt: Number(row.due_at),
-		leaseToken: row.lease_token == null ? null : String(row.lease_token),
-		lastCode: row.last_code == null ? null : String(row.last_code),
-	};
-}
-
-export function createOrdersDbAttributionRepository() {
-	return {
-		async enqueue(input: {
-			orderRef: string;
-			environment: string;
-			visitId: string;
-			consentPolicy: string;
-			paid: boolean;
-			eventRef?: string | null;
-			now: number;
-		}) {
-			const db = await getDb();
-			db.run('BEGIN IMMEDIATE');
-			try {
-				const existingStmt = db.prepare('SELECT * FROM attribution_orders WHERE order_ref = ? LIMIT 1');
-				existingStmt.bind([input.orderRef]);
-				const existing = existingStmt.step() ? attributionRow(existingStmt.getAsObject() as Record<string, unknown>) : null;
-				existingStmt.free();
-				if (existing && (existing.environment !== input.environment || existing.visitId !== input.visitId || existing.consentPolicy !== input.consentPolicy)) {
-					throw new Error('IMMUTABLE_ATTRIBUTION_CHANGED');
-				}
-				if (input.eventRef) {
-					const seenStmt = db.prepare('SELECT order_ref FROM attribution_payment_events WHERE event_ref = ? LIMIT 1');
-					seenStmt.bind([input.eventRef]);
-					const seen = seenStmt.step() ? String(seenStmt.getAsObject().order_ref) : null;
-					seenStmt.free();
-					if (seen && seen !== input.orderRef) throw new Error('PAYMENT_EVENT_ORDER_CONFLICT');
-					if (seen) {
-						db.run('COMMIT');
-						return { status: 'duplicate', ...existing };
-					}
-				}
-				if (!existing) {
-					db.run(
-						`INSERT INTO attribution_orders
-						 (order_ref, environment, visit_id, consent_policy, revision, paid, pending, due_at, updated_at)
-						 VALUES (?, ?, ?, ?, 1, ?, 1, ?, ?)`,
-						[input.orderRef, input.environment, input.visitId, input.consentPolicy, input.paid ? 1 : 0, input.now, input.now],
-					);
-				} else if (!existing.cancelled && input.paid && !existing.paid) {
-					if (existing.revision >= 2147483647) throw new Error('REVISION_EXHAUSTED');
-					db.run(
-						`UPDATE attribution_orders SET paid = 1, revision = revision + 1, pending = 1,
-						 attempts = 0, due_at = ?, last_code = NULL, updated_at = ? WHERE order_ref = ?`,
-						[input.now, input.now, input.orderRef],
-					);
-				}
-				if (input.eventRef) {
-					db.run('INSERT INTO attribution_payment_events (event_ref, order_ref, received_at) VALUES (?, ?, ?)', [input.eventRef, input.orderRef, input.now]);
-				}
-				const currentStmt = db.prepare('SELECT * FROM attribution_orders WHERE order_ref = ? LIMIT 1');
-				currentStmt.bind([input.orderRef]);
-				const current = currentStmt.step() ? attributionRow(currentStmt.getAsObject() as Record<string, unknown>) : null;
-				currentStmt.free();
-				db.run('COMMIT');
-				persistDb(db);
-				const status = current?.cancelled ? 'cancelled' : !existing || current?.revision !== existing.revision ? 'queued' : 'duplicate';
-				return { status, ...current };
-			} catch (error) {
-				db.run('ROLLBACK');
-				throw error;
-			}
-		},
-		async claimNext({ environment, now, leaseSeconds }: { environment: string; now: number; leaseSeconds: number }) {
-			const db = await getDb();
-			db.run('BEGIN IMMEDIATE');
-			try {
-				const stmt = db.prepare(
-					`SELECT * FROM attribution_orders WHERE environment = ? AND pending = 1 AND cancelled = 0
-					 AND due_at <= ? AND lease_until <= ? ORDER BY due_at, order_ref LIMIT 1`,
-				);
-				stmt.bind([environment, now, now]);
-				const row = stmt.step() ? attributionRow(stmt.getAsObject() as Record<string, unknown>) : null;
-				stmt.free();
-				if (!row) {
-					db.run('COMMIT');
-					return null;
-				}
-				const leaseToken = crypto.randomUUID().replace(/-/g, '');
-				db.run('UPDATE attribution_orders SET lease_token = ?, lease_until = ? WHERE order_ref = ?', [leaseToken, now + leaseSeconds, row.orderRef]);
-				db.run('COMMIT');
-				persistDb(db);
-				return { ...row, leaseToken };
-			} catch (error) {
-				db.run('ROLLBACK');
-				throw error;
-			}
-		},
-		async complete({ orderRef, revision, leaseToken }: AttributionLease) {
-			const db = await getDb();
-			db.run(
-				`UPDATE attribution_orders SET pending = 0, attempts = 0, last_code = NULL, lease_token = NULL, lease_until = 0
-				 WHERE order_ref = ? AND revision = ? AND lease_token = ? AND pending = 1`,
-				[orderRef, revision, leaseToken],
-			);
-			const changed = Number(db.exec('SELECT changes() AS count')[0]?.values[0]?.[0] ?? 0) === 1;
-			if (!changed) db.run('UPDATE attribution_orders SET lease_token = NULL, lease_until = 0 WHERE order_ref = ? AND lease_token = ?', [orderRef, leaseToken]);
-			persistDb(db);
-			return changed;
-		},
-		async retry({ orderRef, revision, leaseToken, now, code }: AttributionLease & { now: number; code: string }) {
-			const db = await getDb();
-			const stmt = db.prepare('SELECT attempts FROM attribution_orders WHERE order_ref = ? AND revision = ? AND lease_token = ? AND pending = 1');
-			stmt.bind([orderRef, revision, leaseToken]);
-			const attempts = stmt.step() ? Math.min(Number(stmt.getAsObject().attempts) + 1, 32) : null;
-			stmt.free();
-			if (attempts != null) {
-				const delay = Math.min(3600, 5 * 2 ** Math.min(attempts - 1, 10));
-				db.run(
-					`UPDATE attribution_orders SET attempts = ?, due_at = ?, last_code = ?, lease_token = NULL, lease_until = 0
-					 WHERE order_ref = ? AND revision = ? AND lease_token = ?`,
-					[attempts, now + delay, code.slice(0, 64), orderRef, revision, leaseToken],
-				);
-			} else {
-				db.run('UPDATE attribution_orders SET lease_token = NULL, lease_until = 0 WHERE order_ref = ? AND lease_token = ?', [orderRef, leaseToken]);
-			}
-			persistDb(db);
-		},
-		async cancel({ orderRef, revision, leaseToken }: AttributionLease) {
-			const db = await getDb();
-			db.run(
-				`UPDATE attribution_orders SET pending = 0, cancelled = 1, last_code = 'CONSENT_OR_ATTRIBUTION_REFUSED',
-				 lease_token = NULL, lease_until = 0 WHERE order_ref = ? AND lease_token = ? AND revision >= ?`,
-				[orderRef, leaseToken, revision],
-			);
-			const changed = Number(db.exec('SELECT changes() AS count')[0]?.values[0]?.[0] ?? 0) === 1;
-			persistDb(db);
-			return changed;
-		},
-		async revoke({ orderRef }: { orderRef: string }) {
-			const db = await getDb();
-			db.run(
-				`UPDATE attribution_orders SET pending = 0, cancelled = 1, last_code = 'CONSENT_OR_ATTRIBUTION_REFUSED',
-				 lease_token = NULL, lease_until = 0 WHERE order_ref = ?`,
-				[orderRef],
-			);
-			persistDb(db);
-		},
-	};
-}
-
-export async function listPendingAttributionOrders(limit = 50): Promise<StoredOrder[]> {
+export async function listPendingMetaPurchases(limit = 50): Promise<StoredOrder[]> {
 	const db = await getDb();
 	const stmt = db.prepare(
-		`SELECT order_json FROM orders WHERE attribution_placed_pending = 1 OR attribution_paid_pending = 1
+		`SELECT order_json FROM orders WHERE meta_purchase_pending = 1 AND payment_status = 'paid'
 		 ORDER BY created_at ASC LIMIT ?`,
 	);
 	stmt.bind([Math.max(1, Math.min(limit, 100))]);
@@ -1338,7 +1123,10 @@ export async function listPendingAttributionOrders(limit = 50): Promise<StoredOr
 	return orders;
 }
 
-export async function markAttributionTaskDelivered(orderNumber: string, kind: 'placed' | 'paid'): Promise<void> {
+export async function markMetaPurchaseDelivery(
+	orderNumber: string,
+	result: { ok: boolean; errorCode?: string },
+): Promise<void> {
 	const db = await getDb();
 	const stmt = db.prepare('SELECT order_json FROM orders WHERE order_number = ? LIMIT 1');
 	stmt.bind([orderNumber]);
@@ -1348,24 +1136,23 @@ export async function markAttributionTaskDelivered(orderNumber: string, kind: 'p
 	}
 	const order = parseOrderJson(String(stmt.getAsObject().order_json ?? '{}'));
 	stmt.free();
-	const tracking = (order.attributionTracking as Record<string, unknown> | undefined) ?? {};
+	const tracking = (order.metaTracking as Record<string, unknown> | undefined) ?? {};
+	const attempts = Number(tracking.purchaseAttempts ?? 0) + 1;
 	const updated = {
 		...order,
-		attributionTracking: {
+		metaTracking: {
 			...tracking,
-			[`${kind}Pending`]: false,
-			[`${kind}Delivered`]: true,
+			purchasePending: !result.ok,
+			purchaseDelivered: result.ok,
+			purchaseAttempts: attempts,
+			...(result.ok
+				? { purchaseDeliveredAt: new Date().toISOString(), lastErrorCode: null }
+				: { lastErrorCode: String(result.errorCode ?? 'META_CAPI_ERROR').slice(0, 80) }),
 		},
 	};
 	db.run(
-		`UPDATE orders SET attribution_placed_pending = ?, attribution_paid_pending = ?, order_json = ?, updated_at = ? WHERE order_number = ?`,
-		[
-			kind === 'placed' ? 0 : tracking.placedPending === true ? 1 : 0,
-			kind === 'paid' ? 0 : tracking.paidPending === true ? 1 : 0,
-			JSON.stringify(updated),
-			new Date().toISOString(),
-			orderNumber,
-		],
+		`UPDATE orders SET meta_purchase_pending = ?, order_json = ?, updated_at = ? WHERE order_number = ?`,
+		[result.ok ? 0 : 1, JSON.stringify(updated), new Date().toISOString(), orderNumber],
 	);
 	persistDb(db);
 }

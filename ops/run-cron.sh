@@ -33,9 +33,9 @@ case "$JOB" in
 		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
 			-X POST "http://127.0.0.1:3000/api/cron/etransfer-reminders" -H "x-cron-secret: $CRON_SECRET"
 		;;
-	order-attribution)
+	meta-conversions)
 		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
-			-X POST "http://127.0.0.1:3000/api/cron/order-attribution" -H "x-cron-secret: $CRON_SECRET"
+			-X POST "http://127.0.0.1:3000/api/cron/meta-conversions" -H "x-cron-secret: $CRON_SECRET"
 		;;
 	*)
 		echo "Unknown cron job: $JOB"
