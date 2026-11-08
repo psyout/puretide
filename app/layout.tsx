@@ -5,7 +5,6 @@ import { Providers } from './providers';
 import MetaPixel from '@/components/MetaPixel';
 import Footer from '@/components/Footer';
 import { getCachedAutomaticSitewidePromo } from '@/lib/sheetCache';
-import { getMetaPixelId } from '@/lib/metaConversions';
 
 // Promotion pricing comes from Google Sheets and must be evaluated at request
 // time. Otherwise Next.js can bake an inactive promotion into static cart and
@@ -20,7 +19,6 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
 	const automaticPromotion = await getCachedAutomaticSitewidePromo();
-	const metaPixelId = getMetaPixelId();
 	return (
 		<html lang='en'>
 			<head>
@@ -46,11 +44,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				/>
 			</head>
 			<body className='min-h-screen antialiased'>
-				{metaPixelId ? (
-					<Suspense fallback={null}>
-						<MetaPixel pixelId={metaPixelId} />
-					</Suspense>
-				) : null}
+				<Suspense fallback={null}>
+					<MetaPixel />
+				</Suspense>
 				<Providers automaticPromotion={automaticPromotion}>{children}</Providers>
 				<Footer />
 			</body>
