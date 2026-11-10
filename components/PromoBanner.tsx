@@ -7,18 +7,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface PromoBannerProps {
 	messages?: string[];
 	cta?: string;
+	newsletterOfferEnabled?: boolean;
 	onCtaClick: () => void;
 	ctaButtonRef?: React.RefObject<HTMLButtonElement>;
 	onHeightChange?: (height: number) => void;
 }
 
-const PromoBanner = forwardRef<HTMLDivElement, PromoBannerProps>(({ messages, cta = 'Get 10% OFF', onCtaClick, ctaButtonRef, onHeightChange }, ref) => {
+const PromoBanner = forwardRef<HTMLDivElement, PromoBannerProps>(({ messages, cta = 'Get 10% OFF', newsletterOfferEnabled = false, onCtaClick, ctaButtonRef, onHeightChange }, ref) => {
 	const [isMounted, setIsMounted] = useState(false);
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [isPaused, setIsPaused] = useState(false);
 	const internalRef = useRef<HTMLDivElement>(null);
 
-	const defaultMessages = ['Claim 10% OFF on your first order', 'Enjoy free shipping on all orders over $300', 'All products are third-party tested in Canada'];
+	const defaultMessages = [
+		...(newsletterOfferEnabled ? ['Claim 10% OFF on your first order'] : []),
+		'Enjoy free shipping on all orders over $300',
+		'All products are third-party tested in Canada',
+	];
 
 	const bannerMessages = messages || defaultMessages;
 
@@ -70,7 +75,7 @@ const PromoBanner = forwardRef<HTMLDivElement, PromoBannerProps>(({ messages, ct
 						<div className='flex-none'>
 							<p className='text-sm sm:text-sm text-deep-tidal-teal-700'>{bannerMessages[currentIndex]}</p>
 						</div>
-						{currentIndex === 0 && (
+						{newsletterOfferEnabled && currentIndex === 0 && (
 							<div className='flex items-center flex-shrink-0'>
 								<button
 									ref={ctaButtonRef}

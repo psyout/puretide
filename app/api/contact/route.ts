@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sendMail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { buildBrandedEmail, emailInfoBox, escapeEmailHtml } from '@/lib/emailTemplate';
 
 type ContactPayload = {
 	name: string;
@@ -54,7 +55,13 @@ export async function POST(request: Request) {
 		const safeName = sanitizeForEmailSubject(name);
 		const subject = `New contact message from ${safeName}`;
 		const text = ['New contact form submission', '', `Name: ${name}`, `Email: ${email}`, '', 'Message:', message].join('\n');
-		const html = `<p><strong>New contact form submission</strong></p><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong></p><p>${message.replace(/\n/g, '<br>')}</p>`;
+		const html = buildBrandedEmail({
+			title: 'New contact form submission',
+			headerLabel: 'Website notification',
+			status: 'New message',
+			preheader: `Message from ${safeName}`,
+			bodyHtml: `${emailInfoBox(`<strong>Name:</strong> ${escapeEmailHtml(name)}<br><strong>Email:</strong> <a href="mailto:${escapeEmailHtml(email)}" style="color:#1e5260">${escapeEmailHtml(email)}</a>`)}<h2 style="margin:24px 0 10px;color:#1e5260;font-size:18px">Message</h2><p style="margin:0;white-space:pre-line">${escapeEmailHtml(message)}</p>`,
+		});
 
 		const result = await sendMail({
 			to: 'info@puretide.ca',

@@ -44,6 +44,7 @@ export type FulfillmentOrder = {
 	cartItems: Array<{
 		id: string;
 		name: string;
+		mg?: string;
 		price: number;
 		quantity: number;
 		image?: string;

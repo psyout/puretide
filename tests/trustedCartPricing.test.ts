@@ -39,6 +39,7 @@ test('uses the selected Zoho variant price instead of the parent price', () => {
 	if (!result.ok) return;
 	assert.equal(result.items[0].id, 'retatrutide-10mg');
 	assert.equal(result.items[0].price, 90);
+	assert.equal((result.items[0] as typeof result.items[number] & { mg?: string }).mg, '10mg');
 });
 
 test('returns error when item does not map to a trusted product', () => {

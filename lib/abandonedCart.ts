@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import type { Product } from '@/types/product';
 import type { AbandonedCartItem } from '@/lib/ordersDb';
 import { getProductDisplayName, isProductVariantSellable } from '@/lib/productVariant';
+import { buildBrandedEmail, emailButton, escapeEmailHtml } from '@/lib/emailTemplate';
 
 export const ABANDONED_CART_CONSENT_TEXT =
 	'Email me one reminder about items left in my cart. I can unsubscribe at any time.';
@@ -141,22 +142,21 @@ export function buildAbandonedCartEmail(input: {
 				</tr>`,
 		)
 		.join('');
-	const html = `<!doctype html>
-	<html><body style="margin:0;background:#f4f7f6;font-family:Arial,sans-serif;color:#173f3b;">
-		<div style="max-width:620px;margin:0 auto;padding:32px 18px;">
-			<div style="background:#ffffff;border-radius:16px;padding:32px;border:1px solid #dce8e6;">
+	const html = buildBrandedEmail({
+		title: 'Your cart is waiting',
+		status: 'Saved cart',
+		preheader: 'The items you selected are still in your cart.',
+		bodyHtml: `
 				<p style="margin:0 0 18px;font-size:16px;">${escapeHtml(greeting)}</p>
-				<h1 style="font-size:26px;line-height:1.2;margin:0 0 12px;color:#0b625b;">Your cart is waiting</h1>
 				<p style="line-height:1.6;margin:0 0 20px;">You asked us to remind you about the items left in your Pure Tide cart.</p>
 				<table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:20px;">${rows}
 					<tr><td style="padding-top:14px;font-weight:700;">Estimated subtotal</td><td style="padding-top:14px;text-align:right;font-weight:700;">$${subtotal.toFixed(2)} CAD</td></tr>
 				</table>
-				<a href="${escapeHtml(input.recoveryUrl)}" style="display:inline-block;background:#0b625b;color:#fff;text-decoration:none;padding:13px 22px;border-radius:8px;font-weight:700;">Return to your cart</a>
+				${emailButton('Return to your cart', input.recoveryUrl)}
 				<p style="font-size:12px;line-height:1.5;color:#5d7471;margin:20px 0 0;">Prices, promotions, and availability are checked again at checkout.</p>
-			</div>
-			<p style="font-size:12px;line-height:1.6;color:#667b78;text-align:center;margin:18px 0 0;">Pure Tide · ${escapeHtml(input.businessAddress)}<br /><a href="mailto:${escapeHtml(input.contactEmail)}" style="color:#0b625b;">${escapeHtml(input.contactEmail)}</a><br /><a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#0b625b;">Unsubscribe from cart reminders</a></p>
-		</div>
-	</body></html>`;
+		`,
+		footerHtml: `Pure Tide · ${escapeEmailHtml(input.businessAddress)}<br><a href="mailto:${escapeEmailHtml(input.contactEmail)}" style="color:#1e5260">${escapeEmailHtml(input.contactEmail)}</a><br><a href="${escapeEmailHtml(input.unsubscribeUrl)}" style="color:#1e5260">Unsubscribe from cart reminders</a>`,
+	});
 
 	return { subject, text, html };
 }

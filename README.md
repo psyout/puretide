@@ -151,6 +151,15 @@ Configuration is environment-driven. Major groups include:
 
 Use deployment secrets or a local uncommitted environment file. Do not put real credentials in source control.
 
+The promotional banner can remain active while the newsletter offer is controlled separately:
+
+```dotenv
+NEXT_PUBLIC_PROMO_BANNER_ENABLED=true
+NEXT_PUBLIC_PROMO_BANNER_NEWSLETTER_ENABLED=false
+```
+
+With the newsletter flag disabled, the banner continues rotating the free-shipping and third-party-testing messages but omits the first-order discount message and its CTA. Because this is a `NEXT_PUBLIC_` variable, set it before building or rebuilding the application.
+
 ### Zoho Inventory catalog
 
 The integration uses each item's `Website Slug` as the website product ID. Only items with a slug are loaded, and only items whose `Website Status` is `published` are purchasable. Zoho-only/internal items can be omitted from the website by leaving the slug blank or using a non-published status.

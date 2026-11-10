@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sendMail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { buildBrandedEmail, emailInfoBox } from '@/lib/emailTemplate';
 
 type AffiliateApplicationPayload = {
 	name?: string;
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
 		] as const;
 		const text = ['New Pure Tide affiliate application', '', ...rows.map(([label, value]) => `${label}: ${value}`), '', 'Why they are a good fit:', about].join('\n');
 		const htmlRows = rows.map(([label, value]) => `<tr><td style="padding:8px 12px 8px 0;color:#60706f;vertical-align:top"><strong>${escapeHtml(label)}</strong></td><td style="padding:8px 0;vertical-align:top">${escapeHtml(value)}</td></tr>`).join('');
-		const html = `<div style="font-family:Arial,sans-serif;color:#173238"><h2>New Pure Tide affiliate application</h2><table style="border-collapse:collapse">${htmlRows}</table><h3 style="margin-top:24px">Why they are a good fit</h3><p style="white-space:pre-wrap">${escapeHtml(about)}</p></div>`;
+		const html = buildBrandedEmail({ title: 'New affiliate application', headerLabel: 'Website notification', status: 'New application', preheader: `Affiliate application from ${name}`, bodyHtml: `${emailInfoBox(`<table style="width:100%;border-collapse:collapse">${htmlRows}</table>`)}<h2 style="margin:24px 0 10px;color:#1e5260;font-size:18px">Why they are a good fit</h2><p style="white-space:pre-wrap">${escapeHtml(about)}</p>` });
 		const safeName = name.replace(/[\r\n\x00-\x1f\x7f]/g, '').slice(0, 100);
 
 		const result = await sendMail({

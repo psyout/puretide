@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { buildSafeApiError } from '@/lib/apiError';
 import { sendMail } from '@/lib/email';
 import { isFriendsFamilyEnabled, normalizeEmail, startFriendsFamilyOtp } from '@/lib/friendsFamily';
+import { buildBrandedEmail, emailInfoBox, escapeEmailHtml } from '@/lib/emailTemplate';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,15 +33,12 @@ export async function POST(request: Request) {
 				'Do not share this code with anyone.',
 				'If you did not request this code, you can safely ignore this email.',
 			].join('\n');
-			const html = `
-			<div style="font-family: Arial, sans-serif; line-height: 1.5; color: #0b3f3c;">
-				<p><strong>Your Pure Tide Friends &amp; Family verification code:</strong></p>
-				<p style="font-size: 24px; letter-spacing: 2px;"><strong>${code}</strong></p>
-				<p>This code expires in <strong>10 minutes</strong>.</p>
-				<p><strong>Do not share</strong> this code with anyone.</p>
-				<p>If you did not request this code, you can safely ignore this email.</p>
-			</div>
-		`;
+			const html = buildBrandedEmail({
+				title: 'Your verification code',
+				status: 'Friends & Family',
+				preheader: 'Your Pure Tide verification code expires in 10 minutes.',
+				bodyHtml: `<p>Use this code to complete your Friends &amp; Family verification:</p>${emailInfoBox(`<div style="text-align:center;color:#1e5260;font-size:28px;font-weight:700;letter-spacing:.16em">${escapeEmailHtml(code)}</div>`)}<p>This code expires in <strong>10 minutes</strong>.</p><p><strong>Do not share</strong> this code with anyone. If you did not request it, you can safely ignore this email.</p>`,
+			});
 			const emailResult = await sendMail({
 				to: email,
 				subject,

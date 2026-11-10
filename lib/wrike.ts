@@ -5,6 +5,7 @@ import axios from 'axios';
 import sharp from 'sharp';
 import { AlignmentType, Document, HeightRule, ImageRun, Packer, Paragraph, TabStopType, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { generateAvery5160DocxSheets } from '@/lib/wrikeDailyLabels';
+import { getProductDisplayName } from '@/lib/productVariant';
 import { getOrderPaymentPresentation } from '@/lib/orderPaymentPresentation';
 
 const WRIKE_API_BASE = process.env.WRIKE_API_BASE || 'https://www.wrike.com/api/v4';
@@ -157,6 +158,7 @@ type OrderData = {
 		name: string;
 		price: number;
 		quantity: number;
+		mg?: string;
 	}>;
 	stockLevels?: Array<{
 		name: string;
@@ -192,7 +194,9 @@ export async function createOrderTask(order: OrderData) {
 	});
 	const paymentConfirmed = order.paymentMethod === 'creditcard' || order.paymentConfirmed !== false;
 
-	const itemsList = order.cartItems.map((item) => `<li>${item.name} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`).join('');
+	const itemsList = order.cartItems
+		.map((item) => `<li>${getProductDisplayName(item.name, item.mg, Boolean(item.mg))} × ${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`)
+		.join('');
 
 	const totalCost = order.totalCost ?? 0;
 	const grossProfit = order.subtotal - totalCost;
@@ -226,7 +230,7 @@ export async function createOrderTask(order: OrderData) {
 <p><b>Status:</b> ${paymentConfirmed ? 'Payment confirmed' : 'Awaiting payment'}<br>
 <b>Customer type:</b> ${payment.customerType}</p>
 <h4>Shipping Address</h4>
-<p><b>🚚 SHIP TO:</b><br>
+<p><b>SHIP TO:</b><br>
 ${order.customer.firstName} ${order.customer.lastName}<br>
 ${formatAddressLine(shippingAddr.address, shippingAddr.addressLine2).join('<br>')}<br>
 ${shippingAddr.city}, ${shippingAddr.province} ${shippingAddr.zipCode}<br>

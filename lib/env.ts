@@ -144,6 +144,7 @@ const envSchema = z.object({
 
 	// Promotional banner configuration
 	NEXT_PUBLIC_PROMO_BANNER_ENABLED: booleanEnv.default(false),
+	NEXT_PUBLIC_PROMO_BANNER_NEWSLETTER_ENABLED: booleanEnv.default(false),
 	NEXT_PUBLIC_PROMO_BANNER_MESSAGE: z.string().optional(),
 	NEXT_PUBLIC_PROMO_BANNER_CTA: z.string().optional(),
 

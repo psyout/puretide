@@ -72,7 +72,7 @@ export function buildManualEtransferReminderEmail(order: StoredOrder): { subject
 	const promoCode = String(order.promoCode ?? '').trim();
 	const total = money(order.total);
 	const storeUrl = String(process.env.APP_BASE_URL ?? 'https://puretide.ca').replace(/\/$/, '');
-	const logoUrl = `${storeUrl}/logo.png`;
+	const logoUrl = `${storeUrl}/logo.svg`;
 	const subject = `Reminder: e-Transfer required for order #${orderNumber}`;
 	const itemsText = items.length > 0 ? items.map((item) => `- ${item.name} x${item.quantity} (${money(item.lineTotal)})`).join('\n') : '- Order details unavailable';
 	const discountText = discountAmount > 0 ? `Discount${promoCode ? ` (${promoCode})` : ''}: -${money(discountAmount)}\n` : '';

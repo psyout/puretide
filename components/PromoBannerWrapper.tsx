@@ -8,6 +8,7 @@ import Header from './Header';
 import { useScrollDirection } from '@/lib/useScrollDirection';
 
 const PROMO_BANNER_SUBSCRIBED_KEY = 'promo-banner-subscribed';
+const NEWSLETTER_OFFER_ENABLED = String(process.env.NEXT_PUBLIC_PROMO_BANNER_NEWSLETTER_ENABLED ?? '').toLowerCase() === 'true';
 
 interface PromoBannerWrapperProps {
 	enabled?: boolean;
@@ -64,6 +65,7 @@ export default function PromoBannerWrapper({ enabled = false, message, cta }: Pr
 							<PromoBanner
 								messages={message ? [message] : undefined}
 								cta={cta}
+								newsletterOfferEnabled={NEWSLETTER_OFFER_ENABLED}
 								ctaButtonRef={ctaButtonRef}
 								onCtaClick={() => setIsModalOpen(true)}
 							/>

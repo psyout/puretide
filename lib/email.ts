@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { LOW_STOCK_THRESHOLD, DEFAULT_ALERT_EMAIL } from './constants';
+import { buildBrandedEmail, emailInfoBox, escapeEmailHtml } from './emailTemplate';
 
 export type SmtpConfig = {
 	host: string;
@@ -63,7 +64,7 @@ export async function sendLowStockAlert(items: Array<{ name: string; slug: strin
 
 	const lines = items.map((item) => `- ${item.name} (${item.slug}): ${item.stock}`);
 	const text = `Low stock alert (<= ${LOW_STOCK_THRESHOLD})\n\n${lines.join('\n')}`;
-	const html = `<p><strong>Low stock alert (<= ${LOW_STOCK_THRESHOLD})</strong></p><ul>${lines.map((line) => `<li>${line}</li>`).join('')}</ul>`;
+	const html = buildBrandedEmail({ title: 'Low stock alert', headerLabel: 'Inventory notification', status: 'Action required', preheader: `${items.length} item${items.length === 1 ? '' : 's'} at or below the stock threshold`, bodyHtml: `${emailInfoBox(`<strong>Threshold:</strong> ${LOW_STOCK_THRESHOLD} units`)}<ul style="margin:18px 0;padding-left:22px">${items.map((item) => `<li style="margin:8px 0"><strong>${escapeEmailHtml(item.name)}</strong> (${escapeEmailHtml(item.slug)}): ${escapeEmailHtml(item.stock)}</li>`).join('')}</ul>` });
 
 	const result = await sendMail({
 		to: alertEmail,

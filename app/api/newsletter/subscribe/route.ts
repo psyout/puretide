@@ -5,6 +5,7 @@ import { isPromoActive } from '@/lib/promo';
 import type { PromoCode } from '@/types/product';
 import { google } from 'googleapis';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { buildBrandedEmail, emailInfoBox, escapeEmailHtml } from '@/lib/emailTemplate';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -123,30 +124,12 @@ This code is valid for one-time use per customer.
 Best regards,
 The Pure Tide Team`;
 
-	const html = `
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Your Exclusive Discount Code</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-	<div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
-		<h1 style="color: #1a5f4a; text-align: center;">Welcome to Pure Tide Wellness!</h1>
-		<p style="color: #333; line-height: 1.6;">Thank you for subscribing to our newsletter. Here's your exclusive discount code:</p>
-		
-		<div style="background-color: #1a5f4a; color: #ffffff; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-			<span style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${code}</span>
-		</div>
-		
-		<p style="color: #333; line-height: 1.6;">Use this code at checkout to get <strong>10% OFF</strong> your first order.</p>
-		<p style="color: #666; font-size: 14px;">This code is valid for one-time use per customer.</p>
-		
-		<p style="color: #333; line-height: 1.6; margin-top: 30px;">Best regards,<br>The Pure Tide Team</p>
-	</div>
-</body>
-</html>`;
+	const html = buildBrandedEmail({
+		title: 'Welcome to Pure Tide',
+		status: 'Newsletter welcome',
+		preheader: 'Your exclusive 10% off discount code is inside.',
+		bodyHtml: `<p>Thank you for subscribing. Here is your exclusive discount code:</p>${emailInfoBox(`<div style="text-align:center;color:#1e5260;font-size:26px;font-weight:700;letter-spacing:.12em">${escapeEmailHtml(code)}</div>`)}<p>Use this code at checkout to get <strong>10% off</strong> your first order.</p><p style="color:#667b78;font-size:13px">This code is valid for one-time use per customer.</p><p style="margin-top:26px">Warmly,<br><strong>The Pure Tide team</strong></p>`,
+	});
 
 	return sendMail({
 		to: email,

@@ -48,7 +48,7 @@ test('reminder email contains payment details and already-paid guidance', () => 
 	assert.match(message.text, /Memo\/message: PT123/);
 	assert.match(message.text, /Already sent it\? No action is needed/i);
 	assert.match(message.text, /Need help or changed your mind\?/i);
-	assert.match(message.html, /https:\/\/puretide\.ca\/logo\.png/);
+	assert.match(message.html, /https:\/\/puretide\.ca\/logo\.svg/);
 	assert.match(message.html, /alt="Pure Tide"/);
 	assert.match(message.html, />BPC-157 Peptide</);
 	assert.match(message.html, />\$125\.00 CAD</);

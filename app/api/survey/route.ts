@@ -4,6 +4,7 @@ import { getOrderByOrderNumberFromDb } from '@/lib/ordersDb';
 import { sendMail } from '@/lib/email';
 import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { buildBrandedEmail, emailInfoBox } from '@/lib/emailTemplate';
 
 interface SurveyRequest {
 	orderNumber: string;
@@ -86,13 +87,13 @@ export async function POST(request: Request) {
 			`Customer email: ${customerEmail}`,
 			`Response: ${formattedSurveyData}`,
 		].join('\n');
-		const html = [
-			`<p><strong>How did you hear about us (survey submission)</strong></p>`,
+		const surveyHtml = [
 			`<p><strong>Order:</strong> ${escapeHtml(String(orderNumber))}</p>`,
 			`<p><strong>Customer name:</strong> ${escapeHtml(customerName || '(unknown)')}</p>`,
 			`<p><strong>Customer email:</strong> ${escapeHtml(String(customerEmail))}</p>`,
 			`<p><strong>Response:</strong> ${escapeHtml(formattedSurveyData)}</p>`,
 		].join('');
+		const html = buildBrandedEmail({ title: 'New survey response', headerLabel: 'Customer insight', status: 'Survey submitted', preheader: `Survey response for order ${orderNumber}`, bodyHtml: emailInfoBox(surveyHtml) });
 
 		const emailResult = await sendMail({
 			to: adminEmail,

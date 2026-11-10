@@ -6,6 +6,7 @@ type CartItemWithPrice = {
 	id: string | number;
 	price: number;
 	quantity: number;
+	mg?: string;
 };
 
 type NormalizedResult<T> = { ok: true; items: T[] } | { ok: false; error: string };
@@ -15,6 +16,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 		const itemId = String(item.id);
 		let productPrice = 0;
 		let resolvedId = itemId;
+		let resolvedStrength = item.mg;
 
 		const normalizeKey = (value: string) =>
 			String(value ?? '')
@@ -61,6 +63,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 			if ((product.status ?? 'published') !== 'published') return null;
 			// Regular product found - use its price
 			productPrice = Number(product.price) || 0;
+			resolvedStrength = product.mg ?? resolvedStrength;
 		} else {
 			const baseProduct = products.find((candidate) => candidate.variants?.some((variant) => variant.key === itemId));
 			if (!baseProduct) return null;
@@ -69,6 +72,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 			if (variant && isProductVariantSellable(variant)) {
 				productPrice = Number(variant.price) || 0;
 				resolvedId = variant.key;
+				resolvedStrength = variant.label;
 			} else return null;
 		}
 
@@ -76,6 +80,7 @@ export function normalizeCartItemsWithTrustedPrices<T extends CartItemWithPrice>
 			...item,
 			id: resolvedId,
 			price: productPrice,
+			...(resolvedStrength ? { mg: resolvedStrength } : {}),
 		};
 	});
 

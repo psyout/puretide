@@ -1,4 +1,5 @@
 import { getOrderPaymentPresentation } from '@/lib/orderPaymentPresentation';
+import { buildBrandedEmail, emailInfoBox, emailSectionTitle, escapeEmailHtml } from '@/lib/emailTemplate';
 
 type OrderEmailInput = {
 	orderNumber: string;
@@ -72,9 +73,7 @@ type OrderEmailResult = {
 	admin: OrderEmailPayload;
 };
 
-function escapeHtml(value: string): string {
-	return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+const escapeHtml = escapeEmailHtml;
 
 export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 	const isCreditCard = input.paymentMethod === 'creditcard';
@@ -215,15 +214,16 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <p>Should you encounter any payment related issues, please contact our support at: <strong>${paymentDetails.supportEmail}</strong></p>
   `;
 
-	const customerHtml = `
-    <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
-      <h2 style="margin: 0 0 8px;">Pure Tide</h2>
-      <h3 style="margin: 0 0 16px;">Thank you for your order</h3>
+	const customerHtml = buildBrandedEmail({
+		title: isCreditCard ? 'Order confirmed' : paymentConfirmed ? 'Payment received' : 'Complete your e-Transfer',
+		status: paymentConfirmed || isCreditCard ? 'Order confirmed' : 'Awaiting payment',
+		preheader: `Order #${input.orderNumber}`,
+		bodyHtml: `
       <p>Hi ${customerFirstNameHtml},</p>
       <p>${customerIntro}</p>
       ${eTransferBlockHtml}
 
-      <h4 style="margin: 24px 0 8px;">Order summary</h4>
+	  ${emailSectionTitle('Order summary')}
       <p><strong>Order #${orderNumberHtml}</strong> (${orderDateHtml})</p>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
         <thead>
@@ -243,14 +243,14 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
       <p><strong>Total:</strong> ${formatMoney(input.total)}</p>
       <p><strong>Payment method:</strong> ${paymentMethodLabelHtml}</p>
 
-      <h4 style="margin: 24px 0 8px;">Billing address</h4>
+	  ${emailSectionTitle('Billing address')}
       <p>${billingLinesHtml.join('<br />')}</p>
-      <h4 style="margin: 16px 0 8px;">Shipping address</h4>
+	  ${emailSectionTitle('Shipping address')}
       <p>${shippingLinesHtml.join('<br />')}</p>
 
       <p style="margin-top: 24px;">Thanks again! If you need any help with your order, please contact us at ${paymentDetails.supportEmail}.</p>
-    </div>
-  `;
+	  `,
+	});
 
 	const adminETransferBlock = [
 		'',
@@ -260,9 +260,6 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		`${payment.pipeline === 'BluePeak' ? 'Processor' : 'Pipeline'}: ${payment.pipeline}`,
 		`Customer type: ${payment.customerType}`,
 		...(payment.pipeline === 'Manual Interac' ? ['Auto-deposit: Enabled', 'Security question: Not required'] : []),
-		`Payment recipient name: ${paymentDetails.recipientName}`,
-		`Payment recipient email: ${paymentRecipientEmail ?? 'Unavailable'}`,
-		`Expected Memo: ${input.orderNumber}`,
 	];
 
 	const adminText = [
@@ -271,7 +268,7 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		orderDate,
 		`Customer type: ${payment.customerType}`,
 		'',
-		'🚚 SHIPPING ADDRESS',
+		'SHIPPING ADDRESS',
 		...shippingLines,
 		'',
 		'CUSTOMER',
@@ -294,24 +291,26 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
 		.filter(Boolean)
 		.join('\n');
 
-	const adminHtml = `
-    <div style="font-family: Arial, sans-serif; color: #0b3f3c; line-height: 1.5;">
-      <div style="margin-bottom: 20px;">
-        <h2 style="margin: 0 0 8px; font-size: 24px;">New order received</h2>
-        ${paymentConfirmed ? '<span style="display: inline-block; padding: 5px 10px; border-radius: 999px; background-color: #dff4e8; color: #176b3a; font-size: 12px; font-weight: bold; letter-spacing: .04em;">PAYMENT CONFIRMED</span>' : ''}
+	const adminHtml = buildBrandedEmail({
+		title: 'New order received',
+		headerLabel: 'Operations notification',
+		status: paymentConfirmed ? 'Payment confirmed' : 'Awaiting payment',
+		preheader: `Order #${input.orderNumber} from ${orderName}`,
+		bodyHtml: `
+	  <div style="margin-bottom: 20px;">
         <p style="margin: 10px 0 2px;"><strong>Order #${orderNumberHtml}</strong></p>
         <p style="margin: 0;">${orderDateHtml}<br /><strong>Customer type:</strong> ${escapeHtml(payment.customerType)}</p>
       </div>
 
-      <div style="margin: 24px 0; padding: 16px; border: 2px solid #ff6b35; border-radius: 8px; background-color: #fff5f0;">
-        <h3 style="margin: 0 0 12px; color: #ff6b35; font-size: 18px; font-weight: bold;">🚚 SHIPPING ADDRESS</h3>
+	  ${emailInfoBox(`
+		<h3 style="margin:0 0 12px;color:#1e5260;font-size:16px">Shipping address</h3>
         <p style="margin: 0; font-size: 16px; font-weight: 500; line-height: 1.6;">${shippingLinesHtml.join('<br />')}</p>
-      </div>
+	  `, true)}
 
-      <h3 style="margin: 24px 0 8px; font-size: 16px;">Customer</h3>
+	  ${emailSectionTitle('Customer')}
       <p style="margin: 0;">${escapeHtml(orderName)}<br /><a href="mailto:${escapeHtml(input.customer.email)}" style="color: #0b6b66;">${escapeHtml(input.customer.email)}</a></p>
 
-      <h3 style="margin: 24px 0 8px; font-size: 16px;">Products</h3>
+	  ${emailSectionTitle('Products')}
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
         <thead>
           <tr>
@@ -324,13 +323,13 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
           ${itemsHtml}
         </tbody>
       </table>
-      <div style="margin-top: 20px; padding: 14px 16px; background-color: #f3f7f6; border-radius: 8px;">
+	  ${emailInfoBox(`<div>
         <h3 style="margin: 0 0 10px; font-size: 16px;">Order summary</h3>
         <p style="margin: 4px 0;"><strong>Subtotal:</strong> ${formatMoney(input.subtotal)}</p>
         ${input.discountAmount ? `<p style="margin: 4px 0;"><strong>Discount (${promoCodeHtml}):</strong> -${formatMoney(input.discountAmount)}</p>` : ''}
         <p style="margin: 4px 0;"><strong>Shipping:</strong> ${shippingLabelHtml} ${formatMoney(input.shippingCost)}</p>
         <p style="margin: 10px 0 0; padding-top: 10px; border-top: 1px solid #cdd9d7; font-size: 18px;"><strong>Total: ${formatMoney(input.total)}</strong></p>
-      </div>
+	  </div>`)}
       ${
 			isCreditCard
 				? `<div style="margin-top: 20px;"><h3 style="margin: 0 0 10px; font-size: 16px;">Payment details</h3><p><strong>Status:</strong> ${paymentConfirmed ? 'Confirmed' : 'Awaiting payment'}<br /><strong>Method:</strong> ${paymentMethodLabelHtml}<br /><strong>Customer type:</strong> ${escapeHtml(payment.customerType)}</p></div>`
@@ -342,17 +341,14 @@ export function buildOrderEmails(input: OrderEmailInput): OrderEmailResult {
           <strong>Method:</strong> ${escapeHtml(payment.method)}<br />
           <strong>${payment.pipeline === 'BluePeak' ? 'Processor' : 'Pipeline'}:</strong> ${escapeHtml(payment.pipeline ?? '')}<br />
           <strong>Customer type:</strong> ${escapeHtml(payment.customerType)}<br />
-          ${payment.pipeline === 'Manual Interac' ? '<strong>Auto-deposit:</strong> Enabled<br /><strong>Security question:</strong> Not required<br />' : ''}
-          <strong>Payment recipient name:</strong> ${paymentDetails.recipientName}<br />
-          <strong>Payment recipient email:</strong> ${escapeHtml(paymentRecipientEmail ?? 'Unavailable')}<br />
-          <strong>Expected memo:</strong> ${orderNumberHtml}
+		  ${payment.pipeline === 'Manual Interac' ? '<strong>Auto-deposit:</strong> Enabled<br /><strong>Security question:</strong> Not required' : ''}
         </p>
       </div>
       `
 		}
       ${adminNotesHtml ? `<h4 style="margin: 24px 0 8px;">Order notes</h4><p>${adminNotesHtml}</p>` : ''}
-    </div>
-  `;
+	  `,
+	});
 
 	const customerSubject = isCreditCard
 		? `Order #${input.orderNumber} - Order confirmation`

@@ -76,7 +76,8 @@ test('admin email shows Friends & Family Interac e-Transfer payment method', () 
 	});
 	assert.match(result.admin.text, /Customer type: Family & Friends/);
 	assert.match(result.admin.text, /Pipeline: Manual Interac/);
-	assert.match(result.admin.text, /Payment recipient email: orders@puretide\.ca/);
+	assert.doesNotMatch(result.admin.text, /Payment recipient/);
+	assert.doesNotMatch(result.admin.text, /Expected Memo/);
 	assert.doesNotMatch(result.admin.text, /BluePeak/);
 });
 
@@ -89,6 +90,6 @@ test('admin email shows BluePeak Interac e-Transfer payment method', () => {
 	});
 	assert.match(result.admin.text, /Customer type: Regular Customer/);
 	assert.match(result.admin.text, /Processor: BluePeak/);
-	assert.match(result.admin.text, /Payment recipient email: checkout-123@etransfercanada\.ca/);
-	assert.doesNotMatch(result.admin.text, /Payment recipient email: orders@puretide\.ca/);
+	assert.doesNotMatch(result.admin.text, /Payment recipient/);
+	assert.doesNotMatch(result.admin.text, /Expected Memo/);
 });
