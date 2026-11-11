@@ -104,7 +104,7 @@ export default function ProductDetailClient({ product, description, details, has
 					)}
 				</div>
 
-				<div className='min-w-0 md:w-full'>
+				<div className='min-w-0 md:w-full md:px-0'>
 					{/* Sold out badge */}
 					{(isSoldOut || allVariantsSoldOut) && (
 						<div className='mb-4'>
@@ -114,9 +114,9 @@ export default function ProductDetailClient({ product, description, details, has
 
 					{/* Product name and mg */}
 					<div className='mt-1 md:mt-0'>
-						<h1 className='text-3xl font-bold text-deep-tidal-teal-700 leading-tight'>{displayName}</h1>
+						<h1 className='text-xl font-bold leading-tight text-deep-tidal-teal-700 md:text-3xl'>{displayName}</h1>
 					</div>
-					{displaySubtitle && <p className='text-md text-deep-tidal-teal-600 font-medium mb-4'>{displaySubtitle}</p>}
+					{displaySubtitle && <p className='mb-4 text-[0.9rem] font-medium text-deep-tidal-teal-600 md:text-md'>{displaySubtitle}</p>}
 					{!displaySubtitle && <div className='mb-1' />}
 
 					{/* Icons ***/}
@@ -145,8 +145,8 @@ export default function ProductDetailClient({ product, description, details, has
 						{saleDiscount > 0 && <div className='mt-8 inline-flex rounded-full bg-eucalyptus-100 px-3 py-1 text-sm font-bold text-deep-tidal-teal-800'>{saleDiscount}% OFF</div>}
 						<div className={`${saleDiscount > 0 ? 'mt-2 flex items-baseline gap-3' : 'mt-8'} text-deep-tidal-teal-700`}>
 							{saleDiscount > 0 && <span className='text-xl font-medium text-deep-tidal-teal-500 line-through'>C${displayPrice.toFixed(2)}</span>}
-							<span className={`text-3xl font-bold ${saleDiscount > 0 ? 'text-[#b42318]' : ''}`}>
-								<span className='text-[1.75rem] font-light'>C</span>${salePrice.toFixed(2)}
+							<span className={`text-2xl font-bold md:text-3xl ${saleDiscount > 0 ? 'text-[#b42318]' : ''}`}>
+								<span className='text-[1.5rem] font-light md:text-[1.75rem]'>C</span>${salePrice.toFixed(2)}
 							</span>
 						</div>
 						<div className='mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-deep-tidal-teal-600 md:text-sm'>
@@ -172,7 +172,7 @@ export default function ProductDetailClient({ product, description, details, has
 					</div>
 
 					{(descriptionCopy || descriptionCtas.length > 0) && (
-						<div className='mb-5 border-b border-deep-tidal-teal/15 pb-5 text-[0.9rem] md:text-[1rem] text-pretty leading-6 text-deep-tidal-teal-700'>
+						<div className='mb-5 border-b border-deep-tidal-teal/15 pb-5 text-[0.9rem] md:text-[0.95rem] text-pretty leading-6 text-deep-tidal-teal-700'>
 							{descriptionCopy && <p>{descriptionCopy}</p>}
 							{descriptionCtas.map((cta) => (
 								<p

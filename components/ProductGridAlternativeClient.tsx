@@ -175,13 +175,13 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 					id='product-collection'
 					className='relative scroll-mt-28'>
 					{showSkeleton && (
-						<div className='grid grid-cols-1 gap-3 min-[351px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4'>
+						<div className='grid grid-cols-1 items-start gap-3 min-[400px]:grid-cols-2 min-[400px]:gap-5 min-[680px]:grid-cols-3 lg:items-stretch lg:gap-6 xl:grid-cols-4'>
 							{Array.from({ length: skeletonCount }).map((_, index) => (
 								<div
 									key={index}
 									className='bento-card animate-pulse overflow-hidden'>
-									<div className='aspect-square bg-[#f3f4f4]' />
-									<div className='flex min-h-[12rem] flex-col gap-3 px-3 pb-3 pt-4 sm:min-h-[15rem] sm:gap-4 sm:px-6 sm:pb-6 sm:pt-7'>
+									<div className='h-44 bg-[#f3f4f4] min-[400px]:h-auto min-[400px]:aspect-square' />
+									<div className='flex flex-col gap-3 px-3 pb-3 pt-4 sm:gap-4 sm:px-5 sm:pb-5 sm:pt-5 lg:min-h-[15rem] lg:px-6 lg:pb-6 lg:pt-7'>
 										<div className='h-5 w-3/4 rounded bg-deep-tidal-teal/10 sm:h-7 sm:w-2/3' />
 										<div className='h-3 w-1/2 rounded bg-deep-tidal-teal/10 sm:h-4' />
 										<div className='mt-auto h-10 rounded-lg bg-deep-tidal-teal/10 sm:h-12' />
@@ -193,12 +193,12 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 
 					{visibleProducts.length > 0 ? (
 						<div
-							className={`grid grid-cols-1 gap-3 transition-opacity duration-300 min-[351px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 ${showSkeleton ? 'pointer-events-none absolute inset-0 opacity-0' : 'opacity-100'}`}
+							className={`grid grid-cols-1 items-start gap-3 transition-opacity duration-300 min-[400px]:grid-cols-2 min-[400px]:gap-5 min-[680px]:grid-cols-3 lg:items-stretch lg:gap-6 xl:grid-cols-4 ${showSkeleton ? 'pointer-events-none absolute inset-0 opacity-0' : 'opacity-100'}`}
 							aria-hidden={showSkeleton}>
 							{visibleProducts.map((product) => (
 								<div
 									key={product.id}
-									className='h-full'>
+									className='self-start lg:h-full lg:self-stretch'>
 									<ProductCardAlternative
 										product={product}
 										onImageLoaded={handleImageLoaded}

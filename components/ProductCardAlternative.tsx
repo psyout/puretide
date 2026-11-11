@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, CircleAlert, Eye, Loader2 } from 'lucide-react';
+import { Check, CircleAlert, Eye, Loader2, ShoppingCart } from 'lucide-react';
 import type { Product, PromoCode } from '@/types/product';
 import { getSalePrice } from '@/lib/promo';
 import { useCart } from '@/context/CartContext';
@@ -32,14 +32,13 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 	const { addToCart } = useCart();
 	const [hasReportedImageLoaded, setHasReportedImageLoaded] = useState(false);
 	const [justAdded, setJustAdded] = useState(false);
-	const [isCardHovered, setIsCardHovered] = useState(false);
+	const [isNavigating, setIsNavigating] = useState(false);
 	const variants = product.variants ?? [];
 	const hasVariants = variants.length > 1;
 	const allVariantsSoldOut = hasVariants && variants.every((variant) => !isProductVariantSellable(variant));
 	const isSoldOut = allVariantsSoldOut || (!hasVariants && (Number(product.stock) <= 0 || product.status === 'stock-out'));
 	const isLowStock = !isSoldOut && !hasVariants && Number(product.stock) < 10;
 	const defaultVariant = hasVariants ? (variants.find(isProductVariantSellable) ?? variants[0]) : null;
-	const optionLabel = defaultVariant?.label || product.mg;
 	const primaryIconName = product.icons?.[0];
 	const PrimaryIcon = primaryIconName ? iconMap[primaryIconName] : null;
 	const saleDiscount = automaticPromotion?.discount ?? 0;
@@ -62,7 +61,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 	};
 
 	const handleAdd = () => {
-		if (isSoldOut) return;
+		if (isSoldOut || justAdded) return;
 		if (defaultVariant) {
 			addToCart({
 				...product,
@@ -80,21 +79,28 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 			addToCart(product);
 		}
 		setJustAdded(true);
-		window.setTimeout(() => setJustAdded(false), 1400);
+		window.setTimeout(() => setJustAdded(false), 1800);
+	};
+
+	const handleDetailsClick = (event: MouseEvent<HTMLAnchorElement>) => {
+		if (isNavigating) {
+			event.preventDefault();
+			return;
+		}
+
+		setIsNavigating(true);
 	};
 
 	return (
 		<article
-			onMouseEnter={() => setIsCardHovered(true)}
-			onMouseLeave={() => setIsCardHovered(false)}
-			className='bento-card bento-card-interactive group relative isolate flex h-full flex-col overflow-hidden'>
+			className='bento-card bento-card-interactive group relative isolate flex h-auto flex-col overflow-hidden lg:h-full'>
 			<Link
 				href={`/product/${product.slug}`}
 				aria-label={`View ${product.name}`}
 				className='absolute inset-0 z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-deep-tidal-teal focus-visible:ring-offset-2'
 			/>
 
-			<div className='relative flex aspect-square items-center justify-center overflow-hidden bg-[#f3f4f4]'>
+			<div className='relative flex h-44 items-center justify-center overflow-hidden bg-[#f3f4f4] min-[400px]:h-auto min-[400px]:aspect-square'>
 				{saleDiscount > 0 && (
 					<span className='absolute right-2 top-2 z-20 rounded-full bg-deep-tidal-teal px-2 py-1 text-[10px] font-bold text-white sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-xs'>
 						{saleDiscount}% OFF
@@ -121,18 +127,8 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 						{isSoldOut ? 'Sold out' : 'Low stock'}
 					</span>
 				)}
-				<Link
-					href={`/product/${product.slug}`}
-					aria-hidden={!isCardHovered}
-					tabIndex={isCardHovered ? 0 : -1}
-					className={`absolute bottom-4 right-4 z-20 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-soft-driftwood px-4 py-2 text-sm font-semibold text-deep-tidal-teal-700 shadow-[0_8px_22px_rgba(10,32,39,0.2)] transition-opacity duration-200 hover:bg-soft-driftwood-400 ${
-						isCardHovered ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-					}`}>
-					<Eye className='h-4 w-4' />
-					View
-				</Link>
 				{hasProductImage(product.image) ? (
-					<div className='relative h-[64%] w-[64%]'>
+					<div className='relative h-[74%] w-[74%] min-[400px]:h-[64%] min-[400px]:w-[64%]'>
 						<Image
 							src={product.image}
 							alt={product.name}
@@ -145,19 +141,19 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 						/>
 					</div>
 				) : (
-					<ProductImagePlaceholder className='h-[64%] w-[64%]' />
+					<ProductImagePlaceholder className='h-[74%] w-[74%] min-[400px]:h-[64%] min-[400px]:w-[64%]' />
 				)}
 			</div>
 
-			<div className='flex min-h-[11.5rem] min-w-0 flex-1 flex-col px-3 pb-3 pt-3 sm:min-h-[13rem] sm:px-6 sm:pb-6 sm:pt-4'>
+			<div className='flex min-w-0 flex-col px-3 pb-3 pt-3 lg:min-h-[13rem] lg:flex-1 lg:px-4 lg:pb-4 lg:pt-4'>
 				<div className='min-w-0'>
-					<h3 className='line-clamp-2 text-base font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[351px]:text-[clamp(0.875rem,3.75vw,1rem)] sm:text-base'>
+					<h3 className='line-clamp-2 text-base font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[400px]:text-sm min-[680px]:text-base'>
 						{product.name}
 					</h3>
 					{product.subtitle && <p className='mb-1 mt-1 line-clamp-2 text-[0.7rem] font-medium leading-normal text-deep-tidal-teal-600 sm:text-[0.75rem]'>{product.subtitle}</p>}
 				</div>
 
-				<div className='mt-auto border-t border-deep-tidal-teal-800/15 pt-2.5 sm:pt-3'>
+				<div className='mt-2 border-t border-deep-tidal-teal-800/15 pt-2.5 sm:mt-3 sm:pt-3 lg:mt-auto'>
 					<div className='flex flex-col items-start gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4'>
 						<div className='space-y-0.5'>
 							{saleDiscount > 0 && <p className='text-xs text-deep-tidal-teal-500 line-through sm:text-sm'>${getProductPrice(product)} CAD</p>}
@@ -165,17 +161,29 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 								${getProductPrice(product, saleDiscount)} CAD
 							</p>
 						</div>
-						{optionLabel && <p className='text-xs font-semibold text-deep-tidal-teal-700 underline underline-offset-2 sm:text-sm'></p>}
 					</div>
 
-					<button
-						type='button'
-						onClick={handleAdd}
-						disabled={isSoldOut || justAdded}
-						className='site-cta cta-secondary relative z-20 mt-3 min-h-10 w-full px-2 py-2 text-[11px] font-bold sm:mt-4 sm:min-h-12 sm:px-5 sm:py-3 sm:text-sm'>
-						{justAdded ? <Check className='h-4 w-4' /> : isSoldOut ? <Loader2 className='h-4 w-4' /> : null}
-						<span>{justAdded ? 'Added' : isSoldOut ? 'Unavailable' : 'Add To Cart'}</span>
-					</button>
+					<div className='relative z-20 mt-3 grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2 sm:mt-4 sm:grid-cols-[minmax(0,1fr)_3rem]'>
+						<Link
+							href={`/product/${product.slug}`}
+							onClick={handleDetailsClick}
+							aria-disabled={isNavigating}
+							className={`site-cta cta-secondary min-h-10 whitespace-nowrap px-2 py-2 text-sm normal-case tracking-normal sm:min-h-12 sm:px-4 ${isNavigating ? 'cursor-wait opacity-70' : ''}`}>
+							{isNavigating ? <Loader2 className='h-4 w-4 animate-spin' aria-hidden='true' /> : <Eye className='hidden h-4 w-4 sm:block' />}
+							<span>More details</span>
+						</Link>
+						<button
+							type='button'
+							onClick={handleAdd}
+							disabled={isSoldOut}
+							aria-pressed={justAdded}
+							aria-live='polite'
+							aria-label={justAdded ? `${product.name} added to cart` : isSoldOut ? `${product.name} is unavailable` : `Add ${product.name} to cart`}
+							className={`site-cta min-h-10 w-10 p-0 sm:min-h-12 sm:w-12 ${justAdded ? 'border-eucalyptus-500 bg-eucalyptus-500 text-white shadow-[0_0_0_3px_rgba(106,184,147,0.22)]' : 'cta-primary'}`}>
+							{justAdded ? <Check className='h-4 w-4' /> : isSoldOut ? <Loader2 className='h-4 w-4' /> : <ShoppingCart className='h-4 w-4' />}
+							<span className='sr-only'>{justAdded ? 'Added' : isSoldOut ? 'Unavailable' : 'Add to cart'}</span>
+						</button>
+					</div>
 				</div>
 			</div>
 		</article>
