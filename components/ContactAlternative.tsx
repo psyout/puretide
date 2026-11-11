@@ -25,8 +25,11 @@ export default function ContactAlternative() {
 					<div className='py-10 text-deep-tidal-teal-800 sm:py-12 lg:border-r lg:border-deep-tidal-teal-800/15 lg:py-14 lg:pr-12'>
 						<div className='flex h-full min-h-[30rem] flex-col'>
 							<div>
-								<p className='text-xs font-bold uppercase tracking-[0.22em] text-deep-tidal-teal-600'>A real conversation</p>
-								<h3 className='mt-4 max-w-sm text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl'>Clear answers, handled with care.</h3>
+								<div className='flex items-center gap-3'>
+									<span className='h-px w-3 shrink-0 bg-deep-tidal-teal-500' />
+									<p className='text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>Contact us</p>
+								</div>
+								<h3 className='mt-4 max-w-sm text-3xl text-pretty font-semibold leading-tight tracking-[-0.03em] sm:text-4xl'>Clear answers, handled with care.</h3>
 								<p className='mt-1 max-w-sm leading-relaxed text-deep-tidal-teal-700/65'>Every message is read by our team, not routed through a generic support loop.</p>
 							</div>
 

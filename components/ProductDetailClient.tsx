@@ -116,7 +116,7 @@ export default function ProductDetailClient({ product, description, details, has
 					<div className='mt-1 md:mt-0'>
 						<h1 className='text-3xl font-bold text-deep-tidal-teal-700 leading-tight'>{displayName}</h1>
 					</div>
-					{displaySubtitle && <p className='text-lg text-deep-tidal-teal-600 font-medium mb-4'>{displaySubtitle}</p>}
+					{displaySubtitle && <p className='text-md text-deep-tidal-teal-600 font-medium mb-4'>{displaySubtitle}</p>}
 					{!displaySubtitle && <div className='mb-1' />}
 
 					{/* Icons ***/}
@@ -172,7 +172,7 @@ export default function ProductDetailClient({ product, description, details, has
 					</div>
 
 					{(descriptionCopy || descriptionCtas.length > 0) && (
-						<div className='mb-5 border-b border-deep-tidal-teal/15 pb-5 text-[0.95rem] text-pretty leading-6 text-deep-tidal-teal-700'>
+						<div className='mb-5 border-b border-deep-tidal-teal/15 pb-5 text-[0.9rem] md:text-[1rem] text-pretty leading-6 text-deep-tidal-teal-700'>
 							{descriptionCopy && <p>{descriptionCopy}</p>}
 							{descriptionCtas.map((cta) => (
 								<p

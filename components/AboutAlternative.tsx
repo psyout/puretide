@@ -91,7 +91,7 @@ export default function AboutAlternative() {
 									className='group grid gap-5 py-8 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-6'>
 									<div>
 										<h3 className='text-2xl font-bold tracking-tight text-deep-tidal-teal-800 sm:text-3xl'>{principle.title}</h3>
-										<p className='mt-3 max-w-xl text-base font-medium leading-relaxed text-deep-tidal-teal-700/70 sm:text-lg'>{principle.body}</p>
+										<p className='mt-3 max-w-xl text-base text-pretty font-medium leading-relaxed text-deep-tidal-teal-700/70 sm:text-lg'>{principle.body}</p>
 									</div>
 									<div className='flex h-12 w-12 items-center justify-center rounded-full border border-deep-tidal-teal-800/15 text-deep-tidal-teal transition-colors group-hover:border-deep-tidal-teal group-hover:bg-white/60'>
 										<Icon
@@ -106,7 +106,8 @@ export default function AboutAlternative() {
 				</div>
 
 				<div className='mt-20 border-t border-deep-tidal-teal/10 pt-14 lg:mt-24 lg:pt-16'>
-					<div className='mb-10 grid gap-5 lg:grid-cols-[0.72fr_1.28fr] lg:gap-20'>
+					<div className='mb-10 flex items-center gap-3'>
+						<span className='h-px w-3 shrink-0 bg-deep-tidal-teal-500' />
 						<p className='text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>Our philosophy</p>
 					</div>
 
