@@ -28,14 +28,23 @@ test('a product-specific promo gives no discount without an eligible cart item',
 	assert.equal(getPromoProductEligibilityError(promo, items), 'OTHER10 does not apply to the products in your cart.');
 });
 
-test('SITEWIDE25 is selected as the automatic sale only while active and sitewide', () => {
+test('SITEWIDE25 reuses a valid active sheet row only while the sale flag is enabled', () => {
 	const promos: PromoCode[] = [
 		{ code: 'SAVE10', discount: 10, active: true },
-		{ code: 'SITEWIDE25', discount: 25, active: true },
+		{ code: 'SITEWIDE25', discount: 25, active: true, freeShipping: true },
 	];
-	assert.equal(getAutomaticSitewidePromo(promos)?.discount, 25);
-	assert.equal(getAutomaticSitewidePromo([{ ...promos[1], active: false }]), null);
-	assert.equal(getAutomaticSitewidePromo([{ ...promos[1], productIds: ['bpc-157'] }]), null);
+	assert.equal(getAutomaticSitewidePromo(promos, new Date(), true)?.discount, 25);
+	assert.equal(getAutomaticSitewidePromo(promos, new Date(), true)?.freeShipping, true);
+	assert.equal(getAutomaticSitewidePromo(promos, new Date(), false), null);
+});
+
+test('enabled sitewide sale does not depend on a promo-sheet row', () => {
+	assert.deepEqual(getAutomaticSitewidePromo([], new Date(), true), {
+		code: 'SITEWIDE25',
+		discount: 25,
+		active: true,
+		productIds: [],
+	});
 });
 
 test('sale prices are rounded to currency precision', () => {
@@ -50,11 +59,11 @@ test('promo date range is inclusive in Vancouver time', () => {
 	assert.equal(isPromoActive(promo, new Date('2026-10-13T07:00:00.000Z')), false);
 });
 
-test('automatic sale is not selected before or after its schedule', () => {
+test('the feature flag keeps the fixed sale active even when an old sheet row is out of schedule', () => {
 	const promo: PromoCode = { code: 'SITEWIDE25', discount: 25, active: true, startDate: '2026-10-10', endDate: '2026-10-12' };
-	assert.equal(getAutomaticSitewidePromo([promo], new Date('2026-10-09T19:00:00.000Z')), null);
-	assert.equal(getAutomaticSitewidePromo([promo], new Date('2026-10-11T19:00:00.000Z'))?.code, 'SITEWIDE25');
-	assert.equal(getAutomaticSitewidePromo([promo], new Date('2026-10-14T19:00:00.000Z')), null);
+	assert.equal(getAutomaticSitewidePromo([promo], new Date('2026-10-09T19:00:00.000Z'), true)?.code, 'SITEWIDE25');
+	assert.equal(getAutomaticSitewidePromo([promo], new Date('2026-10-11T19:00:00.000Z'), true)?.code, 'SITEWIDE25');
+	assert.equal(getAutomaticSitewidePromo([promo], new Date('2026-10-14T19:00:00.000Z'), true)?.code, 'SITEWIDE25');
 });
 
 test('Google Sheets North American date formatting remains an inclusive date', () => {
@@ -68,15 +77,15 @@ test('active sitewide sale overrides quantity pricing and any submitted promo co
 		{ code: 'AFFILIATE10', discount: 10, active: true },
 		{ code: 'SITEWIDE25', discount: 25, active: true, startDate: '2026-10-09', endDate: '2026-10-31' },
 	];
-	const selected = getPromotionForOrder(promos, 'AFFILIATE10', new Date('2026-10-15T19:00:00.000Z'));
+	const selected = getPromotionForOrder(promos, 'AFFILIATE10', new Date('2026-10-15T19:00:00.000Z'), true);
 	assert.equal(selected?.code, 'SITEWIDE25');
 	assert.equal(selected?.discount, 25);
 });
 
-test('regular promo selection returns after the sitewide sale ends', () => {
+test('regular promo selection returns when the sitewide sale flag is disabled', () => {
 	const promos: PromoCode[] = [
 		{ code: 'AFFILIATE10', discount: 10, active: true },
 		{ code: 'SITEWIDE25', discount: 25, active: true, endDate: '2026-10-31' },
 	];
-	assert.equal(getPromotionForOrder(promos, 'AFFILIATE10', new Date('2026-11-01T20:00:00.000Z'))?.code, 'AFFILIATE10');
+	assert.equal(getPromotionForOrder(promos, 'AFFILIATE10', new Date('2026-11-01T20:00:00.000Z'), false)?.code, 'AFFILIATE10');
 });

@@ -449,18 +449,18 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 									</div>
 								)}
 								<div className='flex justify-between text-lg font-bold'>
-									<span className='text-deep-tidal-teal-800 font-semibold'>Subtotal</span>
+									<span className='text-deep-tidal-teal-800 font-semibold'>{appliedDiscount > 0 ? 'Original subtotal' : 'Subtotal'}</span>
 									<span className='text-deep-tidal-teal'>${summarySubtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
 									<div className='flex justify-between text-sm font-semibold text-emerald-700'>
-										<span>Promo discount ({appliedDiscount}%)</span>
+										<span>{scheduledPromotion ? 'Sitewide discount' : 'Promo discount'} ({appliedDiscount}%)</span>
 										<span>−${promoDiscountAmount.toFixed(2)}</span>
 									</div>
 								)}
 								{promoApplied && (
 									<div className='flex justify-between border-t border-deep-tidal-teal/10 pt-2 text-lg font-bold'>
-										<span className='text-deep-tidal-teal-800'>Total</span>
+										<span className='text-deep-tidal-teal-800'>Merchandise total</span>
 										<span className='text-[#b42318]'>${summaryTotal.toFixed(2)}</span>
 									</div>
 								)}

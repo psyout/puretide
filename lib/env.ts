@@ -138,6 +138,8 @@ const envSchema = z.object({
 	FRIENDS_FAMILY_ENABLED: booleanEnv.default(false),
 	NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED: booleanEnv.default(false),
 	PROMO_MODAL_ENABLED: booleanEnv.default(false),
+	SITEWIDE_25_SALE_ENABLED: booleanEnv.default(false),
+	SALE_HERO_ENABLED: booleanEnv.default(false),
 	ENABLE_WRIKE_INTEGRATION: booleanEnv.default(false),
 	ENABLE_EMAIL_NOTIFICATIONS: booleanEnv.default(true),
 	ENABLE_SHEET_SYNC: booleanEnv.default(true),

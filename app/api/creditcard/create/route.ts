@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { readProducts } from '@/lib/productCatalog';
 import { readSheetPromoCodes } from '@/lib/stockSheet';
-import type { PromoCode } from '@/types/product';
-import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError, getPromotionForOrder } from '@/lib/promo';
-import { getDiscountedPrice } from '@/lib/pricing';
-import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { getEffectiveShippingCost } from '@/lib/constants';
 import { markAbandonedCartsRecoveredByEmail, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
@@ -19,6 +16,7 @@ import { getGatewaylinxConfig } from '@/lib/env';
 import { validateEnv } from '@/lib/env';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
 import { prepareMetaOrderTracking } from '@/lib/metaConversions';
+import { calculateCheckoutPricing } from '@/lib/checkoutPricing';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -172,53 +170,18 @@ export async function POST(request: Request) {
 		}
 		const trustedCartItems = trustedCart.items;
 
-		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
 		const destinationZipCode = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.zipCode : orderPayload.customer.zipCode;
 		const destinationProvince = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.province : orderPayload.customer.province;
-		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
-		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
-		let discountAmount = 0;
-		let appliedPromo: PromoCode | undefined;
-
-		// Payment pricing must use current promotion data, never a worker-local stale cache.
 		const promoCodes = await readSheetPromoCodes();
-		const promo = getPromotionForOrder(promoCodes, orderPayload.promoCode);
-
-		if (promo) {
-				appliedPromo = promo;
-				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
-				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-				const minimumError = getPromoMinimumSubtotalError({ promo, subtotal: subtotalWithPromo });
-				if (minimumError) {
-					return json({ ok: false, error: minimumError }, { status: 400 });
-				}
-				const eligibilityError = getPromoProductEligibilityError(promo, cartItems);
-				if (eligibilityError) {
-					return json({ ok: false, error: eligibilityError }, { status: 400 });
-				}
-				if (promo.freeShipping) {
-					shippingCost = 0;
-				}
-				discountAmount = getPromoDiscountAmount(promo, cartItems);
-		} else {
-			cartItems = trustedCartItems.map((item) => ({
-				...item,
-				price: getDiscountedPrice(item.price, item.quantity),
-			}));
-		}
-
-		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
-		// Apply free shipping if subtotal after discounts exceeds threshold
-		const subtotalAfterDiscounts = subtotal - discountAmount;
-		if (subtotalAfterDiscounts > FREE_SHIPPING_THRESHOLD) {
-			shippingCost = 0;
-		}
-
-		// Safe card fee handling
-		const cardFee = orderPayload.paymentMethod === 'creditcard' && Number.isFinite(Number(orderPayload.cardFee)) ? Number(orderPayload.cardFee) : 0;
-
-		const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
+		const pricing = calculateCheckoutPricing({
+			trustedCartItems,
+			promoCodes,
+			requestedPromoCode: orderPayload.promoCode,
+			paymentMethod: orderPayload.paymentMethod,
+			baseShippingCost: getEffectiveShippingCost(destinationZipCode, destinationProvince),
+		});
+		if (!pricing.ok) return json({ ok: false, error: pricing.error }, { status: 400 });
+		const { cartItems, appliedPromo, subtotal, shippingCost, discountAmount, cardFee, total } = pricing;
 
 		// Reject tampered totals
 		if (Math.abs(total - orderPayload.total) > 0.01) {
@@ -231,6 +194,7 @@ export async function POST(request: Request) {
 			subtotal,
 			shippingCost,
 			discountAmount,
+			promoCode: appliedPromo?.code,
 			cardFee,
 			total,
 		};

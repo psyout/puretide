@@ -29,8 +29,9 @@ export default function Footer() {
 		router.push(destination);
 	};
 
-	// The stock dashboard is an internal tool and intentionally sits outside the storefront shell.
-	if (pathname.startsWith('/dashboard')) return null;
+	// Internal tools and the neutral welcome gateway intentionally sit outside
+	// the regular storefront shell.
+	if (pathname.startsWith('/dashboard') || pathname === '/welcome') return null;
 
 	return (
 		<footer

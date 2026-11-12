@@ -27,13 +27,13 @@ export async function POST(request: Request) {
 
 		const normalizedCode = code.trim().toUpperCase();
 		const promoCodes = await readSheetPromoCodes();
+		const automaticPromo = getAutomaticSitewidePromo(promoCodes);
 
-		if (promoCodes.length === 0) {
+		if (promoCodes.length === 0 && !automaticPromo) {
 			// This could mean either no codes exist or the sheet is missing
 			return NextResponse.json({ ok: false, error: 'Promo sheet is empty. Please add a code row after the header.' }, { status: 404 });
 		}
 
-		const automaticPromo = getAutomaticSitewidePromo(promoCodes);
 		if (automaticPromo && normalizedCode !== automaticPromo.code) {
 			return NextResponse.json({ ok: false, error: `${automaticPromo.code} is already applied automatically and cannot be combined with another discount.` }, { status: 409 });
 		}

@@ -1,9 +1,12 @@
 import HeroClient from './HeroClient';
 
 const ENABLE_HERO_VIDEO = true;
-const SHOW_THIRD_HERO_SLIDE = false;
 
-const slides = [
+function isSaleHeroEnabled() {
+	return String(process.env.SALE_HERO_ENABLED ?? '').trim().toLowerCase() === 'true';
+}
+
+const standardSlides = [
 	{
 		backgroundImage: '/hero/hero-2-poster.jpg',
 		video: ENABLE_HERO_VIDEO
@@ -28,16 +31,30 @@ const slides = [
 			</>
 		),
 	},
-	...(SHOW_THIRD_HERO_SLIDE
-		? [
-				{
-					backgroundImage: '/hero/hero-4.webp',
-					description: 'Science-informed wellness, refined. Thoughtfully sourced peptides studied for recovery, clarity, and longevity.',
-				},
-			]
-		: []),
+	{
+		backgroundImage: '/hero/hero-4.webp',
+		description: 'Science-informed wellness, refined. Thoughtfully sourced peptides studied for recovery, clarity, and longevity.',
+	},
+];
+
+const saleSlides = [
+	{
+		backgroundImage: '/hero/hero-2-poster.jpg',
+		video: ENABLE_HERO_VIDEO
+			? {
+					src: '/hero/hero-2.mp4',
+					poster: '/hero/hero-2-poster.jpg',
+				}
+			: undefined,
+		variant: 'sale' as const,
+		eyebrow: 'The sale is on',
+		title: 'Early Black Friday',
+		offer: '25% off sitewide',
+		description: 'Our biggest sale of the year, only for a limited time. No code needed.',
+		cta: { label: 'Shop the sale', href: '#products' },
+	},
 ];
 
 export default function Hero() {
-	return <HeroClient slides={slides} />;
+	return <HeroClient slides={isSaleHeroEnabled() ? saleSlides : standardSlides} />;
 }

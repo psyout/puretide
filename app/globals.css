@@ -71,6 +71,37 @@
 	}
 }
 
+@keyframes sale-bag-receive {
+	0%,
+	100% {
+		transform: rotate(0deg);
+	}
+	35% {
+		transform: rotate(-5deg);
+	}
+	70% {
+		transform: rotate(3deg);
+	}
+}
+
+@keyframes sale-item-drop {
+	0% {
+		opacity: 0;
+		transform: translate3d(0, -7px, 0) rotate(-8deg) scale(0.7);
+	}
+	20% {
+		opacity: 1;
+	}
+	70% {
+		opacity: 1;
+		transform: translate3d(0, 4px, 0) rotate(0deg) scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: translate3d(0, 7px, 0) rotate(0deg) scale(0.85);
+	}
+}
+
 .animate-fade-in {
 	animation: fade-in 0.3s ease-out;
 }
@@ -163,6 +194,26 @@ p {
 }
 
 @layer components {
+	.sale-purchase-icon {
+		transform-origin: 50% 85%;
+	}
+
+	.sale-purchase-item {
+		@apply pointer-events-none absolute h-1.5 w-1.5 rounded-[1px] border border-current opacity-0;
+		left: 0.55rem;
+		top: -0.1rem;
+	}
+
+	.sale-purchase-cta:hover .sale-purchase-icon,
+	.sale-purchase-cta:focus-visible .sale-purchase-icon {
+		animation: sale-bag-receive 700ms ease-in-out;
+	}
+
+	.sale-purchase-cta:hover .sale-purchase-item,
+	.sale-purchase-cta:focus-visible .sale-purchase-item {
+		animation: sale-item-drop 900ms ease-in-out infinite;
+	}
+
 	.lab-assurance .lab-flask-icon {
 		transform-origin: 50% 80%;
 	}
@@ -233,6 +284,10 @@ p {
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.sale-purchase-cta:hover .sale-purchase-icon,
+		.sale-purchase-cta:focus-visible .sale-purchase-icon,
+		.sale-purchase-cta:hover .sale-purchase-item,
+		.sale-purchase-cta:focus-visible .sale-purchase-item,
 		.lab-assurance:hover .lab-flask-icon,
 		.lab-assurance:focus-within .lab-flask-icon,
 		.lab-assurance:hover .lab-bubble,

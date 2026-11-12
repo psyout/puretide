@@ -151,7 +151,16 @@ Configuration is environment-driven. Major groups include:
 
 Use deployment secrets or a local uncommitted environment file. Do not put real credentials in source control.
 
-The promotional banner can remain active while the newsletter offer is controlled separately:
+The early Black Friday storefront has two independent switches:
+
+```dotenv
+SITEWIDE_25_SALE_ENABLED=true
+SALE_HERO_ENABLED=true
+```
+
+`SITEWIDE_25_SALE_ENABLED` applies `SITEWIDE25` at 25% to every product and makes it the exclusive discount; quantity tiers and submitted promo codes cannot replace or stack with it. Set it to `false` to restore normal pricing and promo-code behavior. `SALE_HERO_ENABLED` shows the single video-backed sale hero; set it to `false` to restore the standard three-slide hero. Both flags are read from the server environment at runtime and take effect after restarting the application; no rebuild is required.
+
+The slim promotional banner can remain active while the newsletter offer is controlled separately:
 
 ```dotenv
 NEXT_PUBLIC_PROMO_BANNER_ENABLED=true

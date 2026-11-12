@@ -1684,14 +1684,20 @@ export default function CheckoutClient() {
 							{/* Subtotal */}
 							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm flex flex-col gap-3'>
 								<div className='flex justify-between'>
-									<span className='text-deep-tidal-teal-700 text-[15px]'>Subtotal</span>
+									<span className='text-deep-tidal-teal-700 text-[15px]'>{appliedDiscount > 0 ? 'Original subtotal' : 'Subtotal'}</span>
 									<span className='text-deep-tidal-teal-500 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
-									<div className='flex justify-between text-deep-tidal-teal font-bold'>
-										<span className='text-lg'>Discount ({appliedDiscount}%)</span>
-										<span className='text-lg'>-${discountAmount.toFixed(2)}</span>
-									</div>
+									<>
+										<div className='flex justify-between text-deep-tidal-teal font-bold'>
+											<span className='text-lg'>{scheduledPromotion ? 'Sitewide discount' : 'Discount'} ({appliedDiscount}%)</span>
+											<span className='text-lg'>-${discountAmount.toFixed(2)}</span>
+										</div>
+										<div className='flex justify-between text-deep-tidal-teal-700'>
+											<span>Merchandise subtotal</span>
+											<span className='font-semibold'>${subtotalAfterDiscounts.toFixed(2)}</span>
+										</div>
+									</>
 								)}
 								<div className='border-tpt-4 flex justify-between'>
 									<span className='text-deep-tidal-teal-700'>Shipping</span>

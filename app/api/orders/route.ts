@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { readProducts } from '@/lib/productCatalog';
 import { readSheetPromoCodes } from '@/lib/stockSheet';
-import type { PromoCode } from '@/types/product';
-import { getDiscountedPrice } from '@/lib/pricing';
-import { getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
-import { getPromoDiscountAmount, getPromoMinimumSubtotalError, getPromoProductEligibilityError, getPromotionForOrder } from '@/lib/promo';
+import { getEffectiveShippingCost } from '@/lib/constants';
 import { listOrdersFromDb, markAbandonedCartsRecoveredByEmail, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
@@ -19,6 +16,7 @@ import { createOrderTask } from '@/lib/wrike';
 import { decidePaymentPathWithFeatureFlag, getVerifiedFriendsFamilyEmailFromCookie } from '@/lib/friendsFamily';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
 import { prepareMetaOrderTracking } from '@/lib/metaConversions';
+import { calculateCheckoutPricing } from '@/lib/checkoutPricing';
 
 interface OrderPayload {
 	customer: {
@@ -174,49 +172,18 @@ export async function POST(request: Request) {
 		}
 		const trustedCartItems = trustedCart.items;
 
-		// Promo and volume discount cannot stack: if valid promo, use raw prices; else apply volume discount
-		let cartItems: Array<{ id: number | string; name: string; price: number; quantity: number; image: string; description: string }>;
-		let discountAmount = 0;
-		let appliedPromo: PromoCode | undefined;
 		const destinationZipCode = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.zipCode : orderPayload.customer.zipCode;
 		const destinationProvince = orderPayload.shipToDifferentAddress ? orderPayload.shippingAddress?.province : orderPayload.customer.province;
-		let shippingCost = getEffectiveShippingCost(destinationZipCode, destinationProvince);
-
-		// Checkout pricing must use current promotion data, never a worker-local stale cache.
 		const promoCodes = await readSheetPromoCodes();
-		const promo = getPromotionForOrder(promoCodes, orderPayload.promoCode);
-
-		if (promo) {
-				appliedPromo = promo;
-				cartItems = trustedCartItems.map((item) => ({ ...item, price: item.price }));
-				const subtotalWithPromo = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-				const minimumError = getPromoMinimumSubtotalError({ promo, subtotal: subtotalWithPromo });
-				if (minimumError) {
-					return NextResponse.json({ ok: false, error: minimumError }, { status: 400 });
-				}
-				const eligibilityError = getPromoProductEligibilityError(promo, cartItems);
-				if (eligibilityError) {
-					return NextResponse.json({ ok: false, error: eligibilityError }, { status: 400 });
-				}
-				if (promo.freeShipping) {
-					shippingCost = 0;
-				}
-				discountAmount = getPromoDiscountAmount(promo, cartItems);
-		} else {
-			cartItems = trustedCartItems.map((item) => ({
-				...item,
-				price: getDiscountedPrice(item.price, item.quantity),
-			}));
-		}
-
-		const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
-		const subtotalAfterDiscounts = subtotal - discountAmount;
-		if (subtotalAfterDiscounts > FREE_SHIPPING_THRESHOLD) {
-			shippingCost = 0;
-		}
-
-		const total = Number((subtotal + shippingCost - discountAmount).toFixed(2));
+		const pricing = calculateCheckoutPricing({
+			trustedCartItems,
+			promoCodes,
+			requestedPromoCode: orderPayload.promoCode,
+			paymentMethod: orderPayload.paymentMethod,
+			baseShippingCost: getEffectiveShippingCost(destinationZipCode, destinationProvince),
+		});
+		if (!pricing.ok) return NextResponse.json({ ok: false, error: pricing.error }, { status: 400 });
+		const { cartItems, appliedPromo, subtotal, shippingCost, discountAmount, cardFee, total } = pricing;
 		const normalizedCustomer = {
 			...orderPayload.customer,
 			email: String(orderPayload.customer.email ?? '').trim(),
@@ -229,6 +196,8 @@ export async function POST(request: Request) {
 			subtotal,
 			shippingCost,
 			discountAmount,
+			promoCode: appliedPromo?.code,
+			cardFee,
 			total,
 		};
 
@@ -325,7 +294,7 @@ export async function POST(request: Request) {
 					const fulfillmentOrder = {
 						...(orderRecord as unknown as Record<string, unknown>),
 						paymentMethod: 'etransfer',
-						cardFee: orderPayload.cardFee,
+						cardFee,
 					} as unknown as FulfillmentOrder;
 					const pendingEmailResult = emailEnabled
 						? await sendPendingManualEtransferNotifications(fulfillmentOrder)
@@ -344,7 +313,7 @@ export async function POST(request: Request) {
 						paymentMethod: 'etransfer',
 						paymentPath,
 						paymentConfirmed: false,
-						cardFee: orderPayload.cardFee,
+						cardFee,
 						subtotal: orderRecord.subtotal,
 						shippingCost: orderRecord.shippingCost,
 						discountAmount: orderRecord.discountAmount,

@@ -3,6 +3,11 @@ import type { PromoCode } from '@/types/product';
 type PromoCartItem = { id: string | number; price: number; quantity: number };
 
 export const AUTOMATIC_SITEWIDE_PROMO_CODE = 'SITEWIDE25';
+export const AUTOMATIC_SITEWIDE_DISCOUNT = 25;
+
+export function isAutomaticSitewideSaleEnabled(): boolean {
+	return String(process.env.SITEWIDE_25_SALE_ENABLED ?? '').trim().toLowerCase() === 'true';
+}
 
 function getVancouverDateKey(date: Date): string {
 	const parts = new Intl.DateTimeFormat('en-CA', {
@@ -52,20 +57,30 @@ export function isPromoActive(promo: PromoCode, now = new Date()): boolean {
 	return true;
 }
 
-export function getAutomaticSitewidePromo(promos: PromoCode[], now = new Date()): PromoCode | null {
-	return (
-		promos.find(
-			(promo) =>
-				isPromoActive(promo, now) &&
-				promo.code.trim().toUpperCase() === AUTOMATIC_SITEWIDE_PROMO_CODE &&
-				promo.discount > 0 &&
-				(promo.productIds?.length ?? 0) === 0,
-		) ?? null
+export function getAutomaticSitewidePromo(promos: PromoCode[], now = new Date(), enabled = isAutomaticSitewideSaleEnabled()): PromoCode | null {
+	if (!enabled) return null;
+
+	const configuredPromo = promos.find(
+		(promo) =>
+			isPromoActive(promo, now) &&
+			promo.code.trim().toUpperCase() === AUTOMATIC_SITEWIDE_PROMO_CODE &&
+			promo.discount === AUTOMATIC_SITEWIDE_DISCOUNT &&
+			(promo.productIds?.length ?? 0) === 0,
 	);
+
+	// The feature flag is the source of truth for this fixed campaign. Reuse the
+	// sheet row when one is active so its metadata remains available, but do not
+	// require an operational sheet edit just to switch the sale on.
+	return configuredPromo ?? {
+		code: AUTOMATIC_SITEWIDE_PROMO_CODE,
+		discount: AUTOMATIC_SITEWIDE_DISCOUNT,
+		active: true,
+		productIds: [],
+	};
 }
 
-export function getPromotionForOrder(promos: PromoCode[], requestedCode?: string | null, now = new Date()): PromoCode | null {
-	const automaticPromo = getAutomaticSitewidePromo(promos, now);
+export function getPromotionForOrder(promos: PromoCode[], requestedCode?: string | null, now = new Date(), sitewideSaleEnabled = isAutomaticSitewideSaleEnabled()): PromoCode | null {
+	const automaticPromo = getAutomaticSitewidePromo(promos, now, sitewideSaleEnabled);
 	if (automaticPromo) return automaticPromo;
 	const normalizedCode = requestedCode?.trim().toUpperCase();
 	if (!normalizedCode) return null;
