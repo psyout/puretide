@@ -11,8 +11,9 @@ const standardSlides = [
 		backgroundImage: '/hero/hero-2-poster.jpg',
 		video: ENABLE_HERO_VIDEO
 			? {
-					src: '/hero/hero-2.mp4',
-					poster: '/hero/hero-2-poster.jpg',
+					src: '/hero/hero-2.mp4?v=20261112',
+					mobileSrc: '/hero/hero-2-mobile.mp4?v=20261112',
+					poster: '/hero/hero-2-poster.jpg?v=20261112',
 				}
 			: undefined,
 		description: (
@@ -42,8 +43,9 @@ const saleSlides = [
 		backgroundImage: '/hero/hero-2-poster.jpg',
 		video: ENABLE_HERO_VIDEO
 			? {
-					src: '/hero/hero-2.mp4',
-					poster: '/hero/hero-2-poster.jpg',
+					src: '/hero/hero-2.mp4?v=20261112',
+					mobileSrc: '/hero/hero-2-mobile.mp4?v=20261112',
+					poster: '/hero/hero-2-poster.jpg?v=20261112',
 				}
 			: undefined,
 		variant: 'sale' as const,

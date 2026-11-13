@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ShoppingBag } from 'lucide-react';
+import { LoaderCircle, ShoppingBag } from 'lucide-react';
 import LogoHorizontal from './LogoHorizotal';
 
 type HeroSlide = {
 	backgroundImage?: string;
 	video?: {
 		src: string;
+		mobileSrc?: string;
 		poster: string;
 	};
 	variant?: 'default' | 'sale';
@@ -26,6 +27,8 @@ type HeroClientProps = {
 export default function HeroClient({ slides }: HeroClientProps) {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [isMobile, setIsMobile] = useState(false);
+	const [readyVideos, setReadyVideos] = useState<Set<string>>(() => new Set());
+	const [showVideoLoader, setShowVideoLoader] = useState(false);
 
 	useEffect(() => {
 		if (slides.length <= 1) return;
@@ -59,6 +62,30 @@ export default function HeroClient({ slides }: HeroClientProps) {
 	const currentSlide = slides[currentIndex];
 	const isSaleSlide = currentSlide.variant === 'sale';
 	const hasMultipleSlides = slides.length > 1;
+	const currentVideoSrc = currentSlide.video?.src;
+	const currentVideoReady = !currentVideoSrc || readyVideos.has(currentVideoSrc);
+
+	useEffect(() => {
+		setShowVideoLoader(false);
+		if (!currentVideoSrc || currentVideoReady) return;
+
+		const showTimeout = window.setTimeout(() => setShowVideoLoader(true), 500);
+		const hideTimeout = window.setTimeout(() => setShowVideoLoader(false), 12000);
+		return () => {
+			window.clearTimeout(showTimeout);
+			window.clearTimeout(hideTimeout);
+		};
+	}, [currentVideoReady, currentVideoSrc]);
+
+	const markVideoReady = (src: string) => {
+		setReadyVideos((current) => {
+			if (current.has(src)) return current;
+			const next = new Set(current);
+			next.add(src);
+			return next;
+		});
+		setShowVideoLoader(false);
+	};
 
 	return (
 		<section className='relative h-[100svh] w-full overflow-hidden'>
@@ -71,16 +98,35 @@ export default function HeroClient({ slides }: HeroClientProps) {
 						{index === 1 ? <div className='absolute inset-0 bg-black/15 z-[1]' /> : null}
 						{slide.video ? (
 							<>
-								{/* Video slide */}
+								<Image
+									src={slide.video.poster}
+									alt=''
+									fill
+									sizes='100vw'
+									priority={index === 0}
+									className='object-cover'
+								/>
 								<video
-									src={slide.video.src}
-									poster={slide.video.poster}
 									autoPlay
 									muted
 									loop
 									playsInline
-									className='absolute inset-0 w-full h-full object-cover'
-								/>
+									preload='auto'
+									onCanPlay={() => markVideoReady(slide.video!.src)}
+									onError={() => setShowVideoLoader(false)}
+									className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${readyVideos.has(slide.video.src) ? 'opacity-100' : 'opacity-0'}`}>
+									{slide.video.mobileSrc ? (
+										<source
+											media='(max-width: 639px)'
+											src={slide.video.mobileSrc}
+											type='video/mp4'
+										/>
+									) : null}
+									<source
+										src={slide.video.src}
+										type='video/mp4'
+									/>
+								</video>
 							</>
 						) : slide.backgroundImage ? (
 							<>
@@ -114,6 +160,17 @@ export default function HeroClient({ slides }: HeroClientProps) {
 							: 'absolute inset-0 z-[2] bg-gradient-to-b from-black/20 via-black/10 to-black/20 sm:bg-black/5'
 					}
 				/>
+				{showVideoLoader && currentVideoSrc ? (
+					<div
+						className='absolute bottom-6 right-6 z-[4] flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-deep-tidal-teal/65 text-white shadow-lg backdrop-blur-md'
+						role='status'
+						aria-label='Loading hero video'>
+						<LoaderCircle
+							className='h-5 w-5 animate-spin'
+							aria-hidden='true'
+						/>
+					</div>
+				) : null}
 			</div>
 
 			{/* Text overlay */}

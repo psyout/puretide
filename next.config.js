@@ -50,6 +50,15 @@ const nextConfig = {
 		const isDev = process.env.NODE_ENV !== 'production';
 		return [
 			{
+				source: '/hero/:path*',
+				headers: [
+					{
+						key: 'Cache-Control',
+						value: 'public, max-age=31536000, immutable',
+					},
+				],
+			},
+			{
 				source: '/:path*',
 				headers: [
 					// Keep: block all search engines from indexing
