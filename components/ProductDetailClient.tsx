@@ -20,13 +20,13 @@ interface ProductDetailClientProps {
 	product: Product;
 	description: string;
 	details?: string;
-	hasCoaFile: boolean;
 	matchingCoaFile?: string;
+	matchingVariantCoaFiles?: Record<string, string | null>;
 	stockUnavailable?: boolean;
 	relatedProducts?: Product[];
 }
 
-export default function ProductDetailClient({ product, description, details, hasCoaFile, matchingCoaFile, stockUnavailable = false, relatedProducts = [] }: ProductDetailClientProps) {
+export default function ProductDetailClient({ product, description, details, matchingCoaFile, matchingVariantCoaFiles = {}, stockUnavailable = false, relatedProducts = [] }: ProductDetailClientProps) {
 	const { automaticPromotion } = useCart();
 	const variants = useMemo(() => product.variants || [], [product.variants]);
 	const hasVariants = variants.length > 1;
@@ -42,6 +42,7 @@ export default function ProductDetailClient({ product, description, details, has
 
 	// If no variants, use the base product
 	const currentVariant = selectedVariant;
+	const currentCoaFile = currentVariant ? matchingVariantCoaFiles[currentVariant.key] : matchingCoaFile;
 	const displayPrice = currentVariant?.price ?? product.price;
 	const saleDiscount = automaticPromotion?.discount ?? 0;
 	const salePrice = getSalePrice(displayPrice, saleDiscount);
@@ -258,7 +259,7 @@ export default function ProductDetailClient({ product, description, details, has
 					</div>
 
 					{/* COA */}
-					{hasCoaFile && (
+					{currentCoaFile && (
 						<div className='lab-assurance mb-5 flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-deep-tidal-teal-700'>
 							<span className='inline-flex items-center gap-2 font-semibold'>
 								<span
@@ -276,7 +277,7 @@ export default function ProductDetailClient({ product, description, details, has
 								className='hidden h-4 w-px bg-deep-tidal-teal/20 min-[350px]:block'
 							/>
 							<Link
-								href={`/coa/${matchingCoaFile}`}
+								href={`/coa/${currentCoaFile}`}
 								target='_blank'
 								rel='noopener noreferrer'
 								aria-label='View lab report (opens in a new tab)'

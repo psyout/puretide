@@ -37,7 +37,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
 	const coaDir = path.join(process.cwd(), 'public', 'coa');
 	const coaFiles = fs.readdirSync(coaDir).filter((file) => file.endsWith('.pdf'));
 	const matchingCoaFile = resolveProductCoaFile(product.coaFile, coaFiles);
-	const hasCoaFile = !!matchingCoaFile;
+	const matchingVariantCoaFiles = Object.fromEntries(
+		(product.variants ?? []).map((variant) => [variant.key, resolveProductCoaFile(variant.coaFile, coaFiles)]),
+	);
 	const relatedProducts = items
 		.filter((item) => item.id !== product.id && item.slug !== product.slug && item.category === product.category && ['published', 'stock-out'].includes(item.status ?? 'published'))
 		.slice(0, 4);
@@ -65,8 +67,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 						product={product}
 						description={product.description}
 						details={product.details}
-						hasCoaFile={hasCoaFile}
 						matchingCoaFile={matchingCoaFile || ''}
+						matchingVariantCoaFiles={matchingVariantCoaFiles}
 						stockUnavailable={stockUnavailable}
 						relatedProducts={relatedProducts}
 					/>

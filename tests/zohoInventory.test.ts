@@ -82,7 +82,7 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			stock_on_hand: 9,
 			attribute_option_name1: '20mg',
 			image_id: 'image-20',
-			custom_fields: customFields({ 'Website Slug': 'retatrutide', Strength: '20mg', 'Website Image': '', 'Website Subtitle': 'BPC157 10 mg TB 500 10 mg' }),
+			custom_fields: customFields({ 'Website Slug': 'retatrutide', Strength: '20mg', 'Website Image': '', 'Website Subtitle': 'BPC157 10 mg TB 500 10 mg', 'COA File': 'https://puretide.ca/coa/reta-20.pdf' }),
 		},
 		{
 			item_id: 'reta-10-id',
@@ -95,7 +95,7 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			stock_on_hand: 4,
 			attribute_option_name1: '10mg',
 			image_id: 'image-10',
-			custom_fields: customFields({ 'Website Slug': '', Strength: '10mg', 'Website Image': '', 'Website Subtitle': 'BPC157 5 mg TB 500 5 mg' }),
+			custom_fields: customFields({ 'Website Slug': '', Strength: '10mg', 'Website Image': '', 'Website Subtitle': 'BPC157 5 mg TB 500 5 mg', 'COA File': 'https://puretide.ca/coa/reta-10.pdf' }),
 		},
 	]);
 
@@ -103,6 +103,7 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 	assert.equal(products[0].slug, 'retatrutide');
 	assert.equal(products[0].name, 'Retatrutide');
 	assert.equal(products[0].stock, 13);
+	assert.equal(products[0].coaFile, 'reta-20.pdf');
 	assert.deepEqual(products[0].variants, [
 		{
 			key: 'retatrutide-10mg',
@@ -113,6 +114,7 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			stock: 4,
 			image: '/api/products/image/reta-10-id',
 			subtitle: 'BPC157 5 mg TB 500 5 mg',
+			coaFile: 'reta-10.pdf',
 			cost: 8,
 			status: 'published',
 		},
@@ -125,6 +127,7 @@ test('groups Zoho variants under the single item carrying the website slug', () 
 			stock: 9,
 			image: '/api/products/image/reta-20-id',
 			subtitle: 'BPC157 10 mg TB 500 10 mg',
+			coaFile: 'reta-20.pdf',
 			cost: 12.23,
 			status: 'published',
 		},

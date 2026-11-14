@@ -7,6 +7,7 @@ export interface ProductVariant {
 	stock: number;
 	image?: string;
 	subtitle?: string;
+	coaFile?: string;
 	cost?: number;
 	status?: 'published' | 'draft' | 'inactive' | 'stock-out';
 }

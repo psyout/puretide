@@ -346,6 +346,7 @@ export function mapZohoItemsToProducts(items: ZohoInventoryItem[]): Product[] {
 				const label = asTrimmedString(variant.attribute_option_name1) || getCustomField(variant, 'Strength');
 				const price = asFiniteNumber(variant.rate);
 				const status = normalizeWebsiteStatus(getCustomField(variant, 'Website Status'));
+				const coaFile = normalizeCoaFile(getCustomField(variant, 'COA File'));
 				if (!variantId || !label || price == null) {
 					throw new Error(`Zoho variant ${variantId || asTrimmedString(variant.name) || groupId} is missing its item ID, Strength option, or Selling Price.`);
 				}
@@ -358,6 +359,7 @@ export function mapZohoItemsToProducts(items: ZohoInventoryItem[]): Product[] {
 					stock: getStockOnHand(variant),
 					image: getWebsiteImage(variant) || product.image,
 					subtitle: getCustomField(variant, 'Website Subtitle') || product.subtitle,
+					...(coaFile ? { coaFile } : {}),
 					status,
 					...(asFiniteNumber(variant.purchase_rate) != null ? { cost: asFiniteNumber(variant.purchase_rate) ?? undefined } : {}),
 				};
