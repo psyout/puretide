@@ -45,8 +45,7 @@ export default function AboutAlternative() {
 			<div className='mx-auto max-w-6xl px-6 py-20 sm:py-24 lg:py-28'>
 				<div className='grid items-end gap-10 border-b border-deep-tidal-teal-800/15 pb-14 lg:grid-cols-[1.35fr_0.65fr] lg:gap-20 lg:pb-20'>
 					<div>
-						<p className='mb-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
-							<span className='h-px w-3 bg-deep-tidal-teal-500' />
+						<p className='mb-6 text-sm font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>
 							About Pure Tide
 						</p>
 						<h2
@@ -106,9 +105,8 @@ export default function AboutAlternative() {
 				</div>
 
 				<div className='mt-20 border-t border-deep-tidal-teal/10 pt-14 lg:mt-24 lg:pt-16'>
-					<div className='mb-10 flex items-center gap-3'>
-						<span className='h-px w-3 shrink-0 bg-deep-tidal-teal-500' />
-						<p className='text-xs font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>Our philosophy</p>
+					<div className='mb-10'>
+						<p className='text-sm font-bold uppercase tracking-[0.24em] text-deep-tidal-teal-600'>Our philosophy</p>
 					</div>
 
 					<div className='grid gap-6 lg:grid-cols-3'>

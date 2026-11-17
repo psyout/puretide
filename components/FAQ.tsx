@@ -73,8 +73,7 @@ export default function FAQ() {
 			id='faqs'>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
-					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Frequently Asked</span>
-					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+					<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Frequently Asked</span>
 				</div>
 				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Common questions</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[660px] mb-10 leading-[1.75]'>Everything you might be wondering about peptides, our products, and how to get started.</p>

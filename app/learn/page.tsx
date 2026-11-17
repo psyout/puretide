@@ -115,8 +115,7 @@ function WhatArePeptides() {
 				</div>
 				<div>
 					<div className='flex items-center gap-[14px] mb-4'>
-						<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>The Basics</span>
-						<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+						<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>The Basics</span>
 					</div>
 					<h3 className='text-[26px] font-bold text-[#1C4855] mb-4 tracking-[-0.02em]'>What are peptides?</h3>
 					<p className='text-[15px] text-[#3a6070] mb-[18px] leading-[1.8]'>
@@ -152,8 +151,7 @@ function HowPeptidesWork() {
 		<section className='px-10 py-[88px] bg-white'>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
-					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>The Science</span>
-					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+					<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>The Science</span>
 				</div>
 				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>How do peptides work?</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-12 leading-[1.75]'>
@@ -232,8 +230,7 @@ function Lyophilization() {
 			}}>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
-					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>How It Works</span>
-					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+					<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>How It Works</span>
 				</div>
 				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Lyophilization: From Powder to Liquid</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-16 leading-[1.75]'>
@@ -325,8 +322,7 @@ function RetaVsOzempic() {
 		<section className='px-10 py-[88px] bg-[#efefef]'>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
-					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Metabolic Research</span>
-					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+					<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Metabolic Research</span>
 				</div>
 				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Retatrutide vs. Ozempic vs. Mounjaro</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-16 leading-[1.75]'>
@@ -456,8 +452,7 @@ function ProductsGrid() {
 		<section className='px-10 py-[88px] bg-[#f5f7f4]'>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
-					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Our Catalogue</span>
-					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+					<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Our Catalogue</span>
 				</div>
 				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Most researched compounds</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-14 leading-[1.75]'>
@@ -586,8 +581,7 @@ function Stacks() {
 			}}>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
-					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Curated Stacks</span>
-					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+					<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>Curated Stacks</span>
 				</div>
 				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Why choose stacks or blends</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-14 leading-[1.75]'>
@@ -625,8 +619,7 @@ function FDASection() {
 		<section className='px-10 py-[88px] bg-white'>
 			<div className='max-w-[980px] mx-auto'>
 				<div className='flex items-center gap-[14px] mb-4'>
-					<span className='text-[11px] font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>The Regulatory Picture</span>
-					<span className='flex-1 h-px bg-[#dde8ed] max-w-[48px]' />
+					<span className='text-sm font-bold tracking-[0.26em] uppercase text-[#6EB4CC]'>The Regulatory Picture</span>
 				</div>
 				<h2 className='text-[clamp(32px,5vw,52px)] font-bold text-[#1C4855] leading-[1.1] mb-4 tracking-[-0.02em]'>Why are most peptides not FDA approved?</h2>
 				<p className='text-[16px] text-[#3a6070] max-w-[620px] mb-12 leading-[1.75]'>
