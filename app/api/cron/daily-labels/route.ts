@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { buildSafeApiError } from '@/lib/apiError';
 import { isExplicitDevBypassEnabled } from '@/lib/authEnv';
 import { getWrikeConfig } from '@/lib/env';
-import { generateAndAttachDailyLabels } from '@/lib/wrikeDailyLabels';
+import { generateAndAttachDailyLabels, getPreviousVancouverDate } from '@/lib/wrikeDailyLabels';
 import { createLabelGenerationRun, updateLabelGenerationRun, getLabelGenerationRun, type LabelGenerationRun } from '@/lib/ordersDb';
 
 export const dynamic = 'force-dynamic';
@@ -33,10 +33,6 @@ function parseIsoDateOnly(s: string | null): Date | null {
 	return d;
 }
 
-function formatLocalDateOnly(date: Date): string {
-	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 export async function POST(request: Request) {
 	if (!requireCronSecret(request)) {
 		return NextResponse.json({ ok: false, error: 'Unauthorized.' }, { status: 401 });
@@ -60,21 +56,13 @@ export async function POST(request: Request) {
 
 		// The morning batch is named for the date on which its 6 AM Vancouver
 		// window starts. At 6 AM today, process yesterday 6 AM through today 6 AM.
-		let base: Date;
-		if (requested) {
-			base = requested;
-		} else {
-			const todayStart = new Date();
-			todayStart.setHours(0, 0, 0, 0);
-			const y = new Date(todayStart);
-			y.setDate(y.getDate() - 1);
-			base = y;
+		const isoDate = dateParam ? dateParam : getPreviousVancouverDate(new Date());
+		const base = requested ?? parseIsoDateOnly(isoDate);
+		if (!base || (dateParam && !requested)) {
+			return NextResponse.json({ ok: false, error: 'Invalid date. Expected YYYY-MM-DD.' }, { status: 400 });
 		}
 
-		// Keep the lock/run key on the same local calendar date used by the label
-		// generator. toISOString() can move midnight to the previous UTC date.
-		const isoDate = formatLocalDateOnly(base);
-
+		// Keep the lock/run key on the Vancouver business date used by the generator.
 		console.log('[cron:daily-labels] start', {
 			requestedDate: requested ? requested.toISOString().slice(0, 10) : null,
 			resolvedDate: isoDate,
@@ -82,6 +70,9 @@ export async function POST(request: Request) {
 
 		// Check for existing run (distributed lock via database)
 		const existingRun = await getLabelGenerationRun('daily', isoDate);
+		if (existingRun?.status === 'completed' && existingRun.wrikeTaskId && existingRun.wrikeAttachmentId) {
+			return NextResponse.json({ ok: true, date: isoDate, alreadyCompleted: true, runId: existingRun.id });
+		}
 		if (existingRun && existingRun.status === 'running') {
 			const ageMs = Date.now() - new Date(existingRun.startedAt).getTime();
 			if (Number.isFinite(ageMs) && ageMs < 15 * 60 * 1000) {
@@ -129,9 +120,8 @@ export async function POST(request: Request) {
 
 		console.log('[cron:daily-labels] done', { ...result, runId: run.id, completedAt });
 
-		// An order that cannot be parsed is an operational failure, not an empty
-		// sales day. Return a failing status so cron monitoring surfaces it.
-		const status = !result.ok && result.reason === 'no-labels' && (result.ordersConsidered ?? 0) > 0 ? 422 : 200;
+		// Every unsuccessful result must fail HTTP so the scheduler can retry it.
+		const status = result.ok ? 200 : 422;
 		return NextResponse.json({ ...result, runId: run.id }, { status });
 	} catch (error) {
 		const safe = buildSafeApiError({ defaultMessage: 'Failed to generate daily labels.', error, logLabel: 'cron:daily-labels:post' });

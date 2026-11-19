@@ -279,6 +279,11 @@ Labels can be generated from the dashboard or through the protected cron routes:
 
 Send `CRON_SECRET` through the `x-cron-secret` header or a bearer authorization header.
 
+Production uses `ops/puretide.cron` to retry the previous Vancouver business
+day hourly from 6 AM onward. The route skips dates that already completed,
+and returns an error status when generation fails so cron records the failure.
+For a manual backfill, pass `?date=YYYY-MM-DD` to `daily-labels`.
+
 Example:
 
 ```cron

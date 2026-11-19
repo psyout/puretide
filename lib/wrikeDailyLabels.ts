@@ -31,6 +31,11 @@ function formatDateInVancouver(date: Date): string {
 	return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
+export function getPreviousVancouverDate(now: Date): string {
+	const [year, month, day] = formatDateInVancouver(now).split('-').map(Number);
+	return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+}
+
 export function getWrikeTaskBusinessDate(task: Pick<WrikeTask, 'createdDate' | 'description'>): string | null {
 	// createdDate is an unambiguous UTC instant. Order descriptions are rendered
 	// in the VPS timezone and can cross a calendar boundary relative to
