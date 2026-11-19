@@ -262,7 +262,7 @@ The checkout checkbox is optional and unchecked by default. It appears only when
 
 ## Shipping Labels
 
-The application can generate Avery 5162 `.docx` sheets from order data and attach them to Wrike.
+The application generates Avery 5160/8160 `.docx` sheets from order data and attaches them to Wrike.
 
 ```dotenv
 WRIKE_API_TOKEN=replace-with-a-secret
@@ -287,7 +287,7 @@ For a manual backfill, pass `?date=YYYY-MM-DD` to `daily-labels`.
 Example:
 
 ```cron
-5 6 * * * curl -fsS -X POST "https://YOUR_DOMAIN/api/cron/daily-labels" -H "x-cron-secret: $CRON_SECRET" >/dev/null
+0 * * * * root /var/www/puretide/ops/run-cron.sh daily-labels >> /var/log/wrike-labels-cron.log 2>&1
 ```
 
 ## Deployment
