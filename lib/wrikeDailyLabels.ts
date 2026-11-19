@@ -21,6 +21,11 @@ type WrikeAttachment = {
 };
 
 function formatDateInVancouver(date: Date): string {
+	// BC remains on UTC-7 after the final clock change on March 8, 2026.
+	// Some hosts still have timezone data that incorrectly switches back to UTC-8.
+	if (date.getTime() >= Date.UTC(2026, 2, 8, 10)) {
+		return new Date(date.getTime() - 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+	}
 	const parts = new Intl.DateTimeFormat('en-CA', {
 		timeZone: 'America/Vancouver',
 		year: 'numeric',
@@ -413,6 +418,9 @@ function vancouverDateTimeToInstant(date: Date, hour: number): Date {
 	const month = date.getMonth();
 	const day = date.getDate();
 	const desiredAsUtc = Date.UTC(year, month, day, hour, 0, 0, 0);
+	if (desiredAsUtc >= Date.UTC(2026, 2, 8, 6)) {
+		return new Date(desiredAsUtc + 7 * 60 * 60 * 1000);
+	}
 	let candidate = new Date(desiredAsUtc);
 	for (let attempt = 0; attempt < 3; attempt += 1) {
 		const parts = new Intl.DateTimeFormat('en-CA', {
@@ -680,6 +688,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 	}
 
 	const outFileName = `daily-labels-${isoDate}-avery-5160.docx`;
+	const rerunFileName = `daily-labels-${isoDate}-avery-5160-rerun.docx`;
 	const forceUpload = ['1', 'true', 'yes'].includes(
 		String(process.env.DAILY_LABELS_FORCE_UPLOAD ?? '')
 			.trim()
@@ -705,7 +714,9 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 		}
 
 		const attachments = await listAttachments(taskId, params.apiToken);
-		const existing = attachments.find((a) => String(a?.name ?? '') === outFileName);
+		// A forced rerun supersedes the initial sheet. This also makes later
+		// scheduled retries return the corrected attachment rather than the old one.
+		const existing = attachments.find((a) => String(a?.name ?? '') === rerunFileName) ?? attachments.find((a) => String(a?.name ?? '') === outFileName);
 		if (existing?.id && !forceUpload) {
 			console.log('[wrikeDailyLabels] attachment already exists; skipping upload', { isoDate, taskId, attachmentId: existing.id });
 			return {
@@ -720,8 +731,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 
 		let uploadPath = outPath;
 		if (existing?.id && forceUpload) {
-			const rerunName = `daily-labels-${isoDate}-avery-5160-rerun.docx`;
-			uploadPath = path.resolve(process.cwd(), rerunName);
+			uploadPath = path.resolve(process.cwd(), rerunFileName);
 			try {
 				fs.copyFileSync(outPath, uploadPath);
 			} catch {
@@ -747,7 +757,7 @@ export async function generateAndAttachDailyLabels(params: { apiToken: string; o
 		try {
 			fs.unlinkSync(outPath);
 			if (forceUpload) {
-				const rerunPath = path.resolve(process.cwd(), `daily-labels-${isoDate}-avery-5160-rerun.docx`);
+				const rerunPath = path.resolve(process.cwd(), rerunFileName);
 				try {
 					fs.unlinkSync(rerunPath);
 				} catch {

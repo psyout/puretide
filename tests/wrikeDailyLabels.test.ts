@@ -13,16 +13,16 @@ test('morning label window runs from 6 AM to 6 AM in Vancouver', () => {
 	assert.equal(end.toISOString(), '2026-08-11T13:00:00.000Z');
 });
 
-test('morning label window follows Vancouver standard time in November', () => {
+test('morning label window follows permanent Vancouver UTC-7 time in November', () => {
 	const { start, end } = getDailyLabelWindow(new Date(2026, 10, 1));
-	assert.equal(start.toISOString(), '2026-11-01T14:00:00.000Z');
-	assert.equal(end.toISOString(), '2026-11-02T14:00:00.000Z');
+	assert.equal(start.toISOString(), '2026-11-01T13:00:00.000Z');
+	assert.equal(end.toISOString(), '2026-11-02T13:00:00.000Z');
 });
 
 test('November 18 batch includes orders through November 19 at 6 AM Vancouver', () => {
 	const { start, end } = getDailyLabelWindow(new Date(2026, 10, 18));
-	assert.equal(start.toISOString(), '2026-11-18T14:00:00.000Z');
-	assert.equal(end.toISOString(), '2026-11-19T14:00:00.000Z');
+	assert.equal(start.toISOString(), '2026-11-18T13:00:00.000Z');
+	assert.equal(end.toISOString(), '2026-11-19T13:00:00.000Z');
 });
 
 test('assigns late-evening UTC orders to their Vancouver business date', () => {
