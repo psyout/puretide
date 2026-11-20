@@ -21,8 +21,8 @@ export default function ContactAlternative() {
 			aria-labelledby='contact-alternative-title'
 			className='relative isolate scroll-mt-32 overflow-hidden bg-[#edf4f6] py-20 sm:py-24 lg:py-32'>
 			<div className='relative mx-auto max-w-6xl px-6'>
-				<div className='grid  border-deep-tidal-teal-800/15 lg:grid-cols-[0.78fr_1.22fr]'>
-					<div className='py-10 text-deep-tidal-teal-800 sm:py-12 lg:border-r lg:border-deep-tidal-teal-800/15 lg:py-14 lg:pr-12'>
+				<div className='contact-layout grid border-deep-tidal-teal-800/15 lg:grid-cols-[0.78fr_1.22fr]'>
+					<div className='contact-info-panel py-10 text-deep-tidal-teal-800 sm:py-12 lg:border-r lg:border-deep-tidal-teal-800/15 lg:py-14 lg:pr-12'>
 						<div className='flex h-full min-h-[30rem] flex-col'>
 							<div>
 								<div>

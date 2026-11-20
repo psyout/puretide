@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { type SurveyData } from './HowDidYouHearSurvey';
 
 interface OrderConfirmationSurveyProps {
 	orderNumber: string;
@@ -18,8 +17,10 @@ const surveyOptions = [
 	{ value: 'other' as const, label: 'Other' },
 ];
 
+type SurveyChoice = (typeof surveyOptions)[number]['value'];
+
 export default function OrderConfirmationSurvey({ orderNumber, customerEmail, confirmationToken }: OrderConfirmationSurveyProps) {
-	const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+	const [selectedChoice, setSelectedChoice] = useState<SurveyChoice | null>(null);
 	const [otherText, setOtherText] = useState('');
 	const [isSubmitted, setIsSubmitted] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,8 +35,8 @@ export default function OrderConfirmationSurvey({ orderNumber, customerEmail, co
 		setError(null);
 
 		try {
-			const surveyData: SurveyData = {
-				choice: selectedChoice as any,
+			const surveyData = {
+				choice: selectedChoice,
 				...(selectedChoice === 'other' && { otherText: otherText.trim() }),
 			};
 

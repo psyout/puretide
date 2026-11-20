@@ -26,7 +26,15 @@ interface ProductDetailClientProps {
 	relatedProducts?: Product[];
 }
 
-export default function ProductDetailClient({ product, description, details, matchingCoaFile, matchingVariantCoaFiles = {}, stockUnavailable = false, relatedProducts = [] }: ProductDetailClientProps) {
+export default function ProductDetailClient({
+	product,
+	description,
+	details,
+	matchingCoaFile,
+	matchingVariantCoaFiles = {},
+	stockUnavailable = false,
+	relatedProducts = [],
+}: ProductDetailClientProps) {
 	const { automaticPromotion } = useCart();
 	const variants = useMemo(() => product.variants || [], [product.variants]);
 	const hasVariants = variants.length > 1;
@@ -299,24 +307,24 @@ export default function ProductDetailClient({ product, description, details, mat
 				className='order-2 col-span-full mt-10 grid grid-cols-1 border-t border-deep-tidal-teal/15 sm:grid-cols-3 sm:divide-x sm:divide-deep-tidal-teal/15'>
 				<div className='flex min-w-0 flex-col items-center justify-center gap-2 border-b border-deep-tidal-teal/15 px-2 py-10 text-center sm:border-b-0 sm:px-4'>
 					<Truck
-						className='h-12 w-12 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600'
+						className='h-14 w-14 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600 sm:h-12 sm:w-12'
 						aria-hidden='true'
 					/>
-					<span className='text-[0.9rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Fast shipping</span>
+					<span className='sm:text-[0.9rem] text-[1rem] font-medium leading-tight text-deep-tidal-teal-800 sm:text-sm'>Fast shipping</span>
 				</div>
 				<div className='flex min-w-0 flex-col items-center justify-center gap-2 border-b border-deep-tidal-teal/15 px-2 py-10 text-center sm:border-b-0 sm:px-4 sm:py-6'>
 					<ShieldCheck
-						className='h-12 w-12 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600'
+						className='h-14 w-14 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600 sm:h-12 sm:w-12'
 						aria-hidden='true'
 					/>
-					<span className='text-[0.9rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Quality assured</span>
+					<span className='sm:text-[0.9rem] text-[1rem] font-medium leading-tight text-deep-tidal-teal-800 sm:text-sm'>Quality assured</span>
 				</div>
 				<div className='flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-10 text-center sm:px-4 sm:py-6'>
 					<CreditCard
-						className='h-12 w-12 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600'
+						className='h-14 w-14 shrink-0 rounded-full bg-eucalyptus-100 p-2.5 text-eucalyptus-600 sm:h-12 sm:w-12'
 						aria-hidden='true'
 					/>
-					<span className='text-[0.9rem] font-semibold leading-tight text-deep-tidal-teal-800 sm:text-sm'>Secure checkout</span>
+					<span className='sm:text-[0.9rem] text-[1rem] font-medium leading-tight text-deep-tidal-teal-800 sm:text-sm'>Secure checkout</span>
 				</div>
 			</section>
 
@@ -370,7 +378,7 @@ export default function ProductDetailClient({ product, description, details, mat
 					aria-labelledby='related-products-heading'>
 					<h2
 						id='related-products-heading'
-						className='my-4 text-2xl font-semibold text-deep-tidal-teal-900'>
+						className='my-4 text-xl font-medium text-deep-tidal-teal-900'>
 						Related products
 					</h2>
 					<div className='grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4'>

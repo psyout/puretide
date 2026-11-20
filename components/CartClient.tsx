@@ -185,10 +185,10 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
 				<StoreBreadcrumb items={[{ label: 'Shop', href: '/#products' }, { label: 'Cart' }]} />
-				<h1 className='text-3xl font-bold mb-6 text-deep-tidal-teal-800'>Your Cart</h1>
+				<h1 className='text-[1.75rem] font-bold mb-6 text-deep-tidal-teal-800'>Your Cart</h1>
 
-				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-					<div className='lg:col-span-2'>
+				<div className='cart-layout grid grid-cols-1 gap-8 lg:grid-cols-3'>
+					<div className='min-w-0 lg:col-span-2'>
 						{/* Free Shipping Progress Bar */}
 						<FreeShippingProgress subtotal={total} />
 
@@ -211,7 +211,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										key={item.id}
 										className={`flex flex-col gap-3 md:gap-4 ${index < cartItems.length - 1 ? 'pb-4 md:pb-6 mb-4 md:mb-6 border-b border-deep-tidal-teal/10' : ''}`}>
 										{/* Mobile: Product Overview (Image + Info side by side) */}
-										<div className='md:hidden flex gap-3 mb-2 items-start'>
+										<div className='cart-item-mobile md:hidden flex gap-3 mb-2 items-start'>
 											{/* Product Image */}
 											<Link
 												href={`/product/${item.slug || item.id}`}
@@ -270,7 +270,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										</div>
 
 										{/* Mobile: Quantity and Remove Row */}
-										<div className='md:hidden flex items-center justify-start gap-3 mb-2'>
+										<div className='cart-item-mobile md:hidden flex items-center justify-start gap-3 mb-2'>
 											<div className='inline-flex items-center border border-deep-tidal-teal/20 rounded-lg overflow-hidden bg-white'>
 												<button
 													onClick={item.quantity === 1 ? () => removeFromCart(item.id) : () => updateQuantity(item.id, item.quantity - 1, availableStock)}
@@ -300,7 +300,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 										{/* Mobile: Invalid quantity warning */}
 										{hasInvalidQuantity && (
-											<div className='md:hidden mt-2 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2'>
+											<div className='cart-item-mobile md:hidden mt-2 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2'>
 												<AlertCircle className='w-3.5 h-3.5 flex-shrink-0' />
 												<span>
 													Only {availableStock} {availableStock === 1 ? 'unit is' : 'units are'} currently available. Please update your quantity.
@@ -309,7 +309,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 										)}
 
 										{/* Desktop: Main Row - Image | Info | Pricing */}
-										<div className='hidden md:grid md:grid-cols-[9rem_minmax(0,1fr)_9rem] gap-6 items-start'>
+										<div className='cart-item-desktop hidden md:grid md:grid-cols-[9rem_minmax(0,1fr)_9rem] gap-6 items-start'>
 											{/* Desktop: Left Section - Product Image */}
 											<Link
 												href={`/product/${item.slug || item.id}`}
@@ -332,20 +332,20 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 											{/* Desktop: Center Section - Product Information */}
 											<div className='flex-1 min-w-0 flex flex-col'>
-												<h3 className='text-xl font-semibold text-deep-tidal-teal-800 mb-2'>{itemDisplayName}</h3>
+												<h3 className='text-lg font-semibold text-deep-tidal-teal-800 mb-2'>{itemDisplayName}</h3>
 												{/* Stock Status */}
 												{isOutOfStock ? (
-													<div className='flex items-center gap-2 text-sm text-red-600 font-medium mb-3'>
+													<div className='flex items-center gap-2 text-[0.8125rem] text-red-600 font-medium mb-3'>
 														<span className='w-2 h-2 rounded-full bg-red-500' />
 														<span>Out of Stock</span>
 													</div>
 												) : isLowStock ? (
-													<div className='flex items-center gap-2 text-sm text-yellow-600 font-medium mb-3'>
+													<div className='flex items-center gap-2 text-[0.8125rem] text-yellow-600 font-medium mb-3'>
 														<span className='w-2 h-2 rounded-full bg-yellow-500' />
 														<span>Low Stock</span>
 													</div>
 												) : (
-													<div className='flex items-center gap-2 text-sm text-green-600 font-medium mb-3'>
+													<div className='flex items-center gap-2 text-[0.8125rem] text-green-600 font-medium mb-3'>
 														<span className='w-2 h-2 rounded-full bg-green-500' />
 														<span>In Stock</span>
 													</div>
@@ -403,7 +403,7 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 
 											{/* Price is its own grid column so discount details never push product information down. */}
 											<div className='flex min-w-0 flex-col items-end justify-start text-right'>
-												<p className={`text-xl font-bold mb-1 ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
+												<p className={`text-lg font-bold mb-1 ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
 													${displayedItemPrice.toFixed(2)}
 												</p>
 												{isDiscounted && (
@@ -422,20 +422,20 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 						</div>
 					</div>
 
-					<div className='lg:col-span-1'>
-						<div className='bento-card sticky top-24 p-5'>
-							<h2 className='text-xl font-semibold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
+					<div className='min-w-0 lg:col-span-1'>
+						<div className='cart-summary-card bento-card sticky top-24 p-5'>
+							<h2 className='text-lg font-semibold mb-4 text-deep-tidal-teal-800'>Order Summary</h2>
 							<div
 								className='space-y-2 mb-3'
 								aria-live='polite'>
 								{cartItems.map((item) => (
 									<div
 										key={item.id}
-										className='flex justify-between text-md'>
-										<span className='text-deep-tidal-teal-700 text-[0.9rem]'>
+										className='flex min-w-0 justify-between gap-2 text-[0.9rem]'>
+										<span className='min-w-0 text-deep-tidal-teal-700 text-[0.85rem]'>
 											{getProductDisplayName(item.name, item.mg, item.id !== item.slug)} × {item.quantity}
 										</span>
-										<span className={`font-semibold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-800'}`}>
+										<span className={`shrink-0 font-semibold ${promoApplied && appliedDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-800'}`}>
 											${(getDisplayedItemPrice(item) * item.quantity).toFixed(2)}
 										</span>
 									</div>
@@ -443,23 +443,23 @@ export default function CartClient({ products, stockUnavailable }: CartClientPro
 							</div>
 							<div className='border-t border-deep-tidal-teal/10 pt-3 pb-3 mb-1 space-y-2'>
 								{totalSavings > 0 && !promoApplied && (
-									<div className='flex justify-between text-sm font-semibold text-emerald-700'>
+									<div className='flex justify-between text-[0.8125rem] font-semibold text-emerald-700'>
 										<span>You save</span>
 										<span>−${totalSavings.toFixed(2)}</span>
 									</div>
 								)}
-								<div className='flex justify-between text-lg font-bold'>
+								<div className='flex justify-between text-base font-bold'>
 									<span className='text-deep-tidal-teal-800 font-semibold'>{appliedDiscount > 0 ? 'Original subtotal' : 'Subtotal'}</span>
 									<span className='text-deep-tidal-teal'>${summarySubtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
-									<div className='flex justify-between text-sm font-semibold text-emerald-700'>
+									<div className='flex justify-between text-[0.8125rem] font-semibold text-emerald-700'>
 										<span>{scheduledPromotion ? 'Sitewide discount' : 'Promo discount'} ({appliedDiscount}%)</span>
 										<span>−${promoDiscountAmount.toFixed(2)}</span>
 									</div>
 								)}
 								{promoApplied && (
-									<div className='flex justify-between border-t border-deep-tidal-teal/10 pt-2 text-lg font-bold'>
+									<div className='flex justify-between border-t border-deep-tidal-teal/10 pt-2 text-base font-bold'>
 										<span className='text-deep-tidal-teal-800'>Merchandise total</span>
 										<span className='text-[#b42318]'>${summaryTotal.toFixed(2)}</span>
 									</div>

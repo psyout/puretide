@@ -11,6 +11,87 @@
 	--ui-border-width: 0px;
 }
 
+@media (orientation: landscape) and (max-height: 700px) {
+	.hero-section {
+		height: auto;
+		min-height: 100svh;
+	}
+
+	.hero-content {
+		position: relative;
+		top: auto !important;
+		bottom: auto;
+		min-height: 100svh;
+		padding-top: calc(var(--site-header-height, 3.75rem) + 5rem);
+		padding-bottom: 5rem;
+	}
+
+	.checkout-page h1 {
+		font-size: 1.75rem;
+	}
+
+	.checkout-layout h2 {
+		font-size: 1.05rem;
+	}
+
+	.checkout-summary-card h2 {
+		font-size: 1.125rem;
+	}
+
+	.checkout-layout label {
+		font-size: 0.85rem;
+	}
+
+	.checkout-order-price {
+		font-size: 0.9375rem;
+	}
+
+	.checkout-subtotal-price,
+	.checkout-discount-amount {
+		font-size: 1rem;
+	}
+
+	.checkout-total-row {
+		font-size: 1.125rem;
+	}
+}
+
+@media (orientation: landscape) and (min-width: 640px) and (max-width: 1023px) {
+	.contact-layout {
+		grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+	}
+
+	.contact-info-panel {
+		@apply border-r border-deep-tidal-teal-800/15 pr-8;
+	}
+
+	.cart-layout {
+		grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+		gap: 1.25rem;
+	}
+
+	.cart-item-mobile {
+		display: flex;
+	}
+
+	.cart-item-desktop {
+		display: none;
+	}
+
+	.cart-summary-card {
+		position: static;
+	}
+
+	.checkout-layout {
+		grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+		gap: 1.25rem;
+	}
+
+	.checkout-summary-card {
+		position: static;
+	}
+}
+
 @keyframes fade-in {
 	from {
 		opacity: 0;

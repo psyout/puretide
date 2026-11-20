@@ -92,8 +92,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 	};
 
 	return (
-		<article
-			className='bento-card bento-card-interactive group relative isolate flex h-auto flex-col overflow-hidden lg:h-full'>
+		<article className='bento-card bento-card-interactive group relative isolate flex h-auto flex-col overflow-hidden lg:h-full'>
 			<Link
 				href={`/product/${product.slug}`}
 				aria-label={`View ${product.name}`}
@@ -147,17 +146,21 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 
 			<div className='flex min-w-0 flex-col px-3 pb-3 pt-3 lg:min-h-[13rem] lg:flex-1 lg:px-4 lg:pb-4 lg:pt-4'>
 				<div className='min-w-0'>
-					<h3 className='line-clamp-2 text-base font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[400px]:text-sm min-[680px]:text-base'>
+					<h3 className='line-clamp-2 text-[1.05rem] font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[400px]:text-[0.95rem] min-[680px]:text-base'>
 						{product.name}
 					</h3>
-					{product.subtitle && <p className='mb-1 mt-1 line-clamp-2 text-[0.7rem] font-medium leading-normal text-deep-tidal-teal-600 sm:text-[0.75rem]'>{product.subtitle}</p>}
+					{product.subtitle && (
+						<p className='mb-1 mt-1 line-clamp-2 text-[0.75rem] font-medium leading-normal text-deep-tidal-teal-600 min-[400px]:text-[0.75rem] min-[680px]:text-[0.8rem]'>
+							{product.subtitle}
+						</p>
+					)}
 				</div>
 
 				<div className='mt-2 border-t border-deep-tidal-teal-800/15 pt-2.5 sm:mt-3 sm:pt-3 lg:mt-auto'>
 					<div className='flex flex-col items-start gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4'>
 						<div className='space-y-0.5'>
 							{saleDiscount > 0 && <p className='text-xs text-deep-tidal-teal-500 line-through sm:text-sm'>${getProductPrice(product)} CAD</p>}
-							<p className={`text-sm xs:text-md font-medium leading-tight sm:text-[1.05rem] ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-700'}`}>
+							<p className={`text-[0.95rem] font-medium leading-tight sm:text-[1.05rem] ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-700'}`}>
 								${getProductPrice(product, saleDiscount)} CAD
 							</p>
 						</div>
@@ -169,7 +172,14 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 							onClick={handleDetailsClick}
 							aria-disabled={isNavigating}
 							className={`site-cta cta-secondary min-h-10 whitespace-nowrap px-2 py-2 text-sm normal-case tracking-normal sm:min-h-12 sm:px-4 ${isNavigating ? 'cursor-wait opacity-70' : ''}`}>
-							{isNavigating ? <Loader2 className='h-4 w-4 animate-spin' aria-hidden='true' /> : <Eye className='hidden h-4 w-4 sm:block' />}
+							{isNavigating ? (
+								<Loader2
+									className='h-4 w-4 animate-spin'
+									aria-hidden='true'
+								/>
+							) : (
+								<Eye className='hidden h-4 w-4 sm:block' />
+							)}
 							<span>More details</span>
 						</Link>
 						<button

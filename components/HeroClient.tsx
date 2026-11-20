@@ -88,7 +88,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 	};
 
 	return (
-		<section className='relative h-[100svh] w-full overflow-hidden'>
+		<section className='hero-section relative h-[100svh] w-full overflow-hidden'>
 			{/* Background image/video slider */}
 			<div className='absolute inset-0 w-full h-full'>
 				{slides.map((slide, index) => (
@@ -176,7 +176,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 			{/* Text overlay */}
 			{isSaleSlide ? (
 				<div
-					className='absolute inset-x-0 bottom-0 z-10 flex items-center'
+					className='hero-content absolute inset-x-0 bottom-0 z-10 flex items-center'
 					style={{ top: 'var(--site-header-height, 3.75rem)' }}>
 					<div className='mx-auto w-full max-w-6xl px-6 py-10 sm:px-8 lg:px-6'>
 						<div className='max-w-[42rem] text-left text-white'>
@@ -213,7 +213,7 @@ export default function HeroClient({ slides }: HeroClientProps) {
 				</div>
 			) : (
 				<div
-					className='absolute inset-x-0 bottom-0 z-10 flex items-center justify-center'
+					className='hero-content absolute inset-x-0 bottom-0 z-10 flex items-center justify-center'
 					style={{ top: 'var(--site-header-height, 3.75rem)' }}>
 					<div className='mx-auto flex max-w-6xl flex-col items-center px-6 text-center text-pretty'>
 						<div className='mb-4 lg:mb-6'>

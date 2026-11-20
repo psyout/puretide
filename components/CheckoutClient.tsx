@@ -779,13 +779,13 @@ export default function CheckoutClient() {
 	}
 
 	return (
-		<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+		<div className='checkout-page min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 			<div className='max-w-6xl mx-auto px-6 pt-32 pb-24'>
 				<StoreBreadcrumb items={[{ label: 'Shop', href: '/#products' }, { label: 'Cart', href: '/cart' }, { label: 'Checkout' }]} />
 				<h1 className='text-3xl font-bold mb-8 text-deep-tidal-teal-800'>Checkout</h1>
 
-				<div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-					<div className='order-1 lg:order-1 lg:col-span-2'>
+				<div className='checkout-layout grid grid-cols-1 gap-8 lg:grid-cols-3'>
+					<div className='order-1 min-w-0 lg:order-1 lg:col-span-2'>
 						{/* Single container with separators */}
 						<div className='bento-card p-5'>
 							{/* Contact Information */}
@@ -1551,9 +1551,9 @@ export default function CheckoutClient() {
 						</div>
 					</div>
 
-					<div className='order-2 lg:order-2 lg:col-span-1'>
+					<div className='order-2 min-w-0 lg:order-2 lg:col-span-1'>
 						<div
-							className={`bento-card sticky top-24 p-5 ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
+							className={`checkout-summary-card bento-card sticky top-24 p-5 ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
 							aria-busy={isProcessing}
 							aria-disabled={isProcessing}>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
@@ -1604,7 +1604,7 @@ export default function CheckoutClient() {
 												{getProductDisplayName(item.name, item.mg, item.id !== item.slug)}
 											</h3>
 											<p
-												className={`text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
+											className={`checkout-order-price text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
 												${(getDisplayPrice(item) * item.quantity).toFixed(2)}
 												{item.quantity > 1 && <span className='text-xs font-normal text-deep-tidal-teal-600 ml-1'>(${getDisplayPrice(item).toFixed(2)} ea)</span>}
 											</p>
@@ -1685,13 +1685,13 @@ export default function CheckoutClient() {
 							<div className='border-t border-deep-tidal-teal/10 pt-4 space-y-2 text-sm flex flex-col gap-3'>
 								<div className='flex justify-between'>
 									<span className='text-deep-tidal-teal-700 text-[15px]'>{appliedDiscount > 0 ? 'Original subtotal' : 'Subtotal'}</span>
-									<span className='text-deep-tidal-teal-500 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
+									<span className='checkout-subtotal-price text-deep-tidal-teal-500 font-semibold text-lg'>${subtotal.toFixed(2)}</span>
 								</div>
 								{appliedDiscount > 0 && (
 									<>
 										<div className='flex justify-between text-deep-tidal-teal font-bold'>
-											<span className='text-lg'>{scheduledPromotion ? 'Sitewide discount' : 'Discount'} ({appliedDiscount}%)</span>
-											<span className='text-lg'>-${discountAmount.toFixed(2)}</span>
+											<span className='checkout-discount-amount text-lg'>{scheduledPromotion ? 'Sitewide discount' : 'Discount'} ({appliedDiscount}%)</span>
+											<span className='checkout-discount-amount text-lg'>-${discountAmount.toFixed(2)}</span>
 										</div>
 										<div className='flex justify-between text-deep-tidal-teal-700'>
 											<span>Merchandise subtotal</span>
@@ -1712,7 +1712,7 @@ export default function CheckoutClient() {
 									</div>
 								)}
 
-								<div className='border-t border-deep-tidal-teal/10 pt-3 flex justify-between text-xl font-semibold'>
+								<div className='checkout-total-row border-t border-deep-tidal-teal/10 pt-3 flex justify-between text-xl font-semibold'>
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>
