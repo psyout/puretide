@@ -20,14 +20,16 @@ case "$JOB" in
 	daily-labels)
 		# BC has stayed on UTC-7 since March 2026. Use that offset explicitly
 		# because some server timezone databases still switch back in November.
-		vancouver_now=$(node -e 'console.log(new Date(Date.now()-7*3600000).toISOString().slice(0,13))')
+		# Cron has a minimal PATH on the VPS, so calculate dates with GNU date
+		# instead of relying on the Node executable used by the PM2 process.
+		vancouver_now=$(date -u -d '7 hours ago' +%Y-%m-%dT%H)
 		vancouver_hour=${vancouver_now:11:2}
 		if (( 10#$vancouver_hour < 6 )); then
 			echo "$(date -Is) $JOB waiting until 06:00 Vancouver"
 			exit 0
 		fi
 		vancouver_today=${vancouver_now:0:10}
-		vancouver_yesterday=$(node -e 'const [y,m,d]=process.argv[1].split("-").map(Number); console.log(new Date(Date.UTC(y,m-1,d-1)).toISOString().slice(0,10))' "$vancouver_today")
+		vancouver_yesterday=$(date -u -d '31 hours ago' +%F)
 		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
 			-X POST "http://127.0.0.1:3000/api/cron/daily-labels?date=$vancouver_yesterday" -H "x-cron-secret: $CRON_SECRET"
 		;;
