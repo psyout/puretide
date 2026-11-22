@@ -57,10 +57,8 @@ export default function WelcomePage() {
 
 					<div className='flex flex-1 items-center py-16 sm:py-20'>
 						<div className='max-w-3xl'>
-							<p className='mb-5 text-sm font-semibold uppercase tracking-[0.3em] text-[#8ed0e5]'>
-								Welcome
-							</p>
-							<h1 className='max-w-3xl text-[clamp(3rem,7vw,6.5rem)] font-bold uppercase leading-[0.9] tracking-[-0.045em] text-white'>Early Black Friday</h1>
+							<p className='mb-5 text-sm font-semibold uppercase tracking-[0.3em] text-[#8ed0e5]'>Welcome</p>
+							<h1 className='max-w-3xl text-[clamp(3rem,7vw,6.5rem)] font-bold uppercase leading-[0.9] tracking-[-0.045em] text-white'>Black Friday</h1>
 							<p className='mt-6 text-[clamp(2rem,4.5vw,4rem)] font-bold uppercase leading-none tracking-[-0.025em] text-[#78c9e7]'>25% off sitewide</p>
 							<p className='mt-7 max-w-xl text-base leading-relaxed text-white/75 sm:text-xl text-pretty'>
 								Our biggest sale of the year, only for a limited time. No code needed.
