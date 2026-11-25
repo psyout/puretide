@@ -63,6 +63,9 @@ export default function CheckoutClient() {
 	const [gatewaylinxConfirmationToken, setGatewaylinxConfirmationToken] = useState<string | null>(null);
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const gatewaylinxChargeInFlightRef = useRef(false);
+	useEffect(() => {
+		if (!ENABLE_CREDIT_CARD && paymentMethod === 'creditcard') setPaymentMethod('etransfer');
+	}, [paymentMethod, setPaymentMethod]);
 
 	// Handle Gatewaylinx iframe postMessage
 	useEffect(() => {
@@ -225,10 +228,10 @@ export default function CheckoutClient() {
 	const destinationProvince = shipToDifferentAddress ? shippingAddress.province : formData.province;
 	const shippingCost = appliedFreeShipping || qualifiesFreeShipping ? 0 : getEffectiveShippingCost(destinationZipCode, destinationProvince);
 	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
-	const cardFee = paymentMethod === 'creditcard' ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
+	const cardFee = useCreditCard ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 	const CREDIT_CARD_LIMIT = 500;
-	const isCreditCardOverLimit = paymentMethod === 'creditcard' && total > CREDIT_CARD_LIMIT;
+	const isCreditCardOverLimit = useCreditCard && total > CREDIT_CARD_LIMIT;
 	const isCreditCardDisabled = total > CREDIT_CARD_LIMIT;
 
 	const isPromoEligibleItem = (item: (typeof cartItems)[0]) => appliedProductIds.length === 0 || appliedProductIds.includes(String(item.id));
@@ -621,7 +624,7 @@ export default function CheckoutClient() {
 			clearSubmissionState();
 			return;
 		}
-		if (paymentMethod === 'creditcard' && total > CREDIT_CARD_LIMIT) {
+		if (useCreditCard && total > CREDIT_CARD_LIMIT) {
 			setCheckoutError('Credit card payments are limited to $500 per transaction. Please select another payment method or split your order.');
 			clearSubmissionState();
 			return;
@@ -1215,14 +1218,14 @@ export default function CheckoutClient() {
 								<div className='space-y-3'>
 									<div
 										className={`overflow-hidden rounded-xl border transition-all ${
-											paymentMethod === 'etransfer' ? 'border-2 border-deep-tidal-teal bg-white' : 'border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
+											!useCreditCard ? 'border-2 border-deep-tidal-teal bg-white' : 'border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
 										}`}>
 										<label className='block cursor-pointer p-4'>
 											<span className='flex items-start gap-3'>
 												<input
 													type='radio'
 													name='payment'
-													checked={paymentMethod === 'etransfer'}
+													checked={!useCreditCard}
 													onChange={() => setPaymentMethod('etransfer')}
 													disabled={isProcessing}
 													className='mt-1 h-4 w-4 accent-deep-tidal-teal'
@@ -1371,6 +1374,7 @@ export default function CheckoutClient() {
 										)}
 									</div>
 								)}
+								{ENABLE_CREDIT_CARD && (
 								<div
 									className={`mt-3 overflow-hidden rounded-xl border transition-all ${
 										isCreditCardDisabled
@@ -1412,6 +1416,10 @@ export default function CheckoutClient() {
 										</div>
 									)}
 								</div>
+								)}
+								{!ENABLE_CREDIT_CARD && (
+									<p className='mt-3 text-sm text-deep-tidal-teal-700'>Credit card payments are temporarily unavailable. Please use e-transfer.</p>
+								)}
 								{isCreditCardOverLimit && (
 									<div className='mt-3 bg-red-50 border border-red-200 rounded-lg p-3'>
 										<p className='text-sm text-red-700 leading-relaxed'>
@@ -1762,24 +1770,6 @@ export default function CheckoutClient() {
 								}}
 								className='site-cta cta-primary min-h-11 sm:px-6'>
 								I Agree
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-			{paymentMethod === 'creditcard' && !ENABLE_CREDIT_CARD && (
-				<div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
-					<div className='bg-mineral-white rounded-xl max-w-md w-full shadow-2xl ui-border p-6'>
-						<h2 className='text-xl font-bold text-deep-tidal-teal-800 mb-2'>Credit Card Notice</h2>
-						<p className='text-sm text-deep-tidal-teal-700 leading-relaxed'>
-							Credit card payments are temporarily unavailable. Please use e-transfer as an alternative payment method at checkout. Secure card processing will be available soon.
-						</p>
-						<div className='mt-5 flex justify-end'>
-							<button
-								type='button'
-								onClick={() => setPaymentMethod('etransfer')}
-								className='site-cta cta-primary cta-compact'>
-								Got it
 							</button>
 						</div>
 					</div>

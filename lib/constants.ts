@@ -9,8 +9,8 @@ export const FREE_SHIPPING_THRESHOLD = 300;
 /** Set NEXT_PUBLIC_DISABLE_SHIPPING_FEE=true in .env to zero shipping for real card test; remove or set false for production. */
 export const DISABLE_SHIPPING_FEE_FOR_TEST = process.env.NEXT_PUBLIC_DISABLE_SHIPPING_FEE === 'true';
 
-/** Set NEXT_PUBLIC_ENABLE_CREDIT_CARD=false to hide credit card and force e-transfer (e.g. when DigiPay has issues). Omit or true = credit card enabled. */
-export const ENABLE_CREDIT_CARD = process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD !== 'false';
+/** Credit card availability shared by checkout and payment creation routes. */
+export { CREDIT_CARD_PAYMENTS_ENABLED as ENABLE_CREDIT_CARD } from './creditCardAvailability';
 
 const WESTERN_PROVINCES = new Set(['British Columbia', 'Alberta', 'Saskatchewan', 'Manitoba']);
 const EASTERN_PROVINCES = new Set(['Ontario', 'Quebec', 'New Brunswick', 'Nova Scotia', 'Prince Edward Island', 'Newfoundland and Labrador']);

@@ -17,6 +17,7 @@ import { validateEnv } from '@/lib/env';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
 import { prepareMetaOrderTracking } from '@/lib/metaConversions';
 import { calculateCheckoutPricing } from '@/lib/checkoutPricing';
+import { CREDIT_CARD_PAYMENTS_ENABLED } from '@/lib/creditCardAvailability';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -75,6 +76,9 @@ function json(body: unknown, init: ResponseInit = {}) {
 }
 
 export async function POST(request: Request) {
+	if (!CREDIT_CARD_PAYMENTS_ENABLED) {
+		return json({ ok: false, error: 'Credit card payments are temporarily unavailable. Please use e-transfer.' }, { status: 503 });
+	}
 	// Validate environment before processing
 	validateEnv();
 
@@ -109,10 +113,6 @@ export async function POST(request: Request) {
 		if (orderPayload.paymentMethod !== 'creditcard') {
 			return json({ ok: false, error: 'Invalid payment method for this endpoint.' }, { status: 400 });
 		}
-		if (process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD === 'false') {
-			return json({ ok: false, error: 'Credit card payments are temporarily disabled. Please use e-transfer.' }, { status: 503 });
-		}
-
 		// Validate cart
 		if (!Array.isArray(orderPayload.cartItems) || orderPayload.cartItems.length === 0) {
 			return json({ ok: false, error: 'Invalid cart' }, { status: 400 });
