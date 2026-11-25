@@ -1,18 +1,18 @@
 import { products as fallbackProducts } from '@/lib/products';
 import { readProducts } from '@/lib/productCatalog';
-import ProductGridAlternativeClient from './ProductGridAlternativeClient';
+import ProductGridClient from './ProductGridClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function ProductGridAlternative() {
+export default async function ProductGrid() {
 	let items = fallbackProducts;
 	let stockUnavailable = false;
 
 	try {
 		items = await readProducts();
 	} catch (error) {
-		console.warn('ProductGridAlternative: Using fallback products due to catalog error:', error);
+		console.warn('ProductGrid: Using fallback products due to catalog error:', error);
 		stockUnavailable = true;
 	}
 
@@ -20,5 +20,5 @@ export default async function ProductGridAlternative() {
 		const status = product.status ?? 'published';
 		return status === 'published' || status === 'stock-out';
 	});
-	return <ProductGridAlternativeClient initialItems={visibleItems} stockUnavailable={stockUnavailable} />;
+	return <ProductGridClient initialItems={visibleItems} stockUnavailable={stockUnavailable} />;
 }

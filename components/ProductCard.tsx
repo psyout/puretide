@@ -12,33 +12,28 @@ import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { isProductVariantSellable } from '@/lib/productVariant';
 
-type ProductCardAlternativeProps = {
+type ProductCardProps = {
 	product: Product;
 	onImageLoaded?: (productId: string) => void;
 	automaticPromotion?: PromoCode | null;
 };
 
-function getProductPrice(product: Product, discount = 0) {
-	const variants = product.variants ?? [];
-	if (variants.length <= 1) return getSalePrice(product.price, discount).toFixed(2);
-
-	const prices = variants.map((variant) => getSalePrice(variant.price, discount));
-	const min = Math.min(...prices);
-	const max = Math.max(...prices);
-	return min === max ? min.toFixed(2) : `${min.toFixed(2)} – ${max.toFixed(2)}`;
-}
-
-export default function ProductCardAlternative({ product, onImageLoaded, automaticPromotion }: ProductCardAlternativeProps) {
+export default function ProductCard({ product, onImageLoaded, automaticPromotion }: ProductCardProps) {
 	const { addToCart } = useCart();
 	const [hasReportedImageLoaded, setHasReportedImageLoaded] = useState(false);
 	const [justAdded, setJustAdded] = useState(false);
 	const [isNavigating, setIsNavigating] = useState(false);
 	const variants = product.variants ?? [];
 	const hasVariants = variants.length > 1;
-	const allVariantsSoldOut = hasVariants && variants.every((variant) => !isProductVariantSellable(variant));
-	const isSoldOut = allVariantsSoldOut || (!hasVariants && (Number(product.stock) <= 0 || product.status === 'stock-out'));
-	const isLowStock = !isSoldOut && !hasVariants && Number(product.stock) < 10;
+	const subtitleIsStrengthRange = hasVariants && /^\s*\d+(?:\.\d+)?\s*(?:mg|mcg|g)\s*[–—-]\s*\d+(?:\.\d+)?\s*(?:mg|mcg|g)\s*$/i.test(product.subtitle ?? '');
 	const defaultVariant = hasVariants ? (variants.find(isProductVariantSellable) ?? variants[0]) : null;
+	const [selectedVariantKey, setSelectedVariantKey] = useState<string | null>(defaultVariant?.key ?? null);
+	const selectedVariant = variants.find((variant) => variant.key === selectedVariantKey) ?? defaultVariant;
+	const isSoldOut = selectedVariant ? !isProductVariantSellable(selectedVariant) : Number(product.stock) <= 0 || product.status === 'stock-out';
+	const isLowStock = !isSoldOut && Number(selectedVariant?.stock ?? product.stock) < 10;
+	const selectedPrice = selectedVariant?.price ?? product.price;
+	const selectedImage = selectedVariant?.image || product.image;
+	const productHref = `/product/${product.slug}${selectedVariant ? `?variant=${encodeURIComponent(selectedVariant.key)}` : ''}`;
 	const primaryIconName = product.icons?.[0];
 	const PrimaryIcon = primaryIconName ? iconMap[primaryIconName] : null;
 	const saleDiscount = automaticPromotion?.discount ?? 0;
@@ -46,7 +41,8 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 	useEffect(() => {
 		setHasReportedImageLoaded(false);
 		setJustAdded(false);
-	}, [product.id]);
+		setSelectedVariantKey(defaultVariant?.key ?? null);
+	}, [product.id, defaultVariant?.key]);
 
 	useEffect(() => {
 		if (!onImageLoaded || hasReportedImageLoaded || hasProductImage(product.image)) return;
@@ -62,18 +58,18 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 
 	const handleAdd = () => {
 		if (isSoldOut || justAdded) return;
-		if (defaultVariant) {
+		if (selectedVariant) {
 			addToCart({
 				...product,
-				id: defaultVariant.key,
-				price: defaultVariant.price,
-				stock: defaultVariant.stock,
-				mg: defaultVariant.label,
-				image: defaultVariant.image || product.image,
-				subtitle: defaultVariant.subtitle ?? product.subtitle,
-				zohoItemId: defaultVariant.zohoItemId,
-				sku: defaultVariant.sku,
-				cost: defaultVariant.cost,
+				id: selectedVariant.key,
+				price: selectedVariant.price,
+				stock: selectedVariant.stock,
+				mg: selectedVariant.label,
+				image: selectedImage,
+				subtitle: selectedVariant.subtitle ?? product.subtitle,
+				zohoItemId: selectedVariant.zohoItemId,
+				sku: selectedVariant.sku,
+				cost: selectedVariant.cost,
 			});
 		} else {
 			addToCart(product);
@@ -94,7 +90,7 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 	return (
 		<article className='bento-card bento-card-interactive group relative isolate flex h-auto flex-col overflow-hidden lg:h-full'>
 			<Link
-				href={`/product/${product.slug}`}
+				href={productHref}
 				aria-label={`View ${product.name}`}
 				className='absolute inset-0 z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-deep-tidal-teal focus-visible:ring-offset-2'
 			/>
@@ -126,14 +122,14 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 						{isSoldOut ? 'Sold out' : 'Low stock'}
 					</span>
 				)}
-				{hasProductImage(product.image) ? (
+				{hasProductImage(selectedImage) ? (
 					<div className='relative h-[74%] w-[74%] min-[400px]:h-[64%] min-[400px]:w-[64%]'>
 						<Image
-							src={product.image}
+							src={selectedImage}
 							alt={product.name}
 							fill
 							sizes='(max-width: 640px) 42vw, (max-width: 1024px) 32vw, 16vw'
-							unoptimized={product.image.startsWith('http')}
+							unoptimized={selectedImage.startsWith('http')}
 							className='object-contain'
 							onLoad={reportImageLoaded}
 							onError={reportImageLoaded}
@@ -149,26 +145,55 @@ export default function ProductCardAlternative({ product, onImageLoaded, automat
 					<h3 className='line-clamp-2 text-[1.05rem] font-semibold leading-[1.25] text-deep-tidal-teal-700 transition-colors group-hover:text-deep-tidal-teal min-[400px]:text-[0.95rem] min-[680px]:text-base'>
 						{product.name}
 					</h3>
-					{product.subtitle && (
+					{product.subtitle && !subtitleIsStrengthRange && (
 						<p className='mb-1 mt-1 line-clamp-2 text-[0.75rem] font-medium leading-normal text-deep-tidal-teal-600 min-[400px]:text-[0.75rem] min-[680px]:text-[0.8rem]'>
 							{product.subtitle}
 						</p>
+					)}
+					{hasVariants && (
+						<fieldset className='relative z-20 mt-2 flex flex-wrap gap-1'>
+							<legend className='sr-only'>Select strength for {product.name}</legend>
+							{variants.map((variant) => {
+								const isSelected = selectedVariant?.key === variant.key;
+								const isUnavailable = !isProductVariantSellable(variant);
+								return (
+									<label
+										key={variant.key}
+										className={`inline-flex min-h-6 min-w-[3rem] items-center justify-center rounded-full border px-1.5 text-xs font-semibold transition-colors focus-within:ring-2 focus-within:ring-deep-tidal-teal/40 ${isSelected ? 'border-deep-tidal-teal-700 bg-deep-tidal-teal-700 text-white' : 'border-deep-tidal-teal/25 bg-white text-deep-tidal-teal-800 hover:bg-eucalyptus-50'} ${isUnavailable ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+										<input
+											type='radio'
+											name={`card-strength-${product.id}`}
+											value={variant.key}
+											checked={isSelected}
+											onChange={() => {
+												setSelectedVariantKey(variant.key);
+												setJustAdded(false);
+											}}
+											disabled={isUnavailable}
+											className='sr-only'
+										/>
+										{variant.label}
+										{isUnavailable && <span className='sr-only'> (sold out)</span>}
+									</label>
+								);
+							})}
+						</fieldset>
 					)}
 				</div>
 
 				<div className='mt-2 border-t border-deep-tidal-teal-800/15 pt-2.5 sm:mt-3 sm:pt-3 lg:mt-auto'>
 					<div className='flex flex-col items-start gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4'>
 						<div className='space-y-0.5'>
-							{saleDiscount > 0 && <p className='text-xs text-deep-tidal-teal-500 line-through sm:text-sm'>${getProductPrice(product)} CAD</p>}
-							<p className={`text-[0.95rem] font-medium leading-tight sm:text-[1.05rem] ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-700'}`}>
-								${getProductPrice(product, saleDiscount)} CAD
+							{saleDiscount > 0 && <p className='text-xs text-deep-tidal-teal-500 line-through sm:text-sm'>${selectedPrice.toFixed(2)} CAD</p>}
+							<p className={`text-[0.95rem] font-semibold leading-tight sm:text-[1.05rem] ${saleDiscount > 0 ? 'text-[#b42318]' : 'text-deep-tidal-teal-700'}`}>
+								${getSalePrice(selectedPrice, saleDiscount).toFixed(2)} CAD
 							</p>
 						</div>
 					</div>
 
 					<div className='relative z-20 mt-3 grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2 sm:mt-4 sm:grid-cols-[minmax(0,1fr)_3rem]'>
 						<Link
-							href={`/product/${product.slug}`}
+							href={productHref}
 							onClick={handleDetailsClick}
 							aria-disabled={isNavigating}
 							className={`site-cta cta-secondary min-h-10 whitespace-nowrap px-2 py-2 text-sm normal-case tracking-normal sm:min-h-12 sm:px-4 ${isNavigating ? 'cursor-wait opacity-70' : ''}`}>

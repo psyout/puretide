@@ -12,9 +12,10 @@ import { getProductFilterCategory } from '@/lib/productCategories';
 
 type ProductPageProps = {
 	params: { id: string };
+	searchParams?: { variant?: string | string[] };
 };
 
-export default async function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({ params, searchParams }: ProductPageProps) {
 	let items: Product[] = fallbackProducts;
 	let stockUnavailable = false;
 	try {
@@ -65,6 +66,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 				<div>
 					<ProductDetailClient
 						product={product}
+						initialVariantKey={typeof searchParams?.variant === 'string' ? searchParams.variant : undefined}
 						description={product.description}
 						details={product.details}
 						matchingCoaFile={matchingCoaFile || ''}

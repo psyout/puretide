@@ -5,14 +5,14 @@ import { Search, X } from 'lucide-react';
 import type { Product } from '@/types/product';
 import { useCart } from '@/context/CartContext';
 import { getProductFilterCategory, isProductFilterCategory, PRODUCT_CATEGORY_EVENT, PRODUCT_FILTER_CATEGORIES, type ProductFilterCategory } from '@/lib/productCategories';
-import ProductCardAlternative from './ProductCardAlternative';
+import ProductCard from './ProductCard';
 
-type ProductGridAlternativeClientProps = {
+type ProductGridClientProps = {
 	initialItems: Product[];
 	stockUnavailable?: boolean;
 };
 
-export default function ProductGridAlternativeClient({ initialItems, stockUnavailable = false }: ProductGridAlternativeClientProps) {
+export default function ProductGridClient({ initialItems, stockUnavailable = false }: ProductGridClientProps) {
 	const { automaticPromotion } = useCart();
 	const [selectedCategory, setSelectedCategory] = useState<ProductFilterCategory>('All');
 	const [searchQuery, setSearchQuery] = useState('');
@@ -22,7 +22,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 	const [imageGateExpired, setImageGateExpired] = useState(false);
 
 	useEffect(() => {
-		if (stockUnavailable) console.warn('[stock] Rendering the alternative product grid without real-time inventory.');
+		if (stockUnavailable) console.warn('[stock] Rendering the product grid without real-time inventory.');
 	}, [stockUnavailable]);
 
 	useEffect(() => {
@@ -198,7 +198,7 @@ export default function ProductGridAlternativeClient({ initialItems, stockUnavai
 								<div
 									key={product.id}
 									className='self-start lg:h-full lg:self-stretch'>
-									<ProductCardAlternative
+									<ProductCard
 										product={product}
 										onImageLoaded={handleImageLoaded}
 										automaticPromotion={automaticPromotion}

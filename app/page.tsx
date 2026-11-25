@@ -1,4 +1,4 @@
-import ProductGridAlternative from '@/components/ProductGridAlternative';
+import ProductGrid from '@/components/ProductGrid';
 import Hero from '@/components/Hero';
 import AboutAlternative from '@/components/AboutAlternative';
 import ContactAlternative from '@/components/ContactAlternative';
@@ -26,7 +26,7 @@ export default async function Home() {
 			<Hero />
 
 			<main>
-				<ProductGridAlternative />
+				<ProductGrid />
 			</main>
 
 			<AboutAlternative />

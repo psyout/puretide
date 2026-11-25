@@ -18,6 +18,7 @@ import ProductInfoAccordions from '@/components/ProductInfoAccordions';
 
 interface ProductDetailClientProps {
 	product: Product;
+	initialVariantKey?: string;
 	description: string;
 	details?: string;
 	matchingCoaFile?: string;
@@ -28,6 +29,7 @@ interface ProductDetailClientProps {
 
 export default function ProductDetailClient({
 	product,
+	initialVariantKey,
 	description,
 	details,
 	matchingCoaFile,
@@ -39,11 +41,13 @@ export default function ProductDetailClient({
 	const variants = useMemo(() => product.variants || [], [product.variants]);
 	const hasVariants = variants.length > 1;
 
-	// Default selection: first in-stock variant, else first variant
+	// Honor a card selection when it is still available; otherwise use the first in-stock variant.
 	const defaultVariant = useMemo(() => {
+		const requestedVariant = variants.find((variant) => variant.key === initialVariantKey && isProductVariantSellable(variant));
+		if (requestedVariant) return requestedVariant;
 		const firstInStock = variants.find(isProductVariantSellable);
 		return firstInStock || variants[0] || null;
-	}, [variants]);
+	}, [variants, initialVariantKey]);
 
 	const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(defaultVariant);
 	const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
