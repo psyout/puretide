@@ -83,10 +83,9 @@ Orders are stored in a SQLite database managed through `sql.js`. Products and in
 The application supports:
 
 - E-transfer order creation and confirmation webhooks
-- DigiPay credit-card checkout and postbacks
-- GatewayLinx credit-card checkout and postbacks
+- Gatewaylinx Payments API hosted credit-card checkout with status reconciliation
 
-The active card provider is selected through server and public environment variables. Provider credentials and webhook secrets must never be committed.
+The hosted card checkout uses `CARD_PAYMENTS_KEY` on the server. The card option is controlled by `NEXT_PUBLIC_ENABLE_CREDIT_CARD`. Provider credentials must never be committed.
 
 ### Operations
 
@@ -144,7 +143,7 @@ Configuration is environment-driven. Major groups include:
 - Zoho Inventory product and stock access
 - Google Sheets promotions, clients, and Friends & Family access
 - SMTP sender credentials
-- DigiPay or GatewayLinx payment credentials
+- Gatewaylinx Payments API key
 - Wrike API and folder identifiers
 - Dashboard, cron, webhook, and orders API secrets
 - Promotion, friends-and-family, and storefront feature flags
@@ -306,7 +305,7 @@ npm run build
 npm start
 ```
 
-Production deployments must use HTTPS, preserve the database across releases, restrict dashboard and operational secrets, and configure authenticated webhooks for the selected payment provider.
+Production deployments must use HTTPS, preserve the database across releases, and restrict dashboard, payment, and operational secrets. Configure authenticated webhooks for e-transfer payments.
 
 ### Meta Pixel and Conversions API
 
