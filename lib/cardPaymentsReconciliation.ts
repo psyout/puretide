@@ -78,6 +78,15 @@ export async function reconcileCardPayment(orderNumber: string, onReturn = false
 			amountReceived: expectedMinor / 100,
 		});
 		if (!claimed) return getOrderByOrderNumberFromDb(orderNumber);
+		if (previous.environment !== 'live') {
+			await upsertOrderInDb({
+				...claimed,
+				cardPayments: paymentState,
+				fulfillmentStatus: { dryRun: true, stockUpdated: false, emailsSent: false, clientSynced: false },
+			});
+			console.info(JSON.stringify({ label: 'card_payments:test_payment_recorded', orderNumber, paymentId: payment.id }));
+			return getOrderByOrderNumberFromDb(orderNumber);
+		}
 		try {
 			const result = await runFulfillment(claimed as FulfillmentOrder);
 			await upsertOrderInDb({

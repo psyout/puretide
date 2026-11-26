@@ -243,7 +243,7 @@ export async function POST(request: Request) {
 		const isProduction = process.env.NODE_ENV === 'production';
 		const configuredBaseUrl = process.env.APP_BASE_URL?.replace(/\/$/, '');
 		if (isProduction && configuredBaseUrl !== 'https://puretide.ca') throw new Error('APP_BASE_URL must be https://puretide.ca for card payments');
-		const tcompleteBase = configuredBaseUrl ?? process.env.NGROK_URL;
+		const tcompleteBase = isProduction ? configuredBaseUrl : (process.env.NGROK_URL ?? configuredBaseUrl);
 		if (!tcompleteBase || !tcompleteBase.startsWith('https://')) throw new Error('An HTTPS APP_BASE_URL is required for card payments');
 		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
 

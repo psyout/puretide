@@ -3,4 +3,5 @@
 export const CREDIT_CARD_PAYMENTS_PAUSED = true;
 
 export const CREDIT_CARD_PAYMENTS_ENABLED =
-	!CREDIT_CARD_PAYMENTS_PAUSED && process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD !== 'false';
+	(!CREDIT_CARD_PAYMENTS_PAUSED || (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_CARD_TEST_MODE === 'true')) &&
+	process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD !== 'false';
