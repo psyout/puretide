@@ -15,6 +15,7 @@ export type CardPayment = {
 	checkout_url?: string;
 	expires_at: string | null;
 	attempts?: Array<{
+		result?: string;
 		cardholder_message?: { headline?: string; guidance?: string } | null;
 	}>;
 };

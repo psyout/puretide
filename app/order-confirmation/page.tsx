@@ -7,6 +7,9 @@ import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { CopyToClipboardButton } from '@/components/CopyToClipboardButton';
 import { reconcileCardPayment } from '@/lib/cardPaymentsReconciliation';
+import { getCurrentCardPayment } from '@/lib/cardPaymentsApi';
+import { shouldReturnToCart } from '@/lib/cardPaymentReturn';
+import { redirect } from 'next/navigation';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -85,6 +88,19 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	const orderNumberParam = queryOrderNumber?.trim();
 	const isAllowed = orderNumberParam ? verifyOrderConfirmationToken(orderNumberParam, token?.trim()) : false;
 	let order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
+	if (order?.paymentStatus === 'pending' && (order as unknown as Record<string, unknown>).paymentProvider === 'gatewaylinx_api' && orderNumberParam && !paymentId) {
+		const savedPaymentId = ((order as unknown as Record<string, unknown>).cardPayments as { id?: string } | undefined)?.id;
+		if (savedPaymentId) {
+			let returnToCart = false;
+			try {
+				const payment = await getCurrentCardPayment(orderNumberParam, savedPaymentId);
+				returnToCart = shouldReturnToCart(payment, orderNumberParam, savedPaymentId);
+			} catch (error) {
+				console.error(JSON.stringify({ label: 'card_payments:return_state_failed', orderNumber: orderNumberParam }));
+			}
+			if (returnToCart) redirect('/cart');
+		}
+	}
 	if (order?.paymentStatus === 'pending' && (order as unknown as Record<string, unknown>).paymentProvider === 'gatewaylinx_api' && orderNumberParam) {
 		try {
 			order = (await reconcileCardPayment(orderNumberParam, Boolean(paymentId))) as Order | null;
