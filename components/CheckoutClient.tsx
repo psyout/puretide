@@ -11,7 +11,7 @@ import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Plus, Minus, Trash2, Loader2 } from 'lucide-react';
 import { IconCreditCard, IconFileInvoice, IconMail, IconTruckDelivery } from '@tabler/icons-react';
 import TermsContent from './TermsContent';
-import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { SHIPPING_COSTS, getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
 import StoreBreadcrumb from './StoreBreadcrumb';
 import { getProductDisplayName } from '@/lib/productVariant';
@@ -34,6 +34,7 @@ function isTrustedPaymentRedirect(urlRaw: string): boolean {
 			return false;
 		}
 		const hostname = url.hostname.toLowerCase();
+		if (hostname === 'api.gatewaylinx.com') return url.pathname.startsWith('/checkout/') && !url.username && !url.password;
 		const envHosts =
 			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS?.split(',')
 				.map((host) => host.trim().toLowerCase())
@@ -55,7 +56,7 @@ function isTrustedGatewaylinxOrigin(originRaw: string): boolean {
 	}
 }
 
-export default function CheckoutClient() {
+export default function CheckoutClient({ enableCreditCard }: { enableCreditCard: boolean }) {
 	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod, automaticPromotion: scheduledPromotion } = useCart();
 	const router = useRouter();
 	const [gatewaylinxIframeUrl, setGatewaylinxIframeUrl] = useState<string | null>(null);
@@ -64,8 +65,8 @@ export default function CheckoutClient() {
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const gatewaylinxChargeInFlightRef = useRef(false);
 	useEffect(() => {
-		if (!ENABLE_CREDIT_CARD && paymentMethod === 'creditcard') setPaymentMethod('etransfer');
-	}, [paymentMethod, setPaymentMethod]);
+		if (!enableCreditCard && paymentMethod === 'creditcard') setPaymentMethod('etransfer');
+	}, [enableCreditCard, paymentMethod, setPaymentMethod]);
 
 	// Handle Gatewaylinx iframe postMessage
 	useEffect(() => {
@@ -158,6 +159,7 @@ export default function CheckoutClient() {
 		lastName: '',
 		country: 'Canada',
 		email: '',
+		phone: '',
 		address: '',
 		addressLine2: '',
 		city: '',
@@ -227,7 +229,7 @@ export default function CheckoutClient() {
 	const destinationZipCode = shipToDifferentAddress ? shippingAddress.zipCode : formData.zipCode;
 	const destinationProvince = shipToDifferentAddress ? shippingAddress.province : formData.province;
 	const shippingCost = appliedFreeShipping || qualifiesFreeShipping ? 0 : getEffectiveShippingCost(destinationZipCode, destinationProvince);
-	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
+	const useCreditCard = enableCreditCard && paymentMethod === 'creditcard';
 	const cardFee = useCreditCard ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 	const CREDIT_CARD_LIMIT = 500;
@@ -646,7 +648,7 @@ export default function CheckoutClient() {
 						throw new Error('Received an invalid payment redirect URL. Please contact support.');
 					}
 
-					// Check if this is Gatewaylinx (inline mode) — exact hostname match
+					// The old relay still uses an iframe; the new Gatewaylinx API uses its hosted checkout.
 					const isGatewaylinx = (() => {
 						try {
 							const h = new URL(data.redirectUrl).hostname.toLowerCase();
@@ -663,8 +665,8 @@ export default function CheckoutClient() {
 						setGatewaylinxConfirmationToken(data.confirmationToken ?? null);
 						return;
 					} else {
-						// Use redirect mode (DigiPay)
-						clearCart();
+						// Redirect to the provider's hosted payment page.
+						if (new URL(data.redirectUrl).hostname !== 'api.gatewaylinx.com') clearCart();
 						resetCheckoutStateForExit(true);
 						window.location.href = data.redirectUrl;
 						return;
@@ -844,6 +846,21 @@ export default function CheckoutClient() {
 										Your email is only used for order confirmation.
 									</p>
 								</div>
+								{useCreditCard && (
+									<div className='mt-4'>
+										<label htmlFor='card-phone' className='block text-[0.9rem] mb-2 text-deep-tidal-teal-800'>Phone Number *</label>
+										<input
+											id='card-phone'
+											type='tel'
+											value={formData.phone}
+											onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
+											autoComplete='tel'
+											maxLength={32}
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required
+										/>
+									</div>
+								)}
 							</div>
 
 							{/* Billing Details */}
@@ -1374,7 +1391,7 @@ export default function CheckoutClient() {
 										)}
 									</div>
 								)}
-								{ENABLE_CREDIT_CARD && (
+								{enableCreditCard && (
 								<div
 									className={`mt-3 overflow-hidden rounded-xl border transition-all ${
 										isCreditCardDisabled
@@ -1417,7 +1434,7 @@ export default function CheckoutClient() {
 									)}
 								</div>
 								)}
-								{!ENABLE_CREDIT_CARD && (
+								{!enableCreditCard && (
 									<p className='mt-3 text-sm text-deep-tidal-teal-700'>Credit card payments are temporarily unavailable. Please use e-transfer.</p>
 								)}
 								{isCreditCardOverLimit && (

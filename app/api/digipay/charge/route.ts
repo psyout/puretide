@@ -110,6 +110,9 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 		}
 		const orderRecord = order as Record<string, unknown>;
+		if (orderRecord.paymentProvider !== 'gatewaylinx' && orderRecord.paymentProvider !== 'digipay') {
+			return NextResponse.json({ error: 'This order does not use the legacy card gateway' }, { status: 400 });
+		}
 		const amount = Number(orderRecord.total ?? 0);
 		if (!amount || amount <= 0) {
 			return NextResponse.json({ error: 'Invalid order amount' }, { status: 400 });

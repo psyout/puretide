@@ -53,6 +53,10 @@ case "$JOB" in
 		/usr/bin/curl --fail --show-error --silent --retry 3 --max-time 180 \
 			-X POST "http://127.0.0.1:3000/api/cron/meta-conversions" -H "x-cron-secret: $CRON_SECRET"
 		;;
+	card-payments)
+		/usr/bin/curl --fail --show-error --silent --retry 2 --max-time 180 \
+			-X POST "http://127.0.0.1:3000/api/cron/card-payments" -H "x-cron-secret: $CRON_SECRET"
+		;;
 	*)
 		echo "Unknown cron job: $JOB"
 		exit 2
