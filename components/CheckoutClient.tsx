@@ -9,7 +9,6 @@ import Image from 'next/image';
 import { hasProductImage } from '@/lib/productImage';
 import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Plus, Minus, Trash2, Loader2 } from 'lucide-react';
-import { IconCreditCard, IconFileInvoice, IconMail, IconTruckDelivery } from '@tabler/icons-react';
 import TermsContent from './TermsContent';
 import { SHIPPING_COSTS, getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
@@ -22,6 +21,21 @@ const ETRANSFER_PROVIDER = String(process.env.NEXT_PUBLIC_ETRANSFER_PROVIDER ?? 
 const FRIENDS_FAMILY_ENABLED = String(process.env.NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED ?? '').toLowerCase() === 'true';
 const ABANDONED_CART_STORAGE_KEY = 'puretide-abandoned-cart-id';
 const ABANDONED_CART_CONSENT_TEXT = 'Email me one reminder about items left in my cart. I can unsubscribe at any time.';
+const CANADIAN_PROVINCES = [
+	{ name: 'British Columbia', code: 'BC' },
+	{ name: 'Alberta', code: 'AB' },
+	{ name: 'Manitoba', code: 'MB' },
+	{ name: 'New Brunswick', code: 'NB' },
+	{ name: 'Newfoundland and Labrador', code: 'NL' },
+	{ name: 'Nova Scotia', code: 'NS' },
+	{ name: 'Ontario', code: 'ON' },
+	{ name: 'Prince Edward Island', code: 'PE' },
+	{ name: 'Quebec', code: 'QC' },
+	{ name: 'Saskatchewan', code: 'SK' },
+	{ name: 'Northwest Territories', code: 'NT' },
+	{ name: 'Nunavut', code: 'NU' },
+	{ name: 'Yukon', code: 'YT' },
+] as const;
 
 function capitalizeWords(str: string): string {
 	return str.replace(/\b\w+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
@@ -791,39 +805,16 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 
 				<div className='checkout-layout grid grid-cols-1 gap-8 lg:grid-cols-3'>
 					<div className='order-1 min-w-0 lg:order-1 lg:col-span-2'>
-						{/* Single container with separators */}
-						<div className='bento-card p-5'>
+						<div className='space-y-5'>
+						<div className='checkout-form-card bento-card p-5'>
 							{/* Contact Information */}
 							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
-									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
-										<IconMail
-											className='h-5 w-5'
-											stroke={1.6}
-											aria-hidden='true'
-										/>
-									</span>
-									Contact Information
-								</h2>
-								{checkoutError && !checkoutError.includes('First name') && !checkoutError.includes('Last name') && (
-									<div
-										role='alert'
-										aria-live='assertive'
-										className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3'>
-										<p className='flex-1 text-red-800 text-sm'>{checkoutError}</p>
-										<button
-											type='button'
-											onClick={() => setCheckoutError(null)}
-											className='text-red-600 hover:text-red-800 font-bold text-md shrink-0 p-1'
-											aria-label='Dismiss'>
-											×
-										</button>
-									</div>
-								)}
+								<h2 className='mb-4 text-lg font-semibold text-deep-tidal-teal-800'>Contact Information</h2>
 								<div>
 									<label className='block text-[0.9rem]  mb-2 text-deep-tidal-teal-800'>Email Address *</label>
 									<input
 										type='email'
+										form='checkout-form'
 										value={formData.email}
 										onChange={(e) => setFormData({ ...formData, email: e.target.value })}
 										autoComplete='email'
@@ -849,17 +840,8 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 							</div>
 
 							{/* Billing Details */}
-							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
-									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
-										<IconFileInvoice
-											className='h-5 w-5'
-											stroke={1.6}
-											aria-hidden='true'
-										/>
-									</span>
-									Billing Details
-								</h2>
+							<div>
+								<h2 className='mb-4 text-lg font-semibold text-deep-tidal-teal-800'>Billing Details</h2>
 								<form
 									id='checkout-form'
 									onSubmit={handleSubmit}
@@ -913,17 +895,6 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 											</div>
 										</div>
 
-										<div className='max-w-[200px]'>
-											<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Country / Region *</label>
-											<select
-												value={formData.country}
-												onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-												autoComplete='country-name'
-												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-												required>
-												<option value='Canada'>Canada</option>
-											</select>
-										</div>
 										<div>
 											<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Street address *</label>
 											<input
@@ -959,7 +930,7 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 												className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 											/>
 										</div>
-										<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+										<div className='checkout-address-grid'>
 											<div>
 												<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Town / City *</label>
 												<input
@@ -985,44 +956,38 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 													autoComplete='address-level1'
 													className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 													required>
-													<option value='British Columbia'>British Columbia</option>
-													<option value='Alberta'>Alberta</option>
-													<option value='Manitoba'>Manitoba</option>
-													<option value='New Brunswick'>New Brunswick</option>
-													<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
-													<option value='Nova Scotia'>Nova Scotia</option>
-													<option value='Ontario'>Ontario</option>
-													<option value='Prince Edward Island'>Prince Edward Island</option>
-													<option value='Saskatchewan'>Saskatchewan</option>
-													<option value='Northwest Territories'>Northwest Territories</option>
-													<option value='Nunavut'>Nunavut</option>
-													<option value='Yukon'>Yukon</option>
+													{CANADIAN_PROVINCES.map(({ name, code }) => (
+														<option
+															key={code}
+															value={name}>
+															{code}
+														</option>
+													))}
 												</select>
 											</div>
-										</div>
-
-										<div className='max-w-[200px]'>
-											<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Postal code *</label>
-											<input
-												type='text'
-												value={formData.zipCode}
-												onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
-												onBlur={(e) => {
-													let v = e.target.value.toUpperCase().replace(/\s/g, '');
-													if (v.length >= 4 && !v.includes(' ')) {
-														v = v.slice(0, 3) + ' ' + v.slice(3);
-													}
-													if (v !== e.target.value) {
-														setFormData((prev) => ({ ...prev, zipCode: v }));
-													}
-												}}
-												autoComplete='postal-code'
-												placeholder=''
-												maxLength={7}
-												className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
-												required
-											/>
-											{billingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+											<div>
+												<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Postal code *</label>
+												<input
+													type='text'
+													value={formData.zipCode}
+													onChange={(e) => setFormData({ ...formData, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+													onBlur={(e) => {
+														let v = e.target.value.toUpperCase().replace(/\s/g, '');
+														if (v.length >= 4 && !v.includes(' ')) {
+															v = v.slice(0, 3) + ' ' + v.slice(3);
+														}
+														if (v !== e.target.value) {
+															setFormData((prev) => ({ ...prev, zipCode: v }));
+														}
+													}}
+													autoComplete='postal-code'
+													placeholder=''
+													maxLength={7}
+													className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${billingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
+													required
+												/>
+												{billingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+											</div>
 										</div>
 
 										<div className='flex items-start gap-2 text-sm text-deep-tidal-teal-800'>
@@ -1075,67 +1040,64 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 														className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
 													/>
 												</div>
-												<div>
-													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Town / City *</label>
-													<input
-														type='text'
-														value={shippingAddress.city}
-														onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-														onBlur={(e) => {
-															const capitalized = capitalizeWords(e.target.value);
-															if (capitalized !== e.target.value) {
-																setShippingAddress((prev) => ({ ...prev, city: capitalized }));
-															}
-														}}
-														autoComplete='shipping address-level2'
-														className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-														required
-													/>
-												</div>
-												<div>
-													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Province *</label>
-													<select
-														value={shippingAddress.province}
-														onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
-														autoComplete='shipping address-level1'
-														className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-														required>
-														<option value='British Columbia'>British Columbia</option>
-														<option value='Alberta'>Alberta</option>
-														<option value='Manitoba'>Manitoba</option>
-														<option value='New Brunswick'>New Brunswick</option>
-														<option value='Newfoundland and Labrador'>Newfoundland and Labrador</option>
-														<option value='Nova Scotia'>Nova Scotia</option>
-														<option value='Ontario'>Ontario</option>
-														<option value='Prince Edward Island'>Prince Edward Island</option>
-														<option value='Saskatchewan'>Saskatchewan</option>
-														<option value='Northwest Territories'>Northwest Territories</option>
-														<option value='Nunavut'>Nunavut</option>
-														<option value='Yukon'>Yukon</option>
-													</select>
-												</div>
-												<div>
-													<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Postal code *</label>
-													<input
-														type='text'
-														value={shippingAddress.zipCode}
-														onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
-														onBlur={(e) => {
-															let v = e.target.value.toUpperCase().replace(/\s/g, '');
-															if (v.length >= 4 && !v.includes(' ')) {
-																v = v.slice(0, 3) + ' ' + v.slice(3);
-															}
-															if (v !== e.target.value) {
-																setShippingAddress((prev) => ({ ...prev, zipCode: v }));
-															}
-														}}
-														autoComplete='shipping postal-code'
-														placeholder='A1A 1A1'
-														maxLength={7}
-														className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
-														required
-													/>
-													{shippingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+												<div className='checkout-address-grid'>
+													<div>
+														<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Town / City *</label>
+														<input
+															type='text'
+															value={shippingAddress.city}
+															onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+															onBlur={(e) => {
+																const capitalized = capitalizeWords(e.target.value);
+																if (capitalized !== e.target.value) {
+																	setShippingAddress((prev) => ({ ...prev, city: capitalized }));
+																}
+															}}
+															autoComplete='shipping address-level2'
+															className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+															required
+														/>
+													</div>
+													<div>
+														<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Province *</label>
+														<select
+															value={shippingAddress.province}
+															onChange={(e) => setShippingAddress({ ...shippingAddress, province: e.target.value })}
+															autoComplete='shipping address-level1'
+															className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+															required>
+															{CANADIAN_PROVINCES.map(({ name, code }) => (
+																<option
+																	key={code}
+																	value={name}>
+																	{code}
+																</option>
+															))}
+														</select>
+													</div>
+													<div>
+														<label className='block text-[0.9rem] font-regular mb-1 text-deep-tidal-teal-800'>Postal code *</label>
+														<input
+															type='text'
+															value={shippingAddress.zipCode}
+															onChange={(e) => setShippingAddress({ ...shippingAddress, zipCode: e.target.value.toUpperCase().slice(0, 7) })}
+															onBlur={(e) => {
+																let v = e.target.value.toUpperCase().replace(/\s/g, '');
+																if (v.length >= 4 && !v.includes(' ')) {
+																	v = v.slice(0, 3) + ' ' + v.slice(3);
+																}
+																if (v !== e.target.value) {
+																	setShippingAddress((prev) => ({ ...prev, zipCode: v }));
+																}
+															}}
+															autoComplete='shipping postal-code'
+															placeholder='A1A 1A1'
+															maxLength={7}
+															className={`w-full bg-white border rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:ring-2 focus:ring-deep-tidal-teal ${shippingZipInvalidFormat ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-deep-tidal-teal'}`}
+															required
+														/>
+														{shippingZipInvalidFormat && <p className='text-sm text-red-600 mt-1'>Please use format A1A 1A1.</p>}
+													</div>
 												</div>
 											</div>
 										)}
@@ -1162,109 +1124,92 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 									</fieldset>
 								</form>
 							</div>
+							<div className='mt-5 border-t border-deep-tidal-teal/10 pt-4'>
+								<h3 className='mb-2 text-[0.9rem] font-semibold text-deep-tidal-teal-800'>Privacy Notice</h3>
+								<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
+									We use your details to process and support your order. Card details are entered with our payment processor.
+								</p>
+								{abandonedCartAvailability.available && (
+									<div className='mt-4'>
+										<label htmlFor='checkout-cart-reminder' className='flex cursor-pointer items-start gap-3'>
+											<input
+												id='checkout-cart-reminder'
+												type='checkbox'
+												checked={abandonedCartConsent}
+												onChange={(event) => {
+													if (event.target.checked) {
+														abandonedCartConsentAtRef.current = new Date().toISOString();
+														setAbandonedCartConsent(true);
+													} else {
+														cancelAbandonedCartReminder();
+													}
+												}}
+												className='mt-0.5 h-4 w-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal'
+											/>
+											<span className='flex-1 text-sm text-deep-tidal-teal-800'>
+												Pure Tide may email me one reminder about items left in my cart. I can unsubscribe at any time. This is optional.
+												{abandonedCartAvailability.businessAddress && abandonedCartAvailability.contactEmail && (
+													<span className='mt-1 block text-xs text-deep-tidal-teal-600'>
+														Pure Tide, {abandonedCartAvailability.businessAddress}. Contact: {abandonedCartAvailability.contactEmail}.
+													</span>
+												)}
+											</span>
+										</label>
+									</div>
+								)}
+							</div>
+						</div>
 
 							{/* Shipping Section */}
-							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
-									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
-										<IconTruckDelivery
-											className='h-5 w-5'
-											stroke={1.6}
-											aria-hidden='true'
-										/>
+							<div className='bento-card p-5'>
+								<h2 className='mb-3 text-lg font-semibold text-deep-tidal-teal-800'>Shipping</h2>
+								<div className='flex items-center gap-3 rounded-xl border border-deep-tidal-teal bg-eucalyptus-50/50 px-4 py-3 ring-1 ring-deep-tidal-teal/20'>
+									<input
+										type='radio'
+										name='shipping-method'
+										checked
+										readOnly
+										aria-label='Express Shipping'
+										className='h-4 w-4 shrink-0 accent-deep-tidal-teal'
+									/>
+									<span className='min-w-0 flex-1'>
+										<span className='block font-semibold text-deep-tidal-teal-900'>Express Shipping</span>
+										<span className='block text-sm text-deep-tidal-teal-600'>
+											{shippingCost === 0 ? 'Free shipping applied to this order.' : 'Rate updates with your delivery postal code.'}
+										</span>
 									</span>
-									Shipping
-								</h2>
-								<div className='text-xs text-deep-tidal-teal-600 mb-3'>
-									{(() => {
-										const zip = formData.zipCode.trim().toUpperCase();
-										const firstLetter = zip.charAt(0);
-										const isWestern = ['V', 'R', 'S', 'T'].includes(firstLetter);
-										if (!zip) return 'Enter your postal code to see shipping cost.';
-										if (shippingCost === 0) return 'Free shipping on orders over $300.';
-										return isWestern ? 'Western Canada (BC, AB, SK, MB)' : 'Eastern Canada (ON, QC, NB, NS, PE, NL)';
-									})()}
-								</div>
-								<label className='flex items-center justify-between gap-2 text-deep-tidal-teal-800'>
-									<span className='flex items-center gap-2'>
-										<input
-											type='radio'
-											name='shipping'
-											checked
-											readOnly
-											aria-label='Express Shipping'
-										/>
-										Express Shipping
-									</span>
-									<span className='text-md text-deep-tidal-teal-500'>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
-								</label>
-								<div className='mt-3 pt-3 border-t border-deep-tidal-teal/10'>
-									<p className='text-xs text-deep-tidal-teal-600 leading-relaxed'>
-										Not responsible for errant shipments due to incorrect addresses. Please double check your address is correct.
-									</p>
+									<span className='shrink-0 font-semibold text-deep-tidal-teal-800'>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</span>
 								</div>
 							</div>
 
 							{/* Payment Section */}
-							<div className='pb-4 border-b border-deep-tidal-teal/10 mb-4'>
-								<h2 className='mb-4 flex items-center gap-3 text-lg font-semibold text-deep-tidal-teal-800'>
-									<span className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-eucalyptus/45 text-deep-tidal-teal-700'>
-										<IconCreditCard
-											className='h-5 w-5'
-											stroke={1.6}
-											aria-hidden='true'
-										/>
-									</span>
-									Payment Method
-								</h2>
+							<div className='bento-card p-5'>
+								<h2 className='mb-4 text-lg font-semibold text-deep-tidal-teal-800'>Payment Method</h2>
 								<div className='space-y-3'>
 									<div
-										className={`overflow-hidden rounded-xl border transition-all ${
-											!useCreditCard ? 'border-2 border-deep-tidal-teal bg-white' : 'border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
+										className={`overflow-hidden rounded-xl border transition-colors ${
+											!useCreditCard
+												? 'border-deep-tidal-teal bg-eucalyptus-50/50 ring-1 ring-deep-tidal-teal/20'
+												: 'border-deep-tidal-teal/20 bg-white hover:border-deep-tidal-teal/50'
 										}`}>
-										<label className='block cursor-pointer p-4'>
-											<span className='flex items-start gap-3'>
+										<label className='block cursor-pointer px-4 py-4'>
+											<span className='flex items-center gap-3'>
 												<input
 													type='radio'
 													name='payment'
 													checked={!useCreditCard}
 													onChange={() => setPaymentMethod('etransfer')}
 													disabled={isProcessing}
-													className='mt-1 h-4 w-4 accent-deep-tidal-teal'
+													className='h-4 w-4 shrink-0 accent-deep-tidal-teal'
 												/>
 												<span className='min-w-0 flex-1'>
-													<span className='flex items-center justify-between gap-3'>
-														<span className='font-semibold text-[0.9rem] text-deep-tidal-teal-900'>Interac e-Transfer</span>
-														<span className='shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800'>No fee</span>
-													</span>
-													<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
-														Place your order first, then send the transfer from your banking app using the instructions on the next screen.
-													</span>
+													<span className='block font-semibold text-base text-deep-tidal-teal-900'>Interac e-Transfer</span>
+													<span className='mt-0.5 block text-sm text-deep-tidal-teal-600'>No fee · Payment details shown after you place your order</span>
 												</span>
 											</span>
 										</label>
-										{paymentMethod === 'etransfer' && (
-											<div
-												className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
-												role='status'>
-												<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
-												<ol className='mt-2 space-y-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
-													<li>
-														<span className='font-semibold'>1.</span> We&apos;ll show the secure auto-deposit email and your order number.
-													</li>
-													<li>
-														<span className='font-semibold'>2.</span> Send the exact total and include your order number in the Interac message.
-													</li>
-													<li>
-														<span className='font-semibold'>3.</span> Your order begins processing after the transfer is confirmed.
-													</li>
-												</ol>
-											</div>
-										)}
-									</div>
-								</div>
 								{FRIENDS_FAMILY_ENABLED && paymentMethod === 'etransfer' && (
-									<div className='mt-3 border-t border-b pt-3 pb-4'>
+									<div className='mx-4 mb-4 border-t border-deep-tidal-teal/15 pt-3'>
 										<div className='flex items-start justify-between gap-4'>
 											<div>
 												<p className='text-sm font-semibold text-deep-tidal-teal-800'>Friends & Family verification</p>
@@ -1376,66 +1321,63 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 										)}
 									</div>
 								)}
+								</div>
+							</div>
 								{enableCreditCard && (
-								<div
-									className={`mt-3 overflow-hidden rounded-xl border transition-all ${
-										isCreditCardDisabled
-											? 'cursor-not-allowed border-deep-tidal-teal/10 bg-slate-50 opacity-60'
-											: paymentMethod === 'creditcard'
-												? 'cursor-pointer border-2 border-deep-tidal-teal bg-white'
-												: 'cursor-pointer border-deep-tidal-teal/15 bg-white hover:border-deep-tidal-teal/35'
-									}`}>
-									<label className={`block p-4 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-										<span className='flex items-start gap-3'>
-											<input
-												type='radio'
-												name='payment'
-												checked={paymentMethod === 'creditcard'}
-												onChange={() => setPaymentMethod('creditcard')}
-												disabled={isProcessing || isCreditCardDisabled}
-												className='mt-1 h-4 w-4 accent-deep-tidal-teal'
-											/>
-											<span className='min-w-0 flex-1'>
-												<span className='flex items-center justify-between gap-3'>
-													<span className='font-semibold text-[0.9rem] text-deep-tidal-teal-900'>Credit card</span>
-													<span className='shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900'>+5% fee</span>
-												</span>
-												<span className='mt-1 block text-sm leading-relaxed text-deep-tidal-teal-600'>
-													Continue to our secure payment page after checkout to enter your card details.
+									<div
+										className={`mt-3 overflow-hidden rounded-xl border transition-colors ${
+											isCreditCardDisabled
+												? 'cursor-not-allowed border-deep-tidal-teal/15 bg-slate-50 opacity-60'
+												: paymentMethod === 'creditcard'
+													? 'cursor-pointer border-deep-tidal-teal bg-eucalyptus-50/50 ring-1 ring-deep-tidal-teal/20'
+													: 'cursor-pointer border-deep-tidal-teal/20 bg-white hover:border-deep-tidal-teal/50'
+										}`}>
+										<label className={`block px-4 py-4 ${isCreditCardDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+											<span className='flex items-center gap-3'>
+												<input
+													type='radio'
+													name='payment'
+													checked={paymentMethod === 'creditcard'}
+													onChange={() => setPaymentMethod('creditcard')}
+													disabled={isProcessing || isCreditCardDisabled}
+													className='h-4 w-4 shrink-0 accent-deep-tidal-teal'
+												/>
+												<span className='min-w-0 flex-1'>
+													<span className='block font-semibold text-base text-deep-tidal-teal-900'>Credit card</span>
+													<span className='mt-0.5 block text-sm text-deep-tidal-teal-600'>5% processing fee · Secure third-party checkout</span>
 												</span>
 											</span>
-										</span>
-									</label>
-									{paymentMethod === 'creditcard' && !isCreditCardDisabled && (
-										<div
-											className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
-											role='status'>
-											<label htmlFor='card-phone' className='block text-sm font-semibold text-deep-tidal-teal-800'>Phone Number *</label>
-											<input
-												id='card-phone'
-												form='checkout-form'
-												type='tel'
-												value={formData.phone}
-												onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
-												autoComplete='tel'
-												maxLength={32}
-												pattern={String.raw`\+?[0-9 \(\)\-]{7,32}`}
-												title='Use 7 to 32 characters: digits, spaces, parentheses, hyphens, and an optional +.'
-												className='mt-2 w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-												required
-											/>
-											<p className='mt-4 text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
-											<p className='mt-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
-												You&apos;ll continue to an encrypted card form to complete payment. The 5% processing fee is included in the order total shown here. Card
-												payments are limited to $500 per transaction.
-											</p>
-										</div>
-									)}
-								</div>
+										</label>
+										{paymentMethod === 'creditcard' && !isCreditCardDisabled && (
+											<div
+												className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
+												role='status'>
+												<label
+													htmlFor='card-phone'
+													className='block text-sm font-semibold text-deep-tidal-teal-800'>
+													Phone Number *
+												</label>
+												<input
+													id='card-phone'
+													form='checkout-form'
+													type='tel'
+													value={formData.phone}
+													onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
+													autoComplete='tel'
+													maxLength={32}
+													pattern={String.raw`\+?[0-9 \(\)\-]{7,32}`}
+													title='Use 7 to 32 characters: digits, spaces, parentheses, hyphens, and an optional +.'
+													className='mt-2 w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+													required
+												/>
+												<p className='mt-2 text-sm leading-relaxed text-deep-tidal-teal-700'>
+													You&apos;ll be directed to our secure third-party card processor to complete payment.
+												</p>
+											</div>
+										)}
+									</div>
 								)}
-								{!enableCreditCard && (
-									<p className='mt-3 text-sm text-deep-tidal-teal-700'>Credit card payments are temporarily unavailable. Please use e-transfer.</p>
-								)}
+								{!enableCreditCard && <p className='mt-3 text-sm text-deep-tidal-teal-700'>Credit card payments are temporarily unavailable. Please use e-transfer.</p>}
 								{isCreditCardOverLimit && (
 									<div className='mt-3 bg-red-50 border border-red-200 rounded-lg p-3'>
 										<p className='text-sm text-red-700 leading-relaxed'>
@@ -1445,139 +1387,12 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 								)}
 							</div>
 
-							{/* Terms & Place Order */}
-							<div>
-								<div className='pb-4 pt-0 border-b border-deep-tidal-teal/10 mb-4'>
-									<div className='flex items-center gap-2 mb-2'>
-										<svg
-											className='w-5 h-5 text-deep-tidal-teal'
-											fill='none'
-											stroke='currentColor'
-											viewBox='0 0 24 24'>
-											<path
-												strokeLinecap='round'
-												strokeLinejoin='round'
-												strokeWidth={1.5}
-												d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-											/>
-										</svg>
-										<h3 className='font-semibold text-[0.9rem] text-deep-tidal-teal-800'>Privacy Notice</h3>
-									</div>
-									<p className='text-sm text-deep-tidal-teal-700 text-pretty'>
-										All information is encrypted and stored securely. We do not share your data with third parties. Payments are processed anonymously. Your identity
-										remains protected.
-									</p>
-								</div>
-								{abandonedCartAvailability.available && (
-									<div className='pb-4 mb-4 border-b border-deep-tidal-teal/10'>
-										<label
-											htmlFor='checkout-cart-reminder'
-											className='flex items-start gap-3 cursor-pointer'>
-											<input
-												id='checkout-cart-reminder'
-												type='checkbox'
-												checked={abandonedCartConsent}
-												onChange={(event) => {
-													if (event.target.checked) {
-														abandonedCartConsentAtRef.current = new Date().toISOString();
-														setAbandonedCartConsent(true);
-													} else {
-														cancelAbandonedCartReminder();
-													}
-												}}
-												className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5'
-											/>
-											<span className='text-sm text-deep-tidal-teal-800 flex-1'>
-												Pure Tide may email me one reminder about items left in my cart. I can unsubscribe at any time. This is optional.
-												{abandonedCartAvailability.businessAddress && abandonedCartAvailability.contactEmail && (
-													<span className='block mt-1 text-xs text-deep-tidal-teal-600'>
-														Pure Tide, {abandonedCartAvailability.businessAddress}. Contact: {abandonedCartAvailability.contactEmail}.
-													</span>
-												)}
-											</span>
-										</label>
-									</div>
-								)}
-								<div className='py-1'>
-									<label
-										htmlFor='checkout-terms'
-										className='flex items-start gap-3 cursor-pointer group'>
-										<input
-											id='checkout-terms'
-											type='checkbox'
-											checked={agreedToTerms}
-											onChange={(e) => setAgreedToTerms(e.target.checked)}
-											className='w-4 h-4 rounded border-deep-tidal-teal-300 text-deep-tidal-teal focus:ring-deep-tidal-teal mt-0.5 transition-colors'
-											required
-										/>
-										<span className='text-sm text-deep-tidal-teal-800 flex-1'>
-											I have read and agree to the{' '}
-											<button
-												type='button'
-												onClick={() => setShowTermsModal(true)}
-												className='text-deep-tidal-teal hover:text-eucalyptus underline font-medium transition-colors'>
-												Terms & Conditions
-											</button>
-										</span>
-									</label>
-									{!agreedToTerms && hasSubmitted && (
-										<p className='text-xs text-red-600 mt-2 ml-7 flex items-start gap-1.5'>
-											<svg
-												className='w-3.5 h-3.5 mt-0.5 flex-shrink-0'
-												fill='none'
-												stroke='currentColor'
-												viewBox='0 0 24 24'>
-												<path
-													strokeLinecap='round'
-													strokeLinejoin='round'
-													strokeWidth={2}
-													d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
-												/>
-											</svg>
-											<span>You must agree to the terms and conditions to place your order</span>
-										</p>
-									)}
-								</div>
-								<div className='relative group'>
-									<button
-										type='submit'
-										form='checkout-form'
-										disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
-										aria-busy={isProcessing}
-										className='site-cta cta-primary mt-3 w-full'>
-										<span className='inline-flex items-center justify-center gap-2'>
-											{isProcessing && (
-												<Loader2
-													className='h-5 w-5 animate-spin'
-													aria-hidden='true'
-												/>
-											)}
-											<span>
-												{isProcessing
-													? useCreditCard
-														? 'Preparing Secure Payment...'
-														: 'Placing Order...'
-													: useCreditCard
-														? 'Continue to Secure Card Payment'
-														: 'Place Order'}
-											</span>
-										</span>
-										{isProcessing && <span className='sr-only'>Checkout submission in progress. Please wait.</span>}
-									</button>
-									{!agreedToTerms && !isProcessing && (
-										<div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-deep-tidal-teal-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap'>
-											Please agree to the Terms & Conditions
-											<div className='absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-deep-tidal-teal-800'></div>
-										</div>
-									)}
-								</div>
-							</div>
 						</div>
 					</div>
 
 					<div className='order-2 min-w-0 lg:order-2 lg:col-span-1'>
 						<div
-							className={`checkout-summary-card bento-card sticky top-24 p-5 ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
+							className={`checkout-summary-card bento-card sticky top-24 p-5 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
 							aria-busy={isProcessing}
 							aria-disabled={isProcessing}>
 							<div className='flex items-center justify-between mb-4 pb-4 border-b border-deep-tidal-teal/10'>
@@ -1628,7 +1443,7 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 												{getProductDisplayName(item.name, item.mg, item.id !== item.slug)}
 											</h3>
 											<p
-											className={`checkout-order-price text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
+												className={`checkout-order-price text-base font-bold mt-0.5 ${promoApplied && appliedDiscount > 0 && isPromoEligibleItem(item) ? 'text-[#b42318]' : 'text-deep-tidal-teal'}`}>
 												${(getDisplayPrice(item) * item.quantity).toFixed(2)}
 												{item.quantity > 1 && <span className='text-xs font-normal text-deep-tidal-teal-600 ml-1'>(${getDisplayPrice(item).toFixed(2)} ea)</span>}
 											</p>
@@ -1714,7 +1529,9 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 								{appliedDiscount > 0 && (
 									<>
 										<div className='flex justify-between text-deep-tidal-teal font-bold'>
-											<span className='checkout-discount-amount text-lg'>{scheduledPromotion ? 'Sitewide discount' : 'Discount'} ({appliedDiscount}%)</span>
+											<span className='checkout-discount-amount text-lg'>
+												{scheduledPromotion ? 'Sitewide discount' : 'Discount'} ({appliedDiscount}%)
+											</span>
 											<span className='checkout-discount-amount text-lg'>-${discountAmount.toFixed(2)}</span>
 										</div>
 										<div className='flex justify-between text-deep-tidal-teal-700'>
@@ -1740,6 +1557,71 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 									<span className='text-deep-tidal-teal-800'>Total</span>
 									<span className='text-deep-tidal-teal'>${total.toFixed(2)}</span>
 								</div>
+							</div>
+							<div className='sticky bottom-0 z-10 mt-4 border-t border-deep-tidal-teal/10 bg-white pt-4'>
+								{checkoutError && (
+									<div
+										role='alert'
+										className='mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800'>
+										<p className='min-w-0 flex-1'>{checkoutError}</p>
+										<button
+											type='button'
+											onClick={() => setCheckoutError(null)}
+											aria-label='Dismiss error'
+											className='shrink-0 font-semibold text-red-700'>
+											×
+										</button>
+									</div>
+								)}
+								<div className='flex items-start gap-3'>
+									<input
+										id='checkout-terms'
+										type='checkbox'
+										form='checkout-form'
+										checked={agreedToTerms}
+										onChange={(event) => setAgreedToTerms(event.target.checked)}
+										className='mt-0.5 h-4 w-4 shrink-0 accent-deep-tidal-teal'
+										required
+									/>
+									<span className='text-sm text-deep-tidal-teal-800'>
+										<label
+											htmlFor='checkout-terms'
+											className='cursor-pointer'>
+											I agree to the{' '}
+										</label>
+										<button
+											type='button'
+											onClick={() => setShowTermsModal(true)}
+											className='font-medium text-deep-tidal-teal underline hover:text-eucalyptus'>
+											Terms & Conditions
+										</button>
+									</span>
+								</div>
+								<button
+									type='submit'
+									form='checkout-form'
+									disabled={isProcessing || isVerifyingPromo || !agreedToTerms}
+									aria-busy={isProcessing}
+									className='site-cta cta-primary mt-4 w-full text-[0.8rem]'>
+									<span className='inline-flex items-center justify-center gap-2'>
+										{isProcessing && (
+											<Loader2
+												className='h-5 w-5 animate-spin'
+												aria-hidden='true'
+											/>
+										)}
+										<span>
+											{isProcessing
+												? useCreditCard
+													? 'Preparing Secure Payment...'
+													: 'Placing Order...'
+												: useCreditCard
+													? 'Continue to Card Checkout'
+													: 'Place Order'}
+										</span>
+									</span>
+								</button>
+								{!agreedToTerms && <p className='mt-2 text-center text-xs text-deep-tidal-teal-600'>Agree to the terms to continue.</p>}
 							</div>
 						</div>
 					</div>
