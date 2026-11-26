@@ -728,7 +728,7 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 		} catch (error) {
 			console.error('Checkout error', error);
 			setCheckoutError(error instanceof Error ? error.message : 'We could not place your order. Please try again.');
-			setIsProcessing(false);
+			clearSubmissionState();
 			setHasSubmitted(false);
 		}
 	};
@@ -846,21 +846,6 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 										Your email is only used for order confirmation.
 									</p>
 								</div>
-								{useCreditCard && (
-									<div className='mt-4'>
-										<label htmlFor='card-phone' className='block text-[0.9rem] mb-2 text-deep-tidal-teal-800'>Phone Number *</label>
-										<input
-											id='card-phone'
-											type='tel'
-											value={formData.phone}
-											onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
-											autoComplete='tel'
-											maxLength={32}
-											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
-											required
-										/>
-									</div>
-								)}
 							</div>
 
 							{/* Billing Details */}
@@ -1425,7 +1410,21 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 										<div
 											className='mx-4 border-t border-deep-tidal-teal/15 pb-4 pt-3'
 											role='status'>
-											<p className='text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
+											<label htmlFor='card-phone' className='block text-sm font-semibold text-deep-tidal-teal-800'>Phone Number *</label>
+											<input
+												id='card-phone'
+												form='checkout-form'
+												type='tel'
+												value={formData.phone}
+												onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
+												autoComplete='tel'
+												maxLength={32}
+												pattern={String.raw`\+?[0-9 \(\)\-]{7,32}`}
+												title='Use 7 to 32 characters: digits, spaces, parentheses, hyphens, and an optional +.'
+												className='mt-2 w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+												required
+											/>
+											<p className='mt-4 text-sm font-semibold text-deep-tidal-teal-800'>What happens next</p>
 											<p className='mt-1.5 text-sm leading-relaxed text-deep-tidal-teal-700'>
 												You&apos;ll continue to an encrypted card form to complete payment. The 5% processing fee is included in the order total shown here. Card
 												payments are limited to $500 per transaction.
