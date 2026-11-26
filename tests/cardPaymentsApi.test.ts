@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CardPaymentsApiError, createHostedCardPayment, getCardPaymentById } from '../lib/cardPaymentsApi';
+import { CardPaymentsApiError, createHostedCardPayment, getCardPaymentById, getCurrentCardPayment } from '../lib/cardPaymentsApi';
 
 const paymentId = `pay_${'a'.repeat(32)}`;
 const input = {
@@ -82,6 +82,27 @@ test('API failures preserve status and request ID without exposing the provider 
 		await assert.rejects(getCardPaymentById(paymentId), (error: unknown) => error instanceof CardPaymentsApiError && error.status === 530);
 		globalThis.fetch = async () => Response.json({ error: { code: 'reference_in_progress', request_id: 'req_123', retryable: false } }, { status: 409 });
 		await assert.rejects(getCardPaymentById(paymentId), (error: unknown) => error instanceof CardPaymentsApiError && error.code === 'reference_in_progress' && error.requestId === 'req_123');
+	} finally {
+		globalThis.fetch = previousFetch;
+		if (previousKey === undefined) delete process.env.CARD_PAYMENTS_KEY;
+		else process.env.CARD_PAYMENTS_KEY = previousKey;
+	}
+});
+
+test('a declined payment is read by its saved ID after its reference is released', async () => {
+	const previousKey = process.env.CARD_PAYMENTS_KEY;
+	const previousFetch = globalThis.fetch;
+	process.env.CARD_PAYMENTS_KEY = 'fv_test_example';
+	const paths: string[] = [];
+	globalThis.fetch = async (url) => {
+		paths.push(String(url));
+		if (String(url).includes('/by-reference/')) return Response.json({ error: { code: 'not_found' } }, { status: 404 });
+		return Response.json(payment({ status: 'declined', outcome: 'failed', final: true }));
+	};
+	try {
+		const result = await getCurrentCardPayment(input.reference, paymentId);
+		assert.equal(result.outcome, 'failed');
+		assert.deepEqual(paths, [`https://api.gatewaylinx.com/v1/payments/${paymentId}`]);
 	} finally {
 		globalThis.fetch = previousFetch;
 		if (previousKey === undefined) delete process.env.CARD_PAYMENTS_KEY;

@@ -550,14 +550,19 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	}
 
 	if (order.paymentStatus === 'failed') {
+		const cardMessage = ((order as unknown as Record<string, unknown>).cardPayments as { cardholderMessage?: { headline?: string; guidance?: string } } | undefined)?.cardholderMessage;
+		const headline = typeof cardMessage?.headline === 'string' ? cardMessage.headline : 'Payment not completed';
+		const guidance = typeof cardMessage?.guidance === 'string'
+			? cardMessage.guidance
+			: 'Your order was received, but the payment was not completed. No charge was captured. Please try again or contact support if you need help.';
 		return (
 			<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 				<Header />
 				<div className='max-w-6xl mx-auto px-6 py-24'>
 					<div className='max-w-2xl mx-auto bg-mineral-white backdrop-blur-sm rounded-lg ui-border p-6 shadow-lg'>
-						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment not completed</h1>
+						<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>{headline}</h1>
 						<p className='text-deep-tidal-teal-800 mb-6'>
-							Your order was received, but the payment was not completed. No charge was captured. Please try again or contact support if you need help.
+							{guidance}
 						</p>
 						<div className='flex flex-col sm:flex-row gap-3'>
 							<Link

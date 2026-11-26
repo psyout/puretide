@@ -1,4 +1,4 @@
-import { CardPaymentsApiError, getCardPaymentByReference, type CardPayment } from './cardPaymentsApi';
+import { CardPaymentsApiError, getCurrentCardPayment, type CardPayment } from './cardPaymentsApi';
 import { claimPaidOrderForFulfillment, getOrderByOrderNumberFromDb, updatePendingOrderIfPending, upsertOrderInDb, type StoredOrder } from './ordersDb';
 import { runFulfillment, type FulfillmentOrder } from './orderFulfillment';
 import { createRetryJobForOrder } from './retryJobs';
@@ -13,6 +13,7 @@ type PaymentTracking = {
 	lastCheckedAt?: string;
 	returnReadAt?: string;
 	manualReview?: string;
+	cardholderMessage?: { headline: string; guidance: string };
 };
 
 function tracking(order: StoredOrder): PaymentTracking {
@@ -38,7 +39,7 @@ export async function reconcileCardPayment(orderNumber: string, onReturn = false
 
 	let payment: CardPayment;
 	try {
-		payment = await getCardPaymentByReference(orderNumber);
+		payment = await getCurrentCardPayment(orderNumber, previous.id);
 	} catch (error) {
 		const delay = error instanceof CardPaymentsApiError && error.status === 429
 			? Math.max(60, error.retryAfterSeconds ?? 60)
@@ -61,6 +62,10 @@ export async function reconcileCardPayment(orderNumber: string, onReturn = false
 		nextCheckAt: nextCheckAt(payment),
 		...(onReturn ? { returnReadAt: now } : {}),
 	};
+	const message = payment.attempts?.at(-1)?.cardholder_message;
+	if (typeof message?.headline === 'string' && typeof message?.guidance === 'string') {
+		paymentState.cardholderMessage = { headline: message.headline.slice(0, 200), guidance: message.guidance.slice(0, 500) };
+	}
 	const expectedMinor = Math.round(Number(order.total) * 100);
 	const decision = decideCardPayment(payment, orderNumber, expectedMinor);
 	if (decision === 'review' && (payment.reference !== orderNumber || payment.amount?.amount_minor !== expectedMinor || payment.amount?.currency !== 'CAD' || payment.amount_matches === false)) {

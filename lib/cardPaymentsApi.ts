@@ -14,6 +14,9 @@ export type CardPayment = {
 	next_action: { type: string; url?: string } | null;
 	checkout_url?: string;
 	expires_at: string | null;
+	attempts?: Array<{
+		cardholder_message?: { headline?: string; guidance?: string } | null;
+	}>;
 };
 
 export type CardPaymentsConnection = {
@@ -146,4 +149,16 @@ export async function getCardPaymentById(id: string): Promise<CardPayment> {
 export async function getCardPaymentByReference(reference: string): Promise<CardPayment> {
 	if (!REFERENCE_PATTERN.test(reference)) throw new Error('Invalid payment reference');
 	return apiRequest<CardPayment>(`/v1/payments/by-reference/${encodeURIComponent(reference)}`, { signal: AbortSignal.timeout(10_000) });
+}
+
+/** Read the saved payment even after a decline frees its reference. */
+export async function getCurrentCardPayment(reference: string, savedId?: string): Promise<CardPayment> {
+	const payment = savedId ? await getCardPaymentById(savedId) : await getCardPaymentByReference(reference);
+	if (payment.status !== 'canceled') return payment;
+	try {
+		return await getCardPaymentByReference(reference);
+	} catch (error) {
+		if (error instanceof CardPaymentsApiError && error.status === 404) return payment;
+		throw error;
+	}
 }
