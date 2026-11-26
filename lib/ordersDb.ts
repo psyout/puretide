@@ -19,7 +19,7 @@ export type RetryJob = {
 
 export type IdempotencyEntry = {
 	key: string;
-	route: 'orders' | 'digipay:create' | 'card-payments:create';
+	route: 'orders' | 'card-payments:create';
 	orderNumber: string;
 	orderId?: string;
 	redirectUrl?: string;
