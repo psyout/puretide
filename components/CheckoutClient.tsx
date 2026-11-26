@@ -15,8 +15,6 @@ import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
 import StoreBreadcrumb from './StoreBreadcrumb';
 import { getProductDisplayName } from '@/lib/productVariant';
 
-const DIGIPAY_DEFAULT_HOST = 'secure.digipay.co';
-const GATEWAYLINX_RELAY_HOST = 'bluepeakdns.com';
 const ETRANSFER_PROVIDER = String(process.env.NEXT_PUBLIC_ETRANSFER_PROVIDER ?? 'manual').toLowerCase() === 'bluepeak' ? 'bluepeak' : 'manual';
 const FRIENDS_FAMILY_ENABLED = String(process.env.NEXT_PUBLIC_FRIENDS_FAMILY_ENABLED ?? '').toLowerCase() === 'true';
 const ABANDONED_CART_STORAGE_KEY = 'puretide-abandoned-cart-id';
@@ -44,27 +42,7 @@ function capitalizeWords(str: string): string {
 function isTrustedPaymentRedirect(urlRaw: string): boolean {
 	try {
 		const url = new URL(urlRaw);
-		if (url.protocol !== 'https:') {
-			return false;
-		}
-		const hostname = url.hostname.toLowerCase();
-		if (hostname === 'api.gatewaylinx.com') return url.pathname.startsWith('/checkout/') && !url.username && !url.password;
-		const envHosts =
-			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS?.split(',')
-				.map((host) => host.trim().toLowerCase())
-				.filter(Boolean) ?? [];
-		const allowedHosts = new Set([DIGIPAY_DEFAULT_HOST, GATEWAYLINX_RELAY_HOST, ...envHosts]);
-		return allowedHosts.has(hostname) || hostname === 'pcivault.io' || hostname.endsWith('.pcivault.io');
-	} catch {
-		return false;
-	}
-}
-
-function isTrustedGatewaylinxOrigin(originRaw: string): boolean {
-	try {
-		const origin = new URL(originRaw);
-		const hostname = origin.hostname.toLowerCase();
-		return origin.protocol === 'https:' && (hostname === GATEWAYLINX_RELAY_HOST || hostname === 'pcivault.io' || hostname.endsWith('.pcivault.io'));
+		return url.origin === 'https://api.gatewaylinx.com' && url.pathname.startsWith('/checkout/') && !url.username && !url.password;
 	} catch {
 		return false;
 	}
@@ -73,100 +51,9 @@ function isTrustedGatewaylinxOrigin(originRaw: string): boolean {
 export default function CheckoutClient({ enableCreditCard }: { enableCreditCard: boolean }) {
 	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod, automaticPromotion: scheduledPromotion } = useCart();
 	const router = useRouter();
-	const [gatewaylinxIframeUrl, setGatewaylinxIframeUrl] = useState<string | null>(null);
-	const [gatewaylinxOrderNumber, setGatewaylinxOrderNumber] = useState<string | null>(null);
-	const [gatewaylinxConfirmationToken, setGatewaylinxConfirmationToken] = useState<string | null>(null);
-	const iframeRef = useRef<HTMLIFrameElement>(null);
-	const gatewaylinxChargeInFlightRef = useRef(false);
 	useEffect(() => {
 		if (!enableCreditCard && paymentMethod === 'creditcard') setPaymentMethod('etransfer');
 	}, [enableCreditCard, paymentMethod, setPaymentMethod]);
-
-	// Handle Gatewaylinx iframe postMessage
-	useEffect(() => {
-		const handleMessage = (event: MessageEvent) => {
-			// Gatewaylinx messages may come from its exact relay host or an HTTPS
-			// PCI Vault origin. Reject every other origin.
-			if (!isTrustedGatewaylinxOrigin(event.origin)) return;
-
-			const data = (event.data || {}) as { status?: string; token?: string; reference?: string; last4?: string; message?: string };
-			console.log('Gatewaylinx iframe postMessage:', data);
-
-			if (data.status === 'error') {
-				// Card capture failed inside the iframe — surface the error so the customer can retry
-				setCheckoutError(data.message || 'Card capture failed. Please try again.');
-				clearSubmissionState();
-				return;
-			}
-
-			// According to Gatewaylinx docs, postMessage contains token + reference.
-			// Do not require status==='success' since the docs example only checks token/reference.
-			if (data.token && data.reference && gatewaylinxOrderNumber) {
-				handleGatewaylinxCharge(gatewaylinxOrderNumber, data.token, data.reference);
-			}
-		};
-
-		window.addEventListener('message', handleMessage);
-		return () => window.removeEventListener('message', handleMessage);
-	}, [gatewaylinxOrderNumber]); // eslint-disable-line react-hooks/exhaustive-deps
-
-	const buildGatewaylinxConfirmationUrl = (orderNumber: string, extra?: Record<string, string>) => {
-		const params = new URLSearchParams({ orderNumber });
-		if (gatewaylinxConfirmationToken) {
-			params.set('token', gatewaylinxConfirmationToken);
-		}
-		if (extra) {
-			for (const [key, value] of Object.entries(extra)) {
-				params.set(key, value);
-			}
-		}
-		return `/order-confirmation?${params.toString()}`;
-	};
-
-	const handleGatewaylinxCharge = async (orderNumber: string, token: string, reference: string) => {
-		if (gatewaylinxChargeInFlightRef.current) return;
-		gatewaylinxChargeInFlightRef.current = true;
-		try {
-			const response = await fetch('/api/digipay/charge', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ orderNumber, token, reference }),
-			});
-			const data = await response.json();
-
-			if (data.redirect && data.redirectUrl) {
-				window.location.href = data.redirectUrl;
-				return;
-			}
-
-			if (data.indeterminate) {
-				clearCart();
-				resetCheckoutStateForExit();
-				router.push(buildGatewaylinxConfirmationUrl(orderNumber, { status: 'indeterminate' }));
-				return;
-			}
-
-			if (data.success) {
-				clearCart();
-				resetCheckoutStateForExit();
-				router.push(buildGatewaylinxConfirmationUrl(orderNumber));
-				return;
-			}
-
-			setCheckoutError(data.error || 'Payment was declined. Please try again.');
-			clearSubmissionState();
-			setHasSubmitted(false);
-		} catch (error) {
-			setCheckoutError(`Charge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-			clearSubmissionState();
-			setHasSubmitted(false);
-		} finally {
-			gatewaylinxChargeInFlightRef.current = false;
-			setGatewaylinxIframeUrl(null);
-			setGatewaylinxOrderNumber(null);
-			setGatewaylinxConfirmationToken(null);
-		}
-	};
 
 	const initialFormData = {
 		firstName: '',
@@ -404,7 +291,7 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 		};
 	}, []);
 
-	// When user navigates back from DigiPay (bfcache restore), reset processing state so they can edit and resubmit
+	// When user navigates back from hosted checkout (bfcache restore), reset processing state so they can edit and resubmit
 	useEffect(() => {
 		const onPageShow = (e: PageTransitionEvent) => {
 			if (e.persisted) {
@@ -662,29 +549,9 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 						throw new Error('Received an invalid payment redirect URL. Please contact support.');
 					}
 
-					// The old relay still uses an iframe; the new Gatewaylinx API uses its hosted checkout.
-					const isGatewaylinx = (() => {
-						try {
-							const h = new URL(data.redirectUrl).hostname.toLowerCase();
-							return h === GATEWAYLINX_RELAY_HOST || h === 'pcivault.io' || h.endsWith('.pcivault.io');
-						} catch {
-							return false;
-						}
-					})();
-
-					if (isGatewaylinx) {
-						// Use inline mode with iframe
-						setGatewaylinxIframeUrl(data.redirectUrl);
-						setGatewaylinxOrderNumber(data.orderNumber);
-						setGatewaylinxConfirmationToken(data.confirmationToken ?? null);
-						return;
-					} else {
-						// Redirect to the provider's hosted payment page.
-						if (new URL(data.redirectUrl).hostname !== 'api.gatewaylinx.com') clearCart();
-						resetCheckoutStateForExit(true);
-						window.location.href = data.redirectUrl;
-						return;
-					}
+					resetCheckoutStateForExit(true);
+					window.location.href = data.redirectUrl;
+					return;
 				}
 				throw new Error('Invalid response from payment');
 			}
@@ -749,39 +616,6 @@ export default function CheckoutClient({ enableCreditCard }: { enableCreditCard:
 
 	if (cartItems.length === 0) {
 		return null;
-	}
-
-	// Show Gatewaylinx iframe for inline mode
-	if (gatewaylinxIframeUrl) {
-		return (
-			<div className='fixed inset-0 bg-white/80 z-50 flex items-center justify-center p-4'>
-				<div
-					className='bg-white rounded-lg shadow-2xl w-full max-w-xl flex flex-col overflow-hidden p-10'
-					style={{ height: 'min(480px, 90vh)' }}>
-					<div className='flex justify-between items-center p-4 border-b'>
-						<h2 className='text-lg font-semibold'>Complete Payment</h2>
-						<button
-							onClick={() => {
-								setGatewaylinxIframeUrl(null);
-								setGatewaylinxOrderNumber(null);
-								setGatewaylinxConfirmationToken(null);
-								setIsProcessing(false);
-							}}
-							className='text-gray-500 hover:text-gray-700'>
-							Cancel
-						</button>
-					</div>
-					<div className='flex-1 min-h-0'>
-						<iframe
-							ref={iframeRef}
-							src={gatewaylinxIframeUrl}
-							className='w-full h-full border-0 block'
-							title='Payment Form'
-						/>
-					</div>
-				</div>
-			</div>
-		);
 	}
 
 	// Show full-page loader for all payment processing

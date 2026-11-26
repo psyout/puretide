@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 /**
- * Simulate e-transfer and credit card transactions to verify:
+ * Simulate an e-transfer order to verify:
  * - Emails are sent (customer + admin)
  * - Stock is decremented in the sheet
  * - Wrike tasks created (Orders + Clients folders)
  *
  * Prerequisites:
  * - App running (e.g. npm run dev) at BASE_URL (default http://localhost:3000)
- * - .env with: Google Sheets (products), SMTP (order emails), and for credit card
- *   add 127.0.0.1,::1 to DIGIPAY_POSTBACK_ALLOWED_IP so local postback is accepted
+ * - .env with: Google Sheets (products) and SMTP (order emails)
  *
  * Usage: node scripts/simulate-transactions.mjs [BASE_URL]
  *
@@ -24,7 +23,6 @@ const BASE_URL = process.argv[2] || 'http://localhost:3000';
 // Must match server: lib/constants getEffectiveShippingCost() and SHIPPING_COSTS.western
 const DISABLE_SHIPPING_FEE = process.env.NEXT_PUBLIC_DISABLE_SHIPPING_FEE === 'true';
 const EXPRESS_SHIPPING = DISABLE_SHIPPING_FEE ? 0 : 20.0; // Western shipping for V6B 1A1 postal code
-const CARD_FEE_PERCENT = 0.05;
 
 const customer = {
 	firstName: 'Test',
@@ -51,10 +49,6 @@ const cartItem = {
 
 const subtotalEtransfer = cartItem.price * cartItem.quantity;
 const totalEtransfer = subtotalEtransfer + EXPRESS_SHIPPING;
-
-const subtotalCard = cartItem.price * cartItem.quantity;
-const cardFee = Number((subtotalCard * CARD_FEE_PERCENT).toFixed(2));
-const totalCard = Number((subtotalCard + EXPRESS_SHIPPING + cardFee).toFixed(2)); // Match server rounding
 
 const cartItems = [cartItem];
 
@@ -125,78 +119,7 @@ async function run() {
 	}
 	console.log('');
 
-	console.log('Waiting 2 seconds to avoid rate limiting...');
-	await new Promise((resolve) => setTimeout(resolve, 2000));
-	console.log('');
-
-	// --- 2. Credit card (create then postback) ---
-	console.log('--- 2. Credit card (POST /api/digipay/create then POST /api/digipay/postback) ---');
-
-	const cardPayload = {
-		...basePayload,
-		paymentMethod: 'creditcard',
-		cardFee,
-		subtotal: subtotalCard,
-		total: totalCard,
-		discountAmount: undefined,
-		promoCode: undefined,
-		company: '',
-		idempotencyKey: `sim-card-${Date.now()}`,
-	};
-
-	let createRes;
-	try {
-		createRes = await fetch(`${BASE_URL}/api/digipay/create`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(cardPayload),
-		});
-	} catch (e) {
-		console.error('DigiPay create request failed:', e.message);
-		process.exit(1);
-	}
-
-	const createData = await createRes.json();
-	if (!createRes.ok || !createData.orderNumber) {
-		console.error('DigiPay create failed:', createRes.status, createData);
-		console.log('Skipping postback.');
-		process.exit(1);
-	}
-
-	const session = createData.orderNumber;
-	console.log('Create OK. Order/session:', session);
-
-	// Simulate DigiPay postback (amount can be with dot or underscore)
-	const postbackBody = new URLSearchParams({
-		session,
-		amount: String(totalCard),
-		status: 'approved',
-	}).toString();
-
-	let postbackRes;
-	try {
-		postbackRes = await fetch(`${BASE_URL}/api/digipay/postback`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: postbackBody,
-		});
-	} catch (e) {
-		console.error('Postback request failed:', e.message);
-		process.exit(1);
-	}
-
-	const postbackText = await postbackRes.text();
-	const ok = postbackText.includes('stat="ok"');
-	if (!ok) {
-		console.error('Postback failed (likely IP not allowlisted). Response:', postbackText.slice(0, 300));
-		console.log('For local testing, add 127.0.0.1,::1 to DIGIPAY_POSTBACK_ALLOWED_IP in .env');
-	} else {
-		console.log('Postback OK. Order marked paid, fulfillment run.');
-		console.log('Check: customer email + admin notification, product stock decreased by 1, and Wrike Order + Client tasks.');
-	}
-	console.log('');
-	console.log('Done. Verify: inbox, Google Sheet stock for product id 1 (BPC 157), and Wrike Orders/Clients folders.');
-	console.log('To test Wrike config only: npm run test:wrike');
+	console.log('Done. Verify the customer and admin inboxes, stock, and order records.');
 }
 
 run().catch((e) => {

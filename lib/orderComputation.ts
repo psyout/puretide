@@ -7,7 +7,7 @@ export type Order = {
 	orderNumber: string;
 	createdAt: string;
 	paymentStatus: OrderPaymentStatus;
-	paymentMethod: 'etransfer' | 'digipay';
+	paymentMethod: 'etransfer' | 'creditcard';
 	customer: {
 		name: string;
 		email: string;
@@ -44,8 +44,6 @@ export type Order = {
 	};
 	total: number;
 	paidAt?: string;
-	digipaySession?: string;
-	digipayRedirectUrl?: string;
 };
 
 export type OrderComputationInput = {

@@ -75,25 +75,8 @@ const envSchema = z.object({
 	// Secrets
 	DASHBOARD_SECRET: z.string().min(1, 'DASHBOARD_SECRET is required'),
 	ORDER_CONFIRMATION_SECRET: z.string().optional(), // Will fallback to DASHBOARD_SECRET in dev
-	DIGIPAY_POSTBACK_HMAC_SECRET: z.string().optional(),
 	CRON_SECRET: z.string().optional(),
 	RETRY_JOB_SECRET: z.string().optional(),
-
-	// DigiPay payment
-	DIGIPAY_SITE_ID: z.string().optional(),
-	DIGIPAY_SECRET_KEY: z.string().optional(),
-	DIGIPAY_POSTBACK_ALLOWED_IP: z.string().optional(),
-
-	// Gatewaylinx payment
-	GATEWAYLINX_SITE_ID: z.string().optional(),
-	GATEWAYLINX_HMAC_KEY: z.string().optional(),
-	GATEWAYLINX_RELAY_URL: z.string().optional(),
-	GATEWAYLINX_POSTBACK_ALLOWED_IP: z.string().optional(),
-	GATEWAYLINX_DRY_RUN_FULFILLMENT: booleanEnv.default(false),
-
-	// Credit card provider switching
-	CREDIT_CARD_PROVIDER: z.enum(['digipay', 'gatewaylinx']).default('digipay'),
-	NEXT_PUBLIC_CREDIT_CARD_PROVIDER: z.enum(['digipay', 'gatewaylinx']).default('digipay'),
 
 	// BluePeak e-Transfer integration
 	BLUEPEAK_SECRET_KEY: z.string().optional(),
@@ -196,16 +179,6 @@ export function validateEnv(): EnvSchema {
 				required('CRON_SECRET', validatedEnv.CRON_SECRET);
 			}
 
-			if (!isNextBuildPhase && validatedEnv.CREDIT_CARD_PROVIDER === 'gatewaylinx') {
-				required('GATEWAYLINX_SITE_ID', validatedEnv.GATEWAYLINX_SITE_ID);
-				required('GATEWAYLINX_HMAC_KEY', validatedEnv.GATEWAYLINX_HMAC_KEY);
-				required('GATEWAYLINX_RELAY_URL', validatedEnv.GATEWAYLINX_RELAY_URL);
-				required('GATEWAYLINX_POSTBACK_ALLOWED_IP', validatedEnv.GATEWAYLINX_POSTBACK_ALLOWED_IP);
-				if (validatedEnv.GATEWAYLINX_DRY_RUN_FULFILLMENT) {
-					throw new Error('GATEWAYLINX_DRY_RUN_FULFILLMENT must be false in production');
-				}
-			}
-
 			if (!isNextBuildPhase && validatedEnv.ENABLE_WRIKE_INTEGRATION) {
 				required('WRIKE_API_TOKEN', validatedEnv.WRIKE_API_TOKEN);
 				required('WRIKE_ORDERS_FOLDER_ID', validatedEnv.WRIKE_ORDERS_FOLDER_ID);
@@ -230,11 +203,6 @@ export function validateEnv(): EnvSchema {
 				if (validatedEnv.ZOHO_INVENTORY_WRITE_ENABLED) {
 					required('ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID', validatedEnv.ZOHO_INVENTORY_ADJUSTMENT_ACCOUNT_ID);
 				}
-			}
-
-			// In production, DigiPay HMAC secret is required if DigiPay is used
-			if (validatedEnv.DIGIPAY_SITE_ID && !validatedEnv.DIGIPAY_POSTBACK_HMAC_SECRET) {
-				console.warn('DIGIPAY_POSTBACK_HMAC_SECRET not configured - DigiPay postbacks will be rejected');
 			}
 
 			// In production, BluePeak secrets are required for e-Transfer payments
@@ -317,22 +285,6 @@ export function getGoogleSheetsConfig() {
 	};
 }
 
-export function getDigipayConfig() {
-	const env = getEnv();
-	if (!env.DIGIPAY_SITE_ID || !env.DIGIPAY_SECRET_KEY) {
-		return null;
-	}
-
-	return {
-		siteId: env.DIGIPAY_SITE_ID,
-		secretKey: env.DIGIPAY_SECRET_KEY,
-		hmacSecret: env.DIGIPAY_POSTBACK_HMAC_SECRET,
-		allowedIps: env.DIGIPAY_POSTBACK_ALLOWED_IP?.split(',')
-			.map((ip) => ip.trim())
-			.filter(Boolean) || ['185.240.29.227'],
-	};
-}
-
 export function getWrikeConfig() {
 	const env = getEnv();
 	if (!env.WRIKE_API_TOKEN) {
@@ -361,22 +313,5 @@ export function getBluePeakConfig() {
 		baseUrl: env.BLUEPEAK_BASE_URL || 'https://deposit.bluepeakdns.com/v1',
 		webhookMaxSkewSeconds: env.BLUEPEAK_WEBHOOK_MAX_SKEW_SECONDS || 300,
 		dryRunFulfillment: env.BLUEPEAK_DRY_RUN_FULFILLMENT === 'true',
-	};
-}
-
-export function getGatewaylinxConfig() {
-	const env = getEnv();
-	if (!env.GATEWAYLINX_SITE_ID || !env.GATEWAYLINX_HMAC_KEY || !env.GATEWAYLINX_RELAY_URL) {
-		return null;
-	}
-
-	return {
-		siteId: env.GATEWAYLINX_SITE_ID,
-		hmacKey: env.GATEWAYLINX_HMAC_KEY,
-		relayUrl: env.GATEWAYLINX_RELAY_URL,
-		allowedIps: env.GATEWAYLINX_POSTBACK_ALLOWED_IP?.split(',')
-			.map((ip) => ip.trim())
-			.filter(Boolean) || ['151.245.121.206'],
-		dryRunFulfillment: env.GATEWAYLINX_DRY_RUN_FULFILLMENT,
 	};
 }
