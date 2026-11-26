@@ -11,7 +11,7 @@ import ProductImagePlaceholder from '@/components/ProductImagePlaceholder';
 import { Plus, Minus, Trash2, Loader2 } from 'lucide-react';
 import { IconCreditCard, IconFileInvoice, IconMail, IconTruckDelivery } from '@tabler/icons-react';
 import TermsContent from './TermsContent';
-import { SHIPPING_COSTS, getEffectiveShippingCost, ENABLE_CREDIT_CARD, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
+import { SHIPPING_COSTS, getEffectiveShippingCost, FREE_SHIPPING_THRESHOLD } from '@/lib/constants';
 import { AUTOMATIC_SITEWIDE_PROMO_CODE, getSalePrice } from '@/lib/promo';
 import StoreBreadcrumb from './StoreBreadcrumb';
 import { getProductDisplayName } from '@/lib/productVariant';
@@ -56,7 +56,7 @@ function isTrustedGatewaylinxOrigin(originRaw: string): boolean {
 	}
 }
 
-export default function CheckoutClient() {
+export default function CheckoutClient({ enableCreditCard }: { enableCreditCard: boolean }) {
 	const { cartItems, getTotal, clearCart, getItemPrice, updateQuantity, removeFromCart, paymentMethod, setPaymentMethod, automaticPromotion: scheduledPromotion } = useCart();
 	const router = useRouter();
 	const [gatewaylinxIframeUrl, setGatewaylinxIframeUrl] = useState<string | null>(null);
@@ -65,8 +65,8 @@ export default function CheckoutClient() {
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const gatewaylinxChargeInFlightRef = useRef(false);
 	useEffect(() => {
-		if (!ENABLE_CREDIT_CARD && paymentMethod === 'creditcard') setPaymentMethod('etransfer');
-	}, [paymentMethod, setPaymentMethod]);
+		if (!enableCreditCard && paymentMethod === 'creditcard') setPaymentMethod('etransfer');
+	}, [enableCreditCard, paymentMethod, setPaymentMethod]);
 
 	// Handle Gatewaylinx iframe postMessage
 	useEffect(() => {
@@ -229,7 +229,7 @@ export default function CheckoutClient() {
 	const destinationZipCode = shipToDifferentAddress ? shippingAddress.zipCode : formData.zipCode;
 	const destinationProvince = shipToDifferentAddress ? shippingAddress.province : formData.province;
 	const shippingCost = appliedFreeShipping || qualifiesFreeShipping ? 0 : getEffectiveShippingCost(destinationZipCode, destinationProvince);
-	const useCreditCard = ENABLE_CREDIT_CARD && paymentMethod === 'creditcard';
+	const useCreditCard = enableCreditCard && paymentMethod === 'creditcard';
 	const cardFee = useCreditCard ? Number(((subtotal - discountAmount) * 0.05).toFixed(2)) : 0;
 	const total = Number((subtotal + shippingCost - discountAmount + cardFee).toFixed(2));
 	const CREDIT_CARD_LIMIT = 500;
@@ -1391,7 +1391,7 @@ export default function CheckoutClient() {
 										)}
 									</div>
 								)}
-								{ENABLE_CREDIT_CARD && (
+								{enableCreditCard && (
 								<div
 									className={`mt-3 overflow-hidden rounded-xl border transition-all ${
 										isCreditCardDisabled
@@ -1434,7 +1434,7 @@ export default function CheckoutClient() {
 									)}
 								</div>
 								)}
-								{!ENABLE_CREDIT_CARD && (
+								{!enableCreditCard && (
 									<p className='mt-3 text-sm text-deep-tidal-teal-700'>Credit card payments are temporarily unavailable. Please use e-transfer.</p>
 								)}
 								{isCreditCardOverLimit && (

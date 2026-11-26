@@ -17,7 +17,7 @@ import { paymentCountryCode, paymentRegionCode } from '@/lib/paymentAddress';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
 import { prepareMetaOrderTracking } from '@/lib/metaConversions';
 import { calculateCheckoutPricing } from '@/lib/checkoutPricing';
-import { CREDIT_CARD_PAYMENTS_ENABLED } from '@/lib/creditCardAvailability';
+import { creditCardPaymentsEnabled } from '@/lib/creditCardAvailability';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -77,7 +77,7 @@ function json(body: unknown, init: ResponseInit = {}) {
 }
 
 export async function POST(request: Request) {
-	if (!CREDIT_CARD_PAYMENTS_ENABLED) {
+	if (!creditCardPaymentsEnabled()) {
 		return json({ ok: false, error: 'Credit card payments are temporarily unavailable. Please use e-transfer.' }, { status: 503 });
 	}
 	const CHECKOUT_RATE_LIMIT = 10;

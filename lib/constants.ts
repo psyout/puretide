@@ -10,7 +10,6 @@ export const FREE_SHIPPING_THRESHOLD = 300;
 export const DISABLE_SHIPPING_FEE_FOR_TEST = process.env.NEXT_PUBLIC_DISABLE_SHIPPING_FEE === 'true';
 
 /** Credit card availability shared by checkout and payment creation routes. */
-export { CREDIT_CARD_PAYMENTS_ENABLED as ENABLE_CREDIT_CARD } from './creditCardAvailability';
 
 const WESTERN_PROVINCES = new Set(['British Columbia', 'Alberta', 'Saskatchewan', 'Manitoba']);
 const EASTERN_PROVINCES = new Set(['Ontario', 'Quebec', 'New Brunswick', 'Nova Scotia', 'Prince Edward Island', 'Newfoundland and Labrador']);
