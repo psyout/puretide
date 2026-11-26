@@ -76,7 +76,9 @@ function json(body: unknown, init: ResponseInit = {}) {
 }
 
 export async function POST(request: Request) {
-	if (!CREDIT_CARD_PAYMENTS_ENABLED) {
+	// The legacy relay is retired. This endpoint must remain closed when the new card flow is enabled.
+	const legacyRelayEnabled = false;
+	if (!legacyRelayEnabled || !CREDIT_CARD_PAYMENTS_ENABLED) {
 		return json({ ok: false, error: 'Credit card payments are temporarily unavailable. Please use e-transfer.' }, { status: 503 });
 	}
 	// Validate environment before processing

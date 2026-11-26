@@ -34,6 +34,7 @@ function isTrustedPaymentRedirect(urlRaw: string): boolean {
 			return false;
 		}
 		const hostname = url.hostname.toLowerCase();
+		if (hostname === 'api.gatewaylinx.com') return url.pathname.startsWith('/checkout/') && !url.username && !url.password;
 		const envHosts =
 			process.env.NEXT_PUBLIC_ALLOWED_PAYMENT_REDIRECT_HOSTS?.split(',')
 				.map((host) => host.trim().toLowerCase())
@@ -158,6 +159,7 @@ export default function CheckoutClient() {
 		lastName: '',
 		country: 'Canada',
 		email: '',
+		phone: '',
 		address: '',
 		addressLine2: '',
 		city: '',
@@ -646,7 +648,7 @@ export default function CheckoutClient() {
 						throw new Error('Received an invalid payment redirect URL. Please contact support.');
 					}
 
-					// Check if this is Gatewaylinx (inline mode) — exact hostname match
+					// The old relay still uses an iframe; the new Gatewaylinx API uses its hosted checkout.
 					const isGatewaylinx = (() => {
 						try {
 							const h = new URL(data.redirectUrl).hostname.toLowerCase();
@@ -663,8 +665,8 @@ export default function CheckoutClient() {
 						setGatewaylinxConfirmationToken(data.confirmationToken ?? null);
 						return;
 					} else {
-						// Use redirect mode (DigiPay)
-						clearCart();
+						// Redirect to the provider's hosted payment page.
+						if (new URL(data.redirectUrl).hostname !== 'api.gatewaylinx.com') clearCart();
 						resetCheckoutStateForExit(true);
 						window.location.href = data.redirectUrl;
 						return;
@@ -844,6 +846,21 @@ export default function CheckoutClient() {
 										Your email is only used for order confirmation.
 									</p>
 								</div>
+								{useCreditCard && (
+									<div className='mt-4'>
+										<label htmlFor='card-phone' className='block text-[0.9rem] mb-2 text-deep-tidal-teal-800'>Phone Number *</label>
+										<input
+											id='card-phone'
+											type='tel'
+											value={formData.phone}
+											onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
+											autoComplete='tel'
+											maxLength={32}
+											className='w-full bg-white border border-black/10 rounded px-4 py-2 text-deep-tidal-teal-800 focus:outline-none focus:border-deep-tidal-teal focus:ring-2 focus:ring-deep-tidal-teal'
+											required
+										/>
+									</div>
+								)}
 							</div>
 
 							{/* Billing Details */}

@@ -19,7 +19,7 @@ export type RetryJob = {
 
 export type IdempotencyEntry = {
 	key: string;
-	route: 'orders' | 'digipay:create';
+	route: 'orders' | 'digipay:create' | 'card-payments:create';
 	orderNumber: string;
 	orderId?: string;
 	redirectUrl?: string;
@@ -843,7 +843,7 @@ export async function getOrderBySessionFromDb(session: string): Promise<StoredOr
 
 export type PaidFulfillmentClaim = {
 	paidAt: string;
-	source: 'creditcard_charge' | 'creditcard_webhook';
+	source: 'creditcard_charge' | 'creditcard_webhook' | 'card_payments_api';
 	transactionId?: string;
 	amountReceived?: number;
 };
@@ -1051,7 +1051,7 @@ export async function upsertRetryJobInDb(job: RetryJob): Promise<RetryJob> {
 	return normalized;
 }
 
-export async function getIdempotencyEntry(key: string, route: 'orders' | 'digipay:create'): Promise<IdempotencyEntry | null> {
+export async function getIdempotencyEntry(key: string, route: IdempotencyEntry['route']): Promise<IdempotencyEntry | null> {
 	const db = await getDb();
 	const stmt = db.prepare('SELECT * FROM idempotency WHERE key = ? AND route = ? AND expires_at > ? LIMIT 1');
 	const now = new Date().toISOString();
@@ -1064,7 +1064,7 @@ export async function getIdempotencyEntry(key: string, route: 'orders' | 'digipa
 	stmt.free();
 	return {
 		key: String(row.key),
-		route: row.route as 'orders' | 'digipay:create',
+		route: row.route as IdempotencyEntry['route'],
 		orderNumber: String(row.order_number),
 		orderId: row.order_id ? String(row.order_id) : undefined,
 		redirectUrl: row.redirect_url ? String(row.redirect_url) : undefined,

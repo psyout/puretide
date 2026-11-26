@@ -7,3 +7,4 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 */30 * * * * root /var/www/puretide/ops/run-cron.sh zoho-stock-sheet >> /var/log/zoho-stock-sheet.log 2>&1
 */15 * * * * root /var/www/puretide/ops/run-cron.sh etransfer-reminders >> /var/log/etransfer-reminders.log 2>&1
 */5 * * * * root /var/www/puretide/ops/run-cron.sh meta-conversions >> /var/log/meta-conversions.log 2>&1
+* * * * * root /var/www/puretide/ops/run-cron.sh card-payments >> /var/log/card-payments.log 2>&1

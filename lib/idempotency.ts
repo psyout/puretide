@@ -24,6 +24,23 @@ export async function getCachedDigipay(key: string): Promise<{ orderNumber: stri
 	return { orderNumber: entry.orderNumber, redirectUrl: entry.redirectUrl };
 }
 
+export async function getCachedCardPayment(key: string): Promise<{ orderNumber: string; redirectUrl: string } | null> {
+	await deleteExpiredIdempotencyEntries();
+	const entry = await getIdempotencyEntry(key, 'card-payments:create');
+	if (!entry?.redirectUrl) return null;
+	return { orderNumber: entry.orderNumber, redirectUrl: entry.redirectUrl };
+}
+
+export async function setCachedCardPayment(key: string, orderNumber: string, redirectUrl: string): Promise<void> {
+	await setIdempotencyEntry({
+		key,
+		route: 'card-payments:create',
+		orderNumber,
+		redirectUrl,
+		expiresAt: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
+	});
+}
+
 export async function setCachedOrder(key: string, orderNumber: string, orderId: string): Promise<void> {
 	const expiresAt = new Date(Date.now() + TTL_MS).toISOString();
 	await setIdempotencyEntry({

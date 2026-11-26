@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { isIP } from 'net';
 import { readProducts } from '@/lib/productCatalog';
 import { readSheetPromoCodes } from '@/lib/stockSheet';
 import { getEffectiveShippingCost } from '@/lib/constants';
-import { markAbandonedCartsRecoveredByEmail, upsertOrderInDb } from '@/lib/ordersDb';
+import { getOrderByOrderNumberFromDb, markAbandonedCartsRecoveredByEmail, upsertOrderInDb } from '@/lib/ordersDb';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { validateOrderPostalCodes } from '@/lib/postalValidation';
 import { validateCustomer, validateShippingAddress, validateStockAvailability } from '@/lib/orderValidation';
-import { getIdempotencyKey, getCachedDigipay, setCachedDigipay } from '@/lib/idempotency';
+import { getIdempotencyKey, getCachedCardPayment, setCachedCardPayment } from '@/lib/idempotency';
 import { normalizeCartItemsWithTrustedPrices } from '@/lib/trustedCartPricing';
 import { createOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { buildSafeApiError } from '@/lib/apiError';
-import { getPaymentProvider } from '@/lib/paymentProvider';
-import { getGatewaylinxConfig } from '@/lib/env';
-import { validateEnv } from '@/lib/env';
+import { createHostedCardPayment, getCardPaymentsConnection } from '@/lib/cardPaymentsApi';
+import { paymentCountryCode, paymentRegionCode } from '@/lib/paymentAddress';
 import { createAffiliateCommissionSnapshot } from '@/lib/affiliateCommissions';
 import { prepareMetaOrderTracking } from '@/lib/metaConversions';
 import { calculateCheckoutPricing } from '@/lib/checkoutPricing';
@@ -28,6 +28,7 @@ interface OrderPayload {
 		lastName: string;
 		country: string;
 		email: string;
+		phone?: string;
 		address: string;
 		addressLine2: string;
 		city: string;
@@ -79,9 +80,6 @@ export async function POST(request: Request) {
 	if (!CREDIT_CARD_PAYMENTS_ENABLED) {
 		return json({ ok: false, error: 'Credit card payments are temporarily unavailable. Please use e-transfer.' }, { status: 503 });
 	}
-	// Validate environment before processing
-	validateEnv();
-
 	const CHECKOUT_RATE_LIMIT = 10;
 	const CHECKOUT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
@@ -95,8 +93,13 @@ export async function POST(request: Request) {
 
 		const idemKey = getIdempotencyKey(request, rawPayload);
 		if (idemKey) {
-			const cached = await getCachedDigipay(idemKey);
+			const cached = await getCachedCardPayment(idemKey);
 			if (cached) {
+				const cachedOrder = await getOrderByOrderNumberFromDb(cached.orderNumber);
+				const cachedPayment = cachedOrder?.cardPayments as { final?: boolean } | undefined;
+				if (cachedOrder?.paymentStatus !== 'pending' || cachedPayment?.final === true) {
+					return json({ ok: false, error: 'This payment has already been processed. Please check your order confirmation.' }, { status: 409 });
+				}
 				const cachedToken = createOrderConfirmationToken(cached.orderNumber);
 				return json({
 					ok: true,
@@ -132,6 +135,24 @@ export async function POST(request: Request) {
 		const customerError = validateCustomer(orderPayload.customer);
 		if (customerError) {
 			return json({ ok: false, error: customerError }, { status: 400 });
+		}
+		const phone = String(orderPayload.customer.phone ?? '').trim();
+		if (!/^\+?[0-9 ()-]{7,32}$/.test(phone)) {
+			return json({ ok: false, error: 'A valid phone number is required for card payment.' }, { status: 400 });
+		}
+		const billingLine1 = [orderPayload.customer.address, orderPayload.customer.addressLine2].filter(Boolean).join(', ').trim();
+		if (billingLine1.length > 256) {
+			return json({ ok: false, error: 'Billing address is too long for card payment.' }, { status: 400 });
+		}
+		const shippingLine1 = orderPayload.shipToDifferentAddress
+			? [orderPayload.shippingAddress?.address, orderPayload.shippingAddress?.addressLine2].filter(Boolean).join(', ').trim()
+			: '';
+		if (shippingLine1.length > 256) {
+			return json({ ok: false, error: 'Shipping address is too long for card payment.' }, { status: 400 });
+		}
+		const ipAddress = request.headers.get('x-real-ip') || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+		if (!ipAddress || isIP(ipAddress) === 0) {
+			return json({ ok: false, error: 'Unable to verify your connection. Please try again.' }, { status: 400 });
 		}
 
 		let stockError: string | null;
@@ -182,6 +203,14 @@ export async function POST(request: Request) {
 		});
 		if (!pricing.ok) return json({ ok: false, error: pricing.error }, { status: 400 });
 		const { cartItems, appliedPromo, subtotal, shippingCost, discountAmount, cardFee, total } = pricing;
+		const amountMinor = Math.round(total * 100);
+		const connection = await getCardPaymentsConnection();
+		if (process.env.NODE_ENV === 'production' && connection.environment !== 'live') {
+			return json({ ok: false, error: 'Credit card payments are not yet available.' }, { status: 503 });
+		}
+		if (!connection.limits?.some((limit) => limit.currency === 'CAD' && amountMinor <= limit.max_amount_minor)) {
+			return json({ ok: false, error: 'The payment amount is not supported.' }, { status: 400 });
+		}
 
 		// Reject tampered totals
 		if (Math.abs(total - orderPayload.total) > 0.01) {
@@ -211,20 +240,11 @@ export async function POST(request: Request) {
 			confirmationParams.set('token', confirmationToken);
 		}
 
-		// Get the payment provider based on env var
-		const provider = getPaymentProvider();
-		const gatewaylinxConfig = getGatewaylinxConfig();
 		const isProduction = process.env.NODE_ENV === 'production';
 		const configuredBaseUrl = process.env.APP_BASE_URL?.replace(/\/$/, '');
-		const ngrokUrl = process.env.NGROK_URL;
-		if (gatewaylinxConfig && isProduction && !configuredBaseUrl) {
-			throw new Error('APP_BASE_URL is required for Gatewaylinx in production');
-		}
-		const callbackBaseUrl = gatewaylinxConfig ? (configuredBaseUrl ?? (!isProduction ? ngrokUrl : undefined)) : (configuredBaseUrl ?? process.env.DIGIPAY_TCOMPLETE_BASE);
-		if (gatewaylinxConfig && !callbackBaseUrl) {
-			throw new Error('A public callback URL is required for Gatewaylinx');
-		}
-		const tcompleteBase = callbackBaseUrl || 'https://puretide.com';
+		if (isProduction && configuredBaseUrl !== 'https://puretide.ca') throw new Error('APP_BASE_URL must be https://puretide.ca for card payments');
+		const tcompleteBase = configuredBaseUrl ?? process.env.NGROK_URL;
+		if (!tcompleteBase || !tcompleteBase.startsWith('https://')) throw new Error('An HTTPS APP_BASE_URL is required for card payments');
 		const tcomplete = `${tcompleteBase.replace(/\/$/, '')}/order-confirmation?${confirmationParams.toString()}`;
 
 		// Build order record
@@ -234,61 +254,60 @@ export async function POST(request: Request) {
 			createdAt,
 			...metaTracking,
 			paymentStatus: 'pending' as const,
-			paymentProvider: gatewaylinxConfig ? 'gatewaylinx' : 'digipay',
+			paymentProvider: 'gatewaylinx_api',
 			...payload,
 			affiliateCommission: createAffiliateCommissionSnapshot(appliedPromo, payload),
+			cardPayments: {
+				environment: connection.environment,
+				final: false,
+				nextCheckAt: new Date(Date.now() + 60_000).toISOString(),
+			},
 		};
-
-		// Add provider-specific config to order record
-		if (gatewaylinxConfig) {
-			(orderRecord as Record<string, unknown>).gatewaylinx = {
-				siteId: gatewaylinxConfig.siteId,
-				dryRunFulfillment: gatewaylinxConfig.dryRunFulfillment,
-				tcomplete,
-			};
-		} else {
-			const siteId = process.env.DIGIPAY_SITE_ID;
-			const pburl = process.env.DIGIPAY_POSTBACK_URL;
-			const useSandbox = process.env.DIGIPAY_USE_SANDBOX === 'true';
-			const sandboxSiteId = process.env.DIGIPAY_SANDBOX_SITE_ID;
-			const effectiveSiteId = useSandbox && sandboxSiteId ? sandboxSiteId : siteId;
-			(orderRecord as Record<string, unknown>).digipay = {
-				useSandbox,
-				siteId: effectiveSiteId,
-				pburl,
-				tcomplete,
-			};
-		}
-
 		await upsertOrderInDb(orderRecord as Record<string, unknown>);
-
-		// Build postback URL (webhook) using the same public callback base.
-		const protocol = request.headers.get('x-forwarded-proto') || 'https';
-		const host = request.headers.get('host');
-		const requestBaseUrl = host ? `${protocol}://${host}` : undefined;
-		const postbackBaseUrl = gatewaylinxConfig ? callbackBaseUrl : requestBaseUrl;
-		if (!postbackBaseUrl) {
-			throw new Error('A public postback URL is required');
-		}
-		const postbackUrl = `${postbackBaseUrl}/api/creditcard/webhook`;
-
-		// Call provider's createPaymentSession
-		const sessionResult = await provider.createPaymentSession({
-			orderNumber,
-			amount: total,
-			returnUrl: tcomplete,
-			postbackUrl,
+		const country = paymentCountryCode(payload.customer.country);
+		const payment = await createHostedCardPayment({
+			reference: orderNumber,
+			amountMinor,
+			currency: 'CAD',
+			merchant_redirect_url: tcomplete,
 			customer: {
-				firstName: payload.customer.firstName,
-				lastName: payload.customer.lastName,
+				first_name: payload.customer.firstName,
+				last_name: payload.customer.lastName,
 				email: payload.customer.email,
-				address: payload.customer.address,
-				city: payload.customer.city,
-				province: payload.customer.province,
-				zipCode: payload.customer.zipCode,
-				country: payload.customer.country,
+				phone,
+				ip_address: ipAddress,
+				billing_address: {
+					line1: billingLine1,
+					city: payload.customer.city,
+					state: paymentRegionCode(payload.customer.province, country),
+					postal_code: payload.customer.zipCode,
+					country,
+				},
+			},
+			shipping: {
+				first_name: payload.customer.firstName,
+				last_name: payload.customer.lastName,
+				phone,
+				address: payload.shipToDifferentAddress && payload.shippingAddress
+					? {
+						line1: payload.shippingAddress.address,
+						...(payload.shippingAddress.addressLine2 ? { line2: payload.shippingAddress.addressLine2 } : {}),
+						city: payload.shippingAddress.city,
+						state: paymentRegionCode(payload.shippingAddress.province, country),
+						postal_code: payload.shippingAddress.zipCode,
+						country,
+					}
+					: {
+						line1: payload.customer.address,
+						...(payload.customer.addressLine2 ? { line2: payload.customer.addressLine2 } : {}),
+						city: payload.customer.city,
+						state: paymentRegionCode(payload.customer.province, country),
+						postal_code: payload.customer.zipCode,
+						country,
+					},
 			},
 		});
+		await upsertOrderInDb({ ...orderRecord, cardPayments: { ...orderRecord.cardPayments, id: payment.id, outcome: payment.outcome, final: payment.final, nextCheckAt: new Date(Date.now() + Math.max(60, payment.poll_after_seconds ?? 300) * 1000).toISOString() } });
 		await markAbandonedCartsRecoveredByEmail(payload.customer.email, createdAt);
 
 		console.log(
@@ -296,21 +315,15 @@ export async function POST(request: Request) {
 				label: 'creditcard:create',
 				orderNumber,
 				total,
-				paymentProvider: gatewaylinxConfig ? 'gatewaylinx' : 'digipay',
-				redirectHost: (() => {
-					try {
-						return new URL(sessionResult.redirectUrl).hostname;
-					} catch {
-						return 'invalid';
-					}
-				})(),
+				paymentProvider: 'gatewaylinx_api',
+				paymentId: payment.id,
 			}),
 		);
 
-		if (idemKey) await setCachedDigipay(idemKey, orderNumber, sessionResult.redirectUrl);
+		if (idemKey) await setCachedCardPayment(idemKey, orderNumber, payment.checkout_url!);
 		return json({
 			ok: true,
-			redirectUrl: sessionResult.redirectUrl,
+			redirectUrl: payment.checkout_url,
 			orderNumber,
 			confirmationToken: confirmationToken ?? null,
 		});

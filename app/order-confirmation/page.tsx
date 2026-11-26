@@ -6,6 +6,7 @@ import OrderConfirmationSurvey from '@/components/OrderConfirmationSurvey';
 import { getOrderByOrderNumberFromDb, upsertOrderInDb } from '@/lib/ordersDb';
 import { verifyOrderConfirmationToken } from '@/lib/orderConfirmationToken';
 import { CopyToClipboardButton } from '@/components/CopyToClipboardButton';
+import { reconcileCardPayment } from '@/lib/cardPaymentsReconciliation';
 
 // Force dynamic rendering - don't cache this page
 export const dynamic = 'force-dynamic';
@@ -79,17 +80,24 @@ function isApprovedProviderStatus(statusRaw: string): boolean {
 	return statusRaw === 'approved' || statusRaw === 'success' || statusRaw === 'completed';
 }
 
-export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string; token?: string; status?: string; result?: string }> }) {
-	const { orderNumber: queryOrderNumber, token, status, result } = await searchParams;
+export default async function OrderConfirmationPage({ searchParams }: { searchParams: Promise<{ orderNumber?: string; token?: string; status?: string; result?: string; payment_id?: string }> }) {
+	const { orderNumber: queryOrderNumber, token, status, result, payment_id: paymentId } = await searchParams;
 	const orderNumberParam = queryOrderNumber?.trim();
 	const isAllowed = orderNumberParam ? verifyOrderConfirmationToken(orderNumberParam, token?.trim()) : false;
 	let order = isAllowed && orderNumberParam ? await getOrderByNumber(orderNumberParam) : null;
+	if (order?.paymentStatus === 'pending' && (order as unknown as Record<string, unknown>).paymentProvider === 'gatewaylinx_api' && orderNumberParam) {
+		try {
+			order = (await reconcileCardPayment(orderNumberParam, Boolean(paymentId))) as Order | null;
+		} catch (error) {
+			console.error(JSON.stringify({ label: 'card_payments:return_read_failed', orderNumber: orderNumberParam }));
+		}
+	}
 
 	// Additional security: If token is valid and order exists, mark it as accessed.
 	// Gatewaylinx uses the signed token too, but its confirmation URL may be revisited after
 	// an iframe payment flow, so it remains refreshable while still requiring possession of it.
 	const isRefreshableGatewaylinxOrder =
-		order?.paymentMethod === 'creditcard' && (order as unknown as Record<string, unknown>).paymentProvider === 'gatewaylinx';
+		order?.paymentMethod === 'creditcard' && ['gatewaylinx', 'gatewaylinx_api'].includes(String((order as unknown as Record<string, unknown>).paymentProvider));
 	if (isAllowed && order && token && !isRefreshableGatewaylinxOrder) {
 		// Check if this token was already used
 		if ((order as unknown as Record<string, unknown>).tokenAccessedAt) {
@@ -181,7 +189,7 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	const paymentProvider = (order as unknown as Record<string, unknown>).paymentProvider;
 	const isDigipayOrder = paymentProvider === 'digipay' || order.paymentMethod === 'creditcard';
 	const isEtransferOrder = order.paymentMethod === 'etransfer' || paymentProvider === 'bluepeak';
-	const providerStatusRaw = normalizeProviderStatus(status) || normalizeProviderStatus(result);
+	const providerStatusRaw = paymentProvider === 'gatewaylinx_api' ? '' : normalizeProviderStatus(status) || normalizeProviderStatus(result);
 	const hasExplicitProviderStatus = Boolean(providerStatusRaw);
 	const isIndeterminateStatus = providerStatusRaw === 'indeterminate';
 
@@ -261,9 +269,24 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
 	}
 
 	if (order.paymentStatus === 'pending') {
+		const cardTracking = (order as unknown as Record<string, unknown>).cardPayments as { manualReview?: string; final?: boolean } | undefined;
+		if (paymentProvider === 'gatewaylinx_api' && cardTracking?.final && cardTracking.manualReview) {
+			return (
+				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
+					<Header />
+					<div className='max-w-6xl mx-auto px-6 py-24'>
+						<div className='max-w-2xl mx-auto bg-mineral-white rounded-lg ui-border p-6 shadow-lg'>
+							<h1 className='text-4xl font-bold text-deep-tidal-teal-800 mb-6'>Payment under review</h1>
+							<p className='text-deep-tidal-teal-800 mb-4'>We need to verify this card payment before processing your order. Please do not pay again.</p>
+							<p className='text-deep-tidal-teal-600 text-sm'>Contact info@puretide.ca with order number {order.orderNumber} if you need help.</p>
+						</div>
+					</div>
+				</div>
+			);
+		}
 		const createdAtMs = Date.parse(order.createdAt);
 		const isStale = Number.isFinite(createdAtMs) ? Date.now() - createdAtMs > 15 * 60 * 1000 : false;
-		if (isDigipayOrder && isStale) {
+		if (isDigipayOrder && isStale && paymentProvider !== 'gatewaylinx_api') {
 			return (
 				<div className='min-h-screen bg-gradient-to-br from-mineral-white via-deep-tidal-teal-50 to-eucalyptus-50'>
 					<Header />

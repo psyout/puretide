@@ -1,5 +1,5 @@
-// Temporary pause while the payment provider's Gatewaylinx tunnel is unavailable.
-// Set to false after the provider is verified healthy and redeploy.
+// Keep checkout paused until the new Gatewaylinx API flow is tested with a live key.
+// Change only after the hosted flow, final-outcome handling, and background polling are verified.
 export const CREDIT_CARD_PAYMENTS_PAUSED = true;
 
 export const CREDIT_CARD_PAYMENTS_ENABLED =
